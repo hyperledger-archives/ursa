@@ -8,12 +8,12 @@ extern crate sha1;
 pub struct BlsService {}
 
 impl BlsService {
-    pub fn create_group_param() -> Result<String, CommonError> {
-        PointG2::new()?.to_string()
+    pub fn create_generator() -> Result<Vec<u8>, CommonError> {
+        PointG2::new()?.to_bytes()
     }
 
-    pub fn generate_keys(g: &str, seed: Option<Vec<u8>>) -> Result<(String, String), CommonError> {
-        let g = PointG2::from_string(g)?;
+    pub fn generate_keys(g: Vec<u8>, seed: Option<Vec<u8>>) -> Result<(Vec<u8>, Vec<u8>), CommonError> {
+        let g = PointG2::from_bytes(&g)?;
 
         let sign_key = match seed {
             Some(s) => GroupOrderElement::new_from_seed(s)?,
@@ -21,47 +21,50 @@ impl BlsService {
         };
         let ver_key = g.mul(&sign_key)?;
 
-        Ok((sign_key.to_string()?, ver_key.to_string()?))
+        Ok((sign_key.to_bytes()?, ver_key.to_bytes()?))
     }
 
-    pub fn sign(message: &str, sign_key: &str, ver_key: &str) -> Result<String, CommonError> {
-        let ver_key = PointG2::from_string(ver_key)?;
-        let sign_key = GroupOrderElement::from_string(sign_key)?;
+    pub fn sign(message: &str, sign_key: Vec<u8>, ver_key: Vec<u8>) -> Result<Vec<u8>, CommonError> {
+        let ver_key = PointG2::from_bytes(&ver_key)?;
+        let sign_key = GroupOrderElement::from_bytes(&sign_key)?;
 
         let h = BlsService::_h(message, &ver_key)?;
 
         let signature = h.mul(&sign_key)?;
-        signature.to_string()
+        signature.to_bytes()
     }
 
-    pub fn create_multi_sig(signatures: &str) -> Result<String, CommonError> {
-        let signatures: Vec<PointG1> = serde_json::from_str(signatures)
-            .map_err(map_err_trace!())
-            .map_err(|err| CommonError::InvalidStructure(format!("Invalid signatures: {}", err.to_string())))?;
+    pub fn create_multi_sig(signatures_b: Vec<Vec<u8>>) -> Result<Vec<u8>, CommonError> {
+        let mut signatures: Vec<PointG1> = Vec::new();
+        for s in signatures_b {
+            signatures.push(PointG1::from_bytes(&s)?)
+        }
 
-        let mut multi_sig =  PointG1::new_inf()?;
+        let mut multi_sig = PointG1::new_inf()?;
         for signature in signatures {
             multi_sig = multi_sig.add(&signature)?;
         }
-        Ok(multi_sig.to_string()?)
+        Ok(multi_sig.to_bytes()?)
     }
 
-    pub fn verify(signature: &str, message: &str, pk: &str, g: &str) -> Result<bool, CommonError> {
-        let signature = PointG1::from_string(signature)?;
-        let pk = PointG2::from_string(pk)?;
-        let g = PointG2::from_string(g)?;
+    pub fn verify(signature: Vec<u8>, message: &str, pk: Vec<u8>, g: Vec<u8>) -> Result<bool, CommonError> {
+        let signature = PointG1::from_bytes(&signature)?;
+        let pk = PointG2::from_bytes(&pk)?;
+        let g = PointG2::from_bytes(&g)?;
 
         let h = BlsService::_h(message, &pk)?;
 
         Ok(Pair::pair(&signature, &g)?.eq(&Pair::pair(&h, &pk)?))
     }
 
-    pub fn verify_multi_sig(signature: &str, message: &str, pks: &str, g: &str) -> Result<bool, CommonError> {
-        let signature = PointG1::from_string(signature)?;
-        let g = PointG2::from_string(g)?;
-        let pks: Vec<PointG2> = serde_json::from_str(pks)
-            .map_err(map_err_trace!())
-            .map_err(|err| CommonError::InvalidStructure(format!("Invalid public keys: {}", err.to_string())))?;
+    pub fn verify_multi_sig(signature: Vec<u8>, message: &str, pub_keys: Vec<Vec<u8>>, g: Vec<u8>) -> Result<bool, CommonError> {
+        let signature = PointG1::from_bytes(&signature)?;
+        let g = PointG2::from_bytes(&g)?;
+
+        let mut pks: Vec<PointG2> = Vec::new();
+        for pk in pub_keys {
+            pks.push(PointG2::from_bytes(&pk)?)
+        }
 
         let mut multi_sig_e_list: Vec<Pair> = Vec::new();
         for pk in pks {
@@ -101,54 +104,58 @@ mod tests {
     #[test]
     fn generate_keys_works() {
         let g = PointG2::new().unwrap();
-        BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
+        BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+    }
+
+    #[test]
+    fn generate_keys_works_for_seed() {
+        let g = PointG2::new().unwrap();
+        let seed: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8];
+        BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
     }
 
     #[test]
     fn sign_works() {
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
-        BlsService::sign("message", &sk.to_string(), &pk.to_string()).unwrap();
+        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        BlsService::sign("message", sk, pk).unwrap();
     }
 
     #[test]
     fn multi_sign_works() {
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
-        let signatures: Vec<String> = vec![
-            BlsService::sign("message1", &sk, &pk).unwrap(),
-            BlsService::sign("message2", &sk, &pk).unwrap()
+        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let signatures: Vec<Vec<u8>> = vec![
+            BlsService::sign("message1", sk.clone(), pk.clone()).unwrap(),
+            BlsService::sign("message2", sk, pk).unwrap()
         ];
-        let signatures_str = serde_json::to_string(&signatures).unwrap();
 
-        BlsService::create_multi_sig(&signatures_str).unwrap();
+        BlsService::create_multi_sig(signatures).unwrap();
     }
 
     #[test]
     fn verify_works() {
         let message = "message";
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
-        let signature = BlsService::sign(message, &sk, &pk).unwrap();
-        assert!(BlsService::verify(&signature, message, &pk, &g.to_string().unwrap()).unwrap())
+        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let signature = BlsService::sign(message, sk, pk.clone()).unwrap();
+        assert!(BlsService::verify(signature, message, pk, g.to_bytes().unwrap()).unwrap())
     }
 
     #[test]
     fn verify_multi_sig_works() {
         let message = "message";
         let g = PointG2::new().unwrap();
-        let (sk1, pk1) = BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
-        let (sk2, pk2) = BlsService::generate_keys(&g.to_string().unwrap(), None).unwrap();
+        let (sk1, pk1) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let (sk2, pk2) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
         let pks = vec![pk1.clone(), pk2.clone()];
 
-        let signatures: Vec<String> = vec![
-            BlsService::sign(message, &sk1, &pk1).unwrap(),
-            BlsService::sign(message, &sk2, &pk2).unwrap()
+        let signatures: Vec<Vec<u8>> = vec![
+            BlsService::sign(message, sk1, pk1).unwrap(),
+            BlsService::sign(message, sk2, pk2).unwrap()
         ];
-        let signatures_str = serde_json::to_string(&signatures).unwrap();
-        let pks_str = serde_json::to_string(&pks).unwrap();
 
-        let signature = BlsService::create_multi_sig(&signatures_str).unwrap();
-        assert!(BlsService::verify_multi_sig(&signature, message, &pks_str, &g.to_string().unwrap()).unwrap())
+        let signature = BlsService::create_multi_sig(signatures).unwrap();
+        assert!(BlsService::verify_multi_sig(signature, message, pks, g.to_bytes().unwrap()).unwrap())
     }
 }

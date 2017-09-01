@@ -581,9 +581,7 @@ mod tests {
     fn point_g1_infinity_test() {
         let p = PointG1::new_inf().unwrap();
         let q = PointG1::new().unwrap();
-        println!("q {:?}", q);
         let result = p.add(&q).unwrap();
-        println!("result {:?}", result);
         assert_eq!(q, result);
     }
 
