@@ -1,8 +1,5 @@
 #[macro_use]
-pub mod cstring;
-
-#[macro_use]
-pub mod byte_array;
+pub mod ctypes;
 
 #[macro_use]
 pub mod logger;

@@ -5,9 +5,9 @@ use pair::amcl::{GroupOrderElement, PointG2, PointG1, Pair};
 
 extern crate sha1;
 
-pub struct BlsService {}
+pub struct Bls {}
 
-impl BlsService {
+impl Bls {
     pub fn create_generator() -> Result<Vec<u8>, CommonError> {
         PointG2::new()?.to_bytes()
     }
@@ -28,7 +28,7 @@ impl BlsService {
         let ver_key = PointG2::from_bytes(&ver_key)?;
         let sign_key = GroupOrderElement::from_bytes(&sign_key)?;
 
-        let h = BlsService::_h(message, &ver_key)?;
+        let h = Bls::_h(message, &ver_key)?;
 
         let signature = h.mul(&sign_key)?;
         signature.to_bytes()
@@ -52,7 +52,7 @@ impl BlsService {
         let pk = PointG2::from_bytes(&pk)?;
         let g = PointG2::from_bytes(&g)?;
 
-        let h = BlsService::_h(message, &pk)?;
+        let h = Bls::_h(message, &pk)?;
 
         Ok(Pair::pair(&signature, &g)?.eq(&Pair::pair(&h, &pk)?))
     }
@@ -68,7 +68,7 @@ impl BlsService {
 
         let mut multi_sig_e_list: Vec<Pair> = Vec::new();
         for pk in pks {
-            let h = BlsService::_h(message, &pk)?;
+            let h = Bls::_h(message, &pk)?;
             multi_sig_e_list.push(Pair::pair(&h, &pk)?);
         }
 
@@ -81,7 +81,7 @@ impl BlsService {
     }
 
     fn _h(message: &str, pk: &PointG2) -> Result<PointG1, CommonError> {
-        let m = BlsService::_get_msg_for_sign(message, pk)?;
+        let m = Bls::_get_msg_for_sign(message, pk)?;
 
         let mut res = sha1::Sha1::new();
         res.update(&m);
@@ -104,58 +104,58 @@ mod tests {
     #[test]
     fn generate_keys_works() {
         let g = PointG2::new().unwrap();
-        BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
     }
 
     #[test]
     fn generate_keys_works_for_seed() {
         let g = PointG2::new().unwrap();
         let seed: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8];
-        BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
     }
 
     #[test]
     fn sign_works() {
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
-        BlsService::sign("message", sk, pk).unwrap();
+        let (sk, pk) = Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        Bls::sign("message", sk, pk).unwrap();
     }
 
     #[test]
     fn multi_sign_works() {
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let (sk, pk) = Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
         let signatures: Vec<Vec<u8>> = vec![
-            BlsService::sign("message1", sk.clone(), pk.clone()).unwrap(),
-            BlsService::sign("message2", sk, pk).unwrap()
+            Bls::sign("message1", sk.clone(), pk.clone()).unwrap(),
+            Bls::sign("message2", sk, pk).unwrap()
         ];
 
-        BlsService::create_multi_sig(signatures).unwrap();
+        Bls::create_multi_sig(signatures).unwrap();
     }
 
     #[test]
     fn verify_works() {
         let message = "message";
         let g = PointG2::new().unwrap();
-        let (sk, pk) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
-        let signature = BlsService::sign(message, sk, pk.clone()).unwrap();
-        assert!(BlsService::verify(signature, message, pk, g.to_bytes().unwrap()).unwrap())
+        let (sk, pk) = Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let signature = Bls::sign(message, sk, pk.clone()).unwrap();
+        assert!(Bls::verify(signature, message, pk, g.to_bytes().unwrap()).unwrap())
     }
 
     #[test]
     fn verify_multi_sig_works() {
         let message = "message";
         let g = PointG2::new().unwrap();
-        let (sk1, pk1) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
-        let (sk2, pk2) = BlsService::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let (sk1, pk1) = Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
+        let (sk2, pk2) = Bls::generate_keys(g.to_bytes().unwrap(), None).unwrap();
         let pks = vec![pk1.clone(), pk2.clone()];
 
         let signatures: Vec<Vec<u8>> = vec![
-            BlsService::sign(message, sk1, pk1).unwrap(),
-            BlsService::sign(message, sk2, pk2).unwrap()
+            Bls::sign(message, sk1, pk1).unwrap(),
+            Bls::sign(message, sk2, pk2).unwrap()
         ];
 
-        let signature = BlsService::create_multi_sig(signatures).unwrap();
-        assert!(BlsService::verify_multi_sig(signature, message, pks, g.to_bytes().unwrap()).unwrap())
+        let signature = Bls::create_multi_sig(signatures).unwrap();
+        assert!(Bls::verify_multi_sig(signature, message, pks, g.to_bytes().unwrap()).unwrap())
     }
 }
