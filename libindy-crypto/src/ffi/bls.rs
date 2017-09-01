@@ -1,6 +1,6 @@
 extern crate libc;
 
-use api::ErrorCode;
+use ffi::ErrorCode;
 use errors::ToErrorCode;
 use utils::cstring::CStringUtils;
 use bls::BlsService;

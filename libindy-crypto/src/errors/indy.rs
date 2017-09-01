@@ -1,6 +1,6 @@
 use errors::common::CommonError;
 
-use api::ErrorCode;
+use ffi::ErrorCode;
 use errors::ToErrorCode;
 
 use std::error;

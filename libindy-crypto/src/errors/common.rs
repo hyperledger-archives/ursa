@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::{fmt, io};
 
-use api::ErrorCode;
+use ffi::ErrorCode;
 use errors::ToErrorCode;
 
 #[derive(Debug)]

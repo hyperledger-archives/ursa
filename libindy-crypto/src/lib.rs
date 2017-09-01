@@ -13,8 +13,9 @@ extern crate sha1;
 #[macro_use]
 mod utils;
 
-pub mod api;
+pub mod ffi;
 mod bls;
+mod pair;
 mod errors;
 
 #[cfg(test)]

@@ -1,13 +1,17 @@
 extern crate serde_json;
 
 use errors::common::CommonError;
-use utils::crypto::pair::{GroupOrderElement, PointG2, PointG1, Pair};
+use pair::amcl::{GroupOrderElement, PointG2, PointG1, Pair};
 
 extern crate sha1;
 
 pub struct BlsService {}
 
 impl BlsService {
+    pub fn create_group_param() -> Result<String, CommonError> {
+        PointG2::new()?.to_string()
+    }
+
     pub fn generate_keys(g: &str, seed: Option<Vec<u8>>) -> Result<(String, String), CommonError> {
         let g = PointG2::from_string(g)?;
 
@@ -25,8 +29,9 @@ impl BlsService {
         let sign_key = GroupOrderElement::from_string(sign_key)?;
 
         let h = BlsService::_h(message, &ver_key)?;
+
         let signature = h.mul(&sign_key)?;
-        Ok(signature.to_string()?)
+        signature.to_string()
     }
 
     pub fn create_multi_sig(signatures: &str) -> Result<String, CommonError> {
@@ -34,10 +39,9 @@ impl BlsService {
             .map_err(map_err_trace!())
             .map_err(|err| CommonError::InvalidStructure(format!("Invalid signatures: {}", err.to_string())))?;
 
-        let multi_sig = signatures.get(0).ok_or(CommonError::InvalidStructure(format!("Element not found")))?;
-
-        for signature in signatures[1..].to_vec() {
-            multi_sig.add(&signature)?;
+        let mut multi_sig =  PointG1::new_inf()?;
+        for signature in signatures {
+            multi_sig = multi_sig.add(&signature)?;
         }
         Ok(multi_sig.to_string()?)
     }
@@ -48,9 +52,6 @@ impl BlsService {
         let g = PointG2::from_string(g)?;
 
         let h = BlsService::_h(message, &pk)?;
-
-        println!("{:?}", pk);
-        println!("{:?}", h);
 
         Ok(Pair::pair(&signature, &g)?.eq(&Pair::pair(&h, &pk)?))
     }
@@ -68,10 +69,9 @@ impl BlsService {
             multi_sig_e_list.push(Pair::pair(&h, &pk)?);
         }
 
-        let multi_sig_e = multi_sig_e_list.get(0).ok_or(CommonError::InvalidStructure(format!("Element not found")))?;
-
+        let mut multi_sig_e = multi_sig_e_list.get(0).ok_or(CommonError::InvalidStructure(format!("Element not found")))?.clone();
         for e in multi_sig_e_list[1..].to_vec() {
-            multi_sig_e.mul(&e)?;
+            multi_sig_e = multi_sig_e.mul(&e)?;
         }
 
         Ok(Pair::pair(&signature, &g)?.eq(&multi_sig_e))

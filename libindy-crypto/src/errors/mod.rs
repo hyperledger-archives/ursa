@@ -1,7 +1,7 @@
 pub mod common;
 pub mod indy;
 
-use api::ErrorCode;
+use ffi::ErrorCode;
 
 pub trait ToErrorCode {
     fn to_error_code(&self) -> ErrorCode;

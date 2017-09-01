@@ -138,9 +138,16 @@ impl PointG1 {
     }
 
     pub fn from_hash(hash: &Vec<u8>) -> Result<PointG1, CommonError> {
-        let el = GroupOrderElement::from_bytes(hash.as_slice())?;
+        let mut el = GroupOrderElement::from_bytes(hash.as_slice())?;
+        let mut point = ECP::new_big(&el.bn);
+
+        while point.is_infinity() {
+            el.bn.inc(1);
+            point = ECP::new_big(&el.bn);
+        }
+
         Ok(PointG1 {
-            point: ECP::new_big(&el.bn)
+            point: point
         })
     }
 }
@@ -547,32 +554,9 @@ impl<'a> Deserialize<'a> for Pair {
     }
 }
 
-#[cfg(feature = "revocation_tests")]
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    extern crate serde_json;
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct TestGroupOrderElementStructure {
-        field: GroupOrderElement
-    }
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct TestPointG1Structure {
-        field: PointG1
-    }
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct TestPointG2Structure {
-        field: PointG2
-    }
-
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
-    struct TestPairStructure {
-        field: Pair
-    }
 
     #[test]
     fn from_bytes_to_bytes_works_for_group_order_element() {
@@ -580,53 +564,6 @@ mod tests {
         let bytes = GroupOrderElement::from_bytes(&vec).unwrap();
         let result = bytes.to_bytes().unwrap();
         assert_eq!(vec, result);
-    }
-
-    #[test]
-    fn serialize_deserialize_works_for_group_order_element() {
-        let structure = TestGroupOrderElementStructure {
-            field: GroupOrderElement::from_string("C4D05C20EC7BAC 2FBB155341552D 6AA4C1EA344257 E84BFFBF1408B3 194D3FBA").unwrap()
-        };
-        let deserialized: TestGroupOrderElementStructure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
-
-        assert_eq!(structure, deserialized);
-    }
-
-    #[test]
-    fn serialize_deserialize_works_for_point_g1() {
-        let structure = TestPointG1Structure {
-            field: PointG1::from_string("true 2EECD9DE38C76F D006CA023A62FC F896DFE9BDD67E 4EDC83F2F88686 39D6CFB6AE4C5F AD41D5E8FFF5BB 46A9EE94E8EC 91210CA1BEE64A D0528EBCE5A3F 644EA24C7C9248 8433949C4FDFFB 32F422BC05E873 E8E64BD56D37 2466FE12D325 8094CE251D2839 5A656663FA5F96 157FD83C6B2426 2FEC3584898982 617BEAC39065DB A9FEFC2AE937BB 6393541E1FFC").unwrap()
-        };
-
-        let deserialized: TestPointG1Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
-
-        assert_eq!(structure, deserialized);
-    }
-
-    #[test]
-    fn deserialize_works_for_point_g2() {
-        let structure = TestPointG2Structure {
-            field: PointG2::from_string("true D11B6D8D20603F 81E85DD0E5F940 58637C2CEFE82 C9AA5515E23FF9 769669C8986A4F B5A4325CEA7B0 66E949BD16A3 77D948C5888160 F81A47F4DD46FE 93485FD0E0275E 328A14F82C2D82 4B9FDD2474E6F5 7A2C5A48F032E6 3249E376F483 6DCCFE77B6B0C1 84C2FD6C046348 808EC9FEB85E2D 773FDC47D8873A D2898B104A8722 4642BDD3AF2B33 A8C52C0D6BF 50D29D832D0799 7163F19F154FE3 5D049BB7C3D8C9 F8AB1B6E4A17F 882A2BC9B08B18 BB13529EA3B95F 3671B9C0F8A3 8094CE251D2839 5A656663FA5F96 157FD83C6B2426 2FEC3584898982 617BEAC39065DB A9FEFC2AE937BB 6393541E1FFC 0 0 0 0 0 0 0").unwrap()
-        };
-        let deserialized: TestPointG2Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
-
-        assert_eq!(structure, deserialized);
-    }
-
-    #[test]
-    fn serialize_deserialize_works_for_pair() {
-        let point_g1 = PointG1 {
-            point: PointG1::from_string("false 2EECD9DE38C76F D006CA023A62FC F896DFE9BDD67E 4EDC83F2F88686 39D6CFB6AE4C5F AD41D5E8FFF5BB 46A9EE94E8EC 91210CA1BEE64A D0528EBCE5A3F 644EA24C7C9248 8433949C4FDFFB 32F422BC05E873 E8E64BD56D37 2466FE12D325 8094CE251D2839 5A656663FA5F96 157FD83C6B2426 2FEC3584898982 617BEAC39065DB A9FEFC2AE937BB 6393541E1FFC").unwrap().point
-        };
-        let point_g2 = PointG2 {
-            point: PointG2::from_string("false D11B6D8D20603F 81E85DD0E5F940 58637C2CEFE82 C9AA5515E23FF9 769669C8986A4F B5A4325CEA7B0 66E949BD16A3 77D948C5888160 F81A47F4DD46FE 93485FD0E0275E 328A14F82C2D82 4B9FDD2474E6F5 7A2C5A48F032E6 3249E376F483 6DCCFE77B6B0C1 84C2FD6C046348 808EC9FEB85E2D 773FDC47D8873A D2898B104A8722 4642BDD3AF2B33 A8C52C0D6BF 50D29D832D0799 7163F19F154FE3 5D049BB7C3D8C9 F8AB1B6E4A17F 882A2BC9B08B18 BB13529EA3B95F 3671B9C0F8A3 8094CE251D2839 5A656663FA5F96 157FD83C6B2426 2FEC3584898982 617BEAC39065DB A9FEFC2AE937BB 6393541E1FFC 0 0 0 0 0 0 0").unwrap().point
-        };
-        let pair = TestPairStructure {
-            field: Pair::pair(&point_g1, &point_g2).unwrap()
-        };
-        let deserialized: TestPairStructure = serde_json::from_str(&serde_json::to_string(&pair).unwrap()).unwrap();
-
-        assert_eq!(pair, deserialized);
     }
 
     #[test]
@@ -644,7 +581,9 @@ mod tests {
     fn point_g1_infinity_test() {
         let p = PointG1::new_inf().unwrap();
         let q = PointG1::new().unwrap();
+        println!("q {:?}", q);
         let result = p.add(&q).unwrap();
+        println!("result {:?}", result);
         assert_eq!(q, result);
     }
 
