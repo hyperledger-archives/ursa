@@ -1,8 +1,8 @@
-extern crate serde;
-extern crate amcl;
+use errors::IndyCryptoError;
 
-use self::amcl::big::BIG;
-use self::amcl::rom::{
+use amcl::big::BIG;
+
+use amcl::rom::{
     CURVE_GX,
     CURVE_GY,
     CURVE_ORDER,
@@ -12,24 +12,18 @@ use self::amcl::rom::{
     CURVE_PYB,
     MODBYTES
 };
-use self::amcl::ecp::ECP;
-use self::amcl::ecp2::ECP2;
-use self::amcl::fp12::FP12;
-use self::amcl::fp2::FP2;
-use self::amcl::pair::{ate, g1mul, g2mul, gtpow, fexp};
-use self::amcl::rand::RAND;
 
-use errors::common::CommonError;
+use amcl::ecp::ECP;
+use amcl::ecp2::ECP2;
+use amcl::fp12::FP12;
+use amcl::fp2::FP2;
+use amcl::pair::{ate, g1mul, g2mul, gtpow, fexp};
+use amcl::rand::RAND;
 
-extern crate rand;
+use rand::os::OsRng;
+use rand::Rng;
 
-use self::rand::os::OsRng;
-use self::rand::Rng;
-use self::serde::ser::{Serialize, Serializer, Error as SError};
-use self::serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
-use std::fmt;
-
-fn random_mod_order() -> Result<BIG, CommonError> {
+fn random_mod_order() -> Result<BIG, IndyCryptoError> {
     let mut seed = vec![0; MODBYTES];
     let mut os_rng = OsRng::new().unwrap();
     os_rng.fill_bytes(&mut seed.as_mut_slice());
@@ -46,7 +40,7 @@ pub struct PointG1 {
 
 impl PointG1 {
     /// Creates new random PointG1
-    pub fn new() -> Result<PointG1, CommonError> {
+    pub fn new() -> Result<PointG1, IndyCryptoError> {
         // generate random point from the group G1
         let point_x = BIG::new_ints(&CURVE_GX);
         let point_y = BIG::new_ints(&CURVE_GY);
@@ -60,7 +54,7 @@ impl PointG1 {
     }
 
     /// Creates new infinity PointG1
-    pub fn new_inf() -> Result<PointG1, CommonError> {
+    pub fn new_inf() -> Result<PointG1, IndyCryptoError> {
         let mut r = ECP::new();
         r.inf();
         Ok(PointG1 {
@@ -69,13 +63,13 @@ impl PointG1 {
     }
 
     /// Checks infinity
-    pub fn is_inf(&self) -> Result<bool, CommonError> {
+    pub fn is_inf(&self) -> Result<bool, IndyCryptoError> {
         let mut r = self.point;
         Ok(r.is_infinity())
     }
 
     /// PointG1 ^ GroupOrderElement
-    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG1, CommonError> {
+    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG1, IndyCryptoError> {
         let mut r = self.point;
         let mut bn = e.bn;
         Ok(PointG1 {
@@ -84,7 +78,7 @@ impl PointG1 {
     }
 
     /// PointG1 * PointG1
-    pub fn add(&self, q: &PointG1) -> Result<PointG1, CommonError> {
+    pub fn add(&self, q: &PointG1) -> Result<PointG1, IndyCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.add(&mut point);
@@ -94,7 +88,7 @@ impl PointG1 {
     }
 
     /// PointG1 / PointG1
-    pub fn sub(&self, q: &PointG1) -> Result<PointG1, CommonError> {
+    pub fn sub(&self, q: &PointG1) -> Result<PointG1, IndyCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.sub(&mut point);
@@ -104,7 +98,7 @@ impl PointG1 {
     }
 
     /// 1 / PointG1
-    pub fn neg(&self) -> Result<PointG1, CommonError> {
+    pub fn neg(&self) -> Result<PointG1, IndyCryptoError> {
         let mut r = self.point;
         r.neg();
         Ok(PointG1 {
@@ -112,24 +106,24 @@ impl PointG1 {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, CommonError> {
+    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
         Ok(self.point.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<PointG1, CommonError> {
+    pub fn from_string(str: &str) -> Result<PointG1, IndyCryptoError> {
         Ok(PointG1 {
             point: ECP::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, CommonError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
         let mut r = self.point;
         let mut vec = vec![0; MODBYTES * 4];
         r.tobytes(&mut vec);
         Ok(vec)
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<PointG1, CommonError> {
+    pub fn from_bytes(b: &[u8]) -> Result<PointG1, IndyCryptoError> {
         Ok(
             PointG1 {
                 point: ECP::frombytes(b)
@@ -137,8 +131,8 @@ impl PointG1 {
         )
     }
 
-    pub fn from_hash(hash: &Vec<u8>) -> Result<PointG1, CommonError> {
-        let mut el = GroupOrderElement::from_bytes(hash.as_slice())?;
+    pub fn from_hash(hash: &[u8]) -> Result<PointG1, IndyCryptoError> {
+        let mut el = GroupOrderElement::from_bytes(hash)?;
         let mut point = ECP::new_big(&el.bn);
 
         while point.is_infinity() {
@@ -152,34 +146,6 @@ impl PointG1 {
     }
 }
 
-impl Serialize for PointG1 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_newtype_struct("PointG1", &self.to_string().map_err(SError::custom)?)
-    }
-}
-
-impl<'a> Deserialize<'a> for PointG1 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
-        struct PointG1Visitor;
-
-        impl<'a> Visitor<'a> for PointG1Visitor {
-            type Value = PointG1;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("expected PointG1")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<PointG1, E>
-                where E: DError
-            {
-                Ok(PointG1::from_string(value).map_err(DError::custom)?)
-            }
-        }
-
-        deserializer.deserialize_str(PointG1Visitor)
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct PointG2 {
     point: ECP2
@@ -187,7 +153,7 @@ pub struct PointG2 {
 
 impl PointG2 {
     /// Creates new random PointG2
-    pub fn new() -> Result<PointG2, CommonError> {
+    pub fn new() -> Result<PointG2, IndyCryptoError> {
         let point_xa = BIG::new_ints(&CURVE_PXA);
         let point_xb = BIG::new_ints(&CURVE_PXB);
         let point_ya = BIG::new_ints(&CURVE_PYA);
@@ -206,7 +172,7 @@ impl PointG2 {
     }
 
     /// Creates new infinity PointG2
-    pub fn new_inf() -> Result<PointG2, CommonError> {
+    pub fn new_inf() -> Result<PointG2, IndyCryptoError> {
         let mut point = ECP2::new();
         point.inf();
 
@@ -216,7 +182,7 @@ impl PointG2 {
     }
 
     /// PointG2 * PointG2
-    pub fn add(&self, q: &PointG2) -> Result<PointG2, CommonError> {
+    pub fn add(&self, q: &PointG2) -> Result<PointG2, IndyCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.add(&mut point);
@@ -227,7 +193,7 @@ impl PointG2 {
     }
 
     /// PointG2 / PointG2
-    pub fn sub(&self, q: &PointG2) -> Result<PointG2, CommonError> {
+    pub fn sub(&self, q: &PointG2) -> Result<PointG2, IndyCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.sub(&mut point);
@@ -238,7 +204,7 @@ impl PointG2 {
     }
 
     /// PointG2 ^ GroupOrderElement
-    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG2, CommonError> {
+    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG2, IndyCryptoError> {
         let mut r = self.point;
         let mut bn = e.bn;
         Ok(PointG2 {
@@ -246,57 +212,29 @@ impl PointG2 {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, CommonError> {
+    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
         Ok(self.point.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<PointG2, CommonError> {
+    pub fn from_string(str: &str) -> Result<PointG2, IndyCryptoError> {
         Ok(PointG2 {
             point: ECP2::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, CommonError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
         let mut point = self.point;
         let mut vec = vec![0; MODBYTES * 4];
         point.tobytes(&mut vec);
         Ok(vec)
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<PointG2, CommonError> {
+    pub fn from_bytes(b: &[u8]) -> Result<PointG2, IndyCryptoError> {
         Ok(
             PointG2 {
                 point: ECP2::frombytes(b)
             }
         )
-    }
-}
-
-impl Serialize for PointG2 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_newtype_struct("PointG2", &self.to_string().map_err(SError::custom)?)
-    }
-}
-
-impl<'a> Deserialize<'a> for PointG2 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
-        struct PointG2Visitor;
-
-        impl<'a> Visitor<'a> for PointG2Visitor {
-            type Value = PointG2;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("expected PointG2")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<PointG2, E>
-                where E: DError
-            {
-                Ok(PointG2::from_string(value).map_err(DError::custom)?)
-            }
-        }
-
-        deserializer.deserialize_str(PointG2Visitor)
     }
 }
 
@@ -306,18 +244,18 @@ pub struct GroupOrderElement {
 }
 
 impl GroupOrderElement {
-    pub fn new() -> Result<GroupOrderElement, CommonError> {
+    pub fn new() -> Result<GroupOrderElement, IndyCryptoError> {
         // returns random element in 0, ..., GroupOrder-1
         Ok(GroupOrderElement {
             bn: random_mod_order()?
         })
     }
 
-    pub fn new_from_seed(seed: Vec<u8>) -> Result<GroupOrderElement, CommonError> {
+    pub fn new_from_seed(seed: &[u8]) -> Result<GroupOrderElement, IndyCryptoError> {
         // returns random element in 0, ..., GroupOrder-1
         let mut rng = RAND::new();
         rng.clean();
-        rng.seed(MODBYTES, seed.as_slice());
+        rng.seed(MODBYTES, seed);
 
         Ok(GroupOrderElement {
             bn: BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng)
@@ -325,7 +263,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement ^ GroupOrderElement) mod GroupOrder
-    pub fn pow_mod(&self, e: &GroupOrderElement) -> Result<GroupOrderElement, CommonError> {
+    pub fn pow_mod(&self, e: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut base = self.bn;
         let mut pow = e.bn;
         Ok(GroupOrderElement {
@@ -334,7 +272,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement + GroupOrderElement) mod GroupOrder
-    pub fn add_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, CommonError> {
+    pub fn add_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut sum = self.bn;
         sum.add(&r.bn);
         sum.rmod(&BIG::new_ints(&CURVE_ORDER));
@@ -344,7 +282,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement - GroupOrderElement) mod GroupOrder
-    pub fn sub_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, CommonError> {
+    pub fn sub_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
         //need to use modneg if sub is negative
         let mut diff = self.bn;
         diff.sub(&r.bn);
@@ -363,7 +301,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement * GroupOrderElement) mod GroupOrder
-    pub fn mul_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, CommonError> {
+    pub fn mul_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut base = self.bn;
         let mut r = r.bn;
         Ok(GroupOrderElement {
@@ -372,7 +310,7 @@ impl GroupOrderElement {
     }
 
     /// 1 / GroupOrderElement
-    pub fn inverse(&self) -> Result<GroupOrderElement, CommonError> {
+    pub fn inverse(&self) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut bn = self.bn;
         bn.invmodp(&BIG::new_ints(&CURVE_ORDER));
 
@@ -382,7 +320,7 @@ impl GroupOrderElement {
     }
 
     /// - GroupOrderElement mod GroupOrder
-    pub fn mod_neg(&self) -> Result<GroupOrderElement, CommonError> {
+    pub fn mod_neg(&self) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut r = self.bn;
         r = BIG::modneg(&mut r, &BIG::new_ints(&CURVE_ORDER));
         Ok(GroupOrderElement {
@@ -390,24 +328,24 @@ impl GroupOrderElement {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, CommonError> {
+    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
         Ok(self.bn.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<GroupOrderElement, CommonError> {
+    pub fn from_string(str: &str) -> Result<GroupOrderElement, IndyCryptoError> {
         Ok(GroupOrderElement {
             bn: BIG::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, CommonError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
         let mut bn = self.bn;
         let mut vec: [u8; MODBYTES] = [0; MODBYTES];
         bn.tobytes(&mut vec);
         Ok(vec.to_vec())
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<GroupOrderElement, CommonError> {
+    pub fn from_bytes(b: &[u8]) -> Result<GroupOrderElement, IndyCryptoError> {
         let mut vec = b.to_vec();
         let len = vec.len();
         if len < MODBYTES {
@@ -428,34 +366,6 @@ impl GroupOrderElement {
     }
 }
 
-impl Serialize for GroupOrderElement {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_newtype_struct("GroupOrderElement", &self.to_string().map_err(SError::custom)?)
-    }
-}
-
-impl<'a> Deserialize<'a> for GroupOrderElement {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
-        struct GroupOrderElementVisitor;
-
-        impl<'a> Visitor<'a> for GroupOrderElementVisitor {
-            type Value = GroupOrderElement;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("expected GroupOrderElement")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<GroupOrderElement, E>
-                where E: DError
-            {
-                Ok(GroupOrderElement::from_string(value).map_err(DError::custom)?)
-            }
-        }
-
-        deserializer.deserialize_str(GroupOrderElementVisitor)
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Pair {
     pair: FP12
@@ -463,7 +373,7 @@ pub struct Pair {
 
 impl Pair {
     /// e(PointG1, PointG2)
-    pub fn pair(p: &PointG1, q: &PointG2) -> Result<Pair, CommonError> {
+    pub fn pair(p: &PointG1, q: &PointG2) -> Result<Pair, IndyCryptoError> {
         let mut p_new = *p;
         let mut q_new = *q;
         let mut result = fexp(&ate(&mut q_new.point, &mut p_new.point));
@@ -475,7 +385,7 @@ impl Pair {
     }
 
     /// e() * e()
-    pub fn mul(&self, b: &Pair) -> Result<Pair, CommonError> {
+    pub fn mul(&self, b: &Pair) -> Result<Pair, IndyCryptoError> {
         let mut base = self.pair;
         let mut b = b.pair;
         base.mul(&mut b);
@@ -486,7 +396,7 @@ impl Pair {
     }
 
     /// e() ^ GroupOrderElement
-    pub fn pow(&self, b: &GroupOrderElement) -> Result<Pair, CommonError> {
+    pub fn pow(&self, b: &GroupOrderElement) -> Result<Pair, IndyCryptoError> {
         let mut base = self.pair;
         let mut b = b.bn;
 
@@ -496,7 +406,7 @@ impl Pair {
     }
 
     /// 1 / e()
-    pub fn inverse(&self) -> Result<Pair, CommonError> {
+    pub fn inverse(&self) -> Result<Pair, IndyCryptoError> {
         let mut r = self.pair;
         r.conj();
         Ok(Pair {
@@ -504,53 +414,21 @@ impl Pair {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, CommonError> {
+    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
         Ok(self.pair.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<Pair, CommonError> {
+    pub fn from_string(str: &str) -> Result<Pair, IndyCryptoError> {
         Ok(Pair {
             pair: FP12::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, CommonError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
         let mut r = self.pair;
         let mut vec = vec![0; MODBYTES * 16];
         r.tobytes(&mut vec);
         Ok(vec)
-    }
-
-    pub fn from_bytes(b: &[u8]) -> Result<Pair, CommonError> {
-        unimplemented!();
-    }
-}
-
-impl Serialize for Pair {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_newtype_struct("Pair", &self.to_string().map_err(SError::custom)?)
-    }
-}
-
-impl<'a> Deserialize<'a> for Pair {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
-        struct PairVisitor;
-
-        impl<'a> Visitor<'a> for PairVisitor {
-            type Value = Pair;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("expected Pair")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Pair, E>
-                where E: DError
-            {
-                Ok(Pair::from_string(value).map_err(DError::custom)?)
-            }
-        }
-
-        deserializer.deserialize_str(PairVisitor)
     }
 }
 

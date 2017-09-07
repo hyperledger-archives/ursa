@@ -1,11 +1,7 @@
-#![warn(unused_variables)] /* FIXME move up */
-
-extern crate libc;
-
 pub mod bls;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum ErrorCode
 {
     Success = 0,

@@ -1,83 +1,69 @@
-extern crate libc;
-
-use self::libc::c_char;
-
-use std::ffi::CStr;
-use std::str::Utf8Error;
-use std::ffi::CString;
 use std::mem;
 
 pub struct CTypesUtils {}
 
 impl CTypesUtils {
-    pub fn c_str_to_string(cstr: *const c_char) -> Result<Option<String>, Utf8Error> {
-        if cstr.is_null() {
-            return Ok(None)
-        }
-
-        unsafe {
-            match CStr::from_ptr(cstr).to_str() {
-                Ok(str) => Ok(Some(str.to_string())),
-                Err(err) => Err(err)
-            }
-        }
+    // Returns vector len and data pointer and forces Rust to unmanage vector memory.
+    // It can be used only for vector with len == capacity. Otherwise
+    // it will be impossible to free this memory correctly
+    // Returned pointer is valid only before first vector modification
+    // De-allocation must be performed by calling c_byte_array_to_vec only!
+    pub fn vec_to_c_byte_array(vec: &Vec<u8>) -> (*const u8, usize) {
+        assert!(vec.len() == vec.capacity());
+        mem::forget(vec);
+        (vec.as_ptr(), vec.len())
     }
 
-    pub fn string_to_cstring(s: String) -> CString {
-        CString::new(s).unwrap()
-    }
-
-    //Returnable pointer is valid only before first vector modification
-    pub fn vec_to_c_byte_array(v: &Vec<u8>) -> (*const i8, u32) {
-        let len = v.len() as u32;
-        let res = (v.as_ptr() as *const i8, len);
-        mem::forget(v);
-        res
+    // It works only with pointers crated by vec_to_c_byte_array!
+    pub fn c_byte_array_to_vec(ptr: *mut u8, len: usize) -> Vec<u8> {
+        unsafe { Vec::from_raw_parts(ptr, len, len) }
     }
 }
 
-macro_rules! check_useful_c_str {
-    ($x:ident, $e:expr) => {
-        let $x = match CTypesUtils::c_str_to_string($x) {
-            Ok(Some(val)) => val,
-            Ok(None) => return $e,
-            Err(_) => return $e
-        };
-
-        if $x.is_empty() {
-            return $e
+macro_rules! check_useful_c_byte_array {
+    ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
+        if $ptr.is_null() {
+            return $err1
         }
+
+        if $len <= 0 {
+            return $err2
+        }
+
+        let $ptr = unsafe { slice::from_raw_parts($ptr, $len) };
     }
 }
 
-macro_rules! check_useful_opt_c_str {
-    ($x:ident, $e:expr) => {
-        let $x = match CTypesUtils::c_str_to_string($x) {
-            Ok(Some(val)) => if val.is_empty() { None } else { Some(val) },
-            Ok(None) => None,
-            Err(_) => return $e
+macro_rules! check_useful_opt_c_byte_array {
+    ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
+        if !$ptr.is_null() && $len <= 0 {
+            return $err2
+        }
+
+        let $ptr = if $ptr.is_null() {
+            None
+        } else {
+            unsafe { Some(slice::from_raw_parts($ptr, $len)) }
         };
     }
 }
 
-macro_rules! check_useful_byte_array {
-    ($x:ident, $l:expr, $e:expr) => {
-        if $x.is_null() {
-            return $e
+macro_rules! check_useful_c_byte_array_ptr {
+    ($ptr_p:ident, $len_p:expr, $err1:expr, $err2:expr) => {
+        if $ptr_p.is_null() {
+            return $err1
         }
 
-        let $x =  unsafe { slice::from_raw_parts($x, $l as usize) };
-        let $x = $x.to_vec();
+        if $len_p.is_null() {
+            return $err2
+        }
     }
 }
 
-macro_rules! check_useful_opt_byte_array {
-    ($x:ident, $l:expr, $e:expr) => {
-        if $x.is_null() {
-            let $x: Option<Vec<u8>> = None;
+macro_rules! check_useful_c_ptr {
+    ($ptr:ident, $err1:expr) => {
+        if $ptr.is_null() {
+            return $err1
         }
-
-        let $x =  unsafe { slice::from_raw_parts($x, $l as usize) };
-        let $x: Option<Vec<u8>> = Some($x.to_vec());
     }
 }

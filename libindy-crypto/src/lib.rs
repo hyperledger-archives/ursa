@@ -1,29 +1,15 @@
-// TODO: FIXME: It must be removed after code layout stabilization!
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
-#[macro_use]
-extern crate log;
-
-extern crate lazy_static;
-
+extern crate amcl;
+extern crate rand;
 extern crate sha1;
 
-// Note that to use macroses from util inside of other modules it must me loaded first!
+// To use macros from util inside of other modules it must me loaded first.
 #[macro_use]
 mod utils;
 
+pub mod bls;
+pub mod errors;
 pub mod ffi;
-mod bls;
-mod pair;
-mod errors;
 
-#[cfg(test)]
-mod tests {
-    //use super::*;
-
-    #[test]
-    fn dummy() {
-        assert! (true, "Dummy check!");
-    }
-}
+#[cfg(feature = "pair_amcl")]
+#[path = "pair/amcl.rs"]
+pub mod pair;
