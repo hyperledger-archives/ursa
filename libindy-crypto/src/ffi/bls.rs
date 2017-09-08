@@ -8,7 +8,11 @@ use std::slice;
 #[no_mangle]
 pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
                                                 gen_len_p: *mut usize) -> ErrorCode {
-    check_useful_c_byte_array_ptr!(gen_p, gen_p, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+
+    use std::io::{self, Write};
+    io::stdout().write(format!("indy_crypto_bls_create_generator >>> {:?} {:?}\n", gen_p, gen_len_p).as_bytes()).unwrap();
+
+    check_useful_c_byte_array_ptr!(gen_p, gen_len_p, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
 
     match Bls::create_generator() {
         Ok(g) => {
@@ -17,6 +21,7 @@ pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
                 *gen_p = gen;
                 *gen_len_p = gen_len;
             }
+            io::stdout().write(format!("indy_crypto_bls_create_generator <<< {:?} {:?}\n", gen, gen_len).as_bytes()).unwrap();
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
@@ -166,15 +171,24 @@ pub  extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
 #[no_mangle]
 pub  extern fn indy_crypto_bls_free_array(ptr: *const u8,
                                           len: usize) -> ErrorCode {
+
+    use std::io::{self, Write};
+    io::stdout().write(format!("indy_crypto_bls_free_array >>> {:?} {:?}\n", ptr, len).as_bytes()).unwrap();
+
     if ptr.is_null() {
         return ErrorCode::CommonInvalidParam1;
     }
+
+    io::stdout().write(format!("indy_crypto_bls_free_array 1\n").as_bytes()).unwrap();
 
     if len <= 0 {
         return ErrorCode::CommonInvalidParam2;
     }
 
+    io::stdout().write(format!("indy_crypto_bls_free_array 2\n").as_bytes()).unwrap();
+
     CTypesUtils::c_byte_array_to_vec(ptr as *mut u8, len);
+    io::stdout().write(format!("indy_crypto_bls_free_array <<<\n").as_bytes()).unwrap();
     ErrorCode::Success
 }
 

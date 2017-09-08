@@ -41,7 +41,7 @@ def _load_cdll() -> CDLL:
         logger.error("_load_cdll: OS isn't supported: %s", os_name)
         raise OSError("OS isn't supported: %s", os_name)
 
-    lib_name = "{0}indy-crypto{1}".format(libindy_prefix, libindy_suffix)
+    lib_name = "{0}indy_crypto{1}".format(libindy_prefix, libindy_suffix)
     logger.debug("_load_cdll: Resolved libindy name is: %s", lib_name)
 
     try:
