@@ -183,7 +183,7 @@ def windowsTesting(isDebugTests) {
 def ubuntuTesting(isDebugTests) {
     node('ubuntu') {
         stage('Ubuntu Test') {
-            linuxTesting("ci/ubuntu.dockerfile ci", isDebugTests)
+            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu", isDebugTests)
         }
     }
 }

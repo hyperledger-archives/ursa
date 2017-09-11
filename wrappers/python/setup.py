@@ -9,6 +9,6 @@ setup(
     author='Vyacheslav Gudkov',
     author_email='vyacheslav.gudkov@dsr-company.com',
     description='This is the official wrapper for Hyperledger Indy Crypto library (https://www.hyperledger.org/projects).',
-    install_requires=[],
+    install_requires=['pytest'],
     tests_require=['pytest']
 )
