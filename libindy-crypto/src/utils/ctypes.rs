@@ -8,10 +8,11 @@ impl CTypesUtils {
     // it will be impossible to free this memory correctly
     // Returned pointer is valid only before first vector modification
     // De-allocation must be performed by calling c_byte_array_to_vec only!
-    pub fn vec_to_c_byte_array(vec: &Vec<u8>) -> (*const u8, usize) {
+    pub fn vec_to_c_byte_array(vec: Vec<u8>) -> (*const u8, usize) {
         assert!(vec.len() == vec.capacity());
+        let res = (vec.as_ptr(), vec.len());
         mem::forget(vec);
-        (vec.as_ptr(), vec.len())
+        res
     }
 
     // It works only with pointers crated by vec_to_c_byte_array!

@@ -1,4 +1,2 @@
-from indy_crypto import bls;
-
-def test_create_generator_works():
-    bls.create_generator();
+def test_create_generator_works(generator):
+    assert generator is not None

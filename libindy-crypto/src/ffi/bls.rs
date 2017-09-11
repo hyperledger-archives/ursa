@@ -8,20 +8,15 @@ use std::slice;
 #[no_mangle]
 pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
                                                 gen_len_p: *mut usize) -> ErrorCode {
-
-    use std::io::{self, Write};
-    io::stdout().write(format!("indy_crypto_bls_create_generator >>> {:?} {:?}\n", gen_p, gen_len_p).as_bytes()).unwrap();
-
     check_useful_c_byte_array_ptr!(gen_p, gen_len_p, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
 
     match Bls::create_generator() {
-        Ok(g) => {
-            let (gen, gen_len) = CTypesUtils::vec_to_c_byte_array(&g);
+        Ok(gen) => {
+            let (gen, gen_len) = CTypesUtils::vec_to_c_byte_array(gen);
             unsafe {
                 *gen_p = gen;
                 *gen_len_p = gen_len;
             }
-            io::stdout().write(format!("indy_crypto_bls_create_generator <<< {:?} {:?}\n", gen, gen_len).as_bytes()).unwrap();
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
@@ -44,8 +39,8 @@ pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
 
     match Bls::generate_keys(gen, seed) {
         Ok((sign_key, ver_key)) => {
-            let (sign_key, sign_key_len) = CTypesUtils::vec_to_c_byte_array(&sign_key);
-            let (ver_key, ver_key_len) = CTypesUtils::vec_to_c_byte_array(&ver_key);
+            let (sign_key, sign_key_len) = CTypesUtils::vec_to_c_byte_array(sign_key);
+            let (ver_key, ver_key_len) = CTypesUtils::vec_to_c_byte_array(ver_key);
             unsafe {
                 *sign_key_p = sign_key;
                 *sign_key_len_p = sign_key_len;
@@ -71,7 +66,7 @@ pub  extern fn indy_crypto_bls_sign(message: *const u8,
 
     match Bls::sign(message, sign_key) {
         Ok(signature) => {
-            let (signature, signature_len) = CTypesUtils::vec_to_c_byte_array(&signature);
+            let (signature, signature_len) = CTypesUtils::vec_to_c_byte_array(signature);
             unsafe {
                 *signature_p = signature;
                 *signature_len_p = signature_len;
@@ -99,7 +94,7 @@ pub  extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const 
 
     match Bls::create_multi_sig(&signatures) {
         Ok(multi_sig) => {
-            let (multi_sig, multi_sig_len) = CTypesUtils::vec_to_c_byte_array(&multi_sig);
+            let (multi_sig, multi_sig_len) = CTypesUtils::vec_to_c_byte_array(multi_sig);
             unsafe {
                 *multi_sig_p = multi_sig;
                 *multi_sig_len_p = multi_sig_len;
@@ -171,24 +166,15 @@ pub  extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
 #[no_mangle]
 pub  extern fn indy_crypto_bls_free_array(ptr: *const u8,
                                           len: usize) -> ErrorCode {
-
-    use std::io::{self, Write};
-    io::stdout().write(format!("indy_crypto_bls_free_array >>> {:?} {:?}\n", ptr, len).as_bytes()).unwrap();
-
     if ptr.is_null() {
         return ErrorCode::CommonInvalidParam1;
     }
-
-    io::stdout().write(format!("indy_crypto_bls_free_array 1\n").as_bytes()).unwrap();
 
     if len <= 0 {
         return ErrorCode::CommonInvalidParam2;
     }
 
-    io::stdout().write(format!("indy_crypto_bls_free_array 2\n").as_bytes()).unwrap();
-
     CTypesUtils::c_byte_array_to_vec(ptr as *mut u8, len);
-    io::stdout().write(format!("indy_crypto_bls_free_array <<<\n").as_bytes()).unwrap();
     ErrorCode::Success
 }
 

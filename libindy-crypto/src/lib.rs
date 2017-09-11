@@ -1,4 +1,6 @@
 extern crate amcl;
+//#[macro_use]
+//extern crate log;
 extern crate rand;
 extern crate sha1;
 
