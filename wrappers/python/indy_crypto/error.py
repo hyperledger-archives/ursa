@@ -50,7 +50,7 @@ class ErrorCode(IntEnum):
 
 
 class IndyCryptoError(Exception):
-    error_code: ErrorCode
+    #error_code: ErrorCode
 
     def __init__(self, error_code: ErrorCode):
         self.error_code = error_code
