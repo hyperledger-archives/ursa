@@ -43,6 +43,10 @@ RUN cargo install --git https://github.com/DSRCorporation/cargo-test-xunit
 
 WORKDIR /home/indy
 
+USER root
+RUN pip3 install \
+twine
+
 USER indy
 RUN virtualenv -p python3.5 /home/indy/test
 USER root
