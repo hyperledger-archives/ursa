@@ -4,4 +4,4 @@ libindy-crypto (0.0.1) unstable; urgency=medium
   * Python wrapper provided. Closes: #315
   * Initial revision. Closes: #314
 
- -- Hyperledger <info@hyperledger.org>  Tue, 12 Sept 2017 19:19:00 +0300
+ -- Hyperledger <info@hyperledger.org>  Tue, 12 Sep 2017 19:19:00 +0300

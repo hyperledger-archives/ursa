@@ -12,12 +12,10 @@ Package: libindy-crypto
 Architecture: amd64
 Depends: 
 Suggests: build-essential
-Description: This is the shared crypto libirary for
-[Hyperledger Indy](https://www.hyperledger.org/projects) components.
+Description: This is the shared crypto libirary for Hyperledger Indy components.
 
 Package: libindy-crypto-dev
 Architecture: amd64
 Depends: libindy-crypto
 Suggests: build-essential
-Description: This is the shared crypto libirary for
-[Hyperledger Indy](https://www.hyperledger.org/projects) components.
+Description: This is the shared crypto libirary for Hyperledger Indy components.
