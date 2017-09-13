@@ -17,12 +17,16 @@ use std::slice;
 /// * `gen_p` - Reference that will contain generator point buffer pointer
 /// * `gen_len_p` - Reference that will contain generator point buffer len
 #[no_mangle]
-pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
-                                                gen_len_p: *mut usize) -> ErrorCode {
-    check_useful_c_byte_array_ptr!(gen_p, gen_len_p, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+pub extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
+                                               gen_len_p: *mut usize) -> ErrorCode {
+    check_useful_c_byte_array_ptr!(gen_p, gen_len_p,
+                                   ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
 
-    match Bls::create_generator() {
+    trace!("indy_crypto_bls_create_generator: >>>");
+
+    let res = match Bls::create_generator() {
         Ok(gen) => {
+            trace!("indy_crypto_bls_create_generator: gen: {:?}", gen);
             let (gen, gen_len) = CTypesUtils::vec_to_c_byte_array(gen);
             unsafe {
                 *gen_p = gen;
@@ -31,7 +35,10 @@ pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
-    }
+    };
+
+    trace!("indy_crypto_bls_create_generator: <<< res: {:?}", res);
+    res
 }
 
 /// Generates and returns random (or known if seed provided) pair of sign and verification keys
@@ -50,21 +57,28 @@ pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
 /// * `ver_key_p` - Reference that will contain verification key buffer pointer
 /// * `ver_key_len_p` - Reference that will contain verification key buffer len
 #[no_mangle]
-pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
-                                             gen_len: usize,
-                                             seed: *const u8,
-                                             seed_len: usize,
-                                             sign_key_p: *mut *const u8,
-                                             sign_key_len_p: *mut usize,
-                                             ver_key_p: *mut *const u8,
-                                             ver_key_len_p: *mut usize) -> ErrorCode {
-    check_useful_c_byte_array!(gen, gen_len, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
-    check_useful_opt_c_byte_array!(seed, seed_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
-    check_useful_c_byte_array_ptr!(sign_key_p, sign_key_len_p, ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
-    check_useful_c_byte_array_ptr!(ver_key_p, ver_key_len_p, ErrorCode::CommonInvalidParam7, ErrorCode::CommonInvalidParam8);
+pub extern fn indy_crypto_bls_generate_keys(gen: *const u8,
+                                            gen_len: usize,
+                                            seed: *const u8,
+                                            seed_len: usize,
+                                            sign_key_p: *mut *const u8,
+                                            sign_key_len_p: *mut usize,
+                                            ver_key_p: *mut *const u8,
+                                            ver_key_len_p: *mut usize) -> ErrorCode {
+    check_useful_c_byte_array!(gen, gen_len,
+                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_opt_c_byte_array!(seed, seed_len,
+                                   ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
+    check_useful_c_byte_array_ptr!(sign_key_p, sign_key_len_p,
+                                   ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
+    check_useful_c_byte_array_ptr!(ver_key_p, ver_key_len_p,
+                                   ErrorCode::CommonInvalidParam7, ErrorCode::CommonInvalidParam8);
 
-    match Bls::generate_keys(gen, seed) {
+    trace!("indy_crypto_bls_generate_keys: >>> gen: {:?}, seed: {:?}", gen, seed);
+
+    let res = match Bls::generate_keys(gen, seed) {
         Ok((sign_key, ver_key)) => {
+            trace!("indy_crypto_bls_generate_keys: sign_key: {:?}, ver_key: {:?}", sign_key, ver_key);
             let (sign_key, sign_key_len) = CTypesUtils::vec_to_c_byte_array(sign_key);
             let (ver_key, ver_key_len) = CTypesUtils::vec_to_c_byte_array(ver_key);
             unsafe {
@@ -76,7 +90,10 @@ pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
-    }
+    };
+
+    trace!("indy_crypto_bls_generate_keys: <<< res: {:?}", res);
+    res
 }
 
 /// Signs the message and returns signature.
@@ -93,15 +110,18 @@ pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
 /// * `signature_p` - Reference that will contain signature buffer pointer
 /// * `signature_len_p` - Reference that will contain signature buffer len
 #[no_mangle]
-pub  extern fn indy_crypto_bls_sign(message: *const u8,
-                                    message_len: usize,
-                                    sign_key: *const u8,
-                                    sign_key_len: usize,
-                                    signature_p: *mut *const u8,
-                                    signature_len_p: *mut usize) -> ErrorCode {
-    check_useful_c_byte_array!(message, message_len, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
-    check_useful_c_byte_array!(sign_key, sign_key_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
-    check_useful_c_byte_array_ptr!(signature_p, signature_len_p, ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
+pub extern fn indy_crypto_bls_sign(message: *const u8,
+                                   message_len: usize,
+                                   sign_key: *const u8,
+                                   sign_key_len: usize,
+                                   signature_p: *mut *const u8,
+                                   signature_len_p: *mut usize) -> ErrorCode {
+    check_useful_c_byte_array!(message, message_len,
+                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(sign_key, sign_key_len,
+                               ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
+    check_useful_c_byte_array_ptr!(signature_p, signature_len_p,
+                                   ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
 
     match Bls::sign(message, sign_key) {
         Ok(signature) => {
@@ -129,19 +149,18 @@ pub  extern fn indy_crypto_bls_sign(message: *const u8,
 /// * `multi_sig_p` - Reference that will contain multi signature buffer pointer
 /// * `multi_sig_len_p` - Reference that will contain multi signature buffer len
 #[no_mangle]
-pub  extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const u8,
-                                                      signature_lens: *const usize,
-                                                      signatures_len: usize,
-                                                      multi_sig_p: *mut *const u8,
-                                                      multi_sig_len_p: *mut usize) -> ErrorCode {
-    let signatures: &[*const u8] = unsafe { slice::from_raw_parts(signatures, signatures_len) };
-    let signature_lens: &[usize] = unsafe { slice::from_raw_parts(signature_lens, signatures_len) };
-    let signatures: Vec<&[u8]> =
-        (0..signatures_len)
-            .map(|i| unsafe { slice::from_raw_parts(signatures[i], signature_lens[i]) })
-            .collect();
-
-    check_useful_c_byte_array_ptr!(multi_sig_p, multi_sig_len_p, ErrorCode::CommonInvalidParam4, ErrorCode::CommonInvalidParam5);
+pub extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const u8,
+                                                     signature_lens: *const usize,
+                                                     signatures_len: usize,
+                                                     multi_sig_p: *mut *const u8,
+                                                     multi_sig_len_p: *mut usize) -> ErrorCode {
+    check_useful_c_byte_arrays!(signatures, signature_lens, signatures_len,
+                                ErrorCode::CommonInvalidParam1,
+                                ErrorCode::CommonInvalidParam2,
+                                ErrorCode::CommonInvalidParam3);
+    check_useful_c_byte_array_ptr!(multi_sig_p, multi_sig_len_p,
+                                   ErrorCode::CommonInvalidParam4,
+                                   ErrorCode::CommonInvalidParam5);
 
     match Bls::create_multi_sig(&signatures) {
         Ok(multi_sig) => {
@@ -170,19 +189,23 @@ pub  extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const 
 /// * `gen_len` - Generator point buffer len
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub  extern fn indy_crypto_bsl_verify(signature: *const u8,
-                                      signature_len: usize,
-                                      message: *const u8,
-                                      message_len: usize,
-                                      ver_key: *const u8,
-                                      ver_key_len: usize,
-                                      gen: *const u8,
-                                      gen_len: usize,
-                                      valid_p: *mut bool) -> ErrorCode {
-    check_useful_c_byte_array!(signature, signature_len, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
-    check_useful_c_byte_array!(message, message_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
-    check_useful_c_byte_array!(ver_key, ver_key_len, ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
-    check_useful_c_byte_array!(gen, gen_len, ErrorCode::CommonInvalidParam7, ErrorCode::CommonInvalidParam8);
+pub extern fn indy_crypto_bsl_verify(signature: *const u8,
+                                     signature_len: usize,
+                                     message: *const u8,
+                                     message_len: usize,
+                                     ver_key: *const u8,
+                                     ver_key_len: usize,
+                                     gen: *const u8,
+                                     gen_len: usize,
+                                     valid_p: *mut bool) -> ErrorCode {
+    check_useful_c_byte_array!(signature, signature_len,
+                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(message, message_len,
+                               ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
+    check_useful_c_byte_array!(ver_key, ver_key_len,
+                               ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
+    check_useful_c_byte_array!(gen, gen_len,
+                               ErrorCode::CommonInvalidParam7, ErrorCode::CommonInvalidParam8);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam9);
 
     match Bls::verify(signature, message, ver_key, gen) {
@@ -209,27 +232,26 @@ pub  extern fn indy_crypto_bsl_verify(signature: *const u8,
 /// * `gen_len` - Generator point buffer len
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub  extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
-                                                multi_sig_len: usize,
-                                                message: *const u8,
-                                                message_len: usize,
-                                                ver_keys: *const *const u8,
-                                                ver_key_lens: *const usize,
-                                                ver_keys_len: usize,
-                                                gen: *const u8,
-                                                gen_len: usize,
-                                                valid_p: *mut bool) -> ErrorCode {
-    check_useful_c_byte_array!(multi_sig, multi_sig_len, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
-    check_useful_c_byte_array!(message, message_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
-
-    let ver_keys: &[*const u8] = unsafe { slice::from_raw_parts(ver_keys, ver_keys_len) };
-    let ver_key_lens: &[usize] = unsafe { slice::from_raw_parts(ver_key_lens, ver_keys_len) };
-    let ver_keys: Vec<&[u8]> =
-        (0..ver_keys_len)
-            .map(|i| unsafe { slice::from_raw_parts(ver_keys[i], ver_key_lens[i]) })
-            .collect();
-
-    check_useful_c_byte_array!(gen, gen_len, ErrorCode::CommonInvalidParam8, ErrorCode::CommonInvalidParam9);
+pub extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
+                                               multi_sig_len: usize,
+                                               message: *const u8,
+                                               message_len: usize,
+                                               ver_keys: *const *const u8,
+                                               ver_key_lens: *const usize,
+                                               ver_keys_len: usize,
+                                               gen: *const u8,
+                                               gen_len: usize,
+                                               valid_p: *mut bool) -> ErrorCode {
+    check_useful_c_byte_array!(multi_sig, multi_sig_len,
+                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(message, message_len,
+                               ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
+    check_useful_c_byte_arrays!(ver_keys, ver_key_lens, ver_keys_len,
+                                ErrorCode::CommonInvalidParam5,
+                                ErrorCode::CommonInvalidParam6,
+                                ErrorCode::CommonInvalidParam7);
+    check_useful_c_byte_array!(gen, gen_len,
+                               ErrorCode::CommonInvalidParam8, ErrorCode::CommonInvalidParam9);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam10);
 
     match Bls::verify_multi_sig(multi_sig, message, &ver_keys, gen) {
@@ -242,8 +264,8 @@ pub  extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
 }
 
 #[no_mangle]
-pub  extern fn indy_crypto_bls_free_array(ptr: *const u8,
-                                          len: usize) -> ErrorCode {
+pub extern fn indy_crypto_bls_free_array(ptr: *const u8,
+                                         len: usize) -> ErrorCode {
     if ptr.is_null() {
         return ErrorCode::CommonInvalidParam1;
     }
@@ -645,6 +667,131 @@ mod tests {
                                                         &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(valid);
+
+        let err_code = indy_crypto_bls_free_array(gen, gen_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_free_array(sign_key1, sign_key1_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_free_array(ver_key1, ver_key1_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_free_array(signature1, signature1_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_free_array(signature2, signature2_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_free_array(multi_sig, multi_sig_len);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_verify_multi_sig_works_for_invalid() {
+        let mut gen: *const u8 = ptr::null();
+        let mut gen_len: usize = 0;
+
+        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+
+        let mut sign_key1: *const u8 = ptr::null();
+        let mut sign_key1_len: usize = 0;
+        let mut ver_key1: *const u8 = ptr::null();
+        let mut ver_key1_len: usize = 0;
+
+        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
+                                                     seed, seed_len,
+                                                     &mut sign_key1, &mut sign_key1_len,
+                                                     &mut ver_key1, &mut ver_key1_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut _sign_key2: *const u8 = ptr::null();
+        let mut _sign_key2_len: usize = 0;
+        let mut sign_key2: *const u8 = ptr::null();
+        let mut sign_key2_len: usize = 0;
+        let mut _ver_key2: *const u8 = ptr::null();
+        let mut _ver_key2_len: usize = 0;
+        let mut ver_key2: *const u8 = ptr::null();
+        let mut ver_key2_len: usize = 0;
+
+        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
+                                                     seed, seed_len,
+                                                     &mut sign_key2, &mut sign_key2_len,
+                                                     &mut _ver_key2, &mut _ver_key2_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
+                                                     seed, seed_len,
+                                                     &mut _sign_key2, &mut _sign_key2_len,
+                                                     &mut ver_key2, &mut ver_key2_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const u8 = ptr::null();
+        let mut signature1_len: usize = 0;
+
+        let err_code = indy_crypto_bls_sign(message, message_len,
+                                            sign_key1, sign_key1_len,
+                                            &mut signature1, &mut signature1_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const u8 = ptr::null();
+        let mut signature2_len: usize = 0;
+
+        let err_code = indy_crypto_bls_sign(message, message_len,
+                                            sign_key2, sign_key2_len,
+                                            &mut signature2, &mut signature2_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures_v = vec![
+            signature1,
+            signature2
+        ];
+        let signatures = signatures_v.as_ptr();
+        let signatures_len = signatures_v.len();
+
+        let signature_lens_v = vec![
+            signature1_len,
+            signature2_len
+        ];
+        let signature_lens = signature_lens_v.as_ptr();
+
+        let mut multi_sig: *const u8 = ptr::null();
+        let mut multi_sig_len: usize = 0;
+
+        let err_code = indy_crypto_bls_create_multi_signature(signatures, signature_lens, signatures_len,
+                                                              &mut multi_sig, &mut multi_sig_len);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let ver_keys_v = vec![
+            ver_key1,
+            ver_key2
+        ];
+        let ver_keys = ver_keys_v.as_ptr();
+        let ver_keys_len = ver_keys_v.len();
+
+        let ver_key_lens_v = vec![
+            ver_key1_len,
+            ver_key2_len
+        ];
+        let ver_key_lens = ver_key_lens_v.as_ptr();
+
+        let mut valid = false;
+
+        let err_code = indy_crypto_bls_verify_multi_sig(multi_sig, multi_sig_len,
+                                                        message, message_len,
+                                                        ver_keys, ver_key_lens, ver_keys_len,
+                                                        gen, gen_len,
+                                                        &mut valid);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!valid);
 
         let err_code = indy_crypto_bls_free_array(gen, gen_len);
         assert_eq!(err_code, ErrorCode::Success);

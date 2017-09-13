@@ -1,5 +1,7 @@
 pub mod bls;
 
+use env_logger;
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(usize)]
 pub enum ErrorCode
@@ -52,4 +54,9 @@ pub enum ErrorCode
 
     // IO Error
     CommonIOError = 114,
+}
+
+#[no_mangle]
+pub extern fn indy_crypto_init_logger() {
+    env_logger::init().unwrap();
 }

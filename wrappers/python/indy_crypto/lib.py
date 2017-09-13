@@ -46,6 +46,10 @@ def _load_cdll() -> CDLL:
 
     try:
         res = CDLL(lib_name)
+
+        logger.debug("_load_cdll: Init Indy Crypto logger")
+        getattr(res, "indy_crypto_init_logger")()
+
         logger.debug("_load_cdll: <<< res: %s", res)
         return res
     except OSError as e:

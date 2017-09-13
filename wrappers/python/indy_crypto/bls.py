@@ -109,11 +109,8 @@ def create_multi_signature(signatures: [bytes]) -> bytes:
 
     for i in range(len(signatures)):
         signature_lens[i] = c_size_t(len(signatures[i]))
-
         # noinspection PyCallingNonCallable,PyTypeChecker
-        signature_buf = (c_ubyte * len(signatures[i]))()
-        signature_buf.value = signatures[i]
-        signatures_arr[i] = signature_buf
+        signatures_arr[i] = (c_ubyte * len(signatures[i]))(*signatures[i])
 
     multi_sig = POINTER(c_ubyte)()
     multi_sig_len = c_size_t()
@@ -180,11 +177,7 @@ def verify_multi_sig(multi_sig: bytes, message: bytes, ver_keys: [bytes], gen: b
 
     for i in range(len(ver_keys)):
         ver_keys_lens[i] = c_size_t(len(ver_keys[i]))
-
-        # noinspection PyCallingNonCallable,PyCallingNonCallable,PyTypeChecker
-        ver_key_buf = (c_ubyte * len(ver_keys[i]))()
-        ver_key_buf.value = ver_keys[i]
-        ver_keys_arr[i] = ver_key_buf
+        ver_keys_arr[i] = (c_ubyte * len(ver_keys[i]))(*ver_keys[i])
 
     valid = c_bool()
 

@@ -49,6 +49,29 @@ macro_rules! check_useful_opt_c_byte_array {
     }
 }
 
+macro_rules! check_useful_c_byte_arrays {
+    ($ptrs:ident, $ptr_lens:ident, $ptrs_len:ident, $err1:expr, $err2:expr, $err3:expr) => {
+        if $ptrs.is_null() {
+            return $err1
+        }
+
+        if $ptr_lens.is_null() {
+            return $err2
+        }
+
+        if $ptrs_len <= 0 {
+            return $err3
+        }
+
+        let $ptrs: &[*const u8] = unsafe { slice::from_raw_parts($ptrs, $ptrs_len) };
+        let $ptr_lens: &[usize] = unsafe { slice::from_raw_parts($ptr_lens, $ptrs_len) };
+        let $ptrs: Vec<&[u8]> =
+        (0..$ptrs_len)
+            .map(|i| unsafe { slice::from_raw_parts($ptrs[i], $ptr_lens[i]) })
+            .collect();
+    }
+}
+
 macro_rules! check_useful_c_byte_array_ptr {
     ($ptr_p:ident, $len_p:expr, $err1:expr, $err2:expr) => {
         if $ptr_p.is_null() {
