@@ -30,9 +30,14 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
    cargo test
    ```
 
+## API Documentation
+
+API documentation is now available as rust doc in code. See:
+* [C API](libindy-crypto\src\ffi\bls.rs)
+* [Rust API](libindy-crypto\src\bls\mod.rs)
+
 ## Wrappers documentation
 
-Note: Wrappers creation is in progress now!!!
 * [Python](wrappers/python/README.md)
 
 ## Binaries

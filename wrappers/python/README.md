@@ -27,5 +27,9 @@ Pull requests welcome!
 
 - Execute tests with pytest
 
+
+### PyPi package
+[python3-indy_crypto](https://pypi.python.org/pypi/python3-indy-crypto) package is available.
+
 ### Example use
-For the main workflow examples check tests in demo folder: https://github.com/hyperledger/indy-crypto/tree/master/wrappers/python/tests/demo
+For the main workflow examples check sample project: https://github.com/hyperledger/indy-crypto/samples/python
