@@ -5,6 +5,17 @@ use bls::Bls;
 
 use std::slice;
 
+/// Creates and returns random generator point that satisfy BLS algorithm requirements.
+///
+/// BLS algorithm requires choosing of generator point that must be known to all parties.
+/// The most of BLS methods require generator to be provided.
+///
+/// Note: allocated buffer referenced by (gen_p, gen_len_p) must be deallocated by calling
+/// indy_crypto_bls_free_array.
+///
+/// # Arguments
+/// * `gen_p` - Reference that will contain generator point buffer pointer
+/// * `gen_len_p` - Reference that will contain generator point buffer len
 #[no_mangle]
 pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
                                                 gen_len_p: *mut usize) -> ErrorCode {
@@ -23,6 +34,21 @@ pub  extern fn indy_crypto_bls_create_generator(gen_p: *mut *const u8,
     }
 }
 
+/// Generates and returns random (or known if seed provided) pair of sign and verification keys
+///
+/// Note: allocated buffers referenced by (sign_key_p, sign_key_len_p) and (ver_key_p, ver_key_len_p)
+/// must be deallocated by calling indy_crypto_bls_free_array.
+///
+/// # Arguments
+///
+/// * `gen` - Generator point buffer pointer
+/// * `gen_len` - Generator point buffer len
+/// * `seed` - Seed buffer pinter
+/// * `seed_len` - Seed buffer pinter len
+/// * `sign_key_p` - Reference that will contain sign key buffer pointer
+/// * `sign_key_len_p` - Reference that will contain sign key buffer len
+/// * `ver_key_p` - Reference that will contain verification key buffer pointer
+/// * `ver_key_len_p` - Reference that will contain verification key buffer len
 #[no_mangle]
 pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
                                              gen_len: usize,
@@ -53,6 +79,19 @@ pub  extern fn indy_crypto_bls_generate_keys(gen: *const u8,
     }
 }
 
+/// Signs the message and returns signature.
+///
+/// Note: allocated buffer referenced by (signature_p, signature_len_p) must be
+/// deallocated by calling indy_crypto_bls_free_array.
+///
+/// # Arguments
+///
+/// * `message` - Message to sign buffer pointer
+/// * `message_len` - Message to sign buffer len
+/// * `sign_key` - Sign key buffer pointer
+/// * `sign_key_len` - Sign key buffer len
+/// * `signature_p` - Reference that will contain signature buffer pointer
+/// * `signature_len_p` - Reference that will contain signature buffer len
 #[no_mangle]
 pub  extern fn indy_crypto_bls_sign(message: *const u8,
                                     message_len: usize,
@@ -77,6 +116,18 @@ pub  extern fn indy_crypto_bls_sign(message: *const u8,
     }
 }
 
+/// Generates and returns multi signature for provided list of signatures.
+///
+/// Note: allocated buffer referenced by (multi_sig_p, multi_sig_len_p) must be
+/// deallocated by calling indy_crypto_bls_free_array.
+///
+/// # Arguments
+///
+/// * `signatures` - Pointer to buffer that contains pointers to signature buffers
+/// * `signature_lens` - Pointer to buffer that contains lens of signature buffers
+/// * `signatures_len` - Len of buffer that contains pointers to signature buffers
+/// * `multi_sig_p` - Reference that will contain multi signature buffer pointer
+/// * `multi_sig_len_p` - Reference that will contain multi signature buffer len
 #[no_mangle]
 pub  extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const u8,
                                                       signature_lens: *const usize,
@@ -105,6 +156,19 @@ pub  extern fn indy_crypto_bls_create_multi_signature(signatures: *const *const 
     }
 }
 
+/// Verifies the message signature and returns true - if signature valid or false otherwise.
+///
+/// # Arguments
+///
+/// * `signature` - Signature to verify buffer pointer
+/// * `signature_len` - Signature to verify buffer len
+/// * `message` - Message to verify buffer pointer
+/// * `message_len` - Message to verify buffer len
+/// * `ver_key` - Verification key buffer pinter
+/// * `ver_key_len` - Verification key buffer len
+/// * `gen` - Generator point buffer pointer
+/// * `gen_len` - Generator point buffer len
+/// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
 pub  extern fn indy_crypto_bsl_verify(signature: *const u8,
                                       signature_len: usize,
@@ -130,6 +194,20 @@ pub  extern fn indy_crypto_bsl_verify(signature: *const u8,
     }
 }
 
+/// Verifies the message multi signature and returns true - if signature valid or false otherwise.
+///
+/// # Arguments
+///
+/// * `multi_sig` - Multi signature to verify buffer pointer
+/// * `multi_sig` - Multi signature to verify buffer len
+/// * `message` - Message to verify buffer pointer
+/// * `message_len` - Message to verify buffer len
+/// * `ver_keys` - Pointer to buffer that contains pointers to verification key buffers
+/// * `ver_key_lens` - Pointer to buffer that contains lens of verification key buffers
+/// * `ver_keys_len` - Len of buffer that contains pointers to verification key buffers
+/// * `gen` - Generator point buffer pointer
+/// * `gen_len` - Generator point buffer len
+/// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
 pub  extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const u8,
                                                 multi_sig_len: usize,
