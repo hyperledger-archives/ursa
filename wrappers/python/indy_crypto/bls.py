@@ -7,7 +7,12 @@ from .lib import do_call
 
 def create_generator() -> bytes:
     """
-    :return: BLS generator.
+    Creates and returns random generator point that satisfy BLS algorithm requirements.
+
+    BLS algorithm requires choosing of generator point that must be known to all parties.
+    The most of BLS methods require generator to be provided.
+
+    :return: BLS generator
     """
 
     logger = logging.getLogger(__name__)
@@ -27,7 +32,11 @@ def create_generator() -> bytes:
 
 def generate_keys(gen: bytes, seed: Optional[bytes]) -> (bytes, bytes):
     """
-    :return: (Sign key, Verification Key).
+    Generates and returns random (or known if seed provided) pair of sign and verification keys
+
+    :param: gen - Generator point
+    :param: seed - Can be used to generate known keys
+    :return: (Sign key, Verification Key)
     """
 
     logger = logging.getLogger(__name__)
@@ -56,7 +65,11 @@ def generate_keys(gen: bytes, seed: Optional[bytes]) -> (bytes, bytes):
 
 def sign(message: bytes, sign_key: bytes) -> bytes:
     """
-    :return: Signature.
+    Signs the message and returns signature.
+
+    :param: message - Message to sign
+    :param: sign_key - Sign key
+    :return: Signature
     """
 
     logger = logging.getLogger(__name__)
@@ -80,7 +93,10 @@ def sign(message: bytes, sign_key: bytes) -> bytes:
 
 def create_multi_signature(signatures: [bytes]) -> bytes:
     """
-    :return: Multi signature.
+    Generates and returns multi signature for provided list of signatures.
+
+    :param: signatures - List of signatures
+    :return: Multi signature
     """
 
     logger = logging.getLogger(__name__)
@@ -116,7 +132,13 @@ def create_multi_signature(signatures: [bytes]) -> bytes:
 
 def verify(signature: bytes, message: bytes, ver_key: bytes, gen: bytes) -> bool:
     """
-    :return: true if signature valid.
+    Verifies the message signature and returns true - if signature valid or false otherwise.
+
+    :param: signature - Signature to verify
+    :param: message - Message to verify
+    :param: ver_key - Verification key
+    :param: gen - Generator point
+    :return: true if signature valid
     """
 
     logger = logging.getLogger(__name__)
@@ -138,6 +160,12 @@ def verify(signature: bytes, message: bytes, ver_key: bytes, gen: bytes) -> bool
 
 def verify_multi_sig(multi_sig: bytes, message: bytes, ver_keys: [bytes], gen: bytes) -> bool:
     """
+    Verifies the message multi signature and returns true - if signature valid or false otherwise.
+
+    :param: multi_sig - Multi signature to verify
+    :param: message - Message to verify
+    :param: ver_keys - List of verification keys
+    :param: gen - Generator point
     :return: true if multi signature valid.
     """
 
