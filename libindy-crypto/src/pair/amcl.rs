@@ -1,3 +1,4 @@
+#[cfg(feature = "serialization")]
 extern crate serde;
 use errors::IndyCryptoError;
 
@@ -24,8 +25,11 @@ use amcl::rand::RAND;
 use rand::os::OsRng;
 use rand::Rng;
 
+#[cfg(feature = "serialization")]
 use self::serde::ser::{Serialize, Serializer, Error as SError};
+#[cfg(feature = "serialization")]
 use self::serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
+#[cfg(feature = "serialization")]
 use std::fmt;
 
 fn random_mod_order() -> Result<BIG, IndyCryptoError> {
@@ -151,12 +155,14 @@ impl PointG1 {
     }
 }
 
+#[cfg(feature = "serialization")]
 impl Serialize for PointG1 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_newtype_struct("PointG1", &self.to_string().map_err(SError::custom)?)
     }
 }
 
+#[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for PointG1 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
         struct PointG1Visitor;
@@ -271,12 +277,14 @@ impl PointG2 {
     }
 }
 
+#[cfg(feature = "serialization")]
 impl Serialize for PointG2 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_newtype_struct("PointG2", &self.to_string().map_err(SError::custom)?)
     }
 }
 
+#[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for PointG2 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
         struct PointG2Visitor;
@@ -427,12 +435,14 @@ impl GroupOrderElement {
     }
 }
 
+#[cfg(feature = "serialization")]
 impl Serialize for GroupOrderElement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_newtype_struct("GroupOrderElement", &self.to_string().map_err(SError::custom)?)
     }
 }
 
+#[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for GroupOrderElement {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
         struct GroupOrderElementVisitor;
@@ -521,12 +531,14 @@ impl Pair {
     }
 }
 
+#[cfg(feature = "serialization")]
 impl Serialize for Pair {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_newtype_struct("Pair", &self.to_string().map_err(SError::custom)?)
     }
 }
 
+#[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for Pair {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
         struct PairVisitor;
@@ -551,6 +563,61 @@ impl<'a> Deserialize<'a> for Pair {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn pairing_definition_bilinearity() {
+        let a = GroupOrderElement::new().unwrap();
+        let b = GroupOrderElement::new().unwrap();
+        let p = PointG1::new().unwrap();
+        let q = PointG2::new().unwrap();
+        let left = Pair::pair(&p.mul(&a).unwrap(), &q.mul(&b).unwrap()).unwrap();
+        let right = Pair::pair(&p, &q).unwrap().pow(&a.mul_mod(&b).unwrap()).unwrap();
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn point_g1_infinity_test() {
+        let p = PointG1::new_inf().unwrap();
+        let q = PointG1::new().unwrap();
+        let result = p.add(&q).unwrap();
+        assert_eq!(q, result);
+    }
+
+    #[test]
+    fn point_g1_infinity_test2() {
+        let p = PointG1::new().unwrap();
+        let inf = p.sub(&p).unwrap();
+        let q = PointG1::new().unwrap();
+        let result = inf.add(&q).unwrap();
+        assert_eq!(q, result);
+    }
+
+    #[test]
+    fn point_g2_infinity_test() {
+        let p = PointG2::new_inf().unwrap();
+        let q = PointG2::new().unwrap();
+        let result = p.add(&q).unwrap();
+        assert_eq!(q, result);
+    }
+
+    #[test]
+    fn inverse_for_pairing() {
+        let p1 = PointG1::new().unwrap();
+        let q1 = PointG2::new().unwrap();
+        let p2 = PointG1::new().unwrap();
+        let q2 = PointG2::new().unwrap();
+        let pair1 = Pair::pair(&p1, &q1).unwrap();
+        let pair2 = Pair::pair(&p2, &q2).unwrap();
+        let pair_result = pair1.mul(&pair2).unwrap();
+        let pair3 = pair_result.mul(&pair1.inverse().unwrap()).unwrap();
+        assert_eq!(pair2, pair3);
+    }
+}
+
+#[cfg(feature = "serialization")]
+#[cfg(test)]
+mod serialization_tests {
     use super::*;
 
     extern crate serde_json;
@@ -628,54 +695,5 @@ mod tests {
         let deserialized: TestPairStructure = serde_json::from_str(&serde_json::to_string(&pair).unwrap()).unwrap();
 
         assert_eq!(pair, deserialized);
-    }
-
-    #[test]
-    fn pairing_definition_bilinearity() {
-        let a = GroupOrderElement::new().unwrap();
-        let b = GroupOrderElement::new().unwrap();
-        let p = PointG1::new().unwrap();
-        let q = PointG2::new().unwrap();
-        let left = Pair::pair(&p.mul(&a).unwrap(), &q.mul(&b).unwrap()).unwrap();
-        let right = Pair::pair(&p, &q).unwrap().pow(&a.mul_mod(&b).unwrap()).unwrap();
-        assert_eq!(left, right);
-    }
-
-    #[test]
-    fn point_g1_infinity_test() {
-        let p = PointG1::new_inf().unwrap();
-        let q = PointG1::new().unwrap();
-        let result = p.add(&q).unwrap();
-        assert_eq!(q, result);
-    }
-
-    #[test]
-    fn point_g1_infinity_test2() {
-        let p = PointG1::new().unwrap();
-        let inf = p.sub(&p).unwrap();
-        let q = PointG1::new().unwrap();
-        let result = inf.add(&q).unwrap();
-        assert_eq!(q, result);
-    }
-
-    #[test]
-    fn point_g2_infinity_test() {
-        let p = PointG2::new_inf().unwrap();
-        let q = PointG2::new().unwrap();
-        let result = p.add(&q).unwrap();
-        assert_eq!(q, result);
-    }
-
-    #[test]
-    fn inverse_for_pairing() {
-        let p1 = PointG1::new().unwrap();
-        let q1 = PointG2::new().unwrap();
-        let p2 = PointG1::new().unwrap();
-        let q2 = PointG2::new().unwrap();
-        let pair1 = Pair::pair(&p1, &q1).unwrap();
-        let pair2 = Pair::pair(&p2, &q2).unwrap();
-        let pair_result = pair1.mul(&pair2).unwrap();
-        let pair3 = pair_result.mul(&pair1.inverse().unwrap()).unwrap();
-        assert_eq!(pair2, pair3);
     }
 }
