@@ -278,10 +278,9 @@ def libindyCryptoCargoPublishing(testEnv, isRelease) {
     dir('libindy-crypto') {
         testEnv.inside {
             def suffix = getSuffix(isRelease, "Cargo")
+            sh "sed -i -E -e 'H;1h;\$!d;x' -e \"s/version = \\\"([0-9,.]+)/version = \\\"\\1$suffix/\" Cargo.toml"
 
             withCredentials([string(credentialsId: 'cargoSecretKey', variable: 'LOGIN')]) {
-                sh "sed -i -E -e 'H;1h;\$!d;x' -e \"s/version = \"([0-9,.]+)\"/version = \"\\1$suffix\"/\" Cargo.toml"
-
                 sh 'cargo login $LOGIN'
                 sh 'cargo package --allow-dirty'
                 sh 'cargo publish --allow-dirty'
