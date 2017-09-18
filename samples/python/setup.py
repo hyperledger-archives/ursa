@@ -8,5 +8,5 @@ setup(
     author='Vyacheslav Gudkov',
     author_email='vyacheslav.gudkov@dsr-company.com',
     description='This is the sample of usage python wrapper for Hyperledger Indy Crypto.',
-    install_requires=['python3-indy_crypto']
+    install_requires=['python3-indy_crypto==0.0.1-dev12']
 )
