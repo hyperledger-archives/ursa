@@ -9,6 +9,10 @@ extern crate sha1;
 #[macro_use]
 mod utils;
 
+#[cfg(feature = "serialization")]
+#[macro_use]
+extern crate serde_derive;
+
 pub mod bls;
 pub mod errors;
 pub mod ffi;
