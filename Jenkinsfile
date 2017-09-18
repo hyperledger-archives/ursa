@@ -201,6 +201,7 @@ def ubuntuPublishing() {
                 testEnv = dockerHelpers.build('indy-crypto', 'libindy-crypto/ci/ubuntu.dockerfile libindy-crypto/ci')
 
                 libindyCryptoDebPublishing(testEnv)
+                libindyCryptoCargoPublishing(testEnv, false)
                 pythonWrapperPublishing(testEnv, false)
             }
             finally {
@@ -273,6 +274,22 @@ def getSuffix(isRelease, target) {
     return suffix
 }
 
+def libindyCryptoCargoPublishing(testEnv, isRelease) {
+    dir('libindy-crypto') {
+        testEnv.inside {
+            def suffix = getSuffix(isRelease, "Cargo")
+
+            withCredentials([string(credentialsId: 'cargoSecretKey', variable: 'LOGIN')]) {
+                sh "sed -i -E -e 'H;1h;\$!d;x' -e \"s/version = \"([0-9,.]+)\"/version = \"\\1$suffix\"/\" Cargo.toml"
+
+                sh 'cargo login $LOGIN'
+                sh 'cargo package --allow-dirty'
+                sh 'cargo publish --allow-dirty'
+            }
+        }
+    }
+}
+
 def pythonWrapperPublishing(testEnv, isRelease) {
     dir('wrappers/python') {
         def suffix = getSuffix(isRelease, "Pypi")
@@ -305,6 +322,7 @@ def publishingRCtoStable() {
                 echo 'Moving RC artifacts to Stable: Build docker image for wrappers publishing'
                 testEnv = dockerHelpers.build('indy-crypto', 'libindy-crypto/ci/ubuntu.dockerfile libindy-crypto/ci')
                 echo 'Moving RC artifacts to Stable: python wrapper'
+                libindyCryptoCargoPublishing(testEnv, true)
                 pythonWrapperPublishing(testEnv, true)
             } finally {
                 echo 'Moving RC artifacts to Stable: Cleanup'
