@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='python3-indy_crypto',
-    version='0.0.1',
+    version='0.1.0',
     packages=['indy_crypto'],
     url='https://github.com/hyperledger/indy_crypto-crypto',
     license='MIT/Apache-2.0',
