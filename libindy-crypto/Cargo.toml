@@ -19,7 +19,7 @@ serialization = ["serde", "serde_json", "serde_derive"]
 amcl = { version = "0.1.2",  optional = true, features = ["BLS383"]}
 log = "0.3.7"
 rand = "0.3"
-sha1 = "0.2.0"
+sha2 = "0.6.0"
 env_logger = "0.4.3"
 serde = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}

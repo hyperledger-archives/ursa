@@ -1,7 +1,7 @@
 use errors::IndyCryptoError;
 use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 
-use sha1::Sha1;
+use sha2::{Sha256, Digest};
 
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
@@ -305,7 +305,7 @@ impl Bls {
     /// Bls::sign(&message, &sign_key).unwrap();
     /// ```
     pub fn sign(message: &[u8], sign_key: &SignKey) -> Result<Signature, IndyCryptoError> {
-        let point = Bls::_h(message)?.mul(&sign_key.group_order_element)?;
+        let point = Bls::_hash(message)?.mul(&sign_key.group_order_element)?;
         Ok(Signature {
             point,
             bytes: point.to_bytes()?
@@ -335,7 +335,7 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        let h = Bls::_h(message)?;
+        let h = Bls::_hash(message)?;
         Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
     }
 
@@ -381,7 +381,7 @@ impl Bls {
     pub fn verify_multi_sig(multi_sig: &MultiSignature, message: &[u8], ver_keys: &[&VerKey], gen: &Generator) -> Result<bool, IndyCryptoError> {
         let mut multi_sig_e_list: Vec<Pair> = Vec::new();
         for ver_key in ver_keys {
-            let h = Bls::_h(message)?;
+            let h = Bls::_hash(message)?;
             multi_sig_e_list.push(Pair::pair(&h, &ver_key.point)?);
         }
 
@@ -393,11 +393,11 @@ impl Bls {
         Ok(Pair::pair(&multi_sig.point, &gen.point)?.eq(&multi_sig_e))
     }
 
-    fn _h(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
-        let mut res = Sha1::new();
-        res.update(message);
+    fn _hash(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
+        let mut hasher = Sha256::default();
+        hasher.input(message);
 
-        Ok(PointG1::from_hash(&res.digest().bytes().to_vec())?)
+        Ok(PointG1::from_hash(hasher.result().as_slice())?)
     }
 }
 

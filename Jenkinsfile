@@ -336,7 +336,7 @@ def publishLibindyCryptoRCtoStable(version) {
     withCredentials([file(credentialsId: 'EvernymRepoSSHKey', variable: 'key')]) {
         for (os in ['ubuntu', 'windows']) { //FIXME add rhel IS-307
             src = "/var/repository/repos/libindy_crypto/$os/rc/$rcFullVersion/"
-            target = "/var/repository/repos/libindy_vrypto/$os/stable/$version"
+            target = "/var/repository/repos/libindy_crypto/$os/stable/$version"
             //should not exists
             sh "ssh -v -oStrictHostKeyChecking=no -i '$key' repo@192.168.11.111 '! ls $target'"
             sh "ssh -v -oStrictHostKeyChecking=no -i '$key' repo@192.168.11.111 cp -r $src $target"
