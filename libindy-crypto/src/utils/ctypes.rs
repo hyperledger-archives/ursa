@@ -1,26 +1,3 @@
-use std::mem;
-
-pub struct CTypesUtils {}
-
-impl CTypesUtils {
-    // Returns vector len and data pointer and forces Rust to unmanage vector memory.
-    // It can be used only for vector with len == capacity. Otherwise
-    // it will be impossible to free this memory correctly
-    // Returned pointer is valid only before first vector modification
-    // De-allocation must be performed by calling c_byte_array_to_vec only!
-    pub fn vec_to_c_byte_array(vec: Vec<u8>) -> (*const u8, usize) {
-        assert!(vec.len() == vec.capacity());
-        let res = (vec.as_ptr(), vec.len());
-        mem::forget(vec);
-        res
-    }
-
-    // It works only with pointers crated by vec_to_c_byte_array!
-    pub fn c_byte_array_to_vec(ptr: *mut u8, len: usize) -> Vec<u8> {
-        unsafe { Vec::from_raw_parts(ptr, len, len) }
-    }
-}
-
 macro_rules! check_useful_c_byte_array {
     ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
         if $ptr.is_null() {
@@ -49,38 +26,31 @@ macro_rules! check_useful_opt_c_byte_array {
     }
 }
 
-macro_rules! check_useful_c_byte_arrays {
-    ($ptrs:ident, $ptr_lens:ident, $ptrs_len:ident, $err1:expr, $err2:expr, $err3:expr) => {
+macro_rules! check_useful_c_reference {
+    ($ptr:ident, $type:ty, $err:expr) => {
+        if $ptr.is_null() {
+            return $err
+        }
+
+        let $ptr: &$type = unsafe { &*($ptr as *const $type) };;
+    }
+}
+
+macro_rules! check_useful_c_reference_array {
+    ($ptrs:ident, $ptrs_len:ident, $type:ty, $err1:expr, $err2:expr) => {
         if $ptrs.is_null() {
             return $err1
         }
 
-        if $ptr_lens.is_null() {
-            return $err2
-        }
-
         if $ptrs_len <= 0 {
-            return $err3
-        }
-
-        let $ptrs: &[*const u8] = unsafe { slice::from_raw_parts($ptrs, $ptrs_len) };
-        let $ptr_lens: &[usize] = unsafe { slice::from_raw_parts($ptr_lens, $ptrs_len) };
-        let $ptrs: Vec<&[u8]> =
-        (0..$ptrs_len)
-            .map(|i| unsafe { slice::from_raw_parts($ptrs[i], $ptr_lens[i]) })
-            .collect();
-    }
-}
-
-macro_rules! check_useful_c_byte_array_ptr {
-    ($ptr_p:ident, $len_p:expr, $err1:expr, $err2:expr) => {
-        if $ptr_p.is_null() {
-            return $err1
-        }
-
-        if $len_p.is_null() {
             return $err2
         }
+
+        let $ptrs: Vec<&$type> =
+            unsafe { slice::from_raw_parts($ptrs, $ptrs_len) }
+                .iter()
+                .map(|ptr| unsafe { &*(*ptr as *const $type) })
+                .collect();
     }
 }
 

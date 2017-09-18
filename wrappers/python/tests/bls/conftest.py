@@ -1,45 +1,54 @@
-from indy_crypto import bls
+from indy_crypto.bls import Bls, Generator, SignKey, VerKey, Signature, MultiSignature
 
 import pytest
 
 
 @pytest.fixture
-def generator() -> bytes:
-    gen = bls.create_generator()
+def generator() -> Generator:
+    gen = Generator.new()
 
-    assert type(gen) is bytes
-    assert len(gen) > 0
-
+    assert type(gen) is Generator
+    assert gen.c_instance is not None
     return gen
 
 
 @pytest.fixture
-def keys1(generator) -> (bytes, bytes):
-    sign_key, ver_key = bls.generate_keys(generator, None)
+def sign_key1() -> SignKey:
+    sign_key = SignKey.new(None)
 
-    assert type(sign_key) is bytes
-    assert len(sign_key) > 0
-
-    assert type(sign_key) is bytes
-    assert len(sign_key) > 0
-
-    return sign_key, ver_key
+    assert type(sign_key) is SignKey
+    assert sign_key.c_instance is not None
+    return sign_key
 
 
 @pytest.fixture
-def keys2(generator) -> (bytes, bytes):
+def sign_key2() -> SignKey:
     seed = bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4,
                   5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8,
                   9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8])
-    sign_key, ver_key = bls.generate_keys(generator, seed)
+    sign_key = SignKey.new(seed)
 
-    assert type(sign_key) is bytes
-    assert len(sign_key) > 0
+    assert type(sign_key) is SignKey
+    assert sign_key.c_instance is not None
+    return sign_key
 
-    assert type(sign_key) is bytes
-    assert len(sign_key) > 0
 
-    return sign_key, ver_key
+@pytest.fixture
+def ver_key1(generator: Generator, sign_key1: SignKey) -> VerKey:
+    ver_key = VerKey.new(generator, sign_key1)
+
+    assert type(ver_key) is VerKey
+    assert ver_key.c_instance is not None
+    return ver_key
+
+
+@pytest.fixture
+def ver_key2(generator: Generator, sign_key2: SignKey) -> VerKey:
+    ver_key = VerKey.new(generator, sign_key2)
+
+    assert type(ver_key) is VerKey
+    assert ver_key.c_instance is not None
+    return ver_key
 
 
 @pytest.fixture
@@ -48,17 +57,27 @@ def message() -> bytes:
 
 
 @pytest.fixture
-def signature1(message, keys1) -> bytes:
-    sign_key, ver_key = keys1
-    return bls.sign(message, sign_key)
+def signature1(message: bytes, sign_key1: SignKey) -> Signature:
+    signature = Bls.sign(message, sign_key1)
+
+    assert type(signature) is Signature
+    assert signature.c_instance is not None
+    return signature
 
 
 @pytest.fixture
-def signature2(message, keys2) -> bytes:
-    sign_key, ver_key = keys2
-    return bls.sign(message, sign_key)
+def signature2(message: bytes, sign_key2: SignKey) -> Signature:
+    signature = Bls.sign(message, sign_key2)
+
+    assert type(signature) is Signature
+    assert signature.c_instance is not None
+    return signature
 
 
 @pytest.fixture
-def multi_sig(signature1, signature2) -> bytes:
-    return bls.create_multi_signature([signature1, signature2])
+def multi_sig(signature1: Signature, signature2: Signature) -> MultiSignature:
+    multi_sig = MultiSignature.new([signature1, signature2])
+
+    assert type(multi_sig) is MultiSignature
+    assert multi_sig.c_instance is not None
+    return multi_sig
