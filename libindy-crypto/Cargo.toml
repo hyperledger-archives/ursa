@@ -2,6 +2,8 @@
 name = "indy-crypto"
 version = "0.0.1"
 authors = ["Artemkaaas <artem.ivanov@dsr-company.com>"]
+description = "This is the shared crypto libirary for Hyperledger Indy components."
+license = "MIT/Apache-2.0"
 
 [lib]
 name = "indy_crypto"
