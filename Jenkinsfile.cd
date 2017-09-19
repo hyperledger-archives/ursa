@@ -16,20 +16,15 @@ try {
 
 def testing() {
     stage('Testing') {
-        isDebugTests = !(env.BRANCH_NAME in ['master', 'rc'])
         parallel([
-                'ubuntu-test' : { ubuntuTesting(isDebugTests) },
-                'windows-test': { windowsTesting(isDebugTests) }
+                'ubuntu-test' : { ubuntuTesting() },
+                'windows-test': { windowsTesting() }
         ])
     }
 }
 
 def publishing() {
     stage('Publishing') {
-        if (!(env.BRANCH_NAME in ['master', 'rc'])) {
-            echo "${env.BRANCH_NAME}: skip publishing"
-            return
-        }
         echo "${env.BRANCH_NAME}: start publishing"
 
         publishedVersions = parallel([
@@ -88,7 +83,7 @@ void getSrcVersion() {
     return version
 }
 
-def linuxTesting(file, env_name, isDebugTests) {
+def linuxTesting(file, env_name) {
     try {
         echo "${env_name} Test: Checkout csm"
         checkout scm
@@ -99,21 +94,14 @@ def linuxTesting(file, env_name, isDebugTests) {
             echo "${env_name} Test: Build docker image"
             
             testEnv = dockerHelpers.build('libindy-crypto', file)
-            testEnv.inside() {
+            testEnv.inside {
                 echo "${env_name} Test: Test"
                 try {
-                    def buildType = ''
-                    if (!isDebugTests) {
-                        buildType = '--release'
-                    }
-
-                    testParams = "$buildType".trim()
-
                     echo "${env_name} Test: Build"
-                    sh "RUST_BACKTRACE=1 cargo test $testParams --no-run"
+                    sh "RUST_BACKTRACE=1 cargo test --release --no-run"
 
                     echo "${env_name} Test: Run tests"
-                    sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test $testParams"
+                    sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test --release"
                 }
                 finally {
                     /* TODO FIXME restore after xunit will be fixed
@@ -123,9 +111,7 @@ def linuxTesting(file, env_name, isDebugTests) {
             }
         }
 
-        def folder = isDebugTests ? "debug" : "release"
-
-        sh "cp libindy-crypto/target/$folder/libindy_crypto.so wrappers/python"
+        sh "cp libindy-crypto/target/release/libindy_crypto.so wrappers/python"
         dir('wrappers/python') {
             testEnv.inside() {
                 echo "${env_name} Test: Test python wrapper"
@@ -142,7 +128,7 @@ def linuxTesting(file, env_name, isDebugTests) {
     }
 }
 
-def windowsTesting(isDebugTests) {
+def windowsTesting() {
     node('win2016') {
         stage('Windows Test') {
             echo "Windows Test: Checkout scm"
@@ -150,23 +136,18 @@ def windowsTesting(isDebugTests) {
 
             try {
                 dir('libindy-crypto') {
-                    def buildType = ''
-                    if (!isDebugTests) {
-                        buildType = '--release'
-                    }
-
                     echo "Windows Test: Build"
                     withEnv([
                             "RUST_BACKTRACE=1"
                     ]) {
-                        bat "cargo test $buildType --no-run"
+                        bat "cargo test --release --no-run"
 
                         echo "Windows Test: Run tests"
                         withEnv([
                                 "RUST_TEST_THREADS=1",
                                 "RUST_LOG=trace",
                         ]) {
-                            bat "cargo test $buildType"
+                            bat "cargo test --release"
                         }
                     }
                 }
@@ -180,10 +161,10 @@ def windowsTesting(isDebugTests) {
     }
 }
 
-def ubuntuTesting(isDebugTests) {
+def ubuntuTesting() {
     node('ubuntu') {
         stage('Ubuntu Test') {
-            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu", isDebugTests)
+            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu")
         }
     }
 }
