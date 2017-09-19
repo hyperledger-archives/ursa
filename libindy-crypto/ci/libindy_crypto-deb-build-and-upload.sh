@@ -15,8 +15,6 @@ number="$4"
 [ -z $type ] && exit 3
 [ -z $number ] && exit 4
 
-sed -i -E -e 'H;1h;\$!d;x' -e "s/libindy-crypto ([(,),0-9,.]+)/libindy-crypto ($version)/" debian/changelog
-
 dpkg-buildpackage -tc
 
 cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.111
