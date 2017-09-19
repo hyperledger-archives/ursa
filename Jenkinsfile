@@ -3,7 +3,7 @@
 try {
     testing()
 } catch (err) {
-    notifyingFailure()
+    currentBuild.result = "FAILED"
     throw err
 }
 
@@ -13,13 +13,6 @@ def testing() {
                 'ubuntu-test' : { ubuntuTesting() },
                 'windows-test': { windowsTesting() }
         ])
-    }
-}
-
-def notifyingFailure() {
-    currentBuild.result = "FAILED"
-    node('ubuntu-master') {
-        sendNotification.fail([email: true])
     }
 }
 
