@@ -144,7 +144,7 @@ impl VerKey {
         })
     }
 
-    /// Converts BLS verification key to bytes representation.
+    /// Returns BLS verification key to bytes representation.
     ///
     /// # Example
     ///
@@ -181,7 +181,7 @@ pub struct Signature {
 }
 
 impl Signature {
-    /// Converts BLS signature to bytes representation.
+    /// Returns BLS signature to bytes representation.
     ///
     /// # Example
     ///
@@ -218,7 +218,7 @@ pub struct MultiSignature {
 }
 
 impl MultiSignature {
-    /// Generates and returns multi signature for provided list of signatures.
+    /// Creates and returns multi signature for provided list of signatures.
    ///
    /// # Arguments
    ///

@@ -38,8 +38,11 @@ pub extern fn indy_crypto_bls_generator_new(gen_p: *mut *const c_void) -> ErrorC
 
 /// Creates and returns generator point from bytes representation.
 ///
+/// Note: Generator instance deallocation must be performed by calling indy_crypto_bls_generator_free
 ///
 /// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
 /// * `gen_p` - Reference that will contain generator instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_generator_from_bytes(bytes: *const u8, bytes_len: usize,
@@ -115,6 +118,14 @@ pub extern fn indy_crypto_bls_generator_free(gen: *const c_void) -> ErrorCode {
     res
 }
 
+/// Creates and returns random (or seeded from seed) BLS sign key algorithm requirements.
+///
+/// Note: Sign Key instance deallocation must be performed by calling indy_crypto_bls_sign_key_free.
+///
+/// # Arguments
+/// * `seed` - Seed buffer pointer. For random generation null must be passed.
+/// * `seed` - Seed buffer len.
+/// * `gen_p` - Reference that will contain sign key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_sign_key_new(seed: *const u8,
                                            seed_len: usize,
@@ -142,6 +153,14 @@ pub extern fn indy_crypto_bls_sign_key_new(seed: *const u8,
     res
 }
 
+/// Creates and returns sign key from bytes representation.
+///
+/// Note: Sign key instance deallocation must be performed by calling indy_crypto_bls_sign_key_free
+///
+/// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
+/// * `sign_key_p` - Reference that will contain sign key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: usize,
                                                   sign_key_p: *mut *const c_void) -> ErrorCode {
@@ -169,20 +188,28 @@ pub extern fn indy_crypto_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: u
     res
 }
 
+/// Returns bytes representation of sign key.
+///
+/// Note: Returned buffer lifetime is the same as sign key instance.
+///
+/// # Arguments
+/// * `sign_key` - Sign key instance pointer
+/// * `bytes_p` - Pointer that will contains bytes buffer
+/// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
 pub extern fn indy_crypto_bls_sign_key_as_bytes(sign_key: *const c_void,
-                                                sign_key_p: *mut *const u8, sign_key_len_p: *mut usize) -> ErrorCode {
-    trace!("indy_crypto_bls_sign_key_as_bytes: >>> sign_key: {:?}, sign_key_p: {:?}, sign_key_len_p: {:?}", sign_key, sign_key_p, sign_key_len_p);
+                                                bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
+    trace!("indy_crypto_bls_sign_key_as_bytes: >>> sign_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", sign_key, bytes_p, bytes_len_p);
 
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(sign_key_p, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(sign_key_len_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
     trace!("indy_crypto_bls_sign_key_as_bytes: sign_key: {:?}", sign_key);
 
     unsafe {
-        *sign_key_p = sign_key.as_bytes().as_ptr();
-        *sign_key_len_p = sign_key.as_bytes().len();
+        *bytes_p = sign_key.as_bytes().as_ptr();
+        *bytes_len_p = sign_key.as_bytes().len();
     };
 
     let res = ErrorCode::Success;
@@ -191,6 +218,10 @@ pub extern fn indy_crypto_bls_sign_key_as_bytes(sign_key: *const c_void,
     res
 }
 
+/// Deallocates sign key instance.
+///
+/// # Arguments
+/// * `sign_key` - Sign key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(sign_key, ErrorCode::CommonInvalidParam1);
@@ -204,6 +235,14 @@ pub extern fn indy_crypto_bls_sign_key_free(sign_key: *const c_void) -> ErrorCod
     res
 }
 
+/// Creates and returns BLS ver key that corresponds to sign key.
+///
+/// Note: Verification key instance deallocation must be performed by calling indy_crypto_bls_ver_key_free.
+///
+/// # Arguments
+/// * `gen` - Generator point instance
+/// * `sign_key` - Sign key instance
+/// * `ver_key_p` - Reference that will contain verification key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_ver_key_new(gen: *const c_void,
                                           sign_key: *const c_void,
@@ -231,6 +270,14 @@ pub extern fn indy_crypto_bls_ver_key_new(gen: *const c_void,
     res
 }
 
+/// Creates and returns verification key from bytes representation.
+///
+/// Note: Verification key instance deallocation must be performed by calling indy_crypto_bls_very_key_free
+///
+/// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
+/// * `ver_key_p` - Reference that will contain verification key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: usize,
                                                  ver_key_p: *mut *const c_void) -> ErrorCode {
@@ -258,20 +305,28 @@ pub extern fn indy_crypto_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: us
     res
 }
 
+/// Returns bytes representation of verification key.
+///
+/// Note: Returned buffer lifetime is the same as verification key instance.
+///
+/// # Arguments
+/// * `ver_key` - Verification key instance pointer
+/// * `bytes_p` - Pointer that will contains bytes buffer
+/// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
 pub extern fn indy_crypto_bls_ver_key_as_bytes(ver_key: *const c_void,
-                                               ver_key_p: *mut *const u8, ver_key_len_p: *mut usize) -> ErrorCode {
-    trace!("indy_crypto_bls_sign_key_as_bytes: >>> ver_key: {:?}, ver_key_p: {:?}, ver_key_len_p: {:?}", ver_key, ver_key_p, ver_key_len_p);
+                                               bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
+    trace!("indy_crypto_bls_sign_key_as_bytes: >>> ver_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", ver_key, bytes_p, bytes_len_p);
 
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(ver_key_p, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(ver_key_len_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
     trace!("indy_crypto_bls_ver_key_as_bytes: ver_key: {:?}", ver_key);
 
     unsafe {
-        *ver_key_p = ver_key.as_bytes().as_ptr();
-        *ver_key_len_p = ver_key.as_bytes().len();
+        *bytes_p = ver_key.as_bytes().as_ptr();
+        *bytes_len_p = ver_key.as_bytes().len();
     };
 
     let res = ErrorCode::Success;
@@ -280,6 +335,10 @@ pub extern fn indy_crypto_bls_ver_key_as_bytes(ver_key: *const c_void,
     res
 }
 
+/// Deallocates verification key instance.
+///
+/// # Arguments
+/// * `ver_key` - Verification key instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(ver_key, ErrorCode::CommonInvalidParam1);
@@ -293,6 +352,14 @@ pub extern fn indy_crypto_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode 
     res
 }
 
+/// Creates and returns signature from bytes representation.
+///
+/// Note: Signature instance deallocation must be performed by calling indy_crypto_bls_signature_free
+///
+/// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
+/// * `signature_p` - Reference that will contain signature instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_signature_from_bytes(bytes: *const u8, bytes_len: usize,
                                                    signature_p: *mut *const c_void) -> ErrorCode {
@@ -320,20 +387,28 @@ pub extern fn indy_crypto_bls_signature_from_bytes(bytes: *const u8, bytes_len: 
     res
 }
 
+/// Returns bytes representation of signature.
+///
+/// Note: Returned buffer lifetime is the same as signature instance.
+///
+/// # Arguments
+/// * `signature` - Signature instance pointer
+/// * `bytes_p` - Pointer that will contains bytes buffer
+/// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
 pub extern fn indy_crypto_bls_signature_as_bytes(signature: *const c_void,
-                                                 signature_p: *mut *const u8, signature_len_p: *mut usize) -> ErrorCode {
-    trace!("indy_crypto_bls_signature_as_bytes: >>> signature: {:?}, signature_p: {:?}, signature_len_p: {:?}", signature, signature_p, signature_len_p);
+                                                 bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
+    trace!("indy_crypto_bls_signature_as_bytes: >>> signature: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", signature, bytes_p, bytes_len_p);
 
     check_useful_c_reference!(signature, Signature, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(signature_p, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(signature_len_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
     trace!("indy_crypto_bls_signature_as_bytes: signature: {:?}", signature);
 
     unsafe {
-        *signature_p = signature.as_bytes().as_ptr();
-        *signature_len_p = signature.as_bytes().len();
+        *bytes_p = signature.as_bytes().as_ptr();
+        *bytes_len_p = signature.as_bytes().len();
     };
 
     let res = ErrorCode::Success;
@@ -342,6 +417,10 @@ pub extern fn indy_crypto_bls_signature_as_bytes(signature: *const c_void,
     res
 }
 
+/// Deallocates signature instance.
+///
+/// # Arguments
+/// * `signature` - Signature instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_signature_free(signature: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(signature, ErrorCode::CommonInvalidParam1);
@@ -355,6 +434,14 @@ pub extern fn indy_crypto_bls_signature_free(signature: *const c_void) -> ErrorC
     res
 }
 
+/// Creates and returns multi signature for provided list of signatures.
+///
+/// Note: Multi signature instance deallocation must be performed by calling indy_crypto_bls_multi_signature_free.
+///
+/// # Arguments
+/// * `signatures` - Signature instance pointers array
+/// * `signatures_len` - Signature instance pointers array len
+/// * `multi_sig_p` - Reference that will contain multi signature instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_multi_signature_new(signatures: *const *const c_void,
                                                   signatures_len: usize,
@@ -382,6 +469,14 @@ pub extern fn indy_crypto_bls_multi_signature_new(signatures: *const *const c_vo
     res
 }
 
+/// Creates and returns multi signature from bytes representation.
+///
+/// Note: Multi signature instance deallocation must be performed by calling indy_crypto_bls_multi_signature_free
+///
+/// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
+/// * `multi_sig_p` - Reference that will contain multi signature instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_multi_signature_from_bytes(bytes: *const u8, bytes_len: usize,
                                                          multi_sig_p: *mut *const c_void) -> ErrorCode {
@@ -409,21 +504,29 @@ pub extern fn indy_crypto_bls_multi_signature_from_bytes(bytes: *const u8, bytes
     res
 }
 
+/// Returns bytes representation of multi signature.
+///
+/// Note: Returned buffer lifetime is the same as multi signature instance.
+///
+/// # Arguments
+/// * `multi_sig` - Multi signature instance pointer
+/// * `bytes_p` - Pointer that will contains bytes buffer
+/// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
 pub extern fn indy_crypto_bls_multi_signature_as_bytes(multi_sig: *const c_void,
-                                                       multi_sig_p: *mut *const u8, multi_sig_len_p: *mut usize) -> ErrorCode {
-    trace!("indy_crypto_bls_multi_signature_as_bytes: >>> multi_sig: {:?}, multi_sig_p: {:?}, multi_sig_len_p: {:?}", multi_sig, multi_sig_p, multi_sig_len_p);
+                                                       bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
+    trace!("indy_crypto_bls_multi_signature_as_bytes: >>> multi_sig: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", multi_sig, bytes_p, bytes_len_p);
 
     check_useful_c_ptr!(multi_sig, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(multi_sig_p, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(multi_sig_len_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
     let multi_sig = unsafe { &*(multi_sig as *const MultiSignature) };
     trace!("indy_crypto_bls_multi_signature_as_bytes: multi_sig: {:?}", multi_sig);
 
     unsafe {
-        *multi_sig_p = multi_sig.as_bytes().as_ptr();
-        *multi_sig_len_p = multi_sig.as_bytes().len();
+        *bytes_p = multi_sig.as_bytes().as_ptr();
+        *bytes_len_p = multi_sig.as_bytes().len();
     };
 
     let res = ErrorCode::Success;
@@ -432,6 +535,10 @@ pub extern fn indy_crypto_bls_multi_signature_as_bytes(multi_sig: *const c_void,
     res
 }
 
+/// Deallocates multi signature instance.
+///
+/// # Arguments
+/// * `multi_sig` - Multi signature instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_bls_multi_signature_free(multi_sig: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(multi_sig, ErrorCode::CommonInvalidParam1);
@@ -544,7 +651,7 @@ pub extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const c_void,
                                                message_len: usize,
                                                ver_keys: *const *const c_void,
                                                ver_keys_len: usize,
-                                               gen: *const u8,
+                                               gen: *const c_void,
                                                valid_p: *mut bool) -> ErrorCode {
     trace!("indy_crypto_bls_verify_multi_sig: >>> multi_sig: {:?}, message: {:?}, message_len: {:?}, ver_keys: {:?}, ver_keys_len: {:?}, gen: {:?}, valid_p: {:?}", multi_sig, message, message_len, ver_keys, ver_keys_len, gen, valid_p);
 
@@ -940,541 +1047,490 @@ mod tests {
         assert_eq!(err_code, ErrorCode::Success);
     }
 
+    #[test]
+    fn indy_crypto_bls_multi_signature_new_works() {
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!multi_sig.is_null());
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_multi_signature_as_bytes_works() {
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!multi_sig.is_null());
+
+        let mut bytes: *const u8 = ptr::null();
+        let mut bytes_len: usize = 0;
+        let err_code = indy_crypto_bls_multi_signature_as_bytes(multi_sig, &mut bytes, &mut bytes_len);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!bytes.is_null());
+        assert!(bytes_len > 0);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_multi_signature_from_bytes_works() {
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut bytes: *const u8 = ptr::null();
+        let mut bytes_len: usize = 0;
+        let err_code = indy_crypto_bls_multi_signature_as_bytes(multi_sig, &mut bytes, &mut bytes_len);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!bytes.is_null());
+        assert!(bytes_len > 0);
+
+        let mut multi_sig2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_from_bytes(bytes, bytes_len, &mut multi_sig2);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!multi_sig2.is_null());
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig2);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_multi_signature_free_works() {
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
 
 
+    #[test]
+    fn indy_crypto_bsl_verify_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
 
+        let mut signature: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key, &mut signature);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut valid = false;
 
+        let err_code = indy_crypto_bsl_verify(signature,
+                                              message, message_len,
+                                              ver_key,
+                                              gen, &mut valid);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(valid);
 
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let err_code = indy_crypto_bls_signature_free(signature);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
 
+    #[test]
+    fn indy_crypto_bsl_verify_works_for_invalid() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key2, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
 
+        let mut signature: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key, &mut signature);
+        assert_eq!(err_code, ErrorCode::Success);
 
+        let mut valid = false;
 
+        let err_code = indy_crypto_bsl_verify(signature,
+                                              message, message_len,
+                                              ver_key,
+                                              gen, &mut valid);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!valid);
 
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
 
-    //
-    //    #[test]
-    //    fn indy_crypto_bls_generate_keys_works() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key: *const u8 = ptr::null();
-    //        let mut sign_key_len: usize = 0;
-    //        let mut ver_key: *const u8 = ptr::null();
-    //        let mut ver_key_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key, &mut sign_key_len,
-    //                                                     &mut ver_key, &mut ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(!sign_key.is_null());
-    //        assert!(sign_key_len > 0);
-    //        assert!(!ver_key.is_null());
-    //        assert!(ver_key_len > 0);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key, sign_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key, ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //    #[test]
-    //    fn generate_keys_works_for_seed() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed_v = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4,
-    //                          5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8,
-    //                          9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8];
-    //        let seed = seed_v.as_ptr();
-    //        let seed_len = seed_v.len();
-    //
-    //        let mut sign_key: *const u8 = ptr::null();
-    //        let mut sign_key_len: usize = 0;
-    //        let mut ver_key: *const u8 = ptr::null();
-    //        let mut ver_key_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len, &mut sign_key,
-    //                                                     &mut sign_key_len,
-    //                                                     &mut ver_key, &mut ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(!sign_key.is_null());
-    //        assert!(sign_key_len > 0);
-    //        assert!(!ver_key.is_null());
-    //        assert!(ver_key_len > 0);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key, sign_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key, ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //    #[test]
-    //    fn indy_crypto_bls_sign_works() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key: *const u8 = ptr::null();
-    //        let mut sign_key_len: usize = 0;
-    //        let mut ver_key: *const u8 = ptr::null();
-    //        let mut ver_key_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key, &mut sign_key_len,
-    //                                                     &mut ver_key, &mut ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let message_v = vec![1, 2, 3, 4, 5];
-    //        let message = message_v.as_ptr();
-    //        let message_len = message_v.len();
-    //
-    //        let mut signature: *const u8 = ptr::null();
-    //        let mut signature_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key, sign_key_len,
-    //                                            &mut signature, &mut signature_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(!signature.is_null());
-    //        assert!(signature_len > 0);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key, sign_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key, ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature, signature_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //    #[test]
-    //    fn indy_crypto_bls_create_multi_signature_works() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key1: *const u8 = ptr::null();
-    //        let mut sign_key1_len: usize = 0;
-    //        let mut ver_key1: *const u8 = ptr::null();
-    //        let mut ver_key1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key1, &mut sign_key1_len,
-    //                                                     &mut ver_key1, &mut ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut sign_key2: *const u8 = ptr::null();
-    //        let mut sign_key2_len: usize = 0;
-    //        let mut ver_key2: *const u8 = ptr::null();
-    //        let mut ver_key2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key2, &mut sign_key2_len,
-    //                                                     &mut ver_key2, &mut ver_key2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let message_v = vec![1, 2, 3, 4, 5];
-    //        let message = message_v.as_ptr();
-    //        let message_len = message_v.len();
-    //
-    //        let mut signature1: *const u8 = ptr::null();
-    //        let mut signature1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key1, sign_key1_len,
-    //                                            &mut signature1, &mut signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut signature2: *const u8 = ptr::null();
-    //        let mut signature2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key2, sign_key2_len,
-    //                                            &mut signature2, &mut signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let signatures_v = vec![
-    //            signature1,
-    //            signature2
-    //        ];
-    //        let signatures = signatures_v.as_ptr();
-    //        let signatures_len = signatures_v.len();
-    //
-    //        let signature_lens_v = vec![
-    //            signature1_len,
-    //            signature2_len
-    //        ];
-    //        let signature_lens = signature_lens_v.as_ptr();
-    //
-    //        let mut multi_sig: *const u8 = ptr::null();
-    //        let mut multi_sig_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_multi_signature(signatures, signature_lens, signatures_len,
-    //                                                              &mut multi_sig, &mut multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(!multi_sig.is_null());
-    //        assert!(multi_sig_len > 0);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key1, sign_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key1, ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature1, signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature2, signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(multi_sig, multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //
-    //    #[test]
-    //    fn indy_crypto_bsl_verify_works() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key: *const u8 = ptr::null();
-    //        let mut sign_key_len: usize = 0;
-    //        let mut ver_key: *const u8 = ptr::null();
-    //        let mut ver_key_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key, &mut sign_key_len,
-    //                                                     &mut ver_key, &mut ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let message_v = vec![1, 2, 3, 4, 5];
-    //        let message = message_v.as_ptr();
-    //        let message_len = message_v.len();
-    //
-    //        let mut signature: *const u8 = ptr::null();
-    //        let mut signature_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key, sign_key_len,
-    //                                            &mut signature, &mut signature_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut valid = false;
-    //
-    //        let err_code = indy_crypto_bsl_verify(signature, signature_len,
-    //                                              message, message_len,
-    //                                              ver_key, ver_key_len,
-    //                                              gen, gen_len, &mut valid);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(valid);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key, sign_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key, ver_key_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature, signature_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //    #[test]
-    //    fn indy_crypto_bls_verify_multi_sig_works() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key1: *const u8 = ptr::null();
-    //        let mut sign_key1_len: usize = 0;
-    //        let mut ver_key1: *const u8 = ptr::null();
-    //        let mut ver_key1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key1, &mut sign_key1_len,
-    //                                                     &mut ver_key1, &mut ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut sign_key2: *const u8 = ptr::null();
-    //        let mut sign_key2_len: usize = 0;
-    //        let mut ver_key2: *const u8 = ptr::null();
-    //        let mut ver_key2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key2, &mut sign_key2_len,
-    //                                                     &mut ver_key2, &mut ver_key2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let message_v = vec![1, 2, 3, 4, 5];
-    //        let message = message_v.as_ptr();
-    //        let message_len = message_v.len();
-    //
-    //        let mut signature1: *const u8 = ptr::null();
-    //        let mut signature1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key1, sign_key1_len,
-    //                                            &mut signature1, &mut signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut signature2: *const u8 = ptr::null();
-    //        let mut signature2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key2, sign_key2_len,
-    //                                            &mut signature2, &mut signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let signatures_v = vec![
-    //            signature1,
-    //            signature2
-    //        ];
-    //        let signatures = signatures_v.as_ptr();
-    //        let signatures_len = signatures_v.len();
-    //
-    //        let signature_lens_v = vec![
-    //            signature1_len,
-    //            signature2_len
-    //        ];
-    //        let signature_lens = signature_lens_v.as_ptr();
-    //
-    //        let mut multi_sig: *const u8 = ptr::null();
-    //        let mut multi_sig_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_multi_signature(signatures, signature_lens, signatures_len,
-    //                                                              &mut multi_sig, &mut multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let ver_keys_v = vec![
-    //            ver_key1,
-    //            ver_key2
-    //        ];
-    //        let ver_keys = ver_keys_v.as_ptr();
-    //        let ver_keys_len = ver_keys_v.len();
-    //
-    //        let ver_key_lens_v = vec![
-    //            ver_key1_len,
-    //            ver_key2_len
-    //        ];
-    //        let ver_key_lens = ver_key_lens_v.as_ptr();
-    //
-    //        let mut valid = false;
-    //
-    //        let err_code = indy_crypto_bls_verify_multi_sig(multi_sig, multi_sig_len,
-    //                                                        message, message_len,
-    //                                                        ver_keys, ver_key_lens, ver_keys_len,
-    //                                                        gen, gen_len,
-    //                                                        &mut valid);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(valid);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key1, sign_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key1, ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature1, signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature2, signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(multi_sig, multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
-    //
-    //    #[test]
-    //    fn indy_crypto_bls_verify_multi_sig_works_for_invalid() {
-    //        let mut gen: *const u8 = ptr::null();
-    //        let mut gen_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_generator(&mut gen, &mut gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let seed: *const u8 = ptr::null();
-    //        let seed_len: usize = 0;
-    //
-    //        let mut sign_key1: *const u8 = ptr::null();
-    //        let mut sign_key1_len: usize = 0;
-    //        let mut ver_key1: *const u8 = ptr::null();
-    //        let mut ver_key1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key1, &mut sign_key1_len,
-    //                                                     &mut ver_key1, &mut ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut _sign_key2: *const u8 = ptr::null();
-    //        let mut _sign_key2_len: usize = 0;
-    //        let mut sign_key2: *const u8 = ptr::null();
-    //        let mut sign_key2_len: usize = 0;
-    //        let mut _ver_key2: *const u8 = ptr::null();
-    //        let mut _ver_key2_len: usize = 0;
-    //        let mut ver_key2: *const u8 = ptr::null();
-    //        let mut ver_key2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut sign_key2, &mut sign_key2_len,
-    //                                                     &mut _ver_key2, &mut _ver_key2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_generate_keys(gen, gen_len,
-    //                                                     seed, seed_len,
-    //                                                     &mut _sign_key2, &mut _sign_key2_len,
-    //                                                     &mut ver_key2, &mut ver_key2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let message_v = vec![1, 2, 3, 4, 5];
-    //        let message = message_v.as_ptr();
-    //        let message_len = message_v.len();
-    //
-    //        let mut signature1: *const u8 = ptr::null();
-    //        let mut signature1_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key1, sign_key1_len,
-    //                                            &mut signature1, &mut signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let mut signature2: *const u8 = ptr::null();
-    //        let mut signature2_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_sign(message, message_len,
-    //                                            sign_key2, sign_key2_len,
-    //                                            &mut signature2, &mut signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let signatures_v = vec![
-    //            signature1,
-    //            signature2
-    //        ];
-    //        let signatures = signatures_v.as_ptr();
-    //        let signatures_len = signatures_v.len();
-    //
-    //        let signature_lens_v = vec![
-    //            signature1_len,
-    //            signature2_len
-    //        ];
-    //        let signature_lens = signature_lens_v.as_ptr();
-    //
-    //        let mut multi_sig: *const u8 = ptr::null();
-    //        let mut multi_sig_len: usize = 0;
-    //
-    //        let err_code = indy_crypto_bls_create_multi_signature(signatures, signature_lens, signatures_len,
-    //                                                              &mut multi_sig, &mut multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let ver_keys_v = vec![
-    //            ver_key1,
-    //            ver_key2
-    //        ];
-    //        let ver_keys = ver_keys_v.as_ptr();
-    //        let ver_keys_len = ver_keys_v.len();
-    //
-    //        let ver_key_lens_v = vec![
-    //            ver_key1_len,
-    //            ver_key2_len
-    //        ];
-    //        let ver_key_lens = ver_key_lens_v.as_ptr();
-    //
-    //        let mut valid = false;
-    //
-    //        let err_code = indy_crypto_bls_verify_multi_sig(multi_sig, multi_sig_len,
-    //                                                        message, message_len,
-    //                                                        ver_keys, ver_key_lens, ver_keys_len,
-    //                                                        gen, gen_len,
-    //                                                        &mut valid);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //        assert!(!valid);
-    //
-    //        let err_code = indy_crypto_bls_free_array(gen, gen_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(sign_key1, sign_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(ver_key1, ver_key1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature1, signature1_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(signature2, signature2_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //
-    //        let err_code = indy_crypto_bls_free_array(multi_sig, multi_sig_len);
-    //        assert_eq!(err_code, ErrorCode::Success);
-    //    }
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_verify_multi_sig_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key1, &mut ver_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key2, &mut ver_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let ver_keys = [ver_key1, ver_key2];
+        let mut valid = false;
+
+        let err_code = indy_crypto_bls_verify_multi_sig(multi_sig,
+                                                        message, message_len,
+                                                        ver_keys.as_ptr(), ver_keys.len(),
+                                                        gen,
+                                                        &mut valid);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(valid);
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_verify_multi_sig_works_for_invalid() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key1: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key2: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key3: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key3);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let message_v = vec![1, 2, 3, 4, 5];
+        let message = message_v.as_ptr();
+        let message_len = message_v.len();
+
+        let mut signature1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key1, &mut signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut signature2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_sign(message, message_len, sign_key2, &mut signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let signatures = [signature1, signature2];
+
+        let mut multi_sig: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key1: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key1, &mut ver_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key3, &mut ver_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let ver_keys = [ver_key1, ver_key2];
+        let mut valid = false;
+
+        let err_code = indy_crypto_bls_verify_multi_sig(multi_sig,
+                                                        message, message_len,
+                                                        ver_keys.as_ptr(), ver_keys.len(),
+                                                        gen,
+                                                        &mut valid);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!valid);
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key3);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature1);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_signature_free(signature2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_multi_signature_free(multi_sig);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
 }

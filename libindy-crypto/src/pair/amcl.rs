@@ -1,5 +1,3 @@
-#[cfg(feature = "serialization")]
-extern crate serde;
 use errors::IndyCryptoError;
 
 use amcl::big::BIG;
@@ -26,9 +24,9 @@ use rand::os::OsRng;
 use rand::Rng;
 
 #[cfg(feature = "serialization")]
-use self::serde::ser::{Serialize, Serializer, Error as SError};
+use serde::ser::{Serialize, Serializer, Error as SError};
 #[cfg(feature = "serialization")]
-use self::serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
+use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
 #[cfg(feature = "serialization")]
 use std::fmt;
 
