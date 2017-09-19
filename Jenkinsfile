@@ -2,7 +2,6 @@
 
 try {
     testing()
-    notifyingSuccess()
 } catch (err) {
     notifyingFailure()
     throw err
@@ -17,19 +16,10 @@ def testing() {
     }
 }
 
-def notifyingSuccess() {
-    if (env.BRANCH_NAME == 'master') {
-        currentBuild.result = "SUCCESS"
-        node('ubuntu-master') {
-            sendNotification.success('indy-crypto')
-        }
-    }
-}
-
 def notifyingFailure() {
     currentBuild.result = "FAILED"
     node('ubuntu-master') {
-        sendNotification.fail([slack: env.BRANCH_NAME == 'master'])
+        sendNotification.fail([email: true])
     }
 }
 
@@ -48,20 +38,14 @@ def linuxTesting(file, env_name) {
             echo "${env_name} Test: Build docker image"
 
             testEnv = docker.build("libindy-crypto-test", "--build-arg uid=${getUserUid()} -f $file")
-            testEnv.inside() {
+            testEnv.inside {
                 echo "${env_name} Test: Test"
-                try {
-                    echo "${env_name} Test: Build"
-                    sh "RUST_BACKTRACE=1 cargo test --no-run"
 
-                    echo "${env_name} Test: Run tests"
-                    sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test"
-                }
-                finally {
-                    /* TODO FIXME restore after xunit will be fixed
-                    junit 'test-results.xml'
-                    */
-                }
+                echo "${env_name} Test: Build"
+                sh "RUST_BACKTRACE=1 cargo test --no-run"
+
+                echo "${env_name} Test: Run tests"
+                sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test"
             }
         }
 
@@ -107,7 +91,6 @@ def windowsTesting() {
                 }
 
                 //TODO wrappers testing
-
             } finally {
                 step([$class: 'WsCleanup'])
             }
