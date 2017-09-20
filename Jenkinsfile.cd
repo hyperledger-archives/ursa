@@ -25,11 +25,6 @@ def testing() {
 
 def publishing() {
     stage('Publishing') {
-        if (!(env.BRANCH_NAME in ['master', 'rc'])) {
-            echo "${env.BRANCH_NAME}: skip publishing"
-            return
-        }
-
         echo "${env.BRANCH_NAME}: start publishing"
 
         publishedVersions = parallel([
@@ -37,8 +32,7 @@ def publishing() {
                 'windows-files': { windowsPublishing() },
         ])
 
-        version = publishedVersions['ubuntu-files']
-        if (publishedVersions['windows-files'] != version) {
+        if (publishedVersions['windows-files'] != publishedVersions['ubuntu-files']) {
             error "platforms artifacts have different versions"
         }
     }
@@ -97,7 +91,7 @@ def linuxTesting(file, env_name) {
 
         dir('libindy-crypto') {
             echo "${env_name} Test: Build docker image"
-            
+
             testEnv = dockerHelpers.build('libindy-crypto', file)
             testEnv.inside {
                 echo "${env_name} Test: Test"
