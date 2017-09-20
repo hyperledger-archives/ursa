@@ -1,11 +1,6 @@
 #!groovy
 
-try {
-    testing()
-} catch (err) {
-    currentBuild.result = "FAILED"
-    throw err
-}
+testing()
 
 def testing() {
     stage('Testing') {
@@ -16,8 +11,44 @@ def testing() {
     }
 }
 
-def getUserUid() {
-    return sh(returnStdout: true, script: 'id -u').trim()
+def ubuntuTesting() {
+    node('ubuntu') {
+        stage('Ubuntu Test') {
+            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu")
+        }
+    }
+}
+
+def windowsTesting() {
+    node('win2016') {
+        stage('Windows Test') {
+            echo "Windows Test: Checkout scm"
+            checkout scm
+
+            try {
+                dir('libindy-crypto') {
+                    echo "Windows Test: Build"
+                    withEnv([
+                            "RUST_BACKTRACE=1"
+                    ]) {
+                        bat "cargo test --no-run"
+
+                        echo "Windows Test: Run tests"
+                        withEnv([
+                                "RUST_TEST_THREADS=1",
+                                "RUST_LOG=trace",
+                        ]) {
+                            bat "cargo test"
+                        }
+                    }
+                }
+
+                //TODO wrappers testing
+            } finally {
+                step([$class: 'WsCleanup'])
+            }
+        }
+    }
 }
 
 def linuxTesting(file, env_name) {
@@ -59,42 +90,6 @@ def linuxTesting(file, env_name) {
     }
 }
 
-def windowsTesting() {
-    node('win2016') {
-        stage('Windows Test') {
-            echo "Windows Test: Checkout scm"
-            checkout scm
-
-            try {
-                dir('libindy-crypto') {
-                    echo "Windows Test: Build"
-                    withEnv([
-                            "RUST_BACKTRACE=1"
-                    ]) {
-                        bat "cargo test --no-run"
-
-                        echo "Windows Test: Run tests"
-                        withEnv([
-                                "RUST_TEST_THREADS=1",
-                                "RUST_LOG=trace",
-                        ]) {
-                            bat "cargo test"
-                        }
-                    }
-                }
-
-                //TODO wrappers testing
-            } finally {
-                step([$class: 'WsCleanup'])
-            }
-        }
-    }
-}
-
-def ubuntuTesting() {
-    node('ubuntu') {
-        stage('Ubuntu Test') {
-            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu")
-        }
-    }
+def getUserUid() {
+    return sh(returnStdout: true, script: 'id -u').trim()
 }
