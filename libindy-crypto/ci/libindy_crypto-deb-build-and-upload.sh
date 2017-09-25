@@ -25,8 +25,4 @@ dpkg-buildpackage -tc
 #ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
 #EOF
 
-mkdir sovrin-packaging && cd sovrin-packaging
-
-git clone https://github.com/evernym/sovrin-packaging
-
-./upload-debs ../ $type
+./sovrin-packaging/upload-debs ../ $type
