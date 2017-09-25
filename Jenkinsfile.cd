@@ -234,6 +234,20 @@ def libindyCryptoDebPublishing(testEnv) {
                 sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $evernym_repo_key $env.BRANCH_NAME $env.BUILD_NUMBER"
                 sh "rm -rf debian"
             }
+
+            dir('sovrin-packaging') {
+                echo 'Build deb packages: get packaging code'
+                git branch: 'master', credentialsId: 'evernym-github-machine-user', url: 'https://github.com/evernym/sovrin-packaging'
+
+                echo 'Build deb packages: Publish debs'
+
+                withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin'), file(credentialsId: 'EvernymRepoSSHKey', variable: 'evernym')]) {
+                    sh 'ln -sf $sovrin ~/.ssh'
+                    sh 'ln -sf $evernym ~/.ssh'
+                    sh "./upload-debs . $env.BRANCH_NAME"
+                    sh "docker volume prune -f"
+                }
+            }
         }
     }
 }
