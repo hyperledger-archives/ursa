@@ -17,12 +17,14 @@ number="$4"
 
 dpkg-buildpackage -tc
 
-#cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.111
-#mkdir /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-#cd /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-#put -r ../libindy-crypto-dev_"$version"_amd64.deb
-#put -r ../libindy-crypto_"$version"_amd64.deb
-#ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-#EOF
+#sed -i -E -e 'H;1h;$!d;x' -e "s/libindy-crypto ([(,),0-9,.]+)/libindy-crypto ($version-$number)/" debian/changelog
+
+cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.111
+mkdir /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+cd /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+put -r ../libindy-crypto-dev_"$version"_amd64.deb
+put -r ../libindy-crypto_"$version"_amd64.deb
+ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+EOF
 
 ./sovrin-packaging/upload_debs.py ../ $type
