@@ -25,4 +25,5 @@ dpkg-buildpackage -tc
 #ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
 #EOF
 
-../sovrin-packaging/upload_debs.py ../ $type
+ls ../sovrin-packaging
+python3 ../sovrin-packaging/upload_debs.py ../ $type
