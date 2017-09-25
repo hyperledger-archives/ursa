@@ -36,6 +36,8 @@ RUN curl -fsOSL $RUST_DOWNLOAD_URL \
 
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.cargo/bin"
 
+RUN pip3 install -U pip plumbum
+
 RUN useradd -ms /bin/bash -u $uid indy
 USER indy
 
@@ -45,8 +47,7 @@ WORKDIR /home/indy
 
 USER root
 RUN pip3 install \
-twine \
-plumbum
+twine
 
 USER indy
 RUN virtualenv -p python3.5 /home/indy/test
