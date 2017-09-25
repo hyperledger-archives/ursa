@@ -45,7 +45,8 @@ WORKDIR /home/indy
 
 USER root
 RUN pip3 install \
-twine
+twine \
+plumbum
 
 USER indy
 RUN virtualenv -p python3.5 /home/indy/test
