@@ -17,10 +17,16 @@ number="$4"
 
 dpkg-buildpackage -tc
 
-cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.111
-mkdir /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-cd /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-put -r ../libindy-crypto-dev_"$version"_amd64.deb
-put -r ../libindy-crypto_"$version"_amd64.deb
-ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
-EOF
+#cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.111
+#mkdir /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+#cd /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+#put -r ../libindy-crypto-dev_"$version"_amd64.deb
+#put -r ../libindy-crypto_"$version"_amd64.deb
+#ls -l /var/repository/repos/libindy_crypto/ubuntu/$type/$version-$number
+#EOF
+
+mkdir sovrin-packaging && cd sovrin-packaging
+
+git clone https://github.com/evernym/sovrin-packaging
+
+./upload-debs ../ $type
