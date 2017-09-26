@@ -21,4 +21,4 @@ rename -v "s/$version/$version-$number/" ../*.deb
 
 mkdir debs &&  mv ../*.deb ./debs/
 
-./sovrin-packaging/upload_debs.py /debs $type
+./sovrin-packaging/upload_debs.py ./debs $type
