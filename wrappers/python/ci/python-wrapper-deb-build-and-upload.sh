@@ -10,8 +10,7 @@ suffix="$2"
 
 sed -i -E "s/version='([0-9,.]+).*/version='\\1$suffix',/" setup.py
 
-PACKAGE_NAME=$(grep -Po "(?<=name=')([0-9]|\.|-)*" setup.py)
-PACKAGE_VERSION=$(grep -Po "(?<=version=')([0-9]|\.|-)*" setup.py)
+PACKAGE_NAME=$(grep -Po "(?<=name=').[^\']*" setup.py)
 LICENSE=$(grep -Po "(?<=license=').[^\']*" setup.py)
 
 mkdir debs
@@ -20,8 +19,8 @@ fpm --input-type "python" \
     --output-type "deb" \
     --verbose \
     --architecture "amd64" \
-    --name "python-indy-sdk" \
-    --license license \
+    --name ${PACKAGE_NAME} \
+    --license ${LICENSE} \
     --python-package-name-prefix "python3" \
     --python-bin "/usr/bin/python3" \
     --exclude "*.pyc" \
@@ -30,4 +29,4 @@ fpm --input-type "python" \
     --package "./debs" \
     .
 
-./sovrin-packaging/upload_debs.py /debs $type
+./sovrin-packaging/upload_debs.py ./debs $type
