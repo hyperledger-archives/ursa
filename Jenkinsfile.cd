@@ -371,7 +371,7 @@ def publishPythonWrapperRCtoStable(version) {
 def uploadDebianFilesToStable(version, rcFullVersion) {
     sh 'ln -sf $sovrin_repo_key ~/.ssh'
 
-    git branch: 'master', credentialsId: 'evernym-github-machine-user', url: 'https://github.com/evernym/sovrin-packaging'
+    downloadPackagingUtils()
 
     sh "rename -v 's/$rcFullVersion/$version/' debs/*.deb"
     path = sh(returnStdout: true, script: 'pwd debs').trim() + '/debs'
