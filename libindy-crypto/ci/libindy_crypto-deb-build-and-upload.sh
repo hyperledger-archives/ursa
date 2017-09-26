@@ -13,6 +13,8 @@ number="$3"
 [ -z $type ] && exit 2
 [ -z $number ] && exit 3
 
+sed -i -E -e 'H;1h;$!d;x' -e "s/libindy-crypto ([(,),0-9,.]+)/libindy-crypto ($version)/" debian/changelog
+
 dpkg-buildpackage -tc
 
 rename -v "s/$version/$version-$number/" ../*.deb
