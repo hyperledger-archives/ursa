@@ -182,7 +182,7 @@ def ubuntuPublishing() {
 
                 libindyCryptoDebPublishing(testEnv)
                 libindyCryptoCargoPublishing(testEnv, false)
-                pythonWrapperPublishing(testEnv, false)
+                pythonWrapperPypiPublishing(testEnv, false)
                 pythonWrapperDebPublishing(testEnv, false)
             }
             finally {
@@ -275,7 +275,7 @@ def libindyCryptoCargoPublishing(testEnv, isRelease) {
     }
 }
 
-def pythonWrapperPublishing(testEnv, isRelease) {
+def pythonWrapperPypiPublishing(testEnv, isRelease) {
     dir('wrappers/python') {
         def suffix = getSuffix(isRelease, "Pypi")
 
@@ -304,7 +304,7 @@ def pythonWrapperDebPublishing(testEnv, isRelease) {
 
             withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key'), file(credentialsId: 'EvernymRepoSSHKey', variable: 'evernym_repo_key')]) {
                 sh 'mkdir /home/indy/.ssh && cp $sovrin_repo_key ~/.ssh'
-                sh "./ci/python-wrapper-deb-build-and-upload.sh devel -1"
+                sh "./ci/python-wrapper-deb-build-and-upload.sh $env.BRANCH_NAME $suffix"
             }
         }
     }
@@ -326,7 +326,7 @@ def publishingRCtoStable() {
                 testEnv = dockerHelpers.build('indy-crypto', 'libindy-crypto/ci/ubuntu.dockerfile libindy-crypto/ci')
                 echo 'Moving RC artifacts to Stable: python wrapper'
                 libindyCryptoCargoPublishing(testEnv, true)
-                pythonWrapperPublishing(testEnv, true)
+                pythonWrapperPypiPublishing(testEnv, true)
                 pythonWrapperDebPublishing(testEnv, true)
             } finally {
                 echo 'Moving RC artifacts to Stable: Cleanup'
