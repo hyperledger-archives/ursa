@@ -19,4 +19,6 @@ dpkg-buildpackage -tc
 
 rename -v "s/$version/$version-$number/" ../*.deb
 
-./sovrin-packaging/upload_debs.py ../ $type
+mkdir debs &&  mv ../*.deb ./debs/
+
+./sovrin-packaging/upload_debs.py /debs $type
