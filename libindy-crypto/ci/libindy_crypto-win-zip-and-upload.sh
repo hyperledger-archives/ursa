@@ -23,8 +23,8 @@ powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compressi
 rm -rf ./libindy-zip
 
 cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.115
-mkdir /var/repository/repos/windows/$type/libindy_crypto/$version-$number
-cd /var/repository/repos/windows/$type/libindy_crypto/$version-$number
+mkdir /var/repository/repos/windows/libindy_crypto/$type/$version-$number
+cd /var/repository/repos/windows/libindy_crypto/$type/$version-$number
 put -r libindy_crypto_"$version".zip
-ls -l /var/repository/repos/windows/$type/libindy_crypto/$version-$number
+ls -l /var/repository/repos/windows/libindy_crypto/$type/$version-$number
 EOF
