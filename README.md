@@ -44,7 +44,7 @@ API documentation is now available as rust doc in code. See:
 
 Note: Binaries creation is in progress now!!!
 
-Builded binaries can be downloaded from https://repo.evernym.com/libindy-crypto:
+Builded binaries can be downloaded from https://repo.sovrin.org/lib/apt/xenial/:
 * ubuntu/{master,stable,rc} - Ubuntu deb packages
 * windows/{master,stable,rc} - Windows zip-archive with all required DLLs (include libindy itself) and headers
 * ios/stable/ - Pods for iOS

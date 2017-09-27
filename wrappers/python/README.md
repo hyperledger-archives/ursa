@@ -12,8 +12,8 @@ Pull requests welcome!
 ### How to build
 
 - Install native "Indy Crypto" library:
-	* Ubuntu:  https://repo.evernym.com/libindy-crypto/ubuntu/
-	* Windows: https://repo.evernym.com/libindy-crypto/windows/
+	* Ubuntu:  https://repo.sovrin.org/lib/apt/xenial/
+	* Windows: https://repo.sovrin.org/windows/libindy_crypto/
 
 - Clone indy-crypto repo from https://github.com/hyperledger/indy-crypto
 
