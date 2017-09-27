@@ -21,6 +21,7 @@ fpm --input-type "python" \
     --architecture "amd64" \
     --name python3-${PACKAGE_NAME} \
     --license ${LICENSE} \
+    --depends libindy-crypto \
     --python-package-name-prefix "python3" \
     --python-bin "/usr/bin/python3" \
     --exclude "*.pyc" \
