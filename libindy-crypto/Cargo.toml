@@ -16,7 +16,7 @@ pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
 
 [dependencies]
-amcl = { version = "0.1.2",  optional = true, features = ["BN254"]}
+amcl = { version = "0.1.2",  optional = true, default-features = false, features = ["BN254"]}
 log = "0.3.7"
 rand = "0.3"
 sha2 = "0.6.0"
