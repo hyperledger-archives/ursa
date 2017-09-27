@@ -212,8 +212,8 @@ def windowsPublishing() {
                         bat "cargo build --release"
                     }
 
-                    withCredentials([file(credentialsId: 'EvernymRepoSSHKey', variable: 'evernym_repo_key')]) {
-                        sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${evernym_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER"
+                    withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
+                        sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER"
                     }
                 }
             }
