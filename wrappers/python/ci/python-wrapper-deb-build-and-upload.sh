@@ -6,9 +6,9 @@ if [ "$1" = "--help" ] ; then
 fi
 
 type="$1"
-number="$2"
+suffix="$2"
 
-sed -i -E "s/version='([0-9,.]+).*/version='\\1-$number',/" setup.py
+sed -i -E "s/version='([0-9,.]+).*/version='\\1$suffix',/" setup.py
 
 PACKAGE_NAME=$(grep -Po "(?<=name=').[^\']*" setup.py)
 LICENSE=$(grep -Po "(?<=license=').[^\']*" setup.py)
