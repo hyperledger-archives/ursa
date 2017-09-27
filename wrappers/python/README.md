@@ -29,7 +29,7 @@ Pull requests welcome!
 
 
 ### PyPi package
-[python3-indy_crypto](https://pypi.python.org/pypi/python3-indy-crypto) package is available.
+[indy_crypto](https://pypi.python.org/pypi/indy-crypto) package is available.
 
 ### Example use
 For the main workflow examples check sample project: https://github.com/hyperledger/indy-crypto/samples/python

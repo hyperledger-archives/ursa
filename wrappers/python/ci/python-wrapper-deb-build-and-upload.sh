@@ -19,7 +19,7 @@ fpm --input-type "python" \
     --output-type "deb" \
     --verbose \
     --architecture "amd64" \
-    --name ${PACKAGE_NAME} \
+    --name python3-${PACKAGE_NAME} \
     --license ${LICENSE} \
     --python-package-name-prefix "python3" \
     --python-bin "/usr/bin/python3" \
