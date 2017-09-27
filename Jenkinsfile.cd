@@ -382,12 +382,14 @@ def uploadDebianFilesToStable(version, rcFullVersion) {
     try {
         sh 'ln -sf $sovrin_repo_key ~/.ssh'
 
-        downloadPackagingUtils()
+        dir ('sovrin-packaging'){
+            downloadPackagingUtils()
+        }
 
         sh "rename -v 's/$rcFullVersion/$version/' debs/*.deb"
         path = sh(returnStdout: true, script: 'pwd debs').trim() + '/debs'
 
-        sh "./upload-debs $path stable"
+        sh "./sovrin-packaging/upload-debs $path stable"
     }
     finally {
         sh 'rm -f ~/.ssh/$sovrin_repo_key'
