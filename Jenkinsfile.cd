@@ -356,38 +356,13 @@ def publishingRCtoStable() {
 
 def publishLibindyCryptoRCtoStable(version) {
     rcFullVersion = "${version}-${env.BUILD_NUMBER}"
-    withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-        //Copy windows files
-        src = "/var/repository/repos/windows/libindy_crypto/rc/$rcFullVersion/"
-        target = "/var/repository/repos/windows/libindy_crypto/stable/$version"
-
-        sh "ssh -v -oStrictHostKeyChecking=no -i '$sovrin_repo_key' repo@192.168.11.115 '! ls $target'"
-        sh "ssh -v -oStrictHostKeyChecking=no -i '$sovrin_repo_key' repo@192.168.11.115 cp -r $src $target"
-
-        //Upload ubuntu files
-        unstash name: 'libindyCryptoDebs'
-        uploadDebianFilesToStable(version, rcFullVersion)
-    }
-}
-
-def publishPythonWrapperRCtoStable(version) {
-    rcFullVersion = "${version}-${env.BUILD_NUMBER}"
-    withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-        unstash name: 'PythonWrapperDebs'
-        uploadDebianFilesToStable(version, rcFullVersion)
-    }
-}
-
-def uploadDebianFilesToStable(version, rcFullVersion) {
-    try {
-        sh 'ln -sf $sovrin_repo_key ~/.ssh'
-
-        sh "rename -v 's/$rcFullVersion/$version/' debs/*.deb"
-        path = sh(returnStdout: true, script: 'pwd debs').trim() + '/debs'
-
-        dir ('sovrin-packaging'){
-            downloadPackagingUtils()
-            sh "./upload-debs $path stable"
+    withCredentials([file(credentialsId: 'EvernymRepoSSHKey', variable: 'key')]) {
+        for (os in ['ubuntu', 'windows']) { //FIXME add rhel IS-307
+            src = "/var/repository/repos/libindy_crypto/$os/rc/$rcFullVersion/"
+            target = "/var/repository/repos/libindy_crypto/$os/stable/$version"
+            //should not exists
+            sh "ssh -v -oStrictHostKeyChecking=no -i '$key' repo@192.168.11.111 '! ls $target'"
+            sh "ssh -v -oStrictHostKeyChecking=no -i '$key' repo@192.168.11.111 cp -r $src $target"
         }
     }
     finally {
