@@ -4,7 +4,7 @@ setup(
     name='indy_crypto',
     version='0.1.5',
     packages=['indy_crypto'],
-    url='https://github.com/hyperledger/indy_crypto-crypto',
+    url='https://github.com/hyperledger/indy-crypto',
     license='MIT/Apache-2.0',
     author='Vyacheslav Gudkov',
     author_email='vyacheslav.gudkov@dsr-company.com',
