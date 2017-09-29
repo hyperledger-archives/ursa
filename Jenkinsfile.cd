@@ -254,7 +254,7 @@ def libindyCryptoDebPublishing(testEnv, isRelease, version) {
                 type = 'stable'
                 suffix = ''
             } else {
-                type = $env.BRANCH_NAME
+                type = env.BRANCH_NAME
                 suffix = "-$env.BUILD_NUMBER"
             }
 
@@ -322,7 +322,7 @@ def pythonWrapperDebPublishing(testEnv, isRelease) {
                 type = 'stable'
                 suffix = ''
             } else {
-                type = $env.BRANCH_NAME
+                type = env.BRANCH_NAME
                 suffix = "-$env.BUILD_NUMBER"
             }
 
