@@ -244,11 +244,11 @@ def getSuffix(isRelease, target) {
 
 def libindyCryptoDebPublishing(testEnv, isRelease, version) {
     dir('libindy-crypto') {
-        echo 'Publish Libindy deb files to Apt'
+        echo 'Publish Libindy-Crypto deb files to Apt'
         testEnv.inside('-u 0:0') {
             sh 'chmod -R 755 ci/*.sh'
 
-            def suffix = getSuffix(isRelease, "Apt(Libindy)")
+            def suffix = getSuffix(isRelease, "Apt(Libindy-Crypto)")
 
             dir('sovrin-packaging') {
                 downloadPackagingUtils()
@@ -270,7 +270,7 @@ def libindyCryptoDebPublishing(testEnv, isRelease, version) {
 
 def libindyCryptoCargoPublishing(testEnv, isRelease) {
     dir('libindy-crypto') {
-        echo 'Publish Libindy to Cargo'
+        echo 'Publish Libindy-Crypto to Cargo'
         testEnv.inside {
             def suffix = getSuffix(isRelease, "Cargo")
             sh "sed -i -E -e 'H;1h;\$!d;x' -e \"s/version = \\\"([0-9,.]+)/version = \\\"\\1$suffix/\" Cargo.toml"
@@ -363,7 +363,6 @@ def publishingRCtoStable() {
 def publishLibindyCryptoWindowsFilesRCtoStable(version) {
     rcFullVersion = "${version}-${env.BUILD_NUMBER}"
     withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-        //Copy windows files
         src = "/var/repository/repos/windows/libindy_crypto/rc/$rcFullVersion/"
         target = "/var/repository/repos/windows/libindy_crypto/stable/$version"
 
