@@ -249,6 +249,7 @@ def libindyCryptoDebPublishing(testEnv, isRelease, version) {
             sh 'chmod -R 755 ci/*.sh'
 
             def suffix = getSuffix(isRelease, "Apt(Libindy-Crypto)")
+            def type = env.BRANCH_NAME == 'rc' && isRelease ? 'stable' : $env.BRANCH_NAME
 
             dir('sovrin-packaging') {
                 downloadPackagingUtils()
@@ -257,7 +258,7 @@ def libindyCryptoDebPublishing(testEnv, isRelease, version) {
             withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
                 try {
                     sh 'mkdir /root/.ssh && ln -sf $sovrin_repo_key /root/.ssh'
-                    sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $suffix"
+                    sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $type $suffix"
                 }
                 finally {
                     sh "rm -rf debian"
@@ -308,6 +309,7 @@ def pythonWrapperDebPublishing(testEnv, isRelease) {
         testEnv.inside {
             sh 'chmod -R 755 ci/*.sh'
             def suffix = getSuffix(isRelease, "Apt(Python wrapper)")
+            def type = env.BRANCH_NAME == 'rc' && isRelease ? 'stable' : $env.BRANCH_NAME
 
             dir('sovrin-packaging') {
                 downloadPackagingUtils()
@@ -316,7 +318,7 @@ def pythonWrapperDebPublishing(testEnv, isRelease) {
             withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
                 try {
                     sh 'mkdir /home/indy/.ssh && ln -sf $sovrin_repo_key ~/.ssh'
-                    sh "./ci/python-wrapper-deb-build-and-upload.sh $env.BRANCH_NAME $suffix"
+                    sh "./ci/python-wrapper-deb-build-and-upload.sh $type $suffix"
                 }
                 finally {
                     sh 'rm -f ~/.ssh/$sovrin_repo_key'
