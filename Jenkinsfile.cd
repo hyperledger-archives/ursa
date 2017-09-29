@@ -248,7 +248,7 @@ def libindyCryptoDebPublishing(testEnv, isRelease, version) {
         testEnv.inside('-u 0:0') {
             sh 'chmod -R 755 ci/*.sh'
 
-            def (type, suffix) = env.BRANCH_NAME == 'rc' && isRelease ? ['stable', ''] : [$env.BRANCH_NAME, '-$env.BUILD_NUMBER']
+            def (type, suffix) = env.BRANCH_NAME == 'rc' && isRelease ? ['stable', ''] : [$env.BRANCH_NAME, "-$env.BUILD_NUMBER"]
 
             dir('sovrin-packaging') {
                 downloadPackagingUtils()
@@ -308,7 +308,7 @@ def pythonWrapperDebPublishing(testEnv, isRelease) {
         testEnv.inside {
             sh 'chmod -R 755 ci/*.sh'
 
-            def (type, suffix) = env.BRANCH_NAME == 'rc' && isRelease ? ['stable', ''] : [$env.BRANCH_NAME, '-$env.BUILD_NUMBER']
+            def (type, suffix) = env.BRANCH_NAME == 'rc' && isRelease ? ['stable', ''] : [$env.BRANCH_NAME, "-$env.BUILD_NUMBER"]
 
             dir('sovrin-packaging') {
                 downloadPackagingUtils()
