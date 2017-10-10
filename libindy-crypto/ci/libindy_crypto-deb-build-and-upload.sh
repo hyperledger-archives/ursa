@@ -8,6 +8,9 @@ fi
 version="$1"
 type="$2"
 suffix="$3"
+repo="$4"
+host="$5"
+key="$6"
 
 [ -z $version ] && exit 1
 [ -z $type ] && exit 2
@@ -19,4 +22,4 @@ dpkg-buildpackage -tc
 
 mkdir debs &&  mv ../*.deb ./debs/
 
-./sovrin-packaging/upload_debs.py ./debs $type
+./sovrin-packaging/upload_debs.py ./debs $repo $type --host $host --ssh-key $key

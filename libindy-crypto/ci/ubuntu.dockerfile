@@ -16,7 +16,9 @@ RUN apt-get update && \
       apt-transport-https \
       ca-certificates \
       debhelper \
-      wget
+      wget \
+      devscripts
+
 
 RUN pip3 install -U \
 	pip \
@@ -46,7 +48,7 @@ WORKDIR /home/indy
 
 USER root
 RUN pip3 install \
-twine
+    twine
 
 USER indy
 RUN virtualenv -p python3.5 /home/indy/test
@@ -54,6 +56,6 @@ USER root
 RUN ln -sf /home/indy/test/bin/python /usr/local/bin/python3
 RUN ln -sf /home/indy/test/bin/pip /usr/local/bin/pip3
 
-RUN pip3 install -U pip plumbum
+RUN pip3 install -U pip plumbum deb-pkg-tools
 RUN apt-get install -y ruby-dev
 RUN gem install fpm

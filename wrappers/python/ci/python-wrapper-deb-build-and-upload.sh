@@ -7,6 +7,9 @@ fi
 
 type="$1"
 suffix="$2"
+repo="$4"
+host="$5"
+key="$6"
 
 sed -i -E "s/version='([0-9,.]+).*/version='\\1$suffix',/" setup.py
 
@@ -30,4 +33,4 @@ fpm --input-type "python" \
     --package "./debs" \
     .
 
-./sovrin-packaging/upload_debs.py ./debs $type
+./sovrin-packaging/upload_debs.py ./debs $repo $type --host $host --ssh-key $key
