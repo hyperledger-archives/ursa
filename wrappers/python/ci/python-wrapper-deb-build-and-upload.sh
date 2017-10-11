@@ -11,6 +11,12 @@ repo="$3"
 host="$4"
 key="$5"
 
+[ -z $type ] && exit 1
+[ -z $suffix ] && exit 2
+[ -z $repo ] && exit 3
+[ -z $host ] && exit 4
+[ -z $key ] && exit 5
+
 sed -i -E "s/version='([0-9,.]+).*/version='\\1$suffix',/" setup.py
 
 PACKAGE_NAME=$(grep -Po "(?<=name=').[^\']*" setup.py)

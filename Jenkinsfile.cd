@@ -406,5 +406,5 @@ def uploadDebianFilesToStable() {
 }
 
 def downloadPackagingUtils() {
-    git branch: 'sdk-apt-repo', credentialsId: 'evernym-github-machine-user', url: 'https://github.com/evernym/sovrin-packaging'
+    git branch: 'master', credentialsId: 'evernym-github-machine-user', url: 'https://github.com/evernym/sovrin-packaging'
 }
