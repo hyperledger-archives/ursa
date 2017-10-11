@@ -7,9 +7,9 @@ fi
 
 type="$1"
 suffix="$2"
-repo="$4"
-host="$5"
-key="$6"
+repo="$3"
+host="$4"
+key="$5"
 
 sed -i -E "s/version='([0-9,.]+).*/version='\\1$suffix',/" setup.py
 
