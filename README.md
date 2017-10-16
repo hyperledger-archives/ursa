@@ -1,3 +1,8 @@
+
+## Before you Continue
+
+If you haven't done so already, please visit the main resource for all things "Indy" to get acquainted with the code base, helpful resources, and up-to-date information: [Hyperledger Wiki-Indy](https://wiki.hyperledger.org/projects/indy).
+
 # Indy Crypto
 
 This is the shared crypto libirary for [Hyperledger Indy](https://www.hyperledger.org/projects) components.
@@ -17,7 +22,7 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
 
 1. Install Rust and rustup (https://www.rust-lang.org/install.html).
 1. Checkout and build the library:
-   
+
    ```
    git clone https://github.com/hyperledger/indy-crypto.git
    cd ./indy-crypto/libindy-crypto
