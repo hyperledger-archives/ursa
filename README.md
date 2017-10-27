@@ -55,10 +55,10 @@ Builded binaries can be downloaded from https://repo.sovrin.org:
 * ios/libindy_crypto/stable/ - Pods for iOS
 * rhel/libindy_crypto/{master,stable,rc} - RHEL rpms
 
-Alternatively we could install Ubundu deb packages by running following commands:
+Also Ubundu deb packages can be installed from APT repository:
 ```
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
-sudo add-apt-repository https://repo.sovrin.org/sdk/deb
-sudo apt-get install -y libindy-crypto
+sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
+sudo apt-get install -y libindy
 ```
 
