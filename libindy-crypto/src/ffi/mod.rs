@@ -54,6 +54,9 @@ pub enum ErrorCode
 
     // IO Error
     CommonIOError = 114,
+
+    // Trying to issue non-revocation claim with full anoncreds revocation accumulator
+    AnoncredsRevocationAccumulatorIsFull = 115
 }
 
 #[no_mangle]

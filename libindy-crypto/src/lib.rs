@@ -10,14 +10,31 @@ extern crate sha2;
 mod utils;
 
 #[cfg(feature = "serialization")]
+extern crate serde;
+
+#[cfg(feature = "serialization")]
 #[allow(unused_imports)] // Remove false positive warning. See https://github.com/rust-lang/rust/issues/44342
 #[macro_use]
 extern crate serde_derive;
 
 #[cfg(feature = "serialization")]
-extern crate serde;
+extern crate serde_json;
 
+#[cfg(feature = "bn_openssl")]
+extern crate openssl;
+
+#[cfg(feature = "bn_openssl")]
+extern crate int_traits;
+
+extern crate time;
+
+pub mod anoncreds;
 pub mod bls;
+
+#[cfg(feature = "bn_openssl")]
+#[path = "bn/openssl.rs"]
+pub mod bn;
+
 pub mod errors;
 pub mod ffi;
 
