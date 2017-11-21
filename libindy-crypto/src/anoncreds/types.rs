@@ -41,10 +41,12 @@ impl ClaimAttributesBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct ClaimAttributesValues {
     pub attrs_values: HashMap<String, BigNumber>
 }
 
+#[derive(Debug)]
 pub struct ClaimAttributesValuesBuilder {
     attrs_values: HashMap<String, BigNumber>
 }
