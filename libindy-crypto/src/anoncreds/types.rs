@@ -1,6 +1,6 @@
 use bn::BigNumber;
 use errors::IndyCryptoError;
-use anoncreds::helpers::{AppendByteArray, clone_bignum_map};
+use anoncreds::helpers::AppendByteArray;
 
 use pair::{
     GroupOrderElement,
@@ -88,6 +88,7 @@ pub struct IssuerRevocationPrivateKey {
     pub sk: GroupOrderElement
 }
 
+#[derive(Clone)]
 pub struct IssuerRevocationPublicKey {
     pub g: PointG1,
     pub g_dash: PointG2,
@@ -167,7 +168,7 @@ pub struct Witness {
     pub v: HashSet<u32>
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub struct NonRevocationClaim {
     pub sigma: PointG1,
     pub c: GroupOrderElement,
@@ -197,6 +198,7 @@ pub struct BlindedMasterSecretData {
     pub vr_prime: Option<GroupOrderElement>
 }
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct PrimaryBlindedMasterSecretData {
     pub u: BigNumber,
     pub v_prime: BigNumber,
@@ -214,14 +216,15 @@ pub struct ClaimInfo {
     pub issuer_did: String
 }
 
+#[derive(Debug)]
 pub struct PrimaryEqualInitProof {
     pub a_prime: BigNumber,
     pub t: BigNumber,
-    pub etilde: BigNumber,
-    pub eprime: BigNumber,
-    pub vtilde: BigNumber,
-    pub vprime: BigNumber,
-    pub mtilde: HashMap<String, BigNumber>,
+    pub e_tilde: BigNumber,
+    pub e_prime: BigNumber,
+    pub v_tilde: BigNumber,
+    pub v_prime: BigNumber,
+    pub m_tilde: HashMap<String, BigNumber>,
     pub m1_tilde: BigNumber,
     pub m2_tilde: BigNumber,
     pub m2: BigNumber
@@ -237,6 +240,7 @@ impl PrimaryEqualInitProof {
     }
 }
 
+#[derive(Debug)]
 pub struct PrimaryPredicateGEInitProof {
     pub c_list: Vec<BigNumber>,
     pub tau_list: Vec<BigNumber>,
@@ -259,6 +263,7 @@ impl PrimaryPredicateGEInitProof {
     }
 }
 
+#[derive(Debug)]
 pub struct PrimaryInitProof {
     pub eq_proof: PrimaryEqualInitProof,
     pub ge_proofs: Vec<PrimaryPredicateGEInitProof>
@@ -397,22 +402,16 @@ pub struct ProofRequest {
 
 
 pub struct ProofClaims {
-    pub claim: ClaimInfo,
+    pub claim: Claim,
+    pub claim_attributes_values: ClaimAttributesValues,
     pub p_pub_key: IssuerPublicKey,
     pub r_pub_key: Option<IssuerRevocationPublicKey>,
     pub r_reg: Option<RevocationRegistryPublic>,
     pub attrs_with_predicates: AttrsWithPredicates
 }
 
-
-pub struct ClaimProof {
-    pub proof: Proof,
-    pub schema_seq_no: i32,
-    pub issuer_did: String
-}
-
 pub struct PrimaryEqualProof {
-    pub revealed_attrs: HashMap<String, String>,
+    pub revealed_attrs: HashMap<String, BigNumber>,
     pub a_prime: BigNumber,
     pub e: BigNumber,
     pub v: BigNumber,
@@ -451,7 +450,7 @@ pub struct AggregatedProof {
 }
 
 pub struct FullProof {
-    pub proofs: HashMap<String, ClaimProof>,
+    pub proofs: HashMap<String, Proof>,
     pub aggregated_proof: AggregatedProof,
 }
 

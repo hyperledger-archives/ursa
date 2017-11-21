@@ -258,10 +258,6 @@ pub fn bignum_to_group_element(num: &BigNumber) -> Result<GroupOrderElement, Ind
     Ok(GroupOrderElement::from_bytes(&num.to_bytes()?)?)
 }
 
-pub fn get_composite_id(issuer_did: &str, schema_seq_no: i32) -> String {
-    issuer_did.to_string() + ":" + &schema_seq_no.to_string()
-}
-
 #[cfg(not(test))]
 pub fn rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
     BigNumber::rand(size)

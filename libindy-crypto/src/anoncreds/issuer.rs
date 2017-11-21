@@ -496,8 +496,8 @@ mod tests {
 
     #[test]
     fn issuer_new_revocation_registry_works() {
-        let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_attributes(), true).unwrap();
-        let (rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&pub_key, 100).unwrap();
+        let (pub_key, _) = Issuer::new_keys(&mocks::claim_attributes(), true).unwrap();
+        let (_, _) = Issuer::new_revocation_registry(&pub_key, 100).unwrap();
     }
 
     #[test]
@@ -570,7 +570,7 @@ pub mod mocks {
     pub fn claim_attributes_values() -> ClaimAttributesValues {
         ClaimAttributesValuesBuilder::new().unwrap()
             .add_attr_value("name", "1139481716457488690172217916278103335").unwrap()
-            .add_attr_value("age", "33").unwrap()
+            .add_attr_value("age", "28").unwrap()
             .add_attr_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap()
             .add_attr_value("height", "175").unwrap()
             .finalize().unwrap()
