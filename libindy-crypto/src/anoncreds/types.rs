@@ -14,12 +14,12 @@ use super::helpers::clone_bignum_map;
 
 #[derive(Debug)]
 pub struct ClaimAttributes {
-    pub attrs: HashSet<String>
+    pub attrs: HashSet<String> /* attr names */
 }
 
 #[derive(Debug)]
 pub struct ClaimAttributesBuilder {
-    attrs: HashSet<String>
+    attrs: HashSet<String> /* attr names */
 }
 
 impl ClaimAttributesBuilder {
@@ -56,7 +56,7 @@ impl ClaimAttributesValues {
 
 #[derive(Debug)]
 pub struct ClaimAttributesValuesBuilder {
-    attrs_values: HashMap<String, BigNumber>
+    attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
 }
 
 impl ClaimAttributesValuesBuilder {
@@ -89,7 +89,7 @@ pub struct IssuerPrimaryPublicKey {
     pub n: BigNumber,
     pub s: BigNumber,
     pub rms: BigNumber,
-    pub r: HashMap<String, BigNumber>,
+    pub r: HashMap<String /* attr_name */, BigNumber>,
     pub rctxt: BigNumber,
     pub z: BigNumber
 }
@@ -130,7 +130,7 @@ pub struct IssuerPrivateKey {
 #[derive(Debug)]
 pub struct RevocationAccumulator {
     pub acc: PointG2,
-    pub v: HashSet<u32>,
+    pub v: HashSet<u32> /* used indexes */,
     pub max_claim_num: u32,
 }
 
@@ -155,8 +155,8 @@ pub struct RevocationAccumulatorPublicKey {
 
 #[derive(Debug)]
 pub struct RevocationAccumulatorTails {
-    pub tails: HashMap<u32, PointG1>,
-    pub tails_dash: HashMap<u32, PointG2>,
+    pub tails: HashMap<u32 /* index in acc */, PointG1>,
+    pub tails_dash: HashMap<u32 /* index in acc */, PointG2>,
 }
 
 #[derive(Debug)]
@@ -202,7 +202,7 @@ pub struct NonRevocationClaim {
 #[derive(Debug)]
 pub struct Claim {
     pub p_claim: PrimaryClaim,
-    pub r_claim: Option<NonRevocationClaim>,
+    pub r_claim: Option<NonRevocationClaim> /* will be used to proof is claim revoked preparation */,
 }
 
 #[derive(Debug)]
@@ -439,11 +439,11 @@ pub struct ProofClaims {
 
 #[derive(Debug)]
 pub struct PrimaryEqualProof {
-    pub revealed_attrs: HashMap<String, BigNumber>,
+    pub revealed_attrs: HashMap<String /* attr_name of revealed */, BigNumber>,
     pub a_prime: BigNumber,
     pub e: BigNumber,
     pub v: BigNumber,
-    pub m: HashMap<String, BigNumber>,
+    pub m: HashMap<String /* attr_name of all except revealed */, BigNumber>,
     pub m1: BigNumber,
     pub m2: BigNumber
 }
@@ -484,7 +484,7 @@ pub struct AggregatedProof {
 
 #[derive(Debug)]
 pub struct FullProof {
-    pub proofs: HashMap<String, Proof>,
+    pub proofs: HashMap<String /* issuer pub key id */, Proof>,
     pub aggregated_proof: AggregatedProof,
 }
 

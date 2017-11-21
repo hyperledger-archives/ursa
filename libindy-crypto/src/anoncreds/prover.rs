@@ -142,6 +142,7 @@ pub struct ProofBuilder {
     pub init_proofs: HashMap<String, InitProof>,
     pub c_list: Vec<Vec<u8>>,
     pub tau_list: Vec<Vec<u8>>,
+    pub proof_claims: HashMap<String /* issuer pub key id */, ProofClaims>,
 }
 
 impl ProofBuilder {

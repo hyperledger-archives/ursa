@@ -1,60 +1,56 @@
-extern crate indy_crypto;
-
-use services::anoncreds::types::*;
-use services::anoncreds::constants::{LARGE_E_START, ITERATION, LARGE_NONCE};
-use services::anoncreds::helpers::{AppendByteArray, get_hash_as_int, bignum_to_group_element};
-use utils::crypto::bn::BigNumber;
+use anoncreds::types::*;
+use anoncreds::constants::{LARGE_E_START, ITERATION, LARGE_NONCE};
+use anoncreds::helpers::{AppendByteArray, get_hash_as_int, bignum_to_group_element};
+use bn::BigNumber;
 use std::collections::{HashMap, HashSet};
-use errors::common::CommonError;
-use services::anoncreds::issuer::Issuer;
-use self::indy_crypto::pair::{PointG1, PointG2, Pair};
+use errors::IndyCryptoError;
+use anoncreds::prover::ProofBuilder;
+use pair::{PointG1, PointG2, Pair};
 
-pub struct Verifier {}
+pub struct Verifier {
+    claims: HashMap<String, ProofClaims>,
+}
 
 impl Verifier {
     pub fn new() -> Verifier {
-        Verifier {}
+        Verifier {
+            claims: HashMap::new(),
+        }
     }
 
-    pub fn generate_nonce(&self) -> Result<BigNumber, CommonError> {
+    pub fn generate_nonce(&self) -> Result<BigNumber, IndyCryptoError> {
         BigNumber::rand(LARGE_NONCE)
     }
 
     pub fn verify(&self,
-                  proof: &ProofJson,
-                  nonce: &BigNumber,
-                  claim_defs: &HashMap<String, ClaimDefinition>,
-                  revoc_regs: &HashMap<String, RevocationRegistry>,
-                  schemas: &HashMap<String, Schema>) -> Result<bool, CommonError> {
+                  proof: &FullProof,
+                  nonce: &BigNumber) -> Result<bool, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify proof -> start");
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
 
         for (proof_uuid, proof_item) in &proof.proofs {
-            let claim_definition = claim_defs.get(proof_uuid)
-                .ok_or(CommonError::InvalidStructure(format!("Claim definition is not found")))?;
-            let schema = schemas.get(proof_uuid)
-                .ok_or(CommonError::InvalidStructure(format!("Schema is not found")))?;
+            let proof_claim: &ProofClaims = self.claims.get(proof_uuid)
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Schema is not found")))?;
 
-            if let (Some(ref non_revocation_proof), Some(ref pkr), Some(ref revoc_reg)) = (proof_item.proof.non_revoc_proof.clone(),
-                                                                                           claim_definition.data.public_key_revocation.clone(),
-                                                                                           revoc_regs.get(proof_uuid)) {
-
+            if let (Some(non_revocation_proof), Some(pkr), Some(revoc_reg)) = (proof_item.proof.non_revoc_proof.as_ref(),
+                                                                               proof_claim.r_pub_key.as_ref(),
+                                                                               proof_claim.r_reg.as_ref()) {
                 tau_list.extend_from_slice(
                     &Verifier::_verify_non_revocation_proof(
-                        pkr,
-                        &revoc_reg.accumulator,
-                        &revoc_reg.acc_pk,
+                        &pkr,
+                        &revoc_reg.acc,
+                        &revoc_reg.key,
                         &proof.aggregated_proof.c_hash,
                         &non_revocation_proof)?.as_slice()?
                 );
             };
 
             tau_list.append_vec(
-                &Verifier::_verify_primary_proof(&claim_definition.data.public_key,
+                &Verifier::_verify_primary_proof(&proof_claim.p_pub_key.p_key,
                                                  &proof.aggregated_proof.c_hash,
                                                  &proof_item.proof.primary_proof,
-                                                 &schema)?
+                                                 &proof_claim.attrs_with_predicates)?
             )?;
         }
 
@@ -71,11 +67,11 @@ impl Verifier {
         Ok(c_hver == proof.aggregated_proof.c_hash)
     }
 
-    fn _verify_primary_proof(pk: &PublicKey, c_hash: &BigNumber,
-                             primary_proof: &PrimaryProof, schema: &Schema) -> Result<Vec<BigNumber>, CommonError> {
+    fn _verify_primary_proof(pk: &IssuerPrimaryPublicKey, c_hash: &BigNumber,
+                             primary_proof: &PrimaryProof, attr_with_predicates: &AttrsWithPredicates) -> Result<Vec<BigNumber>, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify primary proof -> start");
 
-        let mut t_hat: Vec<BigNumber> = Verifier::_verify_equality(pk, &primary_proof.eq_proof, c_hash, schema)?;
+        let mut t_hat: Vec<BigNumber> = Verifier::_verify_equality(pk, &primary_proof.eq_proof, c_hash, attr_with_predicates)?;
 
         for ge_proof in primary_proof.ge_proofs.iter() {
             t_hat.append(&mut Verifier::_verify_ge_predicate(pk, ge_proof, c_hash)?)
@@ -85,14 +81,15 @@ impl Verifier {
         Ok(t_hat)
     }
 
-    fn _verify_equality(pk: &PublicKey, proof: &PrimaryEqualProof, c_h: &BigNumber, schema: &Schema) -> Result<Vec<BigNumber>, CommonError> {
+    fn _verify_equality(pk: &IssuerPrimaryPublicKey, proof: &PrimaryEqualProof, c_h: &BigNumber, attr_with_predicates: &AttrsWithPredicates) -> Result<Vec<BigNumber>, IndyCryptoError> {
         use std::iter::FromIterator;
 
-        let unrevealed_attrs: Vec<String> =
-            schema.data.attr_names
-                .difference(&HashSet::from_iter(proof.revealed_attrs.keys().cloned()))
-                .map(|attr| attr.clone())
-                .collect::<Vec<String>>();
+//        let unrevealed_attrs: Vec<String> =
+//            schema.data.attr_names
+//                .difference(&HashSet::from_iter(proof.revealed_attrs.keys().cloned()))
+//                .map(|attr| attr.clone())
+//                .collect::<Vec<String>>();
+        let unrevealed_attrs: &Vec<String> = &attr_with_predicates.unrevealed_attrs; //TODO
 
         let t1: BigNumber = Verifier::calc_teq(&pk, &proof.a_prime, &proof.e, &proof.v, &proof.m,
                                                &proof.m1, &proof.m2, &unrevealed_attrs)?;
@@ -102,7 +99,7 @@ impl Verifier {
 
         for (attr, encoded_value) in &proof.revealed_attrs {
             let cur_r = pk.r.get(attr)
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in pk.r", attr)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", attr)))?;
 
             rar = cur_r
                 .mod_exp(&BigNumber::from_dec(&encoded_value)?, &pk.n, Some(&mut ctx))?
@@ -132,14 +129,14 @@ impl Verifier {
         Ok(vec![t])
     }
 
-    fn _verify_ge_predicate(pk: &PublicKey, proof: &PrimaryPredicateGEProof, c_h: &BigNumber) -> Result<Vec<BigNumber>, CommonError> {
+    fn _verify_ge_predicate(pk: &IssuerPrimaryPublicKey, proof: &PrimaryPredicateGEProof, c_h: &BigNumber) -> Result<Vec<BigNumber>, IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
         let mut tau_list = Verifier::calc_tge(&pk, &proof.u, &proof.r, &proof.mj,
                                               &proof.alpha, &proof.t)?;
 
         for i in 0..ITERATION {
             let cur_t = proof.t.get(&i.to_string())
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in proof.t", i)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in proof.t", i)))?;
 
             tau_list[i] = cur_t
                 .mod_exp(&c_h, &pk.n, Some(&mut ctx))?
@@ -149,7 +146,7 @@ impl Verifier {
         }
 
         let delta = proof.t.get("DELTA")
-            .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
+            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
         tau_list[ITERATION] = pk.z
             .mod_exp(
@@ -170,17 +167,17 @@ impl Verifier {
         Ok(tau_list)
     }
 
-    pub fn calc_tge(pk: &PublicKey, u: &HashMap<String, BigNumber>, r: &HashMap<String, BigNumber>,
+    pub fn calc_tge(pk: &IssuerPrimaryPublicKey, u: &HashMap<String, BigNumber>, r: &HashMap<String, BigNumber>,
                     mj: &BigNumber, alpha: &BigNumber, t: &HashMap<String, BigNumber>)
-                    -> Result<Vec<BigNumber>, CommonError> {
+                    -> Result<Vec<BigNumber>, IndyCryptoError> {
         let mut tau_list: Vec<BigNumber> = Vec::new();
         let mut ctx = BigNumber::new_context()?;
 
         for i in 0..ITERATION {
             let cur_u = u.get(&i.to_string())
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
             let cur_r = r.get(&i.to_string())
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in r", i)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", i)))?;
 
             let t_tau = pk.z
                 .mod_exp(&cur_u, &pk.n, Some(&mut ctx))?
@@ -194,7 +191,7 @@ impl Verifier {
         }
 
         let delta = r.get("DELTA")
-            .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in r", "DELTA")))?;
+            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", "DELTA")))?;
 
 
         let t_tau = pk.z
@@ -211,9 +208,9 @@ impl Verifier {
 
         for i in 0..ITERATION {
             let cur_t = t.get(&i.to_string())
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in t", i)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in t", i)))?;
             let cur_u = u.get(&i.to_string())
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
 
             q = cur_t
                 .mod_exp(&cur_u, &pk.n, Some(&mut ctx))?
@@ -230,17 +227,17 @@ impl Verifier {
         Ok(tau_list)
     }
 
-    pub fn calc_teq(pk: &PublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
+    pub fn calc_teq(pk: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
                     mtilde: &HashMap<String, BigNumber>, m1tilde: &BigNumber, m2tilde: &BigNumber,
-                    unrevealed_attrs: &Vec<String>) -> Result<BigNumber, CommonError> {
+                    unrevealed_attrs: &Vec<String>) -> Result<BigNumber, IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
         let mut result: BigNumber = BigNumber::from_dec("1")?;
 
         for k in unrevealed_attrs.iter() {
             let cur_r = pk.r.get(k)
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in pk.r", k)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", k)))?;
             let cur_m = mtilde.get(k)
-                .ok_or(CommonError::InvalidStructure(format!("Value by key '{}' not found in mtilde", k)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in mtilde", k)))?;
 
             result = cur_r
                 .mod_exp(&cur_m, &pk.n, Some(&mut ctx))?
@@ -267,27 +264,29 @@ impl Verifier {
         Ok(result)
     }
 
-    pub fn _verify_non_revocation_proof(pkr: &RevocationPublicKey, accum: &Accumulator, accum_pk: &AccumulatorPublicKey,
+    pub fn _verify_non_revocation_proof(pkr: &IssuerRevocationPublicKey,
+                                        accum: &RevocationAccumulator,
+                                        accum_pk: &RevocationAccumulatorPublicKey,
                                         c_hash: &BigNumber, proof: &NonRevocProof)
-                                        -> Result<NonRevocProofTauList, CommonError> {
+                                        -> Result<NonRevocProofTauList, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify non revocation proof -> start");
 
         let ch_num_z = bignum_to_group_element(&c_hash)?;
 
-        let t_hat_expected_values = Issuer::_create_tau_list_expected_values(pkr, accum, accum_pk, &proof.c_list)?;
-        let t_hat_calc_values = Issuer::_create_tau_list_values(&pkr, &accum, &proof.x_list, &proof.c_list)?;
+        let t_hat_expected_values = ProofBuilder::_create_tau_list_expected_values(pkr, accum, accum_pk, &proof.c_list)?;
+        let t_hat_calc_values = ProofBuilder::_create_tau_list_values(&pkr, &accum, &proof.x_list, &proof.c_list)?;
 
 
-        let res = Ok(NonRevocProofTauList::new(
-            t_hat_expected_values.t1.mul(&ch_num_z)?.add(&t_hat_calc_values.t1)?,
-            t_hat_expected_values.t2.mul(&ch_num_z)?.add(&t_hat_calc_values.t2)?,
-            t_hat_expected_values.t3.pow(&ch_num_z)?.mul(&t_hat_calc_values.t3)?,
-            t_hat_expected_values.t4.pow(&ch_num_z)?.mul(&t_hat_calc_values.t4)?,
-            t_hat_expected_values.t5.mul(&ch_num_z)?.add(&t_hat_calc_values.t5)?,
-            t_hat_expected_values.t6.mul(&ch_num_z)?.add(&t_hat_calc_values.t6)?,
-            t_hat_expected_values.t7.pow(&ch_num_z)?.mul(&t_hat_calc_values.t7)?,
-            t_hat_expected_values.t8.pow(&ch_num_z)?.mul(&t_hat_calc_values.t8)?
-        ));
+        let res = Ok(NonRevocProofTauList {
+            t1: t_hat_expected_values.t1.mul(&ch_num_z)?.add(&t_hat_calc_values.t1)?,
+            t2: t_hat_expected_values.t2.mul(&ch_num_z)?.add(&t_hat_calc_values.t2)?,
+            t3: t_hat_expected_values.t3.pow(&ch_num_z)?.mul(&t_hat_calc_values.t3)?,
+            t4: t_hat_expected_values.t4.pow(&ch_num_z)?.mul(&t_hat_calc_values.t4)?,
+            t5: t_hat_expected_values.t5.mul(&ch_num_z)?.add(&t_hat_calc_values.t5)?,
+            t6: t_hat_expected_values.t6.mul(&ch_num_z)?.add(&t_hat_calc_values.t6)?,
+            t7: t_hat_expected_values.t7.pow(&ch_num_z)?.mul(&t_hat_calc_values.t7)?,
+            t8: t_hat_expected_values.t8.pow(&ch_num_z)?.mul(&t_hat_calc_values.t8)?
+        });
         info!(target: "anoncreds_service", "Verifier verify non revocation proof -> start");
         res
     }
@@ -296,8 +295,8 @@ impl Verifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use services::anoncreds::prover;
-    use services::anoncreds::issuer;
+    use anoncreds::prover;
+    use anoncreds::issuer;
 
     #[test]
     fn verify_equlity_works() {
@@ -306,7 +305,7 @@ mod tests {
         let c_h = BigNumber::from_dec("90321426117300366618517575493200873441415194969656589575988281157859869553034").unwrap();
         let schema = issuer::mocks::get_gvt_schema();
 
-        let res: Result<Vec<BigNumber>, CommonError> = Verifier::_verify_equality(
+        let res: Result<Vec<BigNumber>, IndyCryptoError> = Verifier::_verify_equality(
             &pk,
             &proof,
             &c_h,
@@ -395,10 +394,11 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 pub mod mocks {
     use super::*;
-    use ::services::anoncreds::prover;
-    use ::services::anoncreds::issuer;
+    use anoncreds::prover;
+    use anoncreds::issuer;
 
     pub fn get_ge_proof() -> PrimaryPredicateGEProof {
         let mut u = HashMap::new();
@@ -442,7 +442,7 @@ pub mod mocks {
     }
 
     pub fn get_accum_publick_key() -> AccumulatorPublicKey {
-        AccumulatorPublicKey::new(
+        RevocationAccumulatorPublicKey::new(
             Pair::pair(&PointG1::new().unwrap(), &PointG2::new().unwrap()).unwrap()
         )
     }
