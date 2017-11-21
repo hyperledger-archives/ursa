@@ -416,7 +416,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn issuer_generate_keys_works() {
+    fn claim_attributes_builder_works() {
+        let claim_attrs = ClaimAttributesBuilder::new().unwrap()
+            .add_attr("sex").unwrap()
+            .add_attr("name").unwrap()
+            .add_attr("age").unwrap()
+            .finalize().unwrap();
+
+        assert!(claim_attrs.attrs.contains("sex"));
+        assert!(claim_attrs.attrs.contains("name"));
+        assert!(claim_attrs.attrs.contains("age"));
+        assert!(!claim_attrs.attrs.contains("height"));
+    }
+
+    #[test]
+    fn claim_attributes_values_builder_works() {
+        let claim_attrs_values = ClaimAttributesValuesBuilder::new().unwrap()
+            .add_attr_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()
+            .add_attr_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()
+            .finalize().unwrap();
+
+        assert!(claim_attrs_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()));
+        assert!(claim_attrs_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()));
+        assert!(claim_attrs_values.attrs_values.get("age").is_none());
+    }
+
+    #[test]
+    fn issuer_new_keys_works() {
+        let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_attributes(), true).unwrap();
+        assert_eq!(pub_key.p_key, mocks::issuer_primary_public_key());
+        assert_eq!(priv_key.p_key, mocks::issuer_primary_private_key());
+        assert!(pub_key.r_key.is_some());
+        assert!(priv_key.r_key.is_some());
+    }
+
+    #[test]
+    fn issuer_new_keys_works_without_revocation_part() {
         let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_attributes(), false).unwrap();
         assert_eq!(pub_key.p_key, mocks::issuer_primary_public_key());
         assert_eq!(priv_key.p_key, mocks::issuer_primary_private_key());
@@ -425,8 +460,28 @@ mod tests {
     }
 }
 
-pub mod mocks {
-    use super::*;
+    #[test]
+    fn issuer_new_keys_works_for_empty_attributes() {
+        let claim_attrs = ClaimAttributes { attrs: HashSet::new() };
+        let res = Issuer::new_keys(&claim_attrs, false);
+        assert!(res.is_err())
+    }
+
+    #[test]
+    fn issuer_new_revocation_registry_works() {
+        let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_attributes(), true).unwrap();
+        let (rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&pub_key, 100).unwrap();
+    }
+
+    #[test]
+    fn issuer_new_claim_works() {
+//        let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_attributes(), true).unwrap();
+//        let (rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&pub_key, 100).unwrap();
+//        let claim = Issuer::new_claim()
+    }
+
+    pub mod mocks {
+        use super::*;
 
     pub fn issuer_primary_public_key() -> IssuerPrimaryPublicKey {
         let n = BigNumber::from_dec("95230844261716231334966278654105782744493078250034916428724307571481648650972254096365233503303500776910009532385733941342231244809050180342216701303297309484964627111488667613567243812137828734726055835536190375874228378361894062875040911721595668269426387378524841651770329520854646198182993599992246846197622806018586940960824812499707703407200235006250330376435395757240807360245145895448238973940748414130249165698642798758094515234629492123379833360060582377815656998861873479266942101526163937107816424422201955494796734174781894506437514751553369884508767256335322189421050651814494097369702888544056010606733").unwrap();
@@ -452,29 +507,22 @@ pub mod mocks {
         IssuerPrimaryPrivateKey { p, q }
     }
 
-    pub fn claim_attributes() -> ClaimAttributes {
-        let mut attributes: HashSet<String> = HashSet::new();
-        attributes.insert("name".to_string());
-        attributes.insert("age".to_string());
-        attributes.insert("height".to_string());
-        attributes.insert("sex".to_string());
+        pub fn claim_attributes() -> ClaimAttributes {
+            ClaimAttributesBuilder::new().unwrap()
+                .add_attr("name").unwrap()
+                .add_attr("age").unwrap()
+                .add_attr("height").unwrap()
+                .add_attr("sex").unwrap()
+                .finalize().unwrap()
+        }
 
-        ClaimAttributes { attrs: attributes }
-    }
-
-    pub fn issuer_revocation_public_key() -> IssuerRevocationPublicKey {
-        IssuerRevocationPublicKey {
-            g: PointG1::new().unwrap(),
-            g_dash: PointG2::new().unwrap(),
-            h: PointG1::new().unwrap(),
-            h0: PointG1::new().unwrap(),
-            h1: PointG1::new().unwrap(),
-            h2: PointG1::new().unwrap(),
-            htilde: PointG1::new().unwrap(),
-            h_cap: PointG2::new().unwrap(),
-            u: PointG2::new().unwrap(),
-            pk: PointG1::new().unwrap(),
-            y: PointG2::new().unwrap(),
+        pub fn claim_attributes_values() -> ClaimAttributesValues {
+            ClaimAttributesValuesBuilder::new().unwrap()
+                .add_attr_value("name", "1139481716457488690172217916278103335").unwrap()
+                .add_attr_value("age", "33").unwrap()
+                .add_attr_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap()
+                .add_attr_value("height", "175").unwrap()
+                .finalize().unwrap()
         }
     }
 
