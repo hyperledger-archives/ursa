@@ -18,7 +18,7 @@ pub fn encode_attribute(attribute: &str, byte_order: ByteOrder) -> Result<BigNum
     let index = result.iter().position(|&value| value == 0);
 
     if let Some(position) = index {
-        result.truncate(position);
+        result.truncate(position); //FIXME logical error 0x00 may be in any position inside Vec<u8>
     }
 
     if let ByteOrder::Little = byte_order {
@@ -327,5 +327,30 @@ mod tests {
         let int = 0x74BA7445;
         let answer = vec![0x74, 0xBA, 0x74, 0x45];
         assert_eq!(transform_u32_to_array_of_u8(int), answer)
+    }
+
+    #[test]
+    fn test_encode_attribute_fail_simple_collision_on_internal_truncate() {
+        let ea3079 = encode_attribute("3079", ByteOrder::Big).unwrap();
+        let ea6440 = encode_attribute("6440", ByteOrder::Big).unwrap();
+        println!("{:?}", ea3079);
+        println!("{:?}", ea6440);
+        assert_ne!(ea3079, ea6440);
+
+        /* Collision generator
+        let mut arr: [i32; 256] = [0; 256];
+        let i: usize = 0;
+        loop {
+            let v = BigNumber::hash(i.to_string().as_bytes()).unwrap();
+            if v[1] == 0 {
+                let v0 = v[0] as usize;
+                if v0 != 0 && arr[v0] != 0 {
+                    println!("{} {}", arr[v0], i);
+                    return;
+                }
+                arr[v0] = i;
+            }
+        }
+        */
     }
 }
