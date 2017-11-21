@@ -26,6 +26,8 @@ extern crate openssl;
 #[cfg(feature = "bn_openssl")]
 extern crate int_traits;
 
+extern crate libc;
+
 extern crate time;
 
 pub mod anoncreds;

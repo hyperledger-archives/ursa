@@ -17,6 +17,7 @@ pub struct ClaimAttributes {
     pub attrs: HashSet<String>
 }
 
+#[derive(Debug)]
 pub struct ClaimAttributesBuilder {
     attrs: HashSet<String>
 }

@@ -159,7 +159,7 @@ impl Issuer {
                   r_acc_tails: &mut RevocationAccumulatorTails,
                   acc_idx: u32) -> Result<(), IndyCryptoError> {
         if !r_acc.v.remove(&acc_idx) {
-            return Err(IndyCryptoError::AnoncredsRevocationAccumulatorIndex(
+            return Err(IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(
                 format!("User index:{} not found in Accumulator", acc_idx))
             );
         }
