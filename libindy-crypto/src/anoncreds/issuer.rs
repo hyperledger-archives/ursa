@@ -212,7 +212,7 @@ impl Issuer {
         ))
     }
 
-    pub fn _new_revocation_keys() -> Result<(IssuerRevocationPublicKey,
+    fn _new_revocation_keys() -> Result<(IssuerRevocationPublicKey,
                                              IssuerRevocationPrivateKey), IndyCryptoError> {
         let h = PointG1::new()?;
         let h0 = PointG1::new()?;
@@ -237,7 +237,7 @@ impl Issuer {
         ))
     }
 
-    pub fn _calc_m2(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
+    fn _calc_m2(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
         let rev_idx = rev_idx.unwrap_or(0);
 
         let prover_id_bn = encode_attribute(prover_id, ByteOrder::Little)?;
