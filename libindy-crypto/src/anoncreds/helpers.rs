@@ -6,7 +6,7 @@ use super::constants::*;
 
 use std::hash::Hash;
 use std::cmp::max;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub enum ByteOrder {
     Big,
@@ -138,7 +138,7 @@ pub fn get_hash_as_int(nums: &mut Vec<Vec<u8>>) -> Result<BigNumber, IndyCryptoE
     BigNumber::from_bytes(&hashed_array[..])
 }
 
-pub fn get_mtilde(unrevealed_attrs: &Vec<String>)
+pub fn get_mtilde(unrevealed_attrs: &HashSet<String>)
                   -> Result<HashMap<String, BigNumber>, IndyCryptoError> {
     let mut mtilde: HashMap<String, BigNumber> = HashMap::new();
 

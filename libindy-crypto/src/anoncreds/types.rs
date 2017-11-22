@@ -434,10 +434,16 @@ pub struct ProofClaims {
     pub claim_attributes_values: ClaimAttributesValues,
     pub pub_key: IssuerPublicKey,
     pub r_reg: Option<RevocationRegistryPublic>,
-    pub attrs_with_predicates: AttrsWithPredicates
+    pub attrs_with_predicates: ProofAttrs
 }
 
-#[derive(Debug)]
+pub struct VerifyClaim {
+    pub p_pub_key: IssuerPublicKey,
+    pub r_pub_key: Option<IssuerRevocationPublicKey>,
+    pub r_reg: Option<RevocationRegistryPublic>,
+    pub attrs_with_predicates: ProofAttrs
+}
+
 pub struct PrimaryEqualProof {
     pub revealed_attrs: HashMap<String /* attr_name of revealed */, BigNumber>,
     pub a_prime: BigNumber,
@@ -489,44 +495,43 @@ pub struct FullProof {
 }
 
 #[derive(Debug, Clone)]
-pub struct AttrsWithPredicates {
-    pub revealed_attrs: Vec<String>,
-    pub unrevealed_attrs: Vec<String>,
-    pub predicates: Vec<Predicate>,
+pub struct ProofAttrs {
+    pub revealed_attrs: HashSet<String>,
+    pub unrevealed_attrs: HashSet<String>,
+    pub predicates: HashSet<Predicate>,
 }
 
-#[derive(Debug)]
-pub struct AttrsWithPredicatesBuilder {
-    value: AttrsWithPredicates
+pub struct ProofAttrsBuilder {
+    value: ProofAttrs
 }
 
-impl AttrsWithPredicatesBuilder {
-    pub fn new() -> Result<AttrsWithPredicatesBuilder, IndyCryptoError> {
-        Ok(AttrsWithPredicatesBuilder {
-            value: AttrsWithPredicates {
-                revealed_attrs: Vec::new(),
-                unrevealed_attrs: Vec::new(),
-                predicates: Vec::new()
+impl ProofAttrsBuilder {
+    pub fn new() -> Result<ProofAttrsBuilder, IndyCryptoError> {
+        Ok(ProofAttrsBuilder {
+            value: ProofAttrs {
+                revealed_attrs: HashSet::new(),
+                unrevealed_attrs: HashSet::new(),
+                predicates: HashSet::new()
             }
         })
     }
 
-    pub fn add_revealed_attr(mut self, attr: &str) -> Result<AttrsWithPredicatesBuilder, IndyCryptoError> {
-        self.value.revealed_attrs.push(attr.to_owned());
+    pub fn add_revealed_attr(mut self, attr: &str) -> Result<ProofAttrsBuilder, IndyCryptoError> {
+        self.value.revealed_attrs.insert(attr.to_owned());
         Ok(self)
     }
 
-    pub fn add_unrevealed_attr(mut self, attr: &str) -> Result<AttrsWithPredicatesBuilder, IndyCryptoError> {
-        self.value.unrevealed_attrs.push(attr.to_owned());
+    pub fn add_unrevealed_attr(mut self, attr: &str) -> Result<ProofAttrsBuilder, IndyCryptoError> {
+        self.value.unrevealed_attrs.insert(attr.to_owned());
         Ok(self)
     }
 
-    pub fn add_predicate(mut self, predicate: &Predicate) -> Result<AttrsWithPredicatesBuilder, IndyCryptoError> {
-        self.value.predicates.push(predicate.clone());
+    pub fn add_predicate(mut self, predicate: Predicate) -> Result<ProofAttrsBuilder, IndyCryptoError> {
+        self.value.predicates.insert(predicate);
         Ok(self)
     }
 
-    pub fn finalize(self) -> Result<AttrsWithPredicates, IndyCryptoError> {
+    pub fn finalize(self) -> Result<ProofAttrs, IndyCryptoError> {
         Ok(self.value)
     }
 }
@@ -542,7 +547,7 @@ pub enum PredicateType {
     GE
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Predicate {
     pub attr_name: String,
     pub p_type: PredicateType,

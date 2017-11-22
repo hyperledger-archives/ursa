@@ -155,10 +155,20 @@ impl ProofBuilder {
         })
     }
 
-    pub fn add_claim(&mut self, uuid: &str, claim: &Claim, claim_attributes_values: &ClaimAttributesValues, pub_key: &IssuerPublicKey,
-                     r_reg: Option<&RevocationRegistryPublic>, attrs_with_predicates: &AttrsWithPredicates) -> Result<(), IndyCryptoError> {
-        let mut non_revoc_init_proof = None;
-        let mut m2_tilde: Option<BigNumber> = None;
+    pub fn add_claim(&mut self, uuid: &str, claim: Claim, claim_attributes_values: ClaimAttributesValues, p_pub_key: IssuerPublicKey,
+                     r_pub_key: Option<IssuerRevocationPublicKey>, r_reg: Option<RevocationRegistryPublic>,
+                     attrs_with_predicates: ProofAttrs) -> Result<(), IndyCryptoError> {
+        self.proof_claims.insert(uuid.to_owned(),
+                                 ProofClaims {
+                                     claim,
+                                     claim_attributes_values,
+                                     p_pub_key,
+                                     r_pub_key,
+                                     r_reg,
+                                     attrs_with_predicates
+                                 });
+        Ok(())
+    }
 
         if let (&Some(ref r_claim), &Some(ref r_reg), &Some(ref r_pub_key)) = (&claim.r_claim,
                                                                                &r_reg,
@@ -224,7 +234,7 @@ impl ProofBuilder {
     }
 
     fn _init_primary_proof(pk: &IssuerPrimaryPublicKey, c1: &PrimaryClaim, attributes: &HashMap<String, BigNumber>,
-                           attr_with_predicates: &AttrsWithPredicates, m1_t: &BigNumber,
+                           attr_with_predicates: &ProofAttrs, m1_t: &BigNumber,
                            m2_t: Option<BigNumber>) -> Result<PrimaryInitProof, IndyCryptoError> {
         let eq_proof = ProofBuilder::_init_eq_proof(&pk, c1, &attr_with_predicates,
                                                     m1_t, m2_t)?;
@@ -290,7 +300,7 @@ impl ProofBuilder {
         Ok(())
     }
 
-    fn _init_eq_proof(pk: &IssuerPrimaryPublicKey, c1: &PrimaryClaim, attr_with_predicates: &AttrsWithPredicates,
+    fn _init_eq_proof(pk: &IssuerPrimaryPublicKey, c1: &PrimaryClaim, attr_with_predicates: &ProofAttrs,
                       m1_tilde: &BigNumber, m2_t: Option<BigNumber>) -> Result<PrimaryEqualInitProof, IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
 
@@ -421,7 +431,7 @@ impl ProofBuilder {
     }
 
     fn _finalize_eq_proof(ms: &BigNumber, init_proof: &PrimaryEqualInitProof, c_h: &BigNumber,
-                          attributes_values: &HashMap<String, BigNumber>, attrs_with_predicates: &AttrsWithPredicates)
+                          attributes_values: &HashMap<String, BigNumber>, attrs_with_predicates: &ProofAttrs)
                           -> Result<PrimaryEqualProof, IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
 
@@ -546,7 +556,7 @@ impl ProofBuilder {
     }
 
     fn _finalize_proof(ms: &BigNumber, init_proof: &PrimaryInitProof, c_h: &BigNumber,
-                       attributes: &HashMap<String, BigNumber>, attrs_with_predicates: &AttrsWithPredicates)
+                       attributes: &HashMap<String, BigNumber>, attrs_with_predicates: &ProofAttrs)
                        -> Result<PrimaryProof, IndyCryptoError> {
         info!(target: "anoncreds_service", "Prover finalize proof -> start");
 
@@ -625,7 +635,7 @@ impl ProofBuilder {
 
     pub fn calc_teq(pk: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
                     mtilde: &HashMap<String, BigNumber>, m1tilde: &BigNumber, m2tilde: &BigNumber,
-                    unrevealed_attrs: &Vec<String>) -> Result<BigNumber, IndyCryptoError> {
+                    unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
         let mut result: BigNumber = BigNumber::from_dec("1")?;
 
@@ -1067,8 +1077,8 @@ pub mod mocks {
 
     pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 
-    pub fn attrs_with_predicates() -> AttrsWithPredicates {
-        AttrsWithPredicatesBuilder::new().unwrap()
+    pub fn attrs_with_predicates() -> ProofAttrs {
+        ProofAttrsBuilder::new().unwrap()
             .add_revealed_attr("name").unwrap()
             .add_unrevealed_attr("height").unwrap()
             .add_unrevealed_attr("age").unwrap()
