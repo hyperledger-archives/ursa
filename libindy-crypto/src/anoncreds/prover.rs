@@ -976,6 +976,7 @@ mod tests {
 }
 
 pub mod mocks {
+    use std::iter::FromIterator;
     use super::*;
 
     pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
@@ -990,12 +991,12 @@ pub mod mocks {
             .finalize().unwrap()
     }
 
-    pub fn revealed_attrs() -> Vec<String> {
-        vec!["name".to_owned()]
+    pub fn revealed_attrs() -> HashSet<String> {
+        HashSet::from_iter(vec!["name".to_owned()].into_iter())
     }
 
-    pub fn unrevealed_attrs() -> Vec<String> {
-        vec!["height".to_owned(), "age".to_owned(), "sex".to_owned()]
+    pub fn unrevealed_attrs() -> HashSet<String> {
+        HashSet::from_iter(vec!["height".to_owned(), "age".to_owned(), "sex".to_owned()])
     }
 
     pub fn claim_revealed_attributes_values() -> ClaimAttributesValues {

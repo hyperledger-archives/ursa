@@ -9,6 +9,7 @@ use std::hash::Hash;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 
+#[allow(dead_code)] //FIXME
 pub enum ByteOrder {
     Big,
     Little

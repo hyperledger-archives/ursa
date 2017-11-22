@@ -5,7 +5,6 @@ use bn::BigNumber;
 use std::collections::{HashMap, HashSet};
 use errors::IndyCryptoError;
 use anoncreds::prover::ProofBuilder;
-use pair::{PointG1, PointG2, Pair};
 
 pub struct Verifier {
     claims: HashMap<String, VerifyClaim>,
@@ -36,8 +35,7 @@ impl Verifier {
 
     pub fn verify(&self,
                   proof: &FullProof,
-                  nonce: &BigNumber,
-                  proof_attrs: ProofAttrs) -> Result<bool, IndyCryptoError> {
+                  nonce: &BigNumber) -> Result<bool, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify proof -> start");
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
@@ -63,7 +61,7 @@ impl Verifier {
                 &Verifier::_verify_primary_proof(&claim.p_pub_key.p_key,
                                                  &proof.aggregated_proof.c_hash,
                                                  &proof_item.primary_proof,
-                                                 &claim.attrs_with_predicates)?
+                                                 &claim.attrs_with_predicates.unrevealed_attrs)?
             )?;
         }
 
@@ -81,10 +79,10 @@ impl Verifier {
     }
 
     fn _verify_primary_proof(pk: &IssuerPrimaryPublicKey, c_hash: &BigNumber,
-                             primary_proof: &PrimaryProof, attr_with_predicates: &ProofAttrs) -> Result<Vec<BigNumber>, IndyCryptoError> {
+                             primary_proof: &PrimaryProof, unrevealed_attrs: &HashSet<String>) -> Result<Vec<BigNumber>, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify primary proof -> start");
 
-        let mut t_hat: Vec<BigNumber> = Verifier::_verify_equality(pk, &primary_proof.eq_proof, c_hash, attr_with_predicates)?;
+        let mut t_hat: Vec<BigNumber> = Verifier::_verify_equality(pk, &primary_proof.eq_proof, c_hash, unrevealed_attrs)?;
 
         for ge_proof in primary_proof.ge_proofs.iter() {
             t_hat.append(&mut Verifier::_verify_ge_predicate(pk, ge_proof, c_hash)?)
@@ -94,15 +92,13 @@ impl Verifier {
         Ok(t_hat)
     }
 
-    fn _verify_equality(pk: &IssuerPrimaryPublicKey, proof: &PrimaryEqualProof, c_h: &BigNumber, attr_with_predicates: &ProofAttrs) -> Result<Vec<BigNumber>, IndyCryptoError> {
-        use std::iter::FromIterator;
-
+    fn _verify_equality(pk: &IssuerPrimaryPublicKey, proof: &PrimaryEqualProof, c_h: &BigNumber, unrevealed_attrs: &HashSet<String>) -> Result<Vec<BigNumber>, IndyCryptoError> {
+        //        use std::iter::FromIterator;
         //        let unrevealed_attrs: Vec<String> =
         //            schema.data.attr_names
         //                .difference(&HashSet::from_iter(proof.revealed_attrs.keys().cloned()))
         //                .map(|attr| attr.clone())
         //                .collect::<Vec<String>>();
-        let unrevealed_attrs: &HashSet<String> = &attr_with_predicates.unrevealed_attrs; //TODO
 
         let t1: BigNumber = calc_teq(&pk, &proof.a_prime, &proof.e, &proof.v, &proof.m,
                                      &proof.m1, &proof.m2, &unrevealed_attrs)?;
@@ -217,15 +213,15 @@ mod tests {
     #[test]
     fn verify_equlity_works() {
         let proof = mocks::get_eq_proof();
-        let pk = issuer::mocks::get_pk();
+        let pk = issuer::mocks::issuer_primary_public_key();
         let c_h = BigNumber::from_dec("90321426117300366618517575493200873441415194969656589575988281157859869553034").unwrap();
-        let schema = issuer::mocks::get_gvt_schema();
+        let unrevealed_attrs = prover::mocks::unrevealed_attrs();
 
         let res: Result<Vec<BigNumber>, IndyCryptoError> = Verifier::_verify_equality(
             &pk,
             &proof,
             &c_h,
-            &schema
+            &unrevealed_attrs
         );
 
         assert!(res.is_ok());
@@ -240,7 +236,7 @@ mod tests {
     fn _verify_ge_predicate_works() {
         let proof = mocks::get_ge_proof();
         let c_h = BigNumber::from_dec("90321426117300366618517575493200873441415194969656589575988281157859869553034").unwrap();
-        let pk = issuer::mocks::get_pk();
+        let pk = issuer::mocks::issuer_primary_public_key();
 
         let res = Verifier::_verify_ge_predicate(&pk, &proof, &c_h);
 
@@ -265,12 +261,11 @@ mod tests {
 
     #[test]
     fn calc_tge_works() {
-        let verifier = Verifier::new();
         let proof = mocks::get_ge_proof();
-        let pk = issuer::mocks::get_pk();
+        let pk = issuer::mocks::issuer_primary_public_key();
 
-        let res = Verifier::calc_tge(&pk, &proof.u, &proof.r, &proof.mj,
-                                     &proof.alpha, &proof.t);
+        let res = calc_tge(&pk, &proof.u, &proof.r, &proof.mj,
+                           &proof.alpha, &proof.t);
 
         assert!(res.is_ok());
 
@@ -295,11 +290,11 @@ mod tests {
     #[test]
     fn calc_teq_works() {
         let proof = mocks::get_eq_proof();
-        let pk = issuer::mocks::get_pk();
-        let unrevealed_attrs = prover::mocks::get_unrevealed_attrs();
+        let pk = issuer::mocks::issuer_primary_public_key();
+        let unrevealed_attrs = prover::mocks::unrevealed_attrs();
 
-        let res = Verifier::calc_teq(&pk, &proof.a_prime, &proof.e, &proof.v,
-                                     &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs
+        let res = calc_teq(&pk, &proof.a_prime, &proof.e, &proof.v,
+                           &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs
         );
 
         assert!(res.is_ok());
@@ -314,7 +309,7 @@ mod tests {
 pub mod mocks {
     use super::*;
     use anoncreds::prover;
-    use anoncreds::issuer;
+    use pair::{PointG1, PointG2, Pair};
 
     pub fn get_ge_proof() -> PrimaryPredicateGEProof {
         let mut u = HashMap::new();
@@ -337,29 +332,35 @@ pub mod mocks {
         t.insert("2".to_string(), BigNumber::from_dec("89410264446544582460783108256046283919076319065430050325756614584399852372030797406836188839188658589044450904082852710142004660134924756488845128162391217899779712577616690285325130344040888345830793786702389605089886670947913310987447937415013394798653152944186602375622211523989869906842514688368412364643177924764258301720702233619449643601070324239497432310281518069485140179427484578654078080286588210649780194784918635633853990818152978680101738950391705291308278990621417475783919318775532419526399483870315453680012214346133208277396870767376190499172447005639213621681954563685885258611100453847030057210573").unwrap());
         t.insert("DELTA".to_string(), BigNumber::from_dec("17531299058220149467416854489421567897910338960471902975273408583568522392255499968302116890306524687486663687730044248160210339238863476091064742601815037120574733471494286906058476822621292173298642666511349405172455078979126802123773531891625097004911163338483230811323704803366602873408421785889893292223666425119841459293545405397943817131052036368166012943639154162916778629230509814424319368937759879498990977728770262630904002681927411874415760739538041907804807946503694675967291621468790462606280423096949972217261933741626487585406950575711867888842552544895574858154723208928052348208022999454364836959913").unwrap());
 
-        let predicate = prover::mocks::get_gvt_predicate();
+        let predicate = prover::mocks::predicate();
 
         let mj = BigNumber::from_dec("1603425011106247404410993992231356816212687443774810147917707956054468639246061842660922922638282972213339086692783888162583747872610530439675358599658842676000681975294259033921").unwrap();
         let alpha = BigNumber::from_dec("10356391427643160498096100322044181597098497015522243313140952718701540840206124784483254227685815326973121415131868716208997744531667356503588945389793642286002145762891552961662804737699174847630739288154243345749050494830443436382280881466833601915627397601315033369264534756381669075511238130934450573103942299767277725603498732898775126784825329479233488928873905649944203334284969529288341712039042121593832892633719941366126598676503928077684908261211960615121039788257179455497199714100480379742080080363623749544442225600170310016965613238530651846654311018291673656192911252359090044631268913200633654215640107245506757349629342277896334140999154991920063754025485899126293818842601918101509689122011832619551509675197082794490012616416413823359927604558553776550532965415598441778103806673039612795460783658848060332784778084904").unwrap();
 
-        PrimaryPredicateGEProof::new(u, r, mj, alpha, t, predicate)
+        PrimaryPredicateGEProof { u, r, mj, alpha, t, predicate }
     }
 
     pub fn get_eq_proof() -> PrimaryEqualProof {
-        let mtilde = prover::mocks::get_mtilde();
+        let mtilde = prover::mocks::mtilde();
         let a_prime = BigNumber::from_dec("78844788312843933904888269033662162831422304046107077675905006898972188325961502973244613809697759885634089891809903260596596204050337720745582204425029325009022804719252242584040122299621227721199828176761231376551096458193462372191787196647068079526052265156928268144134736182005375490381484557881773286686542404542426808122757946974594449826818670853550143124991683881881113838215414675622341721941313438212584005249213398724981821052915678073798488388669906236343688340695052465960401053524210111298793496466799018612997781887930492163394165793209802065308672404407680589643793898593773957386855704715017263075623").unwrap();
         let e = BigNumber::from_dec("157211048330804559357890763556004205033325190265048652432262377822213198765450524518019378474079954420822601420627089523829180910221666161").unwrap();
         let v = BigNumber::from_dec("1284941348270882857396668346831283261477214348763690683497348697824290862398878189368957036860440621466109067749261102013043934190657143812489958705080669016032522931660500036446733706678652522515950127754450934645211652056136276859874236807975473521456606914069014082991239036433172213010731627604460900655694372427254286535318919513622655843830315487127605220061147693872530746405109346050119002875962452785135042012369674224406878631029359470440107271769428236320166308531422754837805075091788368691034173422556029573001095280381990063052098520390497628832466059617626095893334305279839243726801057118958286768204379145955518934076042328930415723280186456582783477760604150368095698975266693968743996433862121883506028239575396951810130540073342769017977933561136433479399747016313456753154246044046173236103107056336293744927119766084120338151498135676089834463415910355744516788140991012773923718618015121004759889110").unwrap();
         let m1 = BigNumber::from_dec("113866224097885880522899498541789692895180427088521824413896638850295809029417413411152277496349590174605786763072969787168775556353363043323193169646869348691540567047982131578875798814721573306665422753535462043941706296398687162611874398835403372887990167434056141368901284989978738291863881602850122461103").unwrap();
         let m2 = BigNumber::from_dec("1323766290428560718316650362032141006992517904653586088737644821361547649912995176966509589375485991923219004461467056332846596210374933277433111217288600965656096366761598274718188430661014172306546555075331860671882382331826185116501265994994392187563331774320231157973439421596164605280733821402123058645").unwrap();
-        let revealed_attrs: HashMap<String, String> = issuer::mocks::get_gvt_encoded_revealed_attributes();
+        let revealed_attrs: HashMap<String, BigNumber> = get_gvt_encoded_revealed_attributes();
 
-        PrimaryEqualProof::new(revealed_attrs, a_prime, e, v, mtilde, m1, m2)
+        PrimaryEqualProof { revealed_attrs, a_prime, e, v, m: mtilde, m1, m2 }
     }
 
-    pub fn get_accum_publick_key() -> AccumulatorPublicKey {
-        RevocationAccumulatorPublicKey::new(
-            Pair::pair(&PointG1::new().unwrap(), &PointG2::new().unwrap()).unwrap()
-        )
+    pub fn get_accum_publick_key() -> RevocationAccumulatorPublicKey {
+        RevocationAccumulatorPublicKey {
+            z: Pair::pair(&PointG1::new().unwrap(), &PointG2::new().unwrap()).unwrap()
+        }
+    }
+
+    pub fn get_gvt_encoded_revealed_attributes() -> HashMap<String, BigNumber> {
+        let mut encoded_attributes: HashMap<String, BigNumber> = HashMap::new();
+        encoded_attributes.insert("name".to_string(), BigNumber::from_dec("1139481716457488690172217916278103335").unwrap());
+        encoded_attributes
     }
 }
