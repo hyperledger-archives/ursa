@@ -65,7 +65,7 @@ pub fn generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 
 #[cfg(not(test))]
 pub fn generate_safe_prime(size: usize) -> Result<BigNumber, IndyCryptoError> {
-    BigNumber::generate_safe_prime(usize)
+    BigNumber::generate_safe_prime(size)
 }
 
 #[cfg(test)]
