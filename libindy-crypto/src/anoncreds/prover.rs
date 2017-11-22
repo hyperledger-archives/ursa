@@ -24,14 +24,13 @@ impl Prover {
         })
     }
 
-    pub fn generate_blinded_master_secret(p_pub_key: &IssuerPrimaryPublicKey,
-                                          r_pub_key: &Option<&IssuerRevocationPublicKey>,
+    pub fn generate_blinded_master_secret(pub_key: &IssuerPublicKey,
                                           ms: &MasterSecret) -> Result<(BlindedMasterSecret,
                                                                         BlindedMasterSecretData), IndyCryptoError> {
-        let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&p_pub_key, &ms)?;
+        let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&pub_key.p_key, &ms)?;
 
-        let blinded_revocation_master_secret = match r_pub_key {
-            &Some(ref r_pk) => Some(Prover::_generate_blinded_revocation_master_secret(r_pk)?),
+        let blinded_revocation_master_secret = match pub_key.r_key {
+            Some(ref r_pk) => Some(Prover::_generate_blinded_revocation_master_secret(r_pk)?),
             _ => None
         };
 
@@ -72,14 +71,14 @@ impl Prover {
 
     pub fn process_claim(claim: &mut Claim,
                          blinded_master_secret_data: &BlindedMasterSecretData,
-                         r_pub_key: &Option<&IssuerRevocationPublicKey>,
-                         r_reg: &Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
+                         r_pub_key: Option<&IssuerRevocationPublicKey>,
+                         r_reg: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
         Prover::_process_primary_claim(&mut claim.p_claim, &blinded_master_secret_data.v_prime)?;
 
-        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), &Some(ref r_reg)) = (&mut claim.r_claim,
-                                                                                                                    blinded_master_secret_data.vr_prime,
-                                                                                                                    r_pub_key,
-                                                                                                                    r_reg) {
+        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), Some(ref r_key), Some(ref r_reg)) = (&mut claim.r_claim,
+                                                                                                                  blinded_master_secret_data.vr_prime,
+                                                                                                                  r_pub_key,
+                                                                                                                  r_reg) {
             Prover::_process_non_revocation_claim(non_revocation_claim,
                                                   vr_prime,
                                                   &r_key,
@@ -137,12 +136,12 @@ impl Prover {
     }
 }
 
+#[derive(Debug)]
 pub struct ProofBuilder {
     pub m1_tilde: BigNumber,
     pub init_proofs: HashMap<String, InitProof>,
     pub c_list: Vec<Vec<u8>>,
     pub tau_list: Vec<Vec<u8>>,
-    pub proof_claims: HashMap<String, ProofClaims>,
 }
 
 impl ProofBuilder {
@@ -151,56 +150,48 @@ impl ProofBuilder {
             m1_tilde: rand(LARGE_M2_TILDE)?,
             init_proofs: HashMap::new(),
             c_list: Vec::new(),
-            tau_list: Vec::new(),
-            proof_claims: HashMap::new()
+            tau_list: Vec::new()
         })
     }
 
-    pub fn add_claim(&mut self, uuid: &str, claim: Claim, claim_attributes_values: ClaimAttributesValues, p_pub_key: IssuerPublicKey,
-                     r_pub_key: Option<IssuerRevocationPublicKey>, r_reg: Option<RevocationRegistryPublic>,
-                     attrs_with_predicates: AttrsWithPredicates) -> Result<(), IndyCryptoError> {
-        self.proof_claims.insert(uuid.to_owned(),
-                                 ProofClaims {
-                                     claim,
-                                     claim_attributes_values,
-                                     p_pub_key,
-                                     r_pub_key,
-                                     r_reg,
-                                     attrs_with_predicates
-                                 });
+    pub fn add_claim(&mut self, uuid: &str, claim: &Claim, claim_attributes_values: &ClaimAttributesValues, pub_key: &IssuerPublicKey,
+                     r_reg: Option<&RevocationRegistryPublic>, attrs_with_predicates: &AttrsWithPredicates) -> Result<(), IndyCryptoError> {
+        let mut non_revoc_init_proof = None;
+        let mut m2_tilde: Option<BigNumber> = None;
+
+        if let (&Some(ref r_claim), &Some(ref r_reg), &Some(ref r_pub_key)) = (&claim.r_claim,
+                                                                               &r_reg,
+                                                                               &pub_key.r_key) {
+            let proof = ProofBuilder::_init_non_revocation_proof(&mut r_claim.clone(), &r_reg, &r_pub_key)?;//TODO:FIXME
+
+            self.c_list.extend_from_slice(&proof.as_c_list()?);
+            self.tau_list.extend_from_slice(&proof.as_tau_list()?);
+            m2_tilde = Some(group_element_to_bignum(&proof.tau_list_params.m2)?);
+            non_revoc_init_proof = Some(proof);
+        }
+
+        let primary_init_proof = ProofBuilder::_init_primary_proof(&pub_key.p_key,
+                                                                   &claim.p_claim,
+                                                                   &claim_attributes_values.attrs_values,
+                                                                   &attrs_with_predicates,
+                                                                   &self.m1_tilde,
+                                                                   m2_tilde)?;
+
+        self.c_list.extend_from_slice(&primary_init_proof.as_c_list()?);
+        self.tau_list.extend_from_slice(&primary_init_proof.as_tau_list()?);
+
+        let init_proof = InitProof {
+            primary_init_proof,
+            non_revoc_init_proof,
+            attributes_values: claim_attributes_values.clone()?,
+            attrs_with_predicates: attrs_with_predicates.clone()
+        };
+        self.init_proofs.insert(uuid.to_owned(), init_proof);
+
         Ok(())
     }
 
-    pub fn finalize(&mut self, proof_req: &ProofRequest, ms: MasterSecret) -> Result<FullProof, IndyCryptoError> {
-        for (proof_claim_uuid, ref mut proof_claim) in &self.proof_claims {
-            let mut non_revoc_init_proof = None;
-            let mut m2_tilde: Option<BigNumber> = None;
-
-            if let (&Some(ref r_claim), &Some(ref r_reg), &Some(ref r_pub_key)) = (&proof_claim.claim.r_claim,
-                                                                                   &proof_claim.r_reg,
-                                                                                   &proof_claim.r_pub_key) {
-                let proof = ProofBuilder::_init_non_revocation_proof(&mut r_claim.clone(), &r_reg, &r_pub_key)?;//TODO:FIXME
-
-                self.c_list.extend_from_slice(&proof.as_c_list()?);
-                self.tau_list.extend_from_slice(&proof.as_tau_list()?);
-                m2_tilde = Some(group_element_to_bignum(&proof.tau_list_params.m2)?);
-                non_revoc_init_proof = Some(proof);
-            }
-
-            let primary_init_proof = ProofBuilder::_init_primary_proof(&proof_claim.p_pub_key.p_key,
-                                                                       &proof_claim.claim.p_claim,
-                                                                       &proof_claim.claim_attributes_values.attrs_values,
-                                                                       &proof_claim.attrs_with_predicates,
-                                                                       &self.m1_tilde,
-                                                                       m2_tilde)?;
-
-            self.c_list.extend_from_slice(&primary_init_proof.as_c_list()?);
-            self.tau_list.extend_from_slice(&primary_init_proof.as_tau_list()?);
-
-            let init_proof = InitProof { primary_init_proof, non_revoc_init_proof };
-            self.init_proofs.insert(proof_claim_uuid.to_owned(), init_proof);
-        }
-
+    pub fn finalize(&mut self, proof_req: &ProofRequest, ms: &MasterSecret) -> Result<FullProof, IndyCryptoError> {
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
         values.extend_from_slice(&self.c_list);
@@ -211,9 +202,6 @@ impl ProofBuilder {
         let mut proofs: HashMap<String, Proof> = HashMap::new();
 
         for (proof_claim_uuid, init_proof) in self.init_proofs.iter() {
-            let proof_claim = self.proof_claims.get(proof_claim_uuid)
-                .ok_or(IndyCryptoError::InvalidState(format!("Claim not found")))?;
-
             let mut non_revoc_proof: Option<NonRevocProof> = None;
             if let Some(ref non_revoc_init_proof) = init_proof.non_revoc_init_proof {
                 non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(&non_revoc_init_proof, &c_h)?);
@@ -222,8 +210,8 @@ impl ProofBuilder {
             let primary_proof = ProofBuilder::_finalize_proof(&ms.ms,
                                                               &init_proof.primary_init_proof,
                                                               &c_h,
-                                                              &proof_claim.claim_attributes_values.attrs_values,
-                                                              &proof_claim.attrs_with_predicates)?;
+                                                              &init_proof.attributes_values.attrs_values,
+                                                              &init_proof.attrs_with_predicates)?;
 
             let proof = Proof { primary_proof, non_revoc_proof };
             proofs.insert(proof_claim_uuid.to_owned(), proof);
@@ -792,7 +780,7 @@ impl ProofBuilder {
     }
 
     pub fn create_tau_list_values(pk_r: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
-                                   params: &NonRevocProofXList, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
+                                  params: &NonRevocProofXList, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
         let t1 = pk_r.h.mul(&params.rho)?.add(&pk_r.htilde.mul(&params.o)?)?;
         let mut t2 = proof_c.e.mul(&params.c)?
             .add(&pk_r.h.mul(&params.m.mod_neg()?)?)?
@@ -835,7 +823,7 @@ impl ProofBuilder {
     }
 
     pub fn create_tau_list_expected_values(pk_r: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
-                                            accum_pk: &RevocationAccumulatorPublicKey, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
+                                           accum_pk: &RevocationAccumulatorPublicKey, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
         let t1 = proof_c.e;
         let t2 = PointG1::new_inf()?;
         let t3 = Pair::pair(&pk_r.h0.add(&proof_c.g)?, &pk_r.h_cap)?
@@ -890,11 +878,10 @@ mod tests {
 
     #[test]
     fn generate_blinded_master_secret_works() {
-        let pk = issuer::mocks::issuer_primary_public_key();
-        let r_pk = issuer::mocks::issuer_revocation_public_key();
+        let pk = issuer::mocks::issuer_public_key();
         let ms = super::mocks::master_secret();
 
-        let (blinded_master_secret, blinded_master_secret_data) = Prover::generate_blinded_master_secret(&pk, &Some(&r_pk), &ms).unwrap();
+        let (blinded_master_secret, blinded_master_secret_data) = Prover::generate_blinded_master_secret(&pk, &ms).unwrap();
 
         assert_eq!(blinded_master_secret.u, mocks::primary_blinded_master_secret_data().u);
         assert_eq!(blinded_master_secret_data.v_prime, mocks::primary_blinded_master_secret_data().v_prime);
@@ -923,7 +910,7 @@ mod tests {
 
         let old_v = claim.p_claim.v.clone().unwrap();
 
-        Prover::process_claim(&mut claim, &blinded_master_secret_data, &None, &None).unwrap();
+        Prover::process_claim(&mut claim, &blinded_master_secret_data, None, None).unwrap();
         let new_v = claim.p_claim.v;
 
         assert_ne!(old_v, new_v);
@@ -1041,12 +1028,12 @@ mod tests {
         let proof_c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &r_key).unwrap();
 
         let proof_tau_list = ProofBuilder::create_tau_list_values(&r_key, &pub_rev_reg.acc,
-                                                                   &c_list_params, &proof_c_list).unwrap();
+                                                                  &c_list_params, &proof_c_list).unwrap();
 
         let proof_tau_list_calc = ProofBuilder::create_tau_list_expected_values(&r_key,
-                                                                                 &pub_rev_reg.acc,
-                                                                                 &pub_rev_reg.key,
-                                                                                 &proof_c_list).unwrap();
+                                                                                &pub_rev_reg.acc,
+                                                                                &pub_rev_reg.key,
+                                                                                &proof_c_list).unwrap();
 
         assert_eq!(proof_tau_list.as_slice().unwrap(), proof_tau_list_calc.as_slice().unwrap());
     }
@@ -1063,7 +1050,7 @@ pub mod mocks {
             .add_unrevealed_attr("height").unwrap()
             .add_unrevealed_attr("age").unwrap()
             .add_unrevealed_attr("sex").unwrap()
-            .add_predicate(predicate()).unwrap()
+            .add_predicate(&predicate()).unwrap()
             .finalize().unwrap()
     }
 

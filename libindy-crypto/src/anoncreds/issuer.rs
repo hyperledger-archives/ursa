@@ -154,9 +154,8 @@ impl Issuer {
         Ok(Claim { p_claim, r_claim })
     }
 
-    pub fn revoke(&self,
-                  r_acc: &mut RevocationAccumulator,
-                  r_acc_tails: &mut RevocationAccumulatorTails,
+    pub fn revoke(r_acc: &mut RevocationAccumulator,
+                  r_acc_tails: &RevocationAccumulatorTails,
                   acc_idx: u32) -> Result<(), IndyCryptoError> {
         if !r_acc.v.remove(&acc_idx) {
             return Err(IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(
@@ -213,7 +212,7 @@ impl Issuer {
     }
 
     fn _new_revocation_keys() -> Result<(IssuerRevocationPublicKey,
-                                             IssuerRevocationPrivateKey), IndyCryptoError> {
+                                         IssuerRevocationPrivateKey), IndyCryptoError> {
         let h = PointG1::new()?;
         let h0 = PointG1::new()?;
         let h1 = PointG1::new()?;
@@ -510,6 +509,13 @@ mod tests {
 
 pub mod mocks {
     use super::*;
+
+    pub fn issuer_public_key() -> IssuerPublicKey {
+        IssuerPublicKey {
+            p_key: issuer_primary_public_key(),
+            r_key: Some(issuer_revocation_public_key())
+        }
+    }
 
     pub fn issuer_primary_public_key() -> IssuerPrimaryPublicKey {
         let n = BigNumber::from_dec("95230844261716231334966278654105782744493078250034916428724307571481648650972254096365233503303500776910009532385733941342231244809050180342216701303297309484964627111488667613567243812137828734726055835536190375874228378361894062875040911721595668269426387378524841651770329520854646198182993599992246846197622806018586940960824812499707703407200235006250330376435395757240807360245145895448238973940748414130249165698642798758094515234629492123379833360060582377815656998861873479266942101526163937107816424422201955494796734174781894506437514751553369884508767256335322189421050651814494097369702888544056010606733").unwrap();
