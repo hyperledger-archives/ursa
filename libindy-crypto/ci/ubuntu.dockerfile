@@ -5,6 +5,7 @@ ARG uid=1000
 RUN apt-get update && \
     apt-get install -y \
       pkg-config \
+      libssl-dev \
       curl \
       build-essential \
       cmake \

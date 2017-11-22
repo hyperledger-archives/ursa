@@ -1,5 +1,6 @@
 use anoncreds::types::*;
 
+use bn::BigNumber;
 use ffi::ErrorCode;
 use errors::ToErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -447,6 +448,145 @@ pub extern fn indy_crypto_anoncreds_attrs_with_predicates_free(attrs_with_predic
     let res = ErrorCode::Success;
 
     trace!("indy_crypto_anoncreds_attrs_with_predicates_free: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns proof builder.
+///
+/// Note that proof buildera deallocation must be performed by
+/// calling indy_crypto_anoncreds_proof_builder_free
+///
+/// Note: Claims proof builder instance deallocation must be performed by
+/// calling indy_crypto_anoncreds_proof_builder_finalize.
+///
+/// # Arguments
+/// * `proof_builder_p` - Reference that will contain proof builder instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_anoncreds_proof_builder_new(proof_builder_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_anoncreds_proof_builder_new: >>>");
+
+    let res = match ProofBuilder::new() {
+        Ok(proof_builder) => {
+            trace!("indy_crypto_anoncreds_proof_builder_new: proof_builder: {:?}", proof_builder);
+            unsafe {
+                *proof_builder_p = Box::into_raw(Box::new(proof_builder)) as *const c_void;
+                trace!("indy_crypto_anoncreds_proof_builder_new: *proof_builder_p: {:?}", *proof_builder_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_anoncreds_proof_builder_new: <<< res: {:?}", res);
+    res
+}
+
+/// Add claim to proof builder which will be used fo building of proof.
+///
+/// # Arguments
+/// * `proof_builder_p` - Reference that contain proof builder instance pointer.
+/// * `uuid` - Uuid.
+/// * `claim_p` - Reference that contain claim instance pointer.
+/// * `claim_attributes_values_p` - Reference that contain claim attributes instance pointer.
+/// * `pub_key_p` - Reference that contain public key instance pointer.
+/// * `r_reg_p` - Reference that contain public revocation registry instance pointer.
+/// * `attrs_with_predicates_p` - Reference that contain requested attributes and predicates instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_anoncreds_proof_builder_add_claim(proof_builder_p: *const c_void,
+                                                            uuid: *const c_char,
+                                                            claim_p: *const c_void,
+                                                            claim_attributes_values_p: *const c_void,
+                                                            pub_key_p: *const c_void,
+                                                            r_reg_p: *const c_void,
+                                                            attrs_with_predicates_p: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_anoncreds_proof_builder_add_claim: >>> proof_builder_p: {:?},uuid: {:?},claim_p: {:?},\
+            claim_attributes_values_p: {:?},pub_key_p: {:?},r_reg_p: {:?},,attrs_with_predicates_p: {:?}",
+           proof_builder_p, uuid, claim_p, claim_attributes_values_p, pub_key_p, r_reg_p, attrs_with_predicates_p);
+
+    check_useful_c_ptr!(proof_builder_p, ErrorCode::CommonInvalidParam1);
+    check_useful_c_str!(uuid, ErrorCode::CommonInvalidParam2);
+
+    check_useful_c_reference!(claim_p, Claim, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(claim_attributes_values_p, ClaimAttributesValues, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(pub_key_p, IssuerPublicKey, ErrorCode::CommonInvalidParam3);
+    check_useful_opt_c_reference!(r_reg_p, RevocationRegistryPublic, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(attrs_with_predicates_p, ProofAttrs, ErrorCode::CommonInvalidParam3);
+
+    let mut proof_builder = unsafe { Box::from_raw(proof_builder_p as *mut ProofBuilder) };
+
+    let res = match ProofBuilder::add_claim(&mut proof_builder,
+                                            &uuid,
+                                            claim_p,
+                                            claim_attributes_values_p,
+                                            pub_key_p,
+                                            r_reg_p,
+                                            attrs_with_predicates_p) {
+        Ok(()) => ErrorCode::Success,
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_anoncreds_proof_builder_add_claim: <<< res: {:?}", res);
+    res
+}
+
+
+/// Finalize proof
+///
+/// Note that blinded master secret deallocation must be performed by
+/// calling indy_crypto_anoncreds_blinded_master_secret_free
+///
+/// Note that blinded proof deallocation must be performed by
+/// calling indy_crypto_anoncreds_proof_free
+///
+/// # Arguments
+/// * `proof_builder_p` - Reference that contain public keys instance pointer.
+/// * `proof_req_p` - Reference that contain proof request instance pointer.
+/// * `master_secret_p` - Reference that contain master secret instance pointer.
+/// * `proof_p` - Reference that will contain proof instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_anoncreds_proof_builder_finilize(proof_builder_p: *const c_void,
+                                                           proof_req_p: *const c_void,
+                                                           master_secret_p: *const c_void,
+                                                           proof_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_anoncreds_proof_builder_finilize: >>> proof_builder_p: {:?}, proof_req_p: {:?}, master_secret_p: {:?}, proof_p: {:?}",
+           proof_builder_p, proof_req_p, master_secret_p, proof_p);
+
+    check_useful_c_ptr!(proof_builder_p, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(proof_req_p, BigNumber, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(master_secret_p, MasterSecret, ErrorCode::CommonInvalidParam2);
+
+    let mut proof_builder = unsafe { Box::from_raw(proof_builder_p as *mut ProofBuilder) };
+
+    let res = match ProofBuilder::finalize(&mut proof_builder, proof_req_p, master_secret_p) {
+        Ok(proof) => {
+            trace!("indy_crypto_anoncreds_proof_builder_finilize: proof: {:?}", proof);
+            unsafe {
+                *proof_p = Box::into_raw(Box::new(proof)) as *const c_void;
+                trace!("indy_crypto_anoncreds_proof_builder_finilize: *proof_p: {:?}", *proof_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_anoncreds_proof_builder_finilize: <<< res: {:?}", res);
+    res
+}
+
+/// Deallocates proof builder instance.
+///
+/// # Arguments
+/// * `blinded_master_secret_data_p` - Proof builder instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_anoncreds_proof_builder_free(proof_builder_p: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_anoncreds_proof_builder_free: >>> proof_builder_p: {:?}", proof_builder_p);
+
+    check_useful_c_ptr!(proof_builder_p, ErrorCode::CommonInvalidParam1);
+
+    unsafe { Box::from_raw(proof_builder_p as *mut ProofBuilder); }
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_anoncreds_proof_builder_free: <<< res: {:?}", res);
     res
 }
 
