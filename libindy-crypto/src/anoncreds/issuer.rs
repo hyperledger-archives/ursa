@@ -154,22 +154,21 @@ impl Issuer {
         Ok(Claim { p_claim, r_claim })
     }
 
-    pub fn revoke(r_acc: &mut RevocationAccumulator,
-                  r_acc_tails: &RevocationAccumulatorTails,
+    pub fn revoke(r_reg: &mut RevocationRegistryPublic,
                   acc_idx: u32) -> Result<(), IndyCryptoError> {
-        if !r_acc.v.remove(&acc_idx) {
+        if !r_reg.acc.v.remove(&acc_idx) {
             return Err(IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(
                 format!("User index:{} not found in Accumulator", acc_idx))
             );
         }
 
-        let index: u32 = r_acc.max_claim_num + 1 - acc_idx;
+        let index: u32 = r_reg.acc.max_claim_num + 1 - acc_idx;
 
-        let element = r_acc_tails.tails_dash
+        let element = r_reg.tails.tails_dash
             .get(&index)
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in g", index)))?;
 
-        r_acc.acc = r_acc.acc.sub(element)?;
+        r_reg.acc.acc = r_reg.acc.acc.sub(element)?;
 
         Ok(())
     }

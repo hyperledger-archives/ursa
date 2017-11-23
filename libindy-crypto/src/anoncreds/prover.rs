@@ -71,14 +71,14 @@ impl Prover {
 
     pub fn process_claim(claim: &mut Claim,
                          blinded_master_secret_data: &BlindedMasterSecretData,
-                         r_pub_key: Option<&IssuerRevocationPublicKey>,
+                         pub_key: &IssuerPublicKey,
                          r_reg: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
         Prover::_process_primary_claim(&mut claim.p_claim, &blinded_master_secret_data.v_prime)?;
 
-        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), Some(ref r_key), Some(ref r_reg)) = (&mut claim.r_claim,
-                                                                                                                  blinded_master_secret_data.vr_prime,
-                                                                                                                  r_pub_key,
-                                                                                                                  r_reg) {
+        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), Some(ref r_reg)) = (&mut claim.r_claim,
+                                                                                                                   blinded_master_secret_data.vr_prime,
+                                                                                                                   &pub_key.r_key,
+                                                                                                                   r_reg) {
             Prover::_process_non_revocation_claim(non_revocation_claim,
                                                   vr_prime,
                                                   &r_key,
@@ -191,11 +191,11 @@ impl ProofBuilder {
         Ok(())
     }
 
-    pub fn finalize(&mut self, proof_req: &ProofRequest, ms: &MasterSecret) -> Result<FullProof, IndyCryptoError> {
+    pub fn finalize(&mut self, nonce: &BigNumber, ms: &MasterSecret) -> Result<FullProof, IndyCryptoError> {
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
         values.extend_from_slice(&self.c_list);
-        values.push(proof_req.nonce.to_bytes()?);
+        values.push(nonce.to_bytes()?);
 
         let c_h = get_hash_as_int(&mut values)?;
 
@@ -437,6 +437,7 @@ impl ProofBuilder {
         for k in attrs_with_predicates.unrevealed_attrs.iter() {
             let cur_mtilde = init_proof.m_tilde.get(k)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in init_proof.mtilde", k)))?;
+
             let cur_val = attributes_values.get(k)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in attributes_values", k)))?;
 
@@ -906,11 +907,12 @@ mod tests {
     #[test]
     fn process_claim_works_for_primary_only() {
         let mut claim = super::mocks::claim();
+        let pk = issuer::mocks::issuer_public_key();
         let blinded_master_secret_data = super::mocks::blinded_master_secret_data();
 
         let old_v = claim.p_claim.v.clone().unwrap();
 
-        Prover::process_claim(&mut claim, &blinded_master_secret_data, None, None).unwrap();
+        Prover::process_claim(&mut claim, &blinded_master_secret_data, &pk, None).unwrap();
         let new_v = claim.p_claim.v;
 
         assert_ne!(old_v, new_v);
@@ -1015,6 +1017,26 @@ mod tests {
         let r_cnxt_m2 = mocks::r_cnxt_m2();
 
         Prover::_test_witness_credential(&mut r_claim, &r_key, &pub_rev_reg, &r_cnxt_m2).unwrap();
+    }
+
+    #[test]
+    fn process_claim_works() {
+        let (pub_key, priv_key) = issuer::Issuer::new_keys(&issuer::mocks::claim_attributes(), true).unwrap();
+
+        let (mut pub_rev_reg, priv_rev_reg) = issuer::Issuer::new_revocation_registry(&pub_key, 5).unwrap();
+
+        let master_secret = Prover::generate_master_secret().unwrap();
+
+        let (blinded_master_secret, blinded_master_secret_data) =
+            Prover::generate_blinded_master_secret(&pub_key, &master_secret).unwrap();
+
+        let claim_attributes = issuer::mocks::claim_attributes_values();
+
+        let mut claim = issuer::Issuer::new_claim(mocks::PROVER_DID, &blinded_master_secret,
+                                                  &claim_attributes, &pub_key,
+                                                  &priv_key, Some(1), Some(&mut pub_rev_reg), Some(&priv_rev_reg)).unwrap();
+
+        Prover::process_claim(&mut claim, &blinded_master_secret_data, &pub_key, Some(&pub_rev_reg)).unwrap();
     }
 
     #[test]
