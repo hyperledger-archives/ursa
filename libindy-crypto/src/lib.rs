@@ -30,7 +30,7 @@ extern crate libc;
 
 extern crate time;
 
-pub mod anoncreds;
+pub mod cl;
 pub mod bls;
 
 #[cfg(feature = "bn_openssl")]

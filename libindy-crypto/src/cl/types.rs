@@ -1,6 +1,6 @@
 use bn::BigNumber;
 use errors::IndyCryptoError;
-use anoncreds::helpers::AppendByteArray;
+use cl::helpers::AppendByteArray;
 
 use pair::{
     GroupOrderElement,
@@ -12,67 +12,67 @@ use pair::{
 use std::collections::{HashMap, HashSet};
 use super::helpers::clone_bignum_map;
 
-#[derive(Debug)]
-pub struct ClaimAttributes {
+#[derive(Debug, Clone)]
+pub struct ClaimSchema {
     pub attrs: HashSet<String> /* attr names */
 }
 
 #[derive(Debug)]
-pub struct ClaimAttributesBuilder {
+pub struct ClaimSchemaBuilder {
     attrs: HashSet<String> /* attr names */
 }
 
-impl ClaimAttributesBuilder {
-    pub fn new() -> Result<ClaimAttributesBuilder, IndyCryptoError> {
-        Ok(ClaimAttributesBuilder {
+impl ClaimSchemaBuilder {
+    pub fn new() -> Result<ClaimSchemaBuilder, IndyCryptoError> {
+        Ok(ClaimSchemaBuilder {
             attrs: HashSet::new()
         })
     }
 
-    pub fn add_attr(mut self, attr: &str) -> Result<ClaimAttributesBuilder, IndyCryptoError> {
+    pub fn add_attr(mut self, attr: &str) -> Result<ClaimSchemaBuilder, IndyCryptoError> {
         self.attrs.insert(attr.to_owned());
         Ok(self)
     }
 
-    pub fn finalize(self) -> Result<ClaimAttributes, IndyCryptoError> {
-        Ok(ClaimAttributes {
+    pub fn finalize(self) -> Result<ClaimSchema, IndyCryptoError> {
+        Ok(ClaimSchema {
             attrs: self.attrs
         })
     }
 }
 
 #[derive(Debug)]
-pub struct ClaimAttributesValues {
+pub struct ClaimValues {
     pub attrs_values: HashMap<String, BigNumber>
 }
 
-impl ClaimAttributesValues {
-    pub fn clone(&self) -> Result<ClaimAttributesValues, IndyCryptoError> {
-        Ok(ClaimAttributesValues {
+impl ClaimValues {
+    pub fn clone(&self) -> Result<ClaimValues, IndyCryptoError> {
+        Ok(ClaimValues {
             attrs_values: clone_bignum_map(&self.attrs_values)?
         })
     }
 }
 
 #[derive(Debug)]
-pub struct ClaimAttributesValuesBuilder {
+pub struct ClaimValuesBuilder {
     attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
 }
 
-impl ClaimAttributesValuesBuilder {
-    pub fn new() -> Result<ClaimAttributesValuesBuilder, IndyCryptoError> {
-        Ok(ClaimAttributesValuesBuilder {
+impl ClaimValuesBuilder {
+    pub fn new() -> Result<ClaimValuesBuilder, IndyCryptoError> {
+        Ok(ClaimValuesBuilder {
             attrs_values: HashMap::new()
         })
     }
 
-    pub fn add_attr_value(mut self, attr: &str, dec_value: &str) -> Result<ClaimAttributesValuesBuilder, IndyCryptoError> {
+    pub fn add_value(mut self, attr: &str, dec_value: &str) -> Result<ClaimValuesBuilder, IndyCryptoError> {
         self.attrs_values.insert(attr.to_owned(), BigNumber::from_dec(dec_value)?);
         Ok(self)
     }
 
-    pub fn finalize(self) -> Result<ClaimAttributesValues, IndyCryptoError> {
-        Ok(ClaimAttributesValues {
+    pub fn finalize(self) -> Result<ClaimValues, IndyCryptoError> {
+        Ok(ClaimValues {
             attrs_values: self.attrs_values
         })
     }
@@ -171,15 +171,15 @@ pub struct RevocationRegistryPrivate {
     pub key: RevocationAccumulatorPrivateKey,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PrimaryClaim {
+#[derive(Debug, PartialEq, Eq)]
+pub struct PrimaryClaimSignature {
     pub m_2: BigNumber,
     pub a: BigNumber,
     pub e: BigNumber,
     pub v: BigNumber
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub struct Witness {
     pub sigma_i: PointG2,
     pub u_i: PointG2,
@@ -189,7 +189,7 @@ pub struct Witness {
 }
 
 #[derive(Clone, Debug)]
-pub struct NonRevocationClaim {
+pub struct NonRevocationClaimSignature {
     pub sigma: PointG1,
     pub c: GroupOrderElement,
     pub vr_prime_prime: GroupOrderElement,
@@ -200,9 +200,9 @@ pub struct NonRevocationClaim {
 }
 
 #[derive(Debug)]
-pub struct Claim {
-    pub p_claim: PrimaryClaim,
-    pub r_claim: Option<NonRevocationClaim> /* will be used to proof is claim revoked preparation */,
+pub struct ClaimSignature {
+    pub p_claim: PrimaryClaimSignature,
+    pub r_claim: Option<NonRevocationClaimSignature> /* will be used to proof is claim revoked preparation */,
 }
 
 #[derive(Debug)]
@@ -233,14 +233,7 @@ pub struct RevocationBlindedMasterSecretData {
     pub vr_prime: GroupOrderElement,
 }
 
-pub struct ClaimInfo {
-    pub claim: HashMap<String, Vec<String>>,
-    pub schema_seq_no: i32,
-    pub signature: Claim,
-    pub issuer_did: String
-}
-
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct PrimaryEqualInitProof {
     pub a_prime: BigNumber,
     pub t: BigNumber,
@@ -264,7 +257,7 @@ impl PrimaryEqualInitProof {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct PrimaryPredicateGEInitProof {
     pub c_list: Vec<BigNumber>,
     pub tau_list: Vec<BigNumber>,
@@ -287,7 +280,7 @@ impl PrimaryPredicateGEInitProof {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct PrimaryInitProof {
     pub eq_proof: PrimaryEqualInitProof,
     pub ge_proofs: Vec<PrimaryPredicateGEInitProof>
@@ -416,8 +409,9 @@ impl NonRevocInitProof {
 pub struct InitProof {
     pub primary_init_proof: PrimaryInitProof,
     pub non_revoc_init_proof: Option<NonRevocInitProof>,
-    pub attributes_values: ClaimAttributesValues,
-    pub attrs_with_predicates: AttrsWithPredicates
+    pub claim_values: ClaimValues,
+    pub sub_proof_request: SubProofRequest,
+    pub claim_schema: ClaimSchema
 }
 
 pub struct ProofRequest {
@@ -430,20 +424,22 @@ pub struct ProofRequest {
 
 #[derive(Debug)]
 pub struct ProofClaims {
-    pub claim: Claim,
-    pub claim_attributes_values: ClaimAttributesValues,
+    pub claim: ClaimSignature,
+    pub claim_attributes_values: ClaimValues,
     pub pub_key: IssuerPublicKey,
     pub r_reg: Option<RevocationRegistryPublic>,
-    pub attrs_with_predicates: ProofAttrs
+    pub attrs_with_predicates: SubProofRequest
 }
 
+#[derive(Debug)]
 pub struct VerifyClaim {
-    pub p_pub_key: IssuerPublicKey,
-    pub r_pub_key: Option<IssuerRevocationPublicKey>,
+    pub pub_key: IssuerPublicKey,
     pub r_reg: Option<RevocationRegistryPublic>,
-    pub proof_attrs: ProofAttrs
+    pub sub_proof_request: SubProofRequest,
+    pub claim_schema: ClaimSchema
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct PrimaryEqualProof {
     pub revealed_attrs: HashMap<String /* attr_name of revealed */, BigNumber>,
     pub a_prime: BigNumber,
@@ -454,7 +450,7 @@ pub struct PrimaryEqualProof {
     pub m2: BigNumber
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PrimaryPredicateGEProof {
     pub u: HashMap<String, BigNumber>,
     pub r: HashMap<String, BigNumber>,
@@ -464,7 +460,7 @@ pub struct PrimaryPredicateGEProof {
     pub predicate: Predicate
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PrimaryProof {
     pub eq_proof: PrimaryEqualProof,
     pub ge_proofs: Vec<PrimaryPredicateGEProof>
@@ -477,61 +473,55 @@ pub struct NonRevocProof {
 }
 
 #[derive(Debug)]
-pub struct Proof {
+pub struct SubProof {
     pub primary_proof: PrimaryProof,
     pub non_revoc_proof: Option<NonRevocProof>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct AggregatedProof {
     pub c_hash: BigNumber,
     pub c_list: Vec<Vec<u8>>
 }
 
 #[derive(Debug)]
-pub struct FullProof {
-    pub proofs: HashMap<String /* issuer pub key id */, Proof>,
+pub struct Proof {
+    pub proofs: HashMap<String /* issuer pub key id */, SubProof>,
     pub aggregated_proof: AggregatedProof,
 }
 
 #[derive(Debug, Clone)]
-pub struct ProofAttrs {
+pub struct SubProofRequest {
     pub revealed_attrs: HashSet<String>,
-    pub unrevealed_attrs: HashSet<String>,
     pub predicates: HashSet<Predicate>,
 }
 
-pub struct ProofAttrsBuilder {
-    value: ProofAttrs
+#[derive(Debug)]
+pub struct SubProofRequestBuilder {
+    value: SubProofRequest
 }
 
-impl ProofAttrsBuilder {
-    pub fn new() -> Result<ProofAttrsBuilder, IndyCryptoError> {
-        Ok(ProofAttrsBuilder {
-            value: ProofAttrs {
+impl SubProofRequestBuilder {
+    pub fn new() -> Result<SubProofRequestBuilder, IndyCryptoError> {
+        Ok(SubProofRequestBuilder {
+            value: SubProofRequest {
                 revealed_attrs: HashSet::new(),
-                unrevealed_attrs: HashSet::new(),
                 predicates: HashSet::new()
             }
         })
     }
 
-    pub fn add_revealed_attr(mut self, attr: &str) -> Result<ProofAttrsBuilder, IndyCryptoError> {
+    pub fn add_revealed_attr(mut self, attr: &str) -> Result<SubProofRequestBuilder, IndyCryptoError> {
         self.value.revealed_attrs.insert(attr.to_owned());
         Ok(self)
     }
 
-    pub fn add_unrevealed_attr(mut self, attr: &str) -> Result<ProofAttrsBuilder, IndyCryptoError> {
-        self.value.unrevealed_attrs.insert(attr.to_owned());
+    pub fn add_predicate(mut self, predicate: &Predicate) -> Result<SubProofRequestBuilder, IndyCryptoError> {
+        self.value.predicates.insert(predicate.clone());
         Ok(self)
     }
 
-    pub fn add_predicate(mut self, predicate: Predicate) -> Result<ProofAttrsBuilder, IndyCryptoError> {
-        self.value.predicates.insert(predicate);
-        Ok(self)
-    }
-
-    pub fn finalize(self) -> Result<ProofAttrs, IndyCryptoError> {
+    pub fn finalize(self) -> Result<SubProofRequest, IndyCryptoError> {
         Ok(self.value)
     }
 }
@@ -552,4 +542,9 @@ pub struct Predicate {
     pub attr_name: String,
     pub p_type: PredicateType,
     pub value: i32,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Nonce {
+    pub value: BigNumber
 }
