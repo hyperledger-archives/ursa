@@ -416,6 +416,59 @@ pub extern fn indy_crypto_cl_sub_proof_request_free(sub_proof_request: *const c_
     res
 }
 
+/// Creates and returns predicate.
+///
+/// Note: Predicate instance deallocation must be performed by
+/// calling indy_crypto_cl_predicate_free.
+///
+/// # Arguments
+/// * `attr_name_p` - Related attribute
+/// * `type_p` - Predicate type (Currently `GE` only).
+/// * `value` - Requested value.
+/// * `predicate_p` - Reference that will contain claims attributes builder instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_predicate_new(attr_name_p: *const c_char,
+                                           type_p: *const c_char,
+                                           value: i32,
+                                           predicate_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_predicate_new: >>> attr_name_p: {:?}, type {:?}, value {:?}, predicate_p {:?}:", attr_name_p, type_p, value, predicate_p);
+
+    check_useful_c_str!(attr_name_p, ErrorCode::CommonInvalidParam1);
+    check_useful_c_str!(type_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(predicate_p, ErrorCode::CommonInvalidParam4);
+
+    let res = match Predicate::new(&attr_name_p, &type_p, value) {
+        Ok(predicate) => {
+            trace!("indy_crypto_cl_predicate_new: predicate: {:?}", predicate);
+            unsafe {
+                *predicate_p = Box::into_raw(Box::new(predicate)) as *const c_void;
+                trace!("indy_crypto_cl_predicate_new: *predicate_p: {:?}", *predicate_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_predicate_new: <<< res: {:?}", res);
+    res
+}
+
+/// Deallocates predicate instance.
+///
+/// # Arguments
+/// * `predicate` - Predicate instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_cl_predicate_free(predicate: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_predicate_free: >>> predicate: {:?}", predicate);
+
+    check_useful_c_ptr!(predicate, ErrorCode::CommonInvalidParam1);
+
+    unsafe { Box::from_raw(predicate as *mut Predicate); }
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_cl_predicate_free: <<< res: {:?}", res);
+    res
+}
 
 #[cfg(test)]
 mod tests {
@@ -598,6 +651,30 @@ mod tests {
         let err_code = indy_crypto_cl_sub_proof_request_free(sub_proof_request);
         assert_eq!(err_code, ErrorCode::Success);
     }
+
+    #[test]
+    fn indy_crypto_cl_predicate_new_works() {
+        let mut predicate: *const c_void = ptr::null();
+
+        let attr_name = CString::new("age").unwrap();
+        let p_type = CString::new("GE").unwrap();
+        let value = 18;
+
+        let err_code = indy_crypto_cl_predicate_new(attr_name.as_ptr(), p_type.as_ptr(), value, &mut predicate);
+
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!predicate.is_null());
+
+        _free_predicate(predicate);
+    }
+
+    #[test]
+    fn indy_crypto_cl_predicate_free_works() {
+        let predicate = _predicate();
+
+        let err_code = indy_crypto_cl_predicate_free(predicate);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
 }
 
 pub mod mocks {
@@ -761,14 +838,9 @@ pub mod mocks {
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!sub_proof_request_builder.is_null());
 
-        let predicate = Predicate {
-            attr_name: "age".to_string(),
-            p_type: PredicateType::GE,
-            value: 18
-        };
-        let predicate_p = Box::into_raw(Box::new(predicate)) as *const c_void;
+        let predicate = _predicate();
         let err_code = indy_crypto_cl_sub_proof_request_builder_add_predicate(sub_proof_request_builder,
-                                                                              predicate_p,
+                                                                              predicate,
                                                                               &mut sub_proof_request_builder);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!sub_proof_request_builder.is_null());
@@ -783,6 +855,26 @@ pub mod mocks {
 
     pub fn _free_sub_proof_request(sub_proof_request: *const c_void) {
         let err_code = indy_crypto_cl_sub_proof_request_free(sub_proof_request);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    pub fn _predicate() -> *const c_void {
+        let mut predicate: *const c_void = ptr::null();
+
+        let attr_name = CString::new("age").unwrap();
+        let p_type = CString::new("GE").unwrap();
+        let value = 18;
+
+        let err_code = indy_crypto_cl_predicate_new(attr_name.as_ptr(), p_type.as_ptr(), value, &mut predicate);
+
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!predicate.is_null());
+
+        predicate
+    }
+
+    pub fn _free_predicate(predicate: *const c_void) {
+        let err_code = indy_crypto_cl_predicate_free(predicate);
         assert_eq!(err_code, ErrorCode::Success);
     }
 }

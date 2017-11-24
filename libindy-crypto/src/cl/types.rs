@@ -544,6 +544,21 @@ pub struct Predicate {
     pub value: i32,
 }
 
+impl Predicate {
+    pub fn new(attr_name: &str, p_type: &str, value: i32) -> Result<Predicate, IndyCryptoError> {
+        let p_type = match p_type {
+            "GE" => PredicateType::GE,
+            p_type => return Err(IndyCryptoError::InvalidStructure(format!("Invalid predicate type: {:?}", p_type)))
+        };
+
+        Ok(Predicate {
+            attr_name: attr_name.to_owned(),
+            p_type,
+            value
+        })
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Nonce {
     pub value: BigNumber
