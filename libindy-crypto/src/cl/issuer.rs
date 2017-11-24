@@ -28,7 +28,7 @@ use super::helpers::{
     generate_prime_in_range
 };
 
-use super::types::*;
+use cl::*;
 
 use std::collections::{HashMap, HashSet};
 

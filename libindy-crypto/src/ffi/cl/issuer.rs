@@ -1,5 +1,5 @@
 use cl::issuer::*;
-use cl::types::*;
+use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -16,22 +16,22 @@ use std::os::raw::c_void;
 ///
 /// # Arguments
 /// * `claim_schema` - claim_signature schema instance pointer.
-/// * `gen_rev_part` - If true non revocation part of issuer keys will be generated.
+/// * `non_revocation_part` - If true non revocation part of issuer keys will be generated.
 /// * `issuer_pub_key_p` - Reference that will contain issuer public key instance pointer.
 /// * `issuer_priv_key_p` - Reference that will contain issuer private key instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_new_keys(claim_schema: *const c_void,
-                                             gen_rev_part: bool,
+                                             non_revocation_part: bool,
                                              issuer_pub_key_p: *mut *const c_void,
                                              issuer_priv_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_new_keys: >>> claim_schema: {:?}, gen_rev_part: {:?}, issuer_pub_key_p: {:?}, issuer_priv_key_p: {:?}",
-           claim_schema, gen_rev_part, issuer_pub_key_p, issuer_priv_key_p);
+    trace!("indy_crypto_cl_issuer_new_keys: >>> claim_schema: {:?}, non_revocation_part: {:?}, issuer_pub_key_p: {:?}, issuer_priv_key_p: {:?}",
+           claim_schema, non_revocation_part, issuer_pub_key_p, issuer_priv_key_p);
 
     check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(issuer_pub_key_p, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(issuer_priv_key_p, ErrorCode::CommonInvalidParam4);
 
-    let res = match Issuer::new_keys(claim_schema, gen_rev_part) {
+    let res = match Issuer::new_keys(claim_schema, non_revocation_part) {
         Ok((issuer_pub_key, issuer_priv_key)) => {
             trace!("indy_crypto_cl_issuer_new_keys: issuer_pub_key: {:?}, issuer_priv_key: {:?}", issuer_pub_key, issuer_priv_key);
             unsafe {
@@ -189,7 +189,8 @@ pub extern fn indy_crypto_cl_issuer_sign_claim(prover_id: *const c_char,
     check_useful_c_reference!(claim_values_p, ClaimValues, ErrorCode::CommonInvalidParam3);
     check_useful_c_reference!(issuer_pub_key_p, IssuerPublicKey, ErrorCode::CommonInvalidParam4);
     check_useful_c_reference!(issuer_priv_key_p, IssuerPrivateKey, ErrorCode::CommonInvalidParam5);
-    check_useful_opt_c_reference!(rev_reg_private_p, RevocationRegistryPrivate, ErrorCode::CommonInvalidParam7);
+    check_useful_opt_c_reference!(rev_reg_private_p, RevocationRegistryPrivate, ErrorCode::CommonInvalidParam8);
+    check_useful_c_ptr!(claim_signature_p, ErrorCode::CommonInvalidParam9);
 
     let rev_idx = if rev_idx != -1 { Some(rev_idx as u32) } else { None };
 
@@ -242,17 +243,17 @@ pub extern fn indy_crypto_cl_claim_signature_free(claim_signature_p: *const c_vo
 ///
 /// # Arguments
 /// * `r_reg_p` - Reference that contain revocation registry instance pointer.
-///  * acc_idx` - index of the user in the accumulator
+///  * rev_idx` - index of the user in the accumulator
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_revoke_claim(r_reg_p: *const c_void,
-                                                 acc_idx: u32) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_revoke_claim: >>> r_reg_p: {:?}, acc_idx: {:?}", r_reg_p, acc_idx);
+                                                 rev_idx: u32) -> ErrorCode {
+    trace!("indy_crypto_cl_issuer_revoke_claim: >>> r_reg_p: {:?}, rev_idx: {:?}", r_reg_p, rev_idx);
 
     check_useful_c_ptr!(r_reg_p, ErrorCode::CommonInvalidParam1);
 
     let mut r_reg_p = unsafe { Box::from_raw(r_reg_p as *mut RevocationRegistryPublic) };
 
-    let res = match Issuer::revoke_claim(&mut r_reg_p, acc_idx) {
+    let res = match Issuer::revoke_claim(&mut r_reg_p, rev_idx) {
         Ok(()) => {
             Box::into_raw(r_reg_p);
             ErrorCode::Success

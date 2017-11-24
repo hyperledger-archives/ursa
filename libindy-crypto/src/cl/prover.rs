@@ -9,7 +9,7 @@ use pair::{
 };
 
 use super::constants::*;
-use super::types::*;
+use cl::*;
 use super::helpers::*;
 
 use std::collections::{HashMap, HashSet};
@@ -153,7 +153,7 @@ pub struct ProofBuilder {
 }
 
 impl ProofBuilder {
-    pub fn add_sub_proof_request(&mut self, uuid: &str, claim: &ClaimSignature, claim_values: ClaimValues, pub_key: &IssuerPublicKey,
+    pub fn add_sub_proof_request(&mut self, key_id: &str, claim: &ClaimSignature, claim_values: ClaimValues, pub_key: &IssuerPublicKey,
                                  r_reg: Option<&RevocationRegistryPublic>, sub_proof_request: SubProofRequest, claim_schema: ClaimSchema) -> Result<(), IndyCryptoError> {
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
@@ -187,7 +187,7 @@ impl ProofBuilder {
             sub_proof_request,
             claim_schema
         };
-        self.init_proofs.insert(uuid.to_owned(), init_proof);
+        self.init_proofs.insert(key_id.to_owned(), init_proof);
 
         Ok(())
     }

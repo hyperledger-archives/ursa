@@ -1,5 +1,5 @@
 use cl::verifier::*;
-use cl::types::*;
+use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -87,27 +87,27 @@ pub extern fn indy_crypto_cl_verifier_new_proof_verifier(proof_verifier_p: *mut 
 ///
 /// # Arguments
 /// * `proof_verifier_p` - Reference that contain proof verifier instance pointer.
-/// * `issuer_key_id` - unique identifier.
+/// * `key_id` - unique identifier.
+/// * `claim_schema_p` - Reference that contain claim schema instance pointer.
 /// * `pub_key_p` - Reference that contain public key instance pointer.
 /// * `r_reg_p` - Reference that contain public revocation registry instance pointer.
 /// * `sub_proof_request_p` - Reference that contain requested attributes and predicates instance pointer.
-/// * `claim_schema_p` - Reference that contain claim schema instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_verifier_add_sub_proof_request(proof_verifier_p: *const c_void,
-                                                                  issuer_key_id: *const c_char,
+                                                                  key_id: *const c_char,
+                                                                  claim_schema_p: *const c_void,
                                                                   pub_key_p: *const c_void,
                                                                   r_reg_p: *const c_void,
-                                                                  sub_proof_request_p: *const c_void,
-                                                                  claim_schema_p: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: >>> proof_verifier_p: {:?},issuer_key_id: {:?},pub_key_p: {:?},\
-            r_reg_p: {:?},sub_proof_request_p: {:?}", proof_verifier_p, issuer_key_id, pub_key_p, r_reg_p, sub_proof_request_p);
+                                                                  sub_proof_request_p: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: >>> proof_verifier_p: {:?},key_id: {:?},pub_key_p: {:?},\
+            r_reg_p: {:?},sub_proof_request_p: {:?}", proof_verifier_p, key_id, pub_key_p, r_reg_p, sub_proof_request_p);
 
     check_useful_c_ptr!(proof_verifier_p, ErrorCode::CommonInvalidParam1);
-    check_useful_c_str!(issuer_key_id, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(pub_key_p,  ErrorCode::CommonInvalidParam3);
-    check_useful_c_ptr!(r_reg_p, ErrorCode::CommonInvalidParam3);
-    check_useful_c_ptr!(sub_proof_request_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
     check_useful_c_ptr!(claim_schema_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(pub_key_p,  ErrorCode::CommonInvalidParam4);
+    check_useful_c_ptr!(r_reg_p, ErrorCode::CommonInvalidParam5);
+    check_useful_c_ptr!(sub_proof_request_p, ErrorCode::CommonInvalidParam6);
 
     let mut proof_verifier = unsafe { *Box::from_raw(proof_verifier_p as *mut ProofVerifier) };
     let pub_key: IssuerPublicKey = unsafe { *Box::from_raw(pub_key_p as *mut IssuerPublicKey) };
@@ -116,7 +116,7 @@ pub extern fn indy_crypto_cl_proof_verifier_add_sub_proof_request(proof_verifier
     let claim_schema: ClaimSchema = unsafe { *Box::from_raw(claim_schema_p as *mut ClaimSchema) };
 
     let res = match ProofVerifier::add_sub_proof_request(&mut proof_verifier,
-                                                         &issuer_key_id,
+                                                         &key_id,
                                                          pub_key,
                                                          r_reg,
                                                          sub_proof_request,
@@ -146,7 +146,8 @@ pub extern fn indy_crypto_cl_proof_builder_verify(proof_verifier_p: *const c_voi
 
     check_useful_c_ptr!(proof_verifier_p, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(proof_p, Proof, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(nonce_p, Nonce, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(nonce_p, Nonce, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam4);
 
     let mut proof_verifier = unsafe { Box::from_raw(proof_verifier_p as *mut ProofVerifier) };
 

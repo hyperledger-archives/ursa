@@ -1,5 +1,5 @@
 use cl::prover::*;
-use cl::types::*;
+use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -208,34 +208,34 @@ pub extern fn indy_crypto_cl_prover_new_proof_builder(proof_builder_p: *mut *con
 ///
 /// # Arguments
 /// * `proof_builder_p` - Reference that contain proof builder instance pointer.
-/// * `uuid` - unique claim_signature identifier.
+/// * `key_id` - unique claim_signature identifier.
+/// * `claim_schema_p` - Reference that contain claim schema instance pointer.
 /// * `claim_signature_p` - Reference that contain claim_signature instance pointer.
 /// * `claim_values_p` - Reference that contain claim_signature attributes instance pointer.
 /// * `pub_key_p` - Reference that contain public key instance pointer.
 /// * `r_reg_p` - Reference that contain public revocation registry instance pointer.
 /// * `sub_proof_request_p` - Reference that contain requested attributes and predicates instance pointer.
-/// * `claim_schema_p` - Reference that contain claim schema instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder_p: *const c_void,
-                                                                 uuid: *const c_char,
+                                                                 key_id: *const c_char,
+                                                                 claim_schema_p: *const c_void,
                                                                  claim_signature_p: *const c_void,
                                                                  claim_values_p: *const c_void,
                                                                  pub_key_p: *const c_void,
                                                                  r_reg_p: *const c_void,
-                                                                 sub_proof_request_p: *const c_void,
-                                                                 claim_schema_p: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder_p: {:?},uuid: {:?},claim_signature_p: {:?},\
+                                                                 sub_proof_request_p: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder_p: {:?},key_id: {:?},claim_signature_p: {:?},\
             claim_values_p: {:?},pub_key_p: {:?},r_reg_p: {:?}, sub_proof_request_p: {:?}, claim_schema_p: {:?}",
-           proof_builder_p, uuid, claim_signature_p, claim_values_p, pub_key_p, r_reg_p, sub_proof_request_p, claim_schema_p);
+           proof_builder_p, key_id, claim_signature_p, claim_values_p, pub_key_p, r_reg_p, sub_proof_request_p, claim_schema_p);
 
     check_useful_c_ptr!(proof_builder_p, ErrorCode::CommonInvalidParam1);
-    check_useful_c_str!(uuid, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(claim_signature_p, ClaimSignature, ErrorCode::CommonInvalidParam3);
-    check_useful_c_ptr!(claim_values_p, ErrorCode::CommonInvalidParam4);
-    check_useful_c_reference!(pub_key_p, IssuerPublicKey, ErrorCode::CommonInvalidParam5);
-    check_useful_opt_c_reference!(r_reg_p, RevocationRegistryPublic, ErrorCode::CommonInvalidParam6);
-    check_useful_c_ptr!(sub_proof_request_p, ErrorCode::CommonInvalidParam7);
-    check_useful_c_ptr!(claim_schema_p, ErrorCode::CommonInvalidParam8);
+    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(claim_schema_p, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(claim_signature_p, ClaimSignature, ErrorCode::CommonInvalidParam4);
+    check_useful_c_ptr!(claim_values_p, ErrorCode::CommonInvalidParam5);
+    check_useful_c_reference!(pub_key_p, IssuerPublicKey, ErrorCode::CommonInvalidParam6);
+    check_useful_opt_c_reference!(r_reg_p, RevocationRegistryPublic, ErrorCode::CommonInvalidParam7);
+    check_useful_c_ptr!(sub_proof_request_p, ErrorCode::CommonInvalidParam8);
 
     let mut proof_builder = unsafe { Box::from_raw(proof_builder_p as *mut ProofBuilder) };
     let claim_values = unsafe { *Box::from_raw(claim_values_p as *mut ClaimValues) };
@@ -243,7 +243,7 @@ pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder_p
     let claim_schema = unsafe { *Box::from_raw(claim_schema_p as *mut ClaimSchema) };
 
     let res = match ProofBuilder::add_sub_proof_request(&mut proof_builder,
-                                                        &uuid,
+                                                        &key_id,
                                                         claim_signature_p,
                                                         claim_values,
                                                         pub_key_p,
@@ -279,7 +279,7 @@ pub extern fn indy_crypto_cl_proof_builder_finalize(proof_builder_p: *const c_vo
 
     check_useful_c_ptr!(proof_builder_p, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(nonce_p, Nonce, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(master_secret_p, MasterSecret, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(master_secret_p, MasterSecret, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(proof_p, ErrorCode::CommonInvalidParam4);
 
     let mut proof_builder = unsafe { Box::from_raw(proof_builder_p as *mut ProofBuilder) };
@@ -572,12 +572,12 @@ pub mod mocks {
 
         indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
                                                            uuid.as_ptr(),
+                                                           claim_schema,
                                                            claim_signature,
                                                            claim_values,
                                                            issuer_pub_key,
                                                            rev_reg_pub,
-                                                           sub_proof_request,
-                                                           claim_schema);
+                                                           sub_proof_request);
 
         let nonce = BigNumber::rand(80);
         let nonce_p = Box::into_raw(Box::new(nonce)) as *const c_void;

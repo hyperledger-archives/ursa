@@ -1,6 +1,6 @@
-use cl::types::*;
+use cl::*;
 use cl::constants::{LARGE_E_START, ITERATION, LARGE_NONCE};
-use cl::helpers::{AppendByteArray, bignum_to_group_element, calc_teq, calc_tge, get_hash_as_int, bn_rand};
+use cl::helpers::{bignum_to_group_element, calc_teq, calc_tge, get_hash_as_int, bn_rand};
 use bn::BigNumber;
 use std::collections::{HashMap, HashSet};
 use errors::IndyCryptoError;

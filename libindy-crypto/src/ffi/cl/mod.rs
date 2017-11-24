@@ -1,4 +1,4 @@
-use cl::types::*;
+use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -611,13 +611,8 @@ mod tests {
     fn indy_crypto_cl_sub_proof_request_builder_add_predicate_works() {
         let mut sub_proof_request_builder = _sub_proof_request_builder();
 
-        let predicate = Predicate {
-            attr_name: "age".to_string(),
-            p_type: PredicateType::GE,
-            value: 18
-        };
-        let predicate_p = Box::into_raw(Box::new(predicate)) as *const c_void;
 
+        let predicate_p = _predicate();
         let err_code = indy_crypto_cl_sub_proof_request_builder_add_predicate(sub_proof_request_builder,
                                                                               predicate_p,
                                                                               &mut sub_proof_request_builder);
