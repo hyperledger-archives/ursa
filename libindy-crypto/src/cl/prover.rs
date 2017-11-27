@@ -14,6 +14,7 @@ use super::helpers::*;
 
 use std::collections::{HashMap, HashSet};
 
+/// Credentials owner that can proof and partially disclose the credentials to verifier.
 pub struct Prover {}
 
 impl Prover {
@@ -23,9 +24,9 @@ impl Prover {
         })
     }
 
-    pub fn blinded_master_secret(pub_key: &IssuerPublicKey,
-                                 ms: &MasterSecret) -> Result<(BlindedMasterSecret,
-                                                               BlindedMasterSecretData), IndyCryptoError> {
+    pub fn blind_master_secret(pub_key: &IssuerPublicKey,
+                               ms: &MasterSecret) -> Result<(BlindedMasterSecret,
+                                                             MasterSecretBlindingData), IndyCryptoError> {
         let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&pub_key.p_key, &ms)?;
 
         let blinded_revocation_master_secret = match pub_key.r_key {
@@ -38,7 +39,7 @@ impl Prover {
                 u: blinded_primary_master_secret.u,
                 ur: blinded_revocation_master_secret.as_ref().map(|d| d.ur)
             },
-            BlindedMasterSecretData {
+            MasterSecretBlindingData {
                 v_prime: blinded_primary_master_secret.v_prime,
                 vr_prime: blinded_revocation_master_secret.map(|d| d.vr_prime)
             }
@@ -68,16 +69,16 @@ impl Prover {
         Ok(RevocationBlindedMasterSecretData { ur, vr_prime })
     }
 
-    pub fn process_claim_signature(claim: &mut ClaimSignature,
-                                   blinded_master_secret_data: &BlindedMasterSecretData,
+    pub fn process_claim_signature(claim_signature: &mut ClaimSignature,
+                                   master_secret_blinding_data: &MasterSecretBlindingData,
                                    pub_key: &IssuerPublicKey,
-                                   r_reg: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
-        Prover::_process_primary_claim(&mut claim.p_claim, &blinded_master_secret_data.v_prime)?;
+                                   rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
+        Prover::_process_primary_claim(&mut claim_signature.p_claim, &master_secret_blinding_data.v_prime)?;
 
-        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), Some(ref r_reg)) = (&mut claim.r_claim,
-                                                                                                                   blinded_master_secret_data.vr_prime,
+        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), Some(ref r_reg)) = (&mut claim_signature.r_claim,
+                                                                                                                   master_secret_blinding_data.vr_prime,
                                                                                                                    &pub_key.r_key,
-                                                                                                                   r_reg) {
+                                                                                                                   rev_reg_pub) {
             Prover::_process_non_revocation_claim(non_revocation_claim,
                                                   vr_prime,
                                                   &r_key,
@@ -153,8 +154,8 @@ pub struct ProofBuilder {
 }
 
 impl ProofBuilder {
-    pub fn add_sub_proof_request(&mut self, key_id: &str, claim: &ClaimSignature, claim_values: ClaimValues, pub_key: &IssuerPublicKey,
-                                 r_reg: Option<&RevocationRegistryPublic>, sub_proof_request: SubProofRequest, claim_schema: ClaimSchema) -> Result<(), IndyCryptoError> {
+    pub fn add_sub_proof_request(&mut self, key_id: &str, claim: &ClaimSignature, claim_values: &ClaimValues, pub_key: &IssuerPublicKey,
+                                 r_reg: Option<&RevocationRegistryPublic>, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
@@ -183,16 +184,16 @@ impl ProofBuilder {
         let init_proof = InitProof {
             primary_init_proof,
             non_revoc_init_proof,
-            claim_values,
-            sub_proof_request,
-            claim_schema
+            claim_values: claim_values.clone()?,
+            sub_proof_request: sub_proof_request.clone(),
+            claim_schema: claim_schema.clone()
         };
         self.init_proofs.insert(key_id.to_owned(), init_proof);
 
         Ok(())
     }
 
-    pub fn finalize(&mut self, nonce: &Nonce, ms: &MasterSecret) -> Result<Proof, IndyCryptoError> {
+    pub fn finalize(&self, nonce: &Nonce, ms: &MasterSecret) -> Result<Proof, IndyCryptoError> {
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
         values.extend_from_slice(&self.c_list);
@@ -784,7 +785,7 @@ mod tests {
         let ms = mocks::master_secret();
 
         let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&pk, &ms).unwrap();
-        assert_eq!(blinded_primary_master_secret, mocks::primary_blinded_master_secret_data());
+        assert_eq!(blinded_primary_master_secret, mocks::primary_master_secret_blinding_data());
     }
 
     #[test]
@@ -798,18 +799,18 @@ mod tests {
         let pk = issuer::mocks::issuer_public_key();
         let ms = super::mocks::master_secret();
 
-        let (blinded_master_secret, blinded_master_secret_data) = Prover::blinded_master_secret(&pk, &ms).unwrap();
+        let (blinded_master_secret, master_secret_blinding_data) = Prover::blind_master_secret(&pk, &ms).unwrap();
 
-        assert_eq!(blinded_master_secret.u, mocks::primary_blinded_master_secret_data().u);
-        assert_eq!(blinded_master_secret_data.v_prime, mocks::primary_blinded_master_secret_data().v_prime);
+        assert_eq!(blinded_master_secret.u, mocks::primary_master_secret_blinding_data().u);
+        assert_eq!(master_secret_blinding_data.v_prime, mocks::primary_master_secret_blinding_data().v_prime);
         assert!(blinded_master_secret.ur.is_some());
-        assert!(blinded_master_secret_data.vr_prime.is_some());
+        assert!(master_secret_blinding_data.vr_prime.is_some());
     }
 
     #[test]
     fn process_primary_claim_works() {
         let mut claim = issuer::mocks::primary_claim();
-        let v_prime = mocks::primary_blinded_master_secret_data().v_prime;
+        let v_prime = mocks::primary_master_secret_blinding_data().v_prime;
 
         Prover::_process_primary_claim(&mut claim, &v_prime).unwrap();
 
@@ -820,9 +821,9 @@ mod tests {
     fn process_claim_works() {
         let mut claim = issuer::mocks::claim();
         let pk = issuer::mocks::issuer_public_key();
-        let blinded_master_secret_data = mocks::blinded_master_secret_data();
+        let master_secret_blinding_data = mocks::master_secret_blinding_data();
 
-        Prover::process_claim_signature(&mut claim, &blinded_master_secret_data, &pk, None).unwrap();
+        Prover::process_claim_signature(&mut claim, &master_secret_blinding_data, &pk, None).unwrap();
 
         assert_eq!(mocks::primary_claim(), claim.p_claim);
     }
@@ -974,14 +975,14 @@ pub mod mocks {
         }
     }
 
-    pub fn blinded_master_secret_data() -> BlindedMasterSecretData {
-        BlindedMasterSecretData {
-            v_prime: primary_blinded_master_secret_data().v_prime,
+    pub fn master_secret_blinding_data() -> MasterSecretBlindingData {
+        MasterSecretBlindingData {
+            v_prime: primary_master_secret_blinding_data().v_prime,
             vr_prime: Some(GroupOrderElement::new().unwrap())
         }
     }
 
-    pub fn primary_blinded_master_secret_data() -> PrimaryBlindedMasterSecretData {
+    pub fn primary_master_secret_blinding_data() -> PrimaryBlindedMasterSecretData {
         PrimaryBlindedMasterSecretData {
             u: BigNumber::from_dec("62131613458491212647450749026110557315107248063999634018939493990510661547774785043368606327349972438752553705268389551695956681591088513470965951022916188426635920785711858270846103151952143962999882605158874187727930917543065819603904033232476213318716946483165845049857055843524772096401162219219325766151823342237298870123405045483888204774734861333194064636771376483246576553005091050395021110616183024926509075608486405908792354917392247618138553245001668496721002592137124689913074323672408089937272809493673139956967625985778946668553397964410414804110497637727146455394436693696946473591314513302670305281967").unwrap(),
             v_prime: BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap()
@@ -1200,10 +1201,10 @@ pub mod mocks {
     }
 
     pub fn sub_proof_request() -> SubProofRequest {
-        SubProofRequestBuilder::new().unwrap()
-            .add_revealed_attr("name").unwrap()
-            .add_predicate(&predicate()).unwrap()
-            .finalize().unwrap()
+        let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
+        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        sub_proof_request_builder.add_predicate(&predicate()).unwrap();
+        sub_proof_request_builder.finalize().unwrap()
     }
 
     pub fn revealed_attrs() -> HashSet<String> {
@@ -1215,9 +1216,9 @@ pub mod mocks {
     }
 
     pub fn claim_revealed_attributes_values() -> ClaimValues {
-        ClaimValuesBuilder::new().unwrap()
-            .add_value("name", "1139481716457488690172217916278103335").unwrap()
-            .finalize().unwrap()
+        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.finalize().unwrap()
     }
 
     pub fn predicate() -> Predicate {

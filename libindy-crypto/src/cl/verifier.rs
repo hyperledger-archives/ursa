@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use errors::IndyCryptoError;
 use cl::prover::ProofBuilder;
 
+/// Party that wants to check that prover has some credentials provided by issuer.
 pub struct Verifier {}
 
 impl Verifier {
@@ -31,20 +32,20 @@ pub struct ProofVerifier {
 impl ProofVerifier {
     pub fn add_sub_proof_request(&mut self,
                                  issuer_key_id: &str,
-                                 pub_key: IssuerPublicKey,
-                                 r_reg: Option<RevocationRegistryPublic>,
-                                 sub_proof_request: SubProofRequest,
-                                 claim_schema: ClaimSchema) -> Result<(), IndyCryptoError> {
+                                 pub_key: &IssuerPublicKey,
+                                 r_reg: Option<&RevocationRegistryPublic>,
+                                 sub_proof_request: &SubProofRequest,
+                                 claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
         self.claims.insert(issuer_key_id.to_string(), VerifyClaim {
-            pub_key,
-            r_reg,
-            sub_proof_request,
-            claim_schema,
+            pub_key: pub_key.clone()?,
+            r_reg: r_reg.map(Clone::clone),
+            sub_proof_request: sub_proof_request.clone(),
+            claim_schema: claim_schema.clone(),
         });
         Ok(())
     }
 
-    pub fn verify(&mut self,
+    pub fn verify(self,
                   proof: &Proof,
                   nonce: &Nonce) -> Result<bool, IndyCryptoError> {
         info!(target: "anoncreds_service", "Verifier verify proof -> start");
@@ -231,9 +232,9 @@ mod tests {
         let c_h = prover::mocks::aggregated_proof().c_hash;
         let claim_schema = issuer::mocks::claim_schema();
 
-        let sub_proof_request = SubProofRequestBuilder::new().unwrap()
-            .add_revealed_attr("name").unwrap()
-            .finalize().unwrap();
+        let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
+        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
         let res: Vec<BigNumber> = ProofVerifier::_verify_equality(&pk,
                                                                   &proof,

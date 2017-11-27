@@ -14,10 +14,21 @@ pub enum ByteOrder {
     Little
 }
 
-#[cfg(not(test))]
-pub fn bn_rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
-    BigNumber::rand(size)
-}
+//#[cfg(test)]
+//thread_local! {
+//  pub static USE_MOCKS: RefCell<bool> = RefCell::new(true);
+//}
+//
+//#[cfg(test)]
+//pub struct MockHelper {
+//}
+//
+//#[cfg(test)]
+//impl MockHelper {
+//    pub fn inject(&mut self) {
+//        self.use_mocks = true;
+//    }
+//}
 
 #[cfg(test)]
 pub fn bn_rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
@@ -37,6 +48,11 @@ pub fn bn_rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
             Ok(BigNumber::new()?)
         }
     }
+}
+
+#[cfg(not(test))]
+pub fn bn_rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
+    BigNumber::rand(size)
 }
 
 pub fn encode_attribute(attribute: &str, byte_order: ByteOrder) -> Result<BigNumber, IndyCryptoError> {
@@ -71,6 +87,7 @@ pub fn generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 }
 
 #[cfg(test)]
+#[allow(unused_variables)]
 pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
     BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881")
 }
@@ -78,11 +95,6 @@ pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<Big
 #[cfg(not(test))]
 pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
     BigNumber::generate_prime_in_range(start, end)
-}
-
-#[cfg(not(test))]
-pub fn generate_safe_prime(size: usize) -> Result<BigNumber, IndyCryptoError> {
-    BigNumber::generate_safe_prime(size)
 }
 
 #[cfg(test)]
@@ -94,6 +106,11 @@ pub fn generate_safe_prime(size: usize) -> Result<BigNumber, IndyCryptoError> {
             Ok(BigNumber::new()?)
         }
     }
+}
+
+#[cfg(not(test))]
+pub fn generate_safe_prime(size: usize) -> Result<BigNumber, IndyCryptoError> {
+    BigNumber::generate_safe_prime(size)
 }
 
 #[cfg(test)]
@@ -112,6 +129,11 @@ pub fn gen_x(p: &BigNumber, q: &BigNumber) -> Result<BigNumber, IndyCryptoError>
     Ok(result)
 }
 
+#[cfg(test)]
+pub fn random_qr(_n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
+    Ok(BigNumber::from_dec("64684820421150545443421261645532741305438158267230326415141505826951816460650437611148133267480407958360035501128469885271549378871140475869904030424615175830170939416512594291641188403335834762737251794282186335118831803135149622404791467775422384378569231649224208728902565541796896860352464500717052768431523703881746487372385032277847026560711719065512366600220045978358915680277126661923892187090579302197390903902744925313826817940566429968987709582805451008234648959429651259809188953915675063700676546393568304468609062443048457324721450190021552656280473128156273976008799243162970386898307404395608179975243")?)
+}
+
 #[cfg(not(test))]
 pub fn random_qr(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
     let random = n
@@ -119,11 +141,6 @@ pub fn random_qr(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
         .sqr(None)?
         .modulus(&n, None)?;
     Ok(random)
-}
-
-#[cfg(test)]
-pub fn random_qr(_n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
-    Ok(BigNumber::from_dec("64684820421150545443421261645532741305438158267230326415141505826951816460650437611148133267480407958360035501128469885271549378871140475869904030424615175830170939416512594291641188403335834762737251794282186335118831803135149622404791467775422384378569231649224208728902565541796896860352464500717052768431523703881746487372385032277847026560711719065512366600220045978358915680277126661923892187090579302197390903902744925313826817940566429968987709582805451008234648959429651259809188953915675063700676546393568304468609062443048457324721450190021552656280473128156273976008799243162970386898307404395608179975243")?)
 }
 
 pub fn bitwise_or_big_int(a: &BigNumber, b: &BigNumber) -> Result<BigNumber, IndyCryptoError> {

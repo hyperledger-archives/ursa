@@ -32,6 +32,7 @@ use cl::*;
 
 use std::collections::{HashMap, HashSet};
 
+/// Trust source that provides credentials to prover.
 pub struct Issuer {}
 
 impl Issuer {
@@ -103,25 +104,25 @@ impl Issuer {
     }
 
     pub fn sign_claim(prover_id: &str,
-                     blnd_ms: &BlindedMasterSecret,
-                     attr_values: &ClaimValues,
-                     issuer_pub_key: &IssuerPublicKey,
-                     issuer_priv_key: &IssuerPrivateKey,
-                     rev_idx: Option<u32>,
-                     r_reg_pub: Option<&mut RevocationRegistryPublic>,
-                     r_reg_priv: Option<&RevocationRegistryPrivate>) -> Result<ClaimSignature, IndyCryptoError> {
+                      blinded_ms: &BlindedMasterSecret,
+                      claim_values: &ClaimValues,
+                      issuer_pub_key: &IssuerPublicKey,
+                      issuer_priv_key: &IssuerPrivateKey,
+                      rev_idx: Option<u32>,
+                      rev_reg_pub: Option<&mut RevocationRegistryPublic>,
+                      rev_reg_priv: Option<&RevocationRegistryPrivate>) -> Result<ClaimSignature, IndyCryptoError> {
         let m_2 = Issuer::_calc_m2(prover_id, rev_idx)?;
 
         let p_claim = Issuer::_new_primary_claim(&m_2,
                                                  issuer_pub_key,
                                                  issuer_priv_key,
-                                                 blnd_ms,
-                                                 attr_values)?;
+                                                 blinded_ms,
+                                                 claim_values)?;
 
-        let r_claim = if let (Some(rev_idx_2), Some(r_reg_pub), Some(r_reg_priv)) = (rev_idx, r_reg_pub, r_reg_priv) {
+        let r_claim = if let (Some(rev_idx_2), Some(r_reg_pub), Some(r_reg_priv)) = (rev_idx, rev_reg_pub, rev_reg_priv) {
             Some(Issuer::_new_non_revocation_claim(rev_idx_2,
                                                    &m_2,
-                                                   blnd_ms,
+                                                   blinded_ms,
                                                    issuer_pub_key,
                                                    issuer_priv_key,
                                                    r_reg_pub,
@@ -133,21 +134,21 @@ impl Issuer {
         Ok(ClaimSignature { p_claim, r_claim })
     }
 
-    pub fn revoke_claim(r_reg: &mut RevocationRegistryPublic,
-                  acc_idx: u32) -> Result<(), IndyCryptoError> {
-        if !r_reg.acc.v.remove(&acc_idx) {
+    pub fn revoke_claim(rev_reg_pub: &mut RevocationRegistryPublic,
+                        rev_idx: u32) -> Result<(), IndyCryptoError> {
+        if !rev_reg_pub.acc.v.remove(&rev_idx) {
             return Err(IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(
-                format!("User index:{} not found in Accumulator", acc_idx))
+                format!("User index:{} not found in Accumulator", rev_idx))
             );
         }
 
-        let index: u32 = r_reg.acc.max_claim_num + 1 - acc_idx;
+        let index: u32 = rev_reg_pub.acc.max_claim_num + 1 - rev_idx;
 
-        let element = r_reg.tails.tails_dash
+        let element = rev_reg_pub.tails.tails_dash
             .get(&index)
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in g", index)))?;
 
-        r_reg.acc.acc = r_reg.acc.acc.sub(element)?;
+        rev_reg_pub.acc.acc = rev_reg_pub.acc.acc.sub(element)?;
 
         Ok(())
     }
@@ -399,29 +400,29 @@ mod tests {
     }
 
     #[test]
-    fn claim_attributes_builder_works() {
-        let claim_attrs = ClaimSchemaBuilder::new().unwrap()
-            .add_attr("sex").unwrap()
-            .add_attr("name").unwrap()
-            .add_attr("age").unwrap()
-            .finalize().unwrap();
+    fn claim_schema_builder_works() {
+        let mut claim_schema_builder = ClaimSchemaBuilder::new().unwrap();
+        claim_schema_builder.add_attr("sex").unwrap();
+        claim_schema_builder.add_attr("name").unwrap();
+        claim_schema_builder.add_attr("age").unwrap();
+        let claim_schema = claim_schema_builder.finalize().unwrap();
 
-        assert!(claim_attrs.attrs.contains("sex"));
-        assert!(claim_attrs.attrs.contains("name"));
-        assert!(claim_attrs.attrs.contains("age"));
-        assert!(!claim_attrs.attrs.contains("height"));
+        assert!(claim_schema.attrs.contains("sex"));
+        assert!(claim_schema.attrs.contains("name"));
+        assert!(claim_schema.attrs.contains("age"));
+        assert!(!claim_schema.attrs.contains("height"));
     }
 
     #[test]
-    fn claim_attributes_values_builder_works() {
-        let claim_attrs_values = ClaimValuesBuilder::new().unwrap()
-            .add_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()
-            .add_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()
-            .finalize().unwrap();
+    fn claim_values_builder_works() {
+        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
+        claim_values_builder.add_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
+        claim_values_builder.add_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
+        let claim_values = claim_values_builder.finalize().unwrap();
 
-        assert!(claim_attrs_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()));
-        assert!(claim_attrs_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()));
-        assert!(claim_attrs_values.attrs_values.get("age").is_none());
+        assert!(claim_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()));
+        assert!(claim_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()));
+        assert!(claim_values.attrs_values.get("age").is_none());
     }
 
     #[test]
@@ -460,13 +461,13 @@ mod tests {
         let (pub_key, secret_key) = (mocks::issuer_public_key(), mocks::issuer_private_key());
         let context_attribute = BigNumber::from_dec("59059690488564137142247698318091397258460906844819605876079330034815387295451").unwrap();
 
-        let claim_attributes_values_builder = Issuer::new_claim_values_builder().unwrap();
-        let claim_values = claim_attributes_values_builder
-            .add_value("name", "1139481716457488690172217916278103335").unwrap()
-            .add_value("age", "28").unwrap()
-            .add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap()
-            .add_value("height", "175").unwrap()
-            .finalize().unwrap();
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.add_value("age", "28").unwrap();
+        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        claim_values_builder.add_value("height", "175").unwrap();
+        let claim_values = claim_values_builder.finalize().unwrap();
+
         let v = BigNumber::from_dec("5237513942984418438429595379849430501110274945835879531523435677101657022026899212054747703201026332785243221088006425007944260107143086435227014329174143861116260506019310628220538205630726081406862023584806749693647480787838708606386447727482772997839699379017499630402117304253212246286800412454159444495341428975660445641214047184934669036997173182682771745932646179140449435510447104436243207291913322964918630514148730337977117021619857409406144166574010735577540583316493841348453073326447018376163876048624924380855323953529434806898415857681702157369526801730845990252958130662749564283838280707026676243727830151176995470125042111348846500489265328810592848939081739036589553697928683006514398844827534478669492201064874941684905413964973517155382540340695991536826170371552446768460042588981089470261358687308").unwrap();
 
         let u = BigNumber::from_dec("72637991796589957272144423539998982864769854130438387485781642285237707120228376409769221961371420625002149758076600738245408098270501483395353213773728601101770725294535792756351646443825391806535296461087756781710547778467803194521965309091287301376623972321639262276779134586366620773325502044026364814032821517244814909708610356590687571152567177116075706850536899272749781370266769562695357044719529245223811232258752001942940813585440938291877640445002571323841625932424781535818087233087621479695522263178206089952437764196471098717335358765920438275944490561172307673744212256272352897964947435086824617146019").unwrap();
@@ -481,14 +482,14 @@ mod tests {
         let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_schema(), false).unwrap();
         let master_secret = Prover::new_master_secret().unwrap();
         let (blinded_master_secret, _) =
-            Prover::blinded_master_secret(&pub_key, &master_secret).unwrap();
+            Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
 
         let claim = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                      &blinded_master_secret,
-                                      &mocks::claim_values(),
-                                      &pub_key,
-                                      &priv_key,
-                                      Some(1), None, None).unwrap();
+                                       &blinded_master_secret,
+                                       &mocks::claim_values(),
+                                       &pub_key,
+                                       &priv_key,
+                                       Some(1), None, None).unwrap();
 
         assert_eq!(mocks::primary_claim(), claim.p_claim);
     }
@@ -536,21 +537,21 @@ pub mod mocks {
     }
 
     pub fn claim_schema() -> ClaimSchema {
-        ClaimSchemaBuilder::new().unwrap()
-            .add_attr("name").unwrap()
-            .add_attr("age").unwrap()
-            .add_attr("height").unwrap()
-            .add_attr("sex").unwrap()
-            .finalize().unwrap()
+        let mut claim_schema_builder = ClaimSchemaBuilder::new().unwrap();
+        claim_schema_builder.add_attr("name").unwrap();
+        claim_schema_builder.add_attr("age").unwrap();
+        claim_schema_builder.add_attr("height").unwrap();
+        claim_schema_builder.add_attr("sex").unwrap();
+        claim_schema_builder.finalize().unwrap()
     }
 
     pub fn claim_values() -> ClaimValues {
-        ClaimValuesBuilder::new().unwrap()
-            .add_value("name", "1139481716457488690172217916278103335").unwrap()
-            .add_value("age", "28").unwrap()
-            .add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap()
-            .add_value("height", "175").unwrap()
-            .finalize().unwrap()
+        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.add_value("age", "28").unwrap();
+        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        claim_values_builder.add_value("height", "175").unwrap();
+        claim_values_builder.finalize().unwrap()
     }
 
     pub fn claim() -> ClaimSignature {
