@@ -275,6 +275,7 @@ pub struct PrimaryBlindedMasterSecretData {
     v_prime: BigNumber,
 }
 
+#[derive(Debug)]
 pub struct RevocationBlindedMasterSecretData {
     ur: PointG1,
     vr_prime: GroupOrderElement,
@@ -664,23 +665,24 @@ mod test {
         claim_schema_builder.add_attr("age").unwrap();
         claim_schema_builder.add_attr("height").unwrap();
         let claim_schema = claim_schema_builder.finalize().unwrap();
-        let (issuer_pub, issuer_priv) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
 
         let master_secret = Prover::new_master_secret().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub, &master_secret).unwrap();
+        let (blinded_master_secret, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
         let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
         claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
         claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
         claim_values_builder.add_value("age", "28").unwrap();
         claim_values_builder.add_value("height", "175").unwrap();
         let claim_values = claim_values_builder.finalize().unwrap();
-        let mut claim = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW", &blinded_master_secret,
-                                           &claim_values,
-                                           &issuer_pub, &issuer_priv,
-                                           Some(1), None, None).unwrap();
-        Prover::process_claim_signature(&mut claim, &master_secret_blinding_data, &issuer_pub, None).unwrap();
+        let mut claim_signature = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW", &blinded_master_secret,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     Some(1), None, None).unwrap();
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
-        let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
         sub_proof_request_builder.add_predicate(&Predicate {
             attr_name: "age".to_string(),
@@ -689,8 +691,8 @@ mod test {
         }).unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request("issuer_key_id_1", &claim, &claim_values,
-                                            &issuer_pub,
+        proof_builder.add_sub_proof_request("issuer_key_id_1", &claim_signature, &claim_values,
+                                            &issuer_pub_key,
                                             None,
                                             &sub_proof_request,
                                             &claim_schema).unwrap();
@@ -698,7 +700,7 @@ mod test {
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request("issuer_key_id_1", &issuer_pub, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request("issuer_key_id_1", &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
         assert_eq!(true, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 }

@@ -43,7 +43,7 @@ impl fmt::Display for IndyCryptoError {
             IndyCryptoError::IOError(ref err) => err.fmt(f),
             IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
             IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
-            IndyCryptoError::AnoncredsClaimRevoked(ref description) => write!(f, "Claim revoked {}", description),
+            IndyCryptoError::AnoncredsClaimRevoked(ref description) => write!(f, "Claim revoked: {}", description),
         }
     }
 }

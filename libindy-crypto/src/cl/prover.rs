@@ -45,6 +45,8 @@ impl Prover {
     pub fn blind_master_secret(issuer_pub_key: &IssuerPublicKey,
                                master_secret: &MasterSecret) -> Result<(BlindedMasterSecret,
                                                                         MasterSecretBlindingData), IndyCryptoError> {
+        trace!("Prover::blind_master_secret: >>> issuer_pub_key: {:?}, master_secret: {:?}", issuer_pub_key, master_secret);
+
         let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&issuer_pub_key.p_key, &master_secret)?;
 
         let blinded_revocation_master_secret = match issuer_pub_key.r_key {
@@ -52,20 +54,25 @@ impl Prover {
             _ => None
         };
 
-        Ok((
-            BlindedMasterSecret {
-                u: blinded_primary_master_secret.u,
-                ur: blinded_revocation_master_secret.as_ref().map(|d| d.ur)
-            },
-            MasterSecretBlindingData {
-                v_prime: blinded_primary_master_secret.v_prime,
-                vr_prime: blinded_revocation_master_secret.map(|d| d.vr_prime)
-            }
-        ))
+        let blinded_master_secret = BlindedMasterSecret {
+            u: blinded_primary_master_secret.u,
+            ur: blinded_revocation_master_secret.as_ref().map(|d| d.ur)
+        };
+
+        let master_secret_blinding_data = MasterSecretBlindingData {
+            v_prime: blinded_primary_master_secret.v_prime,
+            vr_prime: blinded_revocation_master_secret.map(|d| d.vr_prime)
+        };
+
+        trace!("Prover::blind_master_secret: <<< blinded_master_secret: {:?}, master_secret_blinding_data: {:?}", blinded_master_secret, master_secret_blinding_data);
+
+        Ok((blinded_master_secret, master_secret_blinding_data))
     }
 
     fn _generate_blinded_primary_master_secret(p_pub_key: &IssuerPrimaryPublicKey,
                                                master_secret: &MasterSecret) -> Result<PrimaryBlindedMasterSecretData, IndyCryptoError> {
+        trace!("Prover::_generate_blinded_primary_master_secret: >>> p_pub_key: {:?}, master_secret: {:?}", p_pub_key, master_secret);
+
         let mut ctx = BigNumber::new_context()?;
         let v_prime = bn_rand(LARGE_VPRIME)?;
 
@@ -77,14 +84,24 @@ impl Prover {
             )?
             .modulus(&p_pub_key.n, Some(&mut ctx))?;
 
-        Ok(PrimaryBlindedMasterSecretData { u, v_prime })
+        let primary_blinded_master_secret = PrimaryBlindedMasterSecretData { u, v_prime };
+
+        trace!("Prover::_generate_blinded_primary_master_secret: <<< primary_blinded_master_secret: {:?}", primary_blinded_master_secret);
+
+        Ok(primary_blinded_master_secret)
     }
 
     fn _generate_blinded_revocation_master_secret(r_pub_key: &IssuerRevocationPublicKey) -> Result<RevocationBlindedMasterSecretData, IndyCryptoError> {
+        trace!("Prover::_generate_blinded_revocation_master_secret: >>> r_pub_key: {:?}", r_pub_key);
+
         let vr_prime = GroupOrderElement::new()?;
         let ur = r_pub_key.h2.mul(&vr_prime)?;
 
-        Ok(RevocationBlindedMasterSecretData { ur, vr_prime })
+        let revocation_blinded_master_secret = RevocationBlindedMasterSecretData { ur, vr_prime };
+
+        trace!("Prover::_generate_blinded_revocation_master_secret: <<< revocation_blinded_master_secret: {:?}", revocation_blinded_master_secret);
+
+        Ok(revocation_blinded_master_secret)
     }
 
     /// Updates the claim signature by a master secret blinding data.
@@ -123,6 +140,9 @@ impl Prover {
                                    master_secret_blinding_data: &MasterSecretBlindingData,
                                    issuer_pub_key: &IssuerPublicKey,
                                    rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
+        trace!("Prover::process_claim_signature: >>> claim_signature: {:?}, master_secret_blinding_data: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
+               claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+
         Prover::_process_primary_claim(&mut claim_signature.p_claim, &master_secret_blinding_data.v_prime)?;
 
         if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), Some(ref r_reg)) = (&mut claim_signature.r_claim,
@@ -134,12 +154,20 @@ impl Prover {
                                                   &r_key,
                                                   r_reg)?;
         }
+
+        trace!("Prover::process_claim_signature: <<<");
+
         Ok(())
     }
 
     fn _process_primary_claim(p_claim: &mut PrimaryClaimSignature,
                               v_prime: &BigNumber) -> Result<(), IndyCryptoError> {
+        trace!("Prover::_process_primary_claim: >>> p_claim: {:?}, v_prime: {:?}", p_claim, v_prime);
+
         p_claim.v = v_prime.add(&p_claim.v)?;
+
+        trace!("Prover::_process_primary_claim: <<<");
+
         Ok(())
     }
 
@@ -147,9 +175,14 @@ impl Prover {
                                      vr_prime: &GroupOrderElement,
                                      r_pub_key: &IssuerRevocationPublicKey,
                                      rev_reg: &RevocationRegistryPublic) -> Result<(), IndyCryptoError> {
+        trace!("Prover::_process_non_revocation_claim: >>> r_claim: {:?}, vr_prime: {:?}, r_pub_key: {:?}, rev_reg: {:?}", r_claim, vr_prime, r_pub_key, rev_reg);
+
         let r_cnxt_m2 = BigNumber::from_bytes(&r_claim.m2.to_bytes()?)?;
         r_claim.vr_prime_prime = vr_prime.add_mod(&r_claim.vr_prime_prime)?;
         Prover::_test_witness_credential(&r_claim, r_pub_key, rev_reg, &r_cnxt_m2)?;
+
+        trace!("Prover::_process_non_revocation_claim: <<<");
+
         Ok(())
     }
 
@@ -157,6 +190,8 @@ impl Prover {
                                 r_pub_key: &IssuerRevocationPublicKey,
                                 r_reg: &RevocationRegistryPublic,
                                 r_cnxt_m2: &BigNumber) -> Result<(), IndyCryptoError> {
+        trace!("Prover::_test_witness_credential: >>> r_claim: {:?}, r_pub_key: {:?}, r_reg: {:?}, r_cnxt_m2: {:?}", r_claim, r_pub_key, r_reg, r_cnxt_m2);
+
         let z_calc = Pair::pair(&r_claim.witness.g_i, &r_reg.acc.acc)?
             .mul(&Pair::pair(&r_pub_key.g, &r_claim.witness.omega)?.inverse()?)?;
         if z_calc != r_reg.key.z {
@@ -181,6 +216,8 @@ impl Prover {
         if pair_h1 != pair_h2 {
             return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
         }
+
+        trace!("Prover::_test_witness_credential: <<<");
 
         Ok(())
     }
@@ -224,6 +261,10 @@ impl ProofBuilder {
     /// * `claim_schema` - Claim schema.
     pub fn add_sub_proof_request(&mut self, key_id: &str, claim_signature: &ClaimSignature, claim_values: &ClaimValues, issuer_pub_key: &IssuerPublicKey,
                                  rev_reg_pub: Option<&RevocationRegistryPublic>, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+        trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, \
+        rev_reg_pub: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
+               key_id, claim_signature, claim_values, issuer_pub_key, rev_reg_pub, sub_proof_request, claim_schema);
+
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
@@ -258,6 +299,8 @@ impl ProofBuilder {
         };
         self.init_proofs.insert(key_id.to_owned(), init_proof);
 
+        trace!("ProofBuilder::add_sub_proof_request: <<<");
+
         Ok(())
     }
 
@@ -268,6 +311,8 @@ impl ProofBuilder {
     /// * `nonce` - Random BigNumber.
     /// * `master_secret` - Master secret.
     pub fn finalize(&self, nonce: &Nonce, master_secret: &MasterSecret) -> Result<Proof, IndyCryptoError> {
+        trace!("ProofBuilder::finalize: >>> nonce: {:?}, master_secret: {:?}", nonce, master_secret);
+
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
         values.extend_from_slice(&self.c_list);
@@ -296,76 +341,100 @@ impl ProofBuilder {
 
         let aggregated_proof = AggregatedProof { c_hash: c_h, c_list: self.c_list.clone() };
 
-        Ok(Proof { proofs, aggregated_proof })
+        let proof = Proof { proofs, aggregated_proof };
+
+        trace!("ProofBuilder::finalize: <<< proof: {:?}", proof);
+
+        Ok(proof)
     }
 
-    fn _init_primary_proof(pk: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_values: &ClaimValues, claim_schema: &ClaimSchema,
+    fn _init_primary_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_values: &ClaimValues, claim_schema: &ClaimSchema,
                            sub_proof_request: &SubProofRequest, m1_t: &BigNumber,
                            m2_t: Option<BigNumber>) -> Result<PrimaryInitProof, IndyCryptoError> {
-        let eq_proof = ProofBuilder::_init_eq_proof(&pk, c1, claim_schema, sub_proof_request, m1_t, m2_t)?;
+        trace!("ProofBuilder::_init_primary_proof: >>> issuer_pub_key: {:?}, c1: {:?}, claim_values: {:?}, claim_schema: {:?}, sub_proof_request: {:?}, m1_t: {:?}, m2_t: {:?}",
+               issuer_pub_key, c1, claim_values, claim_schema, sub_proof_request, m1_t, m2_t);
+
+        let eq_proof = ProofBuilder::_init_eq_proof(&issuer_pub_key, c1, claim_schema, sub_proof_request, m1_t, m2_t)?;
 
         let mut ge_proofs: Vec<PrimaryPredicateGEInitProof> = Vec::new();
         for predicate in sub_proof_request.predicates.iter() {
-            let ge_proof = ProofBuilder::_init_ge_proof(&pk, &eq_proof.m_tilde, claim_values, predicate)?;
+            let ge_proof = ProofBuilder::_init_ge_proof(&issuer_pub_key, &eq_proof.m_tilde, claim_values, predicate)?;
             ge_proofs.push(ge_proof);
         }
 
-        Ok(PrimaryInitProof { eq_proof, ge_proofs })
+        let primary_init_proof = PrimaryInitProof { eq_proof, ge_proofs };
+
+        trace!("ProofBuilder::_init_primary_proof: <<< primary_init_proof: {:?}", primary_init_proof);
+
+        Ok(primary_init_proof)
     }
 
-    fn _init_non_revocation_proof(claim: &mut NonRevocationClaimSignature, rev_reg: &RevocationRegistryPublic, pkr: &IssuerRevocationPublicKey)
+    fn _init_non_revocation_proof(r_claim: &mut NonRevocationClaimSignature, rev_reg_pub: &RevocationRegistryPublic, issuer_rev_pub_key: &IssuerRevocationPublicKey)
                                   -> Result<NonRevocInitProof, IndyCryptoError> {
-        ProofBuilder::_update_non_revocation_claim(claim, &rev_reg.acc, &rev_reg.tails.tails_dash)?;
+        trace!("ProofBuilder::_init_non_revocation_proof: >>> r_claim: {:?}, rev_reg_pub: {:?}, issuer_rev_pub_key: {:?}", r_claim, rev_reg_pub, issuer_rev_pub_key);
 
-        let c_list_params = ProofBuilder::_gen_c_list_params(&claim)?;
-        let proof_c_list = ProofBuilder::_create_c_list_values(&claim, &c_list_params, &pkr)?;
+        ProofBuilder::_update_non_revocation_claim(r_claim, &rev_reg_pub.acc, &rev_reg_pub.tails.tails_dash)?;
+
+        let c_list_params = ProofBuilder::_gen_c_list_params(&r_claim)?;
+        let proof_c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &issuer_rev_pub_key)?;
 
         let tau_list_params = ProofBuilder::_gen_tau_list_params()?;
-        let proof_tau_list = create_tau_list_values(&pkr, &rev_reg.acc, &tau_list_params, &proof_c_list)?;
+        let proof_tau_list = create_tau_list_values(&issuer_rev_pub_key, &rev_reg_pub.acc, &tau_list_params, &proof_c_list)?;
 
-        Ok(NonRevocInitProof {
+        let r_init_proof = NonRevocInitProof {
             c_list_params,
             tau_list_params,
             c_list: proof_c_list,
             tau_list: proof_tau_list
-        })
+        };
+
+        trace!("ProofBuilder::_init_non_revocation_proof: <<< r_init_proof: {:?}", r_init_proof);
+
+        Ok(r_init_proof)
     }
 
-    fn _update_non_revocation_claim(claim: &mut NonRevocationClaimSignature,
+    fn _update_non_revocation_claim(r_claim: &mut NonRevocationClaimSignature,
                                     accum: &RevocationAccumulator, tails: &HashMap<u32, PointG2>) -> Result<(), IndyCryptoError> {
-        if !accum.v.contains(&claim.i) {
+        trace!("ProofBuilder::_update_non_revocation_claim: >>> r_claim: {:?}, accum: {:?}", r_claim, accum);
+
+        if !accum.v.contains(&r_claim.i) {
             return Err(IndyCryptoError::AnoncredsClaimRevoked("Can not update Witness. Claim revoked.".to_string()));
         }
 
-        if claim.witness.v != accum.v {
+        if r_claim.witness.v != accum.v {
             let v_old_minus_new: HashSet<u32> =
-                claim.witness.v.difference(&accum.v).cloned().collect();
+                r_claim.witness.v.difference(&accum.v).cloned().collect();
             let mut omega_denom = PointG2::new_inf()?;
             for j in v_old_minus_new.iter() {
                 omega_denom = omega_denom.add(
-                    tails.get(&(accum.max_claim_num + 1 - j + claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + claim.i)))?)?;
+                    tails.get(&(accum.max_claim_num + 1 - j + r_claim.i))
+                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
             }
             let mut omega_num = PointG2::new_inf()?;
-            let mut new_omega: PointG2 = claim.witness.omega.clone();
+            let mut new_omega: PointG2 = r_claim.witness.omega.clone();
             for j in v_old_minus_new.iter() {
                 omega_num = omega_num.add(
-                    tails.get(&(accum.max_claim_num + 1 - j + claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + claim.i)))?)?;
+                    tails.get(&(accum.max_claim_num + 1 - j + r_claim.i))
+                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
                 new_omega = new_omega.add(
                     &omega_num.sub(&omega_denom)?
                 )?;
             }
 
-            claim.witness.v = accum.v.clone();
-            claim.witness.omega = new_omega;
+            r_claim.witness.v = accum.v.clone();
+            r_claim.witness.omega = new_omega;
         }
+
+        trace!("ProofBuilder::_update_non_revocation_claim: <<<");
 
         Ok(())
     }
 
-    fn _init_eq_proof(pk: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_schema: &ClaimSchema, sub_proof_request: &SubProofRequest,
+    fn _init_eq_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_schema: &ClaimSchema, sub_proof_request: &SubProofRequest,
                       m1_tilde: &BigNumber, m2_t: Option<BigNumber>) -> Result<PrimaryEqualInitProof, IndyCryptoError> {
+        trace!("ProofBuilder::_init_eq_proof: >>> issuer_pub_key: {:?}, c1: {:?}, claim_schema: {:?}, sub_proof_request: {:?}, m1_tilde: {:?}, m2_t: {:?}",
+               issuer_pub_key, c1, claim_schema, sub_proof_request, m1_tilde, m2_t);
+
         let mut ctx = BigNumber::new_context()?;
 
         let m2_tilde = m2_t.unwrap_or(bn_rand(LARGE_MVECT)?);
@@ -382,10 +451,10 @@ impl ProofBuilder {
 
         let m_tilde = get_mtilde(&unrevealed_attrs)?;
 
-        let a_prime = pk.s
-            .mod_exp(&r, &pk.n, Some(&mut ctx))?
+        let a_prime = issuer_pub_key.s
+            .mod_exp(&r, &issuer_pub_key.n, Some(&mut ctx))?
             .mul(&c1.a, Some(&mut ctx))?
-            .modulus(&pk.n, Some(&mut ctx))?;
+            .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
 
         let large_e_start = BigNumber::from_dec(&LARGE_E_START.to_string())?;
 
@@ -397,10 +466,10 @@ impl ProofBuilder {
             &BigNumber::from_dec("2")?.exp(&large_e_start, Some(&mut ctx))?
         )?;
 
-        let t = calc_teq(&pk, &a_prime, &e_tilde, &v_tilde, &m_tilde, &m1_tilde,
+        let t = calc_teq(&issuer_pub_key, &a_prime, &e_tilde, &v_tilde, &m_tilde, &m1_tilde,
                          &m2_tilde, &unrevealed_attrs)?;
 
-        Ok(PrimaryEqualInitProof {
+        let primary_equal_init_proof = PrimaryEqualInitProof {
             a_prime,
             t,
             e_tilde,
@@ -411,11 +480,18 @@ impl ProofBuilder {
             m1_tilde: m1_tilde.clone()?,
             m2_tilde: m2_tilde.clone()?,
             m2: c1.m_2.clone()?
-        })
+        };
+
+        trace!("ProofBuilder::_init_eq_proof: <<< primary_equal_init_proof: {:?}", primary_equal_init_proof);
+
+        Ok(primary_equal_init_proof)
     }
 
-    fn _init_ge_proof(issuer_public_key: &IssuerPrimaryPublicKey, m_tilde: &HashMap<String, BigNumber>,
+    fn _init_ge_proof(issuer_pub_key: &IssuerPrimaryPublicKey, m_tilde: &HashMap<String, BigNumber>,
                       claim_values: &ClaimValues, predicate: &Predicate) -> Result<PrimaryPredicateGEInitProof, IndyCryptoError> {
+        trace!("ProofBuilder::_init_ge_proof: >>> issuer_pub_key: {:?}, m_tilde: {:?}, claim_values: {:?}, predicate: {:?}",
+               issuer_pub_key, m_tilde, claim_values, predicate);
+
         let mut ctx = BigNumber::new_context()?;
         let (k, value) = (&predicate.attr_name, predicate.value);
 
@@ -443,13 +519,13 @@ impl ProofBuilder {
 
             let cur_r = bn_rand(LARGE_VPRIME)?;
 
-            let cut_t = issuer_public_key.z
-                .mod_exp(&cur_u, &issuer_public_key.n, Some(&mut ctx))?
+            let cut_t = issuer_pub_key.z
+                .mod_exp(&cur_u, &issuer_pub_key.n, Some(&mut ctx))?
                 .mul(
-                    &issuer_public_key.s.mod_exp(&cur_r, &issuer_public_key.n, Some(&mut ctx))?,
+                    &issuer_pub_key.s.mod_exp(&cur_r, &issuer_pub_key.n, Some(&mut ctx))?,
                     Some(&mut ctx)
                 )?
-                .modulus(&issuer_public_key.n, Some(&mut ctx))?;
+                .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
 
             r.insert(i.to_string(), cur_r);
             t.insert(i.to_string(), cut_t.clone()?);
@@ -458,13 +534,13 @@ impl ProofBuilder {
 
         let r_delta = bn_rand(LARGE_VPRIME)?;
 
-        let t_delta = issuer_public_key.z
-            .mod_exp(&BigNumber::from_dec(&delta.to_string())?, &issuer_public_key.n, Some(&mut ctx))?
+        let t_delta = issuer_pub_key.z
+            .mod_exp(&BigNumber::from_dec(&delta.to_string())?, &issuer_pub_key.n, Some(&mut ctx))?
             .mul(
-                &issuer_public_key.s.mod_exp(&r_delta, &issuer_public_key.n, Some(&mut ctx))?,
+                &issuer_pub_key.s.mod_exp(&r_delta, &issuer_pub_key.n, Some(&mut ctx))?,
                 Some(&mut ctx)
             )?
-            .modulus(&issuer_public_key.n, Some(&mut ctx))?;
+            .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
 
         r.insert("DELTA".to_string(), r_delta);
         t.insert("DELTA".to_string(), t_delta.clone()?);
@@ -484,9 +560,9 @@ impl ProofBuilder {
         let mj = m_tilde.get(&k[..])
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", k)))?;
 
-        let tau_list = calc_tge(&issuer_public_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t)?;
+        let tau_list = calc_tge(&issuer_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t)?;
 
-        Ok(PrimaryPredicateGEInitProof {
+        let primary_predicate_ge_init_proof = PrimaryPredicateGEInitProof {
             c_list,
             tau_list,
             u,
@@ -496,11 +572,18 @@ impl ProofBuilder {
             alpha_tilde,
             predicate: predicate.clone(),
             t
-        })
+        };
+
+        trace!("ProofBuilder::_init_ge_proof: <<< primary_predicate_ge_init_proof: {:?}", primary_predicate_ge_init_proof);
+
+        Ok(primary_predicate_ge_init_proof)
     }
 
     fn _finalize_eq_proof(master_secret: &BigNumber, init_proof: &PrimaryEqualInitProof, c_h: &BigNumber,
                           claim_schema: &ClaimSchema, claim_values: &ClaimValues, sub_proof_request: &SubProofRequest) -> Result<PrimaryEqualProof, IndyCryptoError> {
+        trace!("ProofBuilder::_finalize_eq_proof: >>> master_secret: {:?}, init_proof: {:?}, c_h: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
+               master_secret, init_proof, c_h, claim_schema, claim_values, sub_proof_request);
+
         let mut ctx = BigNumber::new_context()?;
 
         let e = c_h
@@ -554,7 +637,7 @@ impl ProofBuilder {
             );
         }
 
-        Ok(PrimaryEqualProof {
+        let primary_equal_proof = PrimaryEqualProof {
             revealed_attrs: revealed_attrs_with_values,
             a_prime: init_proof.a_prime.clone()?,
             e,
@@ -562,11 +645,17 @@ impl ProofBuilder {
             m,
             m1,
             m2
-        })
+        };
+
+        trace!("ProofBuilder::_finalize_eq_proof: <<< primary_equal_proof: {:?}", primary_equal_proof);
+
+        Ok(primary_equal_proof)
     }
 
     fn _finalize_ge_proof(c_h: &BigNumber, init_proof: &PrimaryPredicateGEInitProof,
                           eq_proof: &PrimaryEqualProof) -> Result<PrimaryPredicateGEProof, IndyCryptoError> {
+        trace!("ProofBuilder::_finalize_ge_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}", c_h, init_proof, eq_proof);
+
         let mut ctx = BigNumber::new_context()?;
         let mut u: HashMap<String, BigNumber> = HashMap::new();
         let mut r: HashMap<String, BigNumber> = HashMap::new();
@@ -619,20 +708,25 @@ impl ProofBuilder {
         let mj = eq_proof.m.get(&init_proof.predicate.attr_name)
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.m", init_proof.predicate.attr_name)))?;
 
-        Ok(PrimaryPredicateGEProof {
+        let primary_predicate_ge_proof = PrimaryPredicateGEProof {
             u,
             r,
             mj: mj.clone()?,
             alpha,
             t: clone_bignum_map(&init_proof.t)?,
             predicate: init_proof.predicate.clone()
-        })
+        };
+
+        trace!("ProofBuilder::_finalize_ge_proof: <<< primary_predicate_ge_proof: {:?}", primary_predicate_ge_proof);
+
+        Ok(primary_predicate_ge_proof)
     }
 
     fn _finalize_primary_proof(master_secret: &BigNumber, init_proof: &PrimaryInitProof, c_h: &BigNumber,
                                claim_schema: &ClaimSchema, claim_values: &ClaimValues, sub_proof_request: &SubProofRequest)
                                -> Result<PrimaryProof, IndyCryptoError> {
-        info!(target: "anoncreds_service", "Prover finalize proof -> start");
+        trace!("ProofBuilder::_finalize_primary_proof: >>> master_secret: {:?}, init_proof: {:?}, c_h: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
+               master_secret, init_proof, c_h, claim_schema, claim_values, sub_proof_request);
 
         let eq_proof = ProofBuilder::_finalize_eq_proof(master_secret, &init_proof.eq_proof, c_h, claim_schema, claim_values, sub_proof_request)?;
         let mut ge_proofs: Vec<PrimaryPredicateGEProof> = Vec::new();
@@ -642,12 +736,16 @@ impl ProofBuilder {
             ge_proofs.push(ge_proof);
         }
 
-        info!(target: "anoncreds_service", "Prover finalize proof -> done");
+        let primary_proof = PrimaryProof { eq_proof, ge_proofs };
 
-        Ok(PrimaryProof { eq_proof, ge_proofs })
+        trace!("ProofBuilder::_finalize_primary_proof: <<< primary_proof: {:?}", primary_proof);
+
+        Ok(primary_proof)
     }
 
-    fn _gen_c_list_params(claim: &NonRevocationClaimSignature) -> Result<NonRevocProofXList, IndyCryptoError> {
+    fn _gen_c_list_params(r_claim: &NonRevocationClaimSignature) -> Result<NonRevocProofXList, IndyCryptoError> {
+        trace!("ProofBuilder::_gen_c_list_params: >>> r_claim: {:?}", r_claim);
+
         let rho = GroupOrderElement::new()?;
         let r = GroupOrderElement::new()?;
         let r_prime = GroupOrderElement::new()?;
@@ -655,13 +753,13 @@ impl ProofBuilder {
         let r_prime_prime_prime = GroupOrderElement::new()?;
         let o = GroupOrderElement::new()?;
         let o_prime = GroupOrderElement::new()?;
-        let m = rho.mul_mod(&claim.c)?;
+        let m = rho.mul_mod(&r_claim.c)?;
         let m_prime = r.mul_mod(&r_prime_prime)?;
-        let t = o.mul_mod(&claim.c)?;
+        let t = o.mul_mod(&r_claim.c)?;
         let t_prime = o_prime.mul_mod(&r_prime_prime)?;
-        let m2 = GroupOrderElement::from_bytes(&claim.m2.to_bytes()?)?;
+        let m2 = GroupOrderElement::from_bytes(&r_claim.m2.to_bytes()?)?;
 
-        Ok(NonRevocProofXList {
+        let non_revoc_proof_x_list = NonRevocProofXList {
             rho,
             r,
             r_prime,
@@ -674,51 +772,57 @@ impl ProofBuilder {
             t,
             t_prime,
             m2,
-            s: claim.vr_prime_prime,
-            c: claim.c
-        })
+            s: r_claim.vr_prime_prime,
+            c: r_claim.c
+        };
+
+        trace!("ProofBuilder::_gen_c_list_params: <<< non_revoc_proof_x_list: {:?}", non_revoc_proof_x_list);
+
+        Ok(non_revoc_proof_x_list)
     }
 
     fn _create_c_list_values(r_claim: &NonRevocationClaimSignature, params: &NonRevocProofXList,
-                             pkr: &IssuerRevocationPublicKey) -> Result<NonRevocProofCList, IndyCryptoError> {
-        let e = pkr.h
+                             r_pub_key: &IssuerRevocationPublicKey) -> Result<NonRevocProofCList, IndyCryptoError> {
+        trace!("ProofBuilder::_create_c_list_values: >>> r_claim: {:?}, r_pub_key: {:?}", r_claim, r_pub_key);
+
+        let e = r_pub_key.h
             .mul(&params.rho)?
             .add(
-                &pkr.htilde.mul(&params.o)?
+                &r_pub_key.htilde.mul(&params.o)?
             )?;
 
-        let d = pkr.g
+        let d = r_pub_key.g
             .mul(&params.r)?
             .add(
-                &pkr.htilde.mul(&params.o_prime)?
+                &r_pub_key.htilde.mul(&params.o_prime)?
             )?;
 
         let a = r_claim.sigma
             .add(
-                &pkr.htilde.mul(&params.rho)?
+                &r_pub_key.htilde.mul(&params.rho)?
             )?;
 
         let g = r_claim.g_i
             .add(
-                &pkr.htilde.mul(&params.r)?
+                &r_pub_key.htilde.mul(&params.r)?
             )?;
 
         let w = r_claim.witness.omega
             .add(
-                &pkr.h_cap.mul(&params.r_prime)?
+                &r_pub_key.h_cap.mul(&params.r_prime)?
             )?;
 
         let s = r_claim.witness.sigma_i
             .add(
-                &pkr.h_cap.mul(&params.r_prime_prime)?
+                &r_pub_key.h_cap.mul(&params.r_prime_prime)?
             )?;
 
         let u = r_claim.witness.u_i
             .add(
-                &pkr.h_cap.mul(&params.r_prime_prime_prime)?
+                &r_pub_key.h_cap.mul(&params.r_prime_prime_prime)?
             )?;
 
-        Ok(NonRevocProofCList {
+        let non_revoc_proof_c_list = NonRevocProofCList {
             e,
             d,
             a,
@@ -726,11 +830,17 @@ impl ProofBuilder {
             w,
             s,
             u
-        })
+        };
+
+        trace!("ProofBuilder::_create_c_list_values: <<< non_revoc_proof_c_list: {:?}", non_revoc_proof_c_list);
+
+        Ok(non_revoc_proof_c_list)
     }
 
     fn _gen_tau_list_params() -> Result<NonRevocProofXList, IndyCryptoError> {
-        Ok(NonRevocProofXList {
+        trace!("ProofBuilder::_gen_tau_list_params: >>>");
+
+        let non_revoc_proof_x_list = NonRevocProofXList {
             rho: GroupOrderElement::new()?,
             r: GroupOrderElement::new()?,
             r_prime: GroupOrderElement::new()?,
@@ -745,11 +855,15 @@ impl ProofBuilder {
             m2: GroupOrderElement::new()?,
             s: GroupOrderElement::new()?,
             c: GroupOrderElement::new()?
-        })
+        };
+
+        trace!("ProofBuilder::_gen_tau_list_params: <<< Nnon_revoc_proof_x_list: {:?}", non_revoc_proof_x_list);
+
+        Ok(non_revoc_proof_x_list)
     }
 
     fn _finalize_non_revocation_proof(init_proof: &NonRevocInitProof, c_h: &BigNumber) -> Result<NonRevocProof, IndyCryptoError> {
-        info!(target: "anoncreds_service", "Prover finalize non-revocation proof -> start");
+        trace!("ProofBuilder::_finalize_non_revocation_proof: >>> init_proof: {:?}, c_h: {:?}", init_proof, c_h);
 
         let ch_num_z = bignum_to_group_element(&c_h)?;
         let mut x_list: Vec<GroupOrderElement> = Vec::new();
@@ -760,12 +874,14 @@ impl ProofBuilder {
             )?);
         }
 
-        info!(target: "anoncreds_service", "Prover finalize non-revocation proof -> done");
-
-        Ok(NonRevocProof {
+        let non_revoc_proof = NonRevocProof {
             x_list: NonRevocProofXList::from_list(x_list),
             c_list: init_proof.c_list.clone()
-        })
+        };
+
+        trace!("ProofBuilder::_finalize_non_revocation_proof: <<< non_revoc_proof: {:?}", non_revoc_proof);
+
+        Ok(non_revoc_proof)
     }
 }
 

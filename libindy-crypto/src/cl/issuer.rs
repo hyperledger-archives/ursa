@@ -45,6 +45,8 @@ impl Issuer {
     /// let (_pub_key, _priv_key) = Issuer::new_keys(&claim_schema, true).unwrap();
     /// ```
     pub fn new_keys(claim_schema: &ClaimSchema, non_revocation_part: bool) -> Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError> {
+        trace!("Issuer::new_keys: >>> claim_schema: {:?}, non_revocation_part: {:?}", claim_schema, non_revocation_part);
+
         let (p_pub_key, p_priv_key) = Issuer::_new_primary_keys(claim_schema)?;
 
         let (r_pub_key, r_priv_key) = if non_revocation_part {
@@ -54,10 +56,11 @@ impl Issuer {
             (None, None)
         };
 
-        Ok((
-            IssuerPublicKey { p_key: p_pub_key, r_key: r_pub_key },
-            IssuerPrivateKey { p_key: p_priv_key, r_key: r_priv_key }
-        ))
+        let issuer_pub_key = IssuerPublicKey { p_key: p_pub_key, r_key: r_pub_key };
+        let issuer_priv_key = IssuerPrivateKey { p_key: p_priv_key, r_key: r_priv_key };
+        trace!("Issuer::new_keys: <<< issuer_pub_key: {:?}, issuer_priv_key: {:?}", issuer_pub_key, issuer_priv_key);
+
+        Ok((issuer_pub_key, issuer_priv_key))
     }
 
     /// Creates and returns revocation registries (public and private) entities.
@@ -79,6 +82,8 @@ impl Issuer {
     pub fn new_revocation_registry(issuer_pub_key: &IssuerPublicKey,
                                    max_claim_num: u32) -> Result<(RevocationRegistryPublic,
                                                                   RevocationRegistryPrivate), IndyCryptoError> {
+        trace!("Issuer::new_revocation_registry: >>> issuer_pub_key: {:?}, max_claim_num: {:?}", issuer_pub_key, max_claim_num);
+
         let r_pub_key = issuer_pub_key.r_key
             .as_ref()
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in issuer key.")))?;
@@ -104,17 +109,20 @@ impl Issuer {
         let acc = PointG2::new_inf()?;
         let v: HashSet<u32> = HashSet::new();
 
-        Ok((
-            RevocationRegistryPublic {
-                acc: RevocationAccumulator { acc, v, max_claim_num },
-                key: RevocationAccumulatorPublicKey { z },
-                tails: RevocationAccumulatorTails { tails: g, tails_dash: g_dash },
+        let rev_reg_pub = RevocationRegistryPublic {
+            acc: RevocationAccumulator { acc, v, max_claim_num },
+            key: RevocationAccumulatorPublicKey { z },
+            tails: RevocationAccumulatorTails { tails: g, tails_dash: g_dash },
 
-            },
-            RevocationRegistryPrivate {
-                key: RevocationAccumulatorPrivateKey { gamma },
-            }
-        ))
+        };
+
+        let rev_reg_priv = RevocationRegistryPrivate {
+            key: RevocationAccumulatorPrivateKey { gamma },
+        };
+
+        trace!("Issuer::new_revocation_registry: <<< rev_reg_pub: {:?}, rev_reg_priv: {:?}", rev_reg_pub, rev_reg_priv);
+
+        Ok((rev_reg_pub, rev_reg_priv))
     }
 
     /// Creates and returns claims values entity builder.
@@ -178,6 +186,9 @@ impl Issuer {
                       rev_idx: Option<u32>,
                       rev_reg_pub: Option<&mut RevocationRegistryPublic>,
                       rev_reg_priv: Option<&RevocationRegistryPrivate>) -> Result<ClaimSignature, IndyCryptoError> {
+        trace!("Issuer::sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_idx: {:?}, \
+        rev_reg_pub: {:?}, rev_reg_priv: {:?}", prover_id, blinded_ms, claim_values, issuer_pub_key, issuer_priv_key, rev_idx, rev_reg_pub, rev_reg_priv);
+
         let m_2 = Issuer::_calc_m2(prover_id, rev_idx)?;
 
         let p_claim = Issuer::_new_primary_claim(&m_2,
@@ -198,7 +209,11 @@ impl Issuer {
             None
         };
 
-        Ok(ClaimSignature { p_claim, r_claim })
+        let claim_signature = ClaimSignature { p_claim, r_claim };
+
+        trace!("Issuer::sign_claim: <<< claim_signature: {:?}", claim_signature);
+
+        Ok(claim_signature)
     }
 
     /// Revokes a claim by a revoc_id in a given revoc-registry
@@ -234,6 +249,8 @@ impl Issuer {
     /// ```
     pub fn revoke_claim(rev_reg_pub: &mut RevocationRegistryPublic,
                         rev_idx: u32) -> Result<(), IndyCryptoError> {
+        trace!("Issuer::revoke_claim: >>> rev_reg_pub: {:?}, rev_idx: {:?}", rev_reg_pub, rev_idx);
+
         if !rev_reg_pub.acc.v.remove(&rev_idx) {
             return Err(IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(
                 format!("User index:{} not found in Accumulator", rev_idx))
@@ -248,11 +265,15 @@ impl Issuer {
 
         rev_reg_pub.acc.acc = rev_reg_pub.acc.acc.sub(element)?;
 
+        trace!("Issuer::revoke_claim: <<<");
+
         Ok(())
     }
 
     fn _new_primary_keys(claim_schema: &ClaimSchema) -> Result<(IssuerPrimaryPublicKey,
                                                                 IssuerPrimaryPrivateKey), IndyCryptoError> {
+        trace!("Issuer::_new_primary_keys: >>> claim_schema: {:?}", claim_schema);
+
         let mut ctx = BigNumber::new_context()?;
 
         if claim_schema.attrs.len() == 0 {
@@ -282,14 +303,18 @@ impl Issuer {
         let rms = s.mod_exp(&gen_x(&p, &q)?, &n, Some(&mut ctx))?;
         let rctxt = s.mod_exp(&gen_x(&p, &q)?, &n, Some(&mut ctx))?;
 
-        Ok((
-            IssuerPrimaryPublicKey { n, s, rms, r, rctxt, z },
-            IssuerPrimaryPrivateKey { p, q }
-        ))
+        let issuer_pr_pub_key = IssuerPrimaryPublicKey { n, s, rms, r, rctxt, z };
+        let issuer_pr_priv_key = IssuerPrimaryPrivateKey { p, q };
+
+        trace!("Issuer::_new_primary_keys: <<< issuer_pr_pub_key: {:?}, issuer_pr_priv_key: {:?}", issuer_pr_pub_key, issuer_pr_priv_key);
+
+        Ok((issuer_pr_pub_key, issuer_pr_priv_key))
     }
 
     fn _new_revocation_keys() -> Result<(IssuerRevocationPublicKey,
                                          IssuerRevocationPrivateKey), IndyCryptoError> {
+        trace!("Issuer::_new_revocation_keys: >>>");
+
         let h = PointG1::new()?;
         let h0 = PointG1::new()?;
         let h1 = PointG1::new()?;
@@ -307,13 +332,17 @@ impl Issuer {
         let pk = g.mul(&sk)?;
         let y = h_cap.mul(&x)?;
 
-        Ok((
-            IssuerRevocationPublicKey { g, g_dash, h, h0, h1, h2, htilde, h_cap, u, pk, y },
-            IssuerRevocationPrivateKey { x, sk }
-        ))
+        let issuer_rev_pub_key = IssuerRevocationPublicKey { g, g_dash, h, h0, h1, h2, htilde, h_cap, u, pk, y };
+        let issuer_rev_priv_key = IssuerRevocationPrivateKey { x, sk };
+
+        trace!("Issuer::_new_revocation_keys: <<< issuer_rev_pub_key: {:?}, issuer_rev_priv_key: {:?}", issuer_rev_pub_key, issuer_rev_priv_key);
+
+        Ok((issuer_rev_pub_key, issuer_rev_priv_key))
     }
 
     fn _calc_m2(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
+        trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, rev_idx);
+
         let rev_idx = rev_idx.map(|i| i as i32).unwrap_or(-1);
 
         let prover_id_bn = encode_attribute(prover_id, ByteOrder::Little)?;
@@ -327,6 +356,8 @@ impl Issuer {
         let pow_2 = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_MASTER_SECRET)?, None)?;
         let m_2 = get_hash_as_int(&mut s)?.modulus(&pow_2, None)?;
 
+        trace!("Issuer::_calc_m2: <<< m_2: {:?}", m_2);
+
         Ok(m_2)
     }
 
@@ -335,6 +366,9 @@ impl Issuer {
                           issuer_priv_key: &IssuerPrivateKey,
                           blnd_ms: &BlindedMasterSecret,
                           claim_values: &ClaimValues) -> Result<PrimaryClaimSignature, IndyCryptoError> {
+        trace!("Issuer::_new_primary_claim: >>> m_2: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, blnd_ms: {:?}, claim_values: {:?}",
+               m_2, issuer_pub_key, issuer_priv_key, blnd_ms, claim_values);
+
         let v = generate_v_prime_prime()?;
 
         let e_start = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_E_START)?, None)?;
@@ -345,7 +379,11 @@ impl Issuer {
         let e = generate_prime_in_range(&e_start, &e_end)?;
         let a = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &m_2, &claim_values, &v, blnd_ms, &e)?;
 
-        Ok(PrimaryClaimSignature { m_2: m_2.clone()?, a, e, v })
+        let pr_claim_signature = PrimaryClaimSignature { m_2: m_2.clone()?, a, e, v };
+
+        trace!("Issuer::_new_primary_claim: <<< pr_claim_signature: {:?}", pr_claim_signature);
+
+        Ok(pr_claim_signature)
     }
 
     fn _sign_primary_claim(p_pub_key: &IssuerPublicKey,
@@ -355,6 +393,9 @@ impl Issuer {
                            v: &BigNumber,
                            blnd_ms: &BlindedMasterSecret,
                            e: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
+        trace!("Issuer::_sign_primary_claim: >>> p_pub_key: {:?}, p_priv_key: {:?}, m_2: {:?}, claim_values: {:?}, v: {:?}, blnd_ms: {:?}, e: {:?}",
+               p_pub_key, p_priv_key, m_2, claim_values, v, blnd_ms, e);
+
         let p_pub_key = &p_pub_key.p_key;
         let p_priv_key = &p_priv_key.p_key;
 
@@ -391,7 +432,8 @@ impl Issuer {
         e_inverse = e_inverse.inverse(&n, Some(&mut context))?;
         a = a.mod_exp(&e_inverse, &p_pub_key.n, Some(&mut context))?;
 
-        info!(target: "anoncreds_service", "Issuer sign attributes -> done");
+        trace!("Issuer::_sign_primary_claim: <<< a: {:?}", a);
+
         Ok(a)
     }
 
@@ -402,6 +444,9 @@ impl Issuer {
                                  issuer_priv_key: &IssuerPrivateKey,
                                  rev_reg_pub: &mut RevocationRegistryPublic,
                                  rev_reg_priv: &RevocationRegistryPrivate) -> Result<NonRevocationClaimSignature, IndyCryptoError> {
+        trace!("Issuer::_new_non_revocation_claim: >>> rev_idx: {:?}, m_2: {:?}, blnd_ms: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_reg_pub: {:?}, rev_reg_priv: {:?}",
+               rev_idx, m_2, blnd_ms, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
+
         let ur = blnd_ms.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secred.")))?;
 
@@ -477,9 +522,11 @@ impl Issuer {
             v: r_acc.v.clone()
         };
 
-        Ok(
-            NonRevocationClaimSignature { sigma, c, vr_prime_prime, witness, g_i: g_i.clone(), i, m2 }
-        )
+        let non_revocation_claim_sig = NonRevocationClaimSignature { sigma, c, vr_prime_prime, witness, g_i: g_i.clone(), i, m2 };
+
+        trace!("Issuer::_new_non_revocation_claim: <<< non_revocation_claim_sig: {:?}", non_revocation_claim_sig);
+
+        Ok(non_revocation_claim_sig)
     }
 }
 
