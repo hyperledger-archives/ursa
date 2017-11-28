@@ -6,12 +6,7 @@ pub mod verifier;
 
 use bn::BigNumber;
 use errors::IndyCryptoError;
-use pair::{
-    GroupOrderElement,
-    PointG1,
-    PointG2,
-    Pair
-};
+use pair::*;
 
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
@@ -23,18 +18,6 @@ pub struct ClaimSchema {
 }
 
 /// A Builder of `Claim Schema`.
-///
-/// # Example
-///
-/// ```
-/// use indy_crypto::cl::ClaimSchemaBuilder;
-/// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-/// claim_schema_builder.add_attr("name").unwrap();
-/// claim_schema_builder.add_attr("sex").unwrap();
-/// claim_schema_builder.add_attr("age").unwrap();
-/// claim_schema_builder.add_attr("height").unwrap();
-/// let claim_schema = claim_schema_builder.finalize().unwrap();
-/// ```
 #[derive(Debug)]
 pub struct ClaimSchemaBuilder {
     attrs: HashSet<String> /* attr names */
@@ -74,18 +57,6 @@ impl ClaimValues {
 }
 
 /// A Builder of `Claim Values`.
-///
-/// # Example
-///
-/// ```
-/// use indy_crypto::cl::ClaimValuesBuilder;
-/// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-/// claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-/// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-/// claim_values_builder.add_value("age", "28").unwrap();
-/// claim_values_builder.add_value("height", "175").unwrap();
-/// let claim_values = claim_values_builder.finalize().unwrap();
-/// ```
 #[derive(Debug)]
 pub struct ClaimValuesBuilder {
     attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
@@ -291,7 +262,7 @@ pub struct BlindedMasterSecret {
     ur: Option<PointG1>
 }
 
-/// `Blinded Master Secret` uses by Prover for post processing of claims received from Issuer.
+/// `Master Secret Blinding Data` uses by Prover for post processing of claims received from Issuer.
 #[derive(Debug)]
 pub struct MasterSecretBlindingData {
     v_prime: BigNumber,
@@ -309,7 +280,7 @@ pub struct RevocationBlindedMasterSecretData {
     vr_prime: GroupOrderElement,
 }
 
-/// “Sub Proof request” - input to create a Proof for a claim;
+/// “Sub Proof Request” - input to create a Proof for a claim;
 /// Contains attributes to be revealed and predicates.
 #[derive(Debug, Clone)]
 pub struct SubProofRequest {
@@ -317,22 +288,7 @@ pub struct SubProofRequest {
     predicates: HashSet<Predicate>,
 }
 
-/// Builder of “Sub Proof request”.
-///
-/// # Example
-///
-/// ```
-/// use indy_crypto::cl::SubProofRequestBuilder;
-/// let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
-/// sub_proof_request_builder.add_revealed_attr("name").unwrap();
-/// let predicate = Predicate {
-///     attr_name: "age".to_string(),
-///     value: 18,
-///     p_type: PredicateType::GE
-/// };
-/// sub_proof_request_builder.add_predicate(&predicate).unwrap();
-/// let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
-/// ```
+/// Builder of “Sub Proof Request”.
 #[derive(Debug)]
 pub struct SubProofRequestBuilder {
     value: SubProofRequest

@@ -1,9 +1,8 @@
 use bn::BigNumber;
+use cl::*;
 use errors::IndyCryptoError;
 use pair::GroupOrderElement;
-
 use super::constants::*;
-use cl::*;
 
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
@@ -14,6 +13,8 @@ pub enum ByteOrder {
     Little
 }
 
+//use std::cell::RefCell;
+//
 //#[cfg(test)]
 //thread_local! {
 //  pub static USE_MOCKS: RefCell<bool> = RefCell::new(true);
@@ -21,6 +22,7 @@ pub enum ByteOrder {
 //
 //#[cfg(test)]
 //pub struct MockHelper {
+//    use_mocks: bool
 //}
 //
 //#[cfg(test)]
@@ -87,8 +89,7 @@ pub fn generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 }
 
 #[cfg(test)]
-#[allow(unused_variables)]
-pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
+pub fn generate_prime_in_range(_start: &BigNumber, _end: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
     BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881")
 }
 
@@ -339,6 +340,76 @@ pub fn bignum_to_group_element(num: &BigNumber) -> Result<GroupOrderElement, Ind
     Ok(GroupOrderElement::from_bytes(&num.to_bytes()?)?)
 }
 
+pub fn create_tau_list_expected_values(pk_r: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
+                                       accum_pk: &RevocationAccumulatorPublicKey, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
+    let t1 = proof_c.e;
+    let t2 = PointG1::new_inf()?;
+    let t3 = Pair::pair(&pk_r.h0.add(&proof_c.g)?, &pk_r.h_cap)?
+        .mul(&Pair::pair(&proof_c.a, &pk_r.y)?.inverse()?)?;
+    let t4 = Pair::pair(&proof_c.g, &accumulator.acc)?
+        .mul(&Pair::pair(&pk_r.g, &proof_c.w)?.mul(&accum_pk.z)?.inverse()?)?;
+    let t5 = proof_c.d;
+    let t6 = PointG1::new_inf()?;
+    let t7 = Pair::pair(&pk_r.pk.add(&proof_c.g)?, &proof_c.s)?
+        .mul(&Pair::pair(&pk_r.g, &pk_r.g_dash)?.inverse()?)?;
+    let t8 = Pair::pair(&proof_c.g, &pk_r.u)?
+        .mul(&Pair::pair(&pk_r.g, &proof_c.u)?.inverse()?)?;
+
+    Ok(NonRevocProofTauList {
+        t1,
+        t2,
+        t3,
+        t4,
+        t5,
+        t6,
+        t7,
+        t8
+    })
+}
+
+pub fn create_tau_list_values(pk_r: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
+                              params: &NonRevocProofXList, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
+    let t1 = pk_r.h.mul(&params.rho)?.add(&pk_r.htilde.mul(&params.o)?)?;
+    let mut t2 = proof_c.e.mul(&params.c)?
+        .add(&pk_r.h.mul(&params.m.mod_neg()?)?)?
+        .add(&pk_r.htilde.mul(&params.t.mod_neg()?)?)?;
+    if t2.is_inf()? {
+        t2 = PointG1::new_inf()?;
+    }
+    let t3 = Pair::pair(&proof_c.a, &pk_r.h_cap)?.pow(&params.c)?
+        .mul(&Pair::pair(&pk_r.htilde, &pk_r.h_cap)?.pow(&params.r)?)?
+        .mul(&Pair::pair(&pk_r.htilde, &pk_r.y)?.pow(&params.rho)?
+            .mul(&Pair::pair(&pk_r.htilde, &pk_r.h_cap)?.pow(&params.m)?)?
+            .mul(&Pair::pair(&pk_r.h1, &pk_r.h_cap)?.pow(&params.m2)?)?
+            .mul(&Pair::pair(&pk_r.h2, &pk_r.h_cap)?.pow(&params.s)?)?.inverse()?)?;
+    let t4 = Pair::pair(&pk_r.htilde, &accumulator.acc)?
+        .pow(&params.r)?
+        .mul(&Pair::pair(&pk_r.g.neg()?, &pk_r.h_cap)?.pow(&params.r_prime)?)?;
+    let t5 = pk_r.g.mul(&params.r)?.add(&pk_r.htilde.mul(&params.o_prime)?)?;
+    let mut t6 = proof_c.d.mul(&params.r_prime_prime)?
+        .add(&pk_r.g.mul(&params.m_prime.mod_neg()?)?)?
+        .add(&pk_r.htilde.mul(&params.t_prime.mod_neg()?)?)?;
+    if t6.is_inf()? {
+        t6 = PointG1::new_inf()?;
+    }
+    let t7 = Pair::pair(&pk_r.pk.add(&proof_c.g)?, &pk_r.h_cap)?.pow(&params.r_prime_prime)?
+        .mul(&Pair::pair(&pk_r.htilde, &pk_r.h_cap)?.pow(&params.m_prime.mod_neg()?)?)?
+        .mul(&Pair::pair(&pk_r.htilde, &proof_c.s)?.pow(&params.r)?)?;
+    let t8 = Pair::pair(&pk_r.htilde, &pk_r.u)?.pow(&params.r)?
+        .mul(&Pair::pair(&pk_r.g.neg()?, &pk_r.h_cap)?.pow(&params.r_prime_prime_prime)?)?;
+
+    Ok(NonRevocProofTauList {
+        t1,
+        t2,
+        t3,
+        t4,
+        t5,
+        t6,
+        t7,
+        t8
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,11 +493,11 @@ mod tests {
 
     #[test]
     fn test_encode_attribute_fail_simple_collision_on_internal_truncate() {
-//        let ea3079 = encode_attribute("3079", ByteOrder::Big).unwrap();
-//        let ea6440 = encode_attribute("6440", ByteOrder::Big).unwrap();
-//        println!("{:?}", ea3079);
-//        println!("{:?}", ea6440);
-//        assert_ne!(ea3079, ea6440);
+        //        let ea3079 = encode_attribute("3079", ByteOrder::Big).unwrap();
+        //        let ea6440 = encode_attribute("6440", ByteOrder::Big).unwrap();
+        //        println!("{:?}", ea3079);
+        //        println!("{:?}", ea6440);
+        //        assert_ne!(ea3079, ea6440);
 
         /* Collision generator
         let mut arr: [i32; 256] = [0; 256];

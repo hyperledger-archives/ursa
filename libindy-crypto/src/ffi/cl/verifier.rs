@@ -89,7 +89,7 @@ pub extern fn indy_crypto_cl_verifier_new_proof_verifier(proof_verifier_p: *mut 
 ///
 /// # Arguments
 /// * `proof_verifier` - Reference that contain proof verifier instance pointer.
-/// * `key_id` - unique identifier.
+/// * `key_id` - unique claim identifier.
 /// * `claim_schema` - Reference that contain claim schema instance pointer.
 /// * `issuer_pub_key` - Reference that contain public key instance pointer.
 /// * `rev_reg_pub` - Reference that contain public revocation registry instance pointer.
@@ -132,8 +132,8 @@ pub extern fn indy_crypto_cl_proof_verifier_add_sub_proof_request(proof_verifier
 ///
 /// # Arguments
 /// * `proof_verifier` - Reference that contain proof verifier instance pointer.
-/// * `proof` - Reference that contain nonce instance pointer.
-/// * `nonce` - Reference that contain master secret instance pointer.
+/// * `proof` - Reference that contain proof instance pointer.
+/// * `nonce` - Reference that contain nonce instance pointer.
 /// * `valid_p` - Reference that will be filled with true - if proof valid or false otherwise.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_verifier_verify(proof_verifier: *const c_void,

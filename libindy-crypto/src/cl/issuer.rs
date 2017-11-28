@@ -1,34 +1,9 @@
 use bn::BigNumber;
-use errors::IndyCryptoError;
-
-use pair::{
-    GroupOrderElement,
-    PointG1,
-    PointG2,
-    Pair
-};
-
-use super::constants::{
-    LARGE_E_END_RANGE,
-    LARGE_E_START,
-    LARGE_MASTER_SECRET,
-    LARGE_PRIME
-};
-
-use super::helpers::{
-    ByteOrder,
-    bitwise_or_big_int,
-    encode_attribute,
-    generate_safe_prime,
-    generate_v_prime_prime,
-    gen_x,
-    get_hash_as_int,
-    random_qr,
-    transform_u32_to_array_of_u8,
-    generate_prime_in_range
-};
-
 use cl::*;
+use errors::IndyCryptoError;
+use pair::*;
+use super::constants::*;
+use super::helpers::*;
 
 use std::collections::{HashMap, HashSet};
 
@@ -36,13 +11,44 @@ use std::collections::{HashMap, HashSet};
 pub struct Issuer {}
 
 impl Issuer {
+    /// Creates and returns claim schema entity builder.
+    ///
+    /// The purpose of claim schema builder is building of claim schema entity that
+    /// represents claim schema attributes set.
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+    /// claim_schema_builder.add_attr("sex").unwrap();
+    /// claim_schema_builder.add_attr("name").unwrap();
+    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    ///
+    /// assert!(claim_schema.attrs.contains("sex"));
+    /// assert!(claim_schema.attrs.contains("name"));
+    /// ```
     pub fn new_claim_schema_builder() -> Result<ClaimSchemaBuilder, IndyCryptoError> {
         let res = ClaimSchemaBuilder::new()?;
         Ok(res)
     }
 
-    pub fn new_keys(attrs: &ClaimSchema, non_revocation_part: bool) -> Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError> {
-        let (p_pub_key, p_priv_key) = Issuer::_new_primary_keys(attrs)?;
+    /// Creates and returns issuer keys (public and private) entities.
+    ///
+    /// # Arguments
+    /// * `claim_schema` - claim schema entity.
+    /// * `non_revocation_part` - If true non revocation part of keys will be generated.
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+    /// claim_schema_builder.add_attr("sex").unwrap();
+    /// claim_schema_builder.add_attr("name").unwrap();
+    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    /// let (pub_key, priv_key) = Issuer::new_keys(&claim_schema, true).unwrap();
+    /// ```
+    pub fn new_keys(claim_schema: &ClaimSchema, non_revocation_part: bool) -> Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError> {
+        let (p_pub_key, p_priv_key) = Issuer::_new_primary_keys(claim_schema)?;
 
         let (r_pub_key, r_priv_key) = if non_revocation_part {
             let (r_pub_key, r_priv_key) = Issuer::_new_revocation_keys()?;
@@ -57,6 +63,22 @@ impl Issuer {
         ))
     }
 
+    /// Creates and returns revocation registries (public and private) entities.
+    ///
+    /// # Arguments
+    /// * `issuer_pub_key` - Issuer pub key instance pointer.
+    /// * `max_claim_num` - Max claim number in generated registry.
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+    /// claim_schema_builder.add_attr("sex").unwrap();
+    /// claim_schema_builder.add_attr("name").unwrap();
+    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    /// let (pub_key, priv_key) = Issuer::new_keys(&claim_schema, true).unwrap();
+    /// let (rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&pub_key, 100).unwrap();
+    /// ```
     pub fn new_revocation_registry(issuer_pub_key: &IssuerPublicKey,
                                    max_claim_num: u32) -> Result<(RevocationRegistryPublic,
                                                                   RevocationRegistryPrivate), IndyCryptoError> {
@@ -98,11 +120,64 @@ impl Issuer {
         ))
     }
 
+    /// Creates and returns claims values entity builder.
+    ///
+    /// The purpose of claim values builder is building of claim values entity that
+    /// represents claim attributes values map.
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// use bn::BigNumber;
+    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+    /// let claim_values = claim_values_builder.finalize().unwrap();
+    ///
+    /// assert!(claim_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap()));
+    /// assert!(claim_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("1139481716457488690172217916278103335").unwrap()));
+    /// assert!(claim_values.attrs_values.get("age").is_none());
+    /// ```
     pub fn new_claim_values_builder() -> Result<ClaimValuesBuilder, IndyCryptoError> {
         let res = ClaimValuesBuilder::new()?;
         Ok(res)
     }
 
+    /// Sign given claim values instance.
+    ///
+    /// # Arguments
+    /// * `prover_id` - Prover identifier.
+    /// * `blinded_ms` - Blinded master secret.
+    /// * `claim_values` - Claim values to be signed.
+    /// * `issuer_pub_key` - Issuer public key.
+    /// * `issuer_priv_key` - Issuer private key.
+    /// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation claim_signature part generation.
+    /// * `rev_reg_pub` - (Optional) Revocation registry public.
+    /// * `rev_reg_priv` - (Optional) Revocation registry private.
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// use cl::prover::Prover;
+    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+    /// claim_schema_builder.add_attr("sex").unwrap();
+    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    ///
+    /// let (pub_key, priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+    /// let master_secret = Prover::new_master_secret().unwrap();
+    /// let (blinded_master_secret, _) = Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
+    ///
+    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let claim_values = claim_values_builder.finalize().unwrap();
+    ///
+    /// let claim_signature = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                           &blinded_master_secret,
+    ///                                           &claim_values,
+    ///                                           &pub_key,
+    ///                                           &priv_key,
+    ///                                           None, None, None).unwrap();
+    /// ```
     pub fn sign_claim(prover_id: &str,
                       blinded_ms: &BlindedMasterSecret,
                       claim_values: &ClaimValues,
@@ -134,6 +209,37 @@ impl Issuer {
         Ok(ClaimSignature { p_claim, r_claim })
     }
 
+    /// Revokes a claim by a revoc_id in a given revoc-registry
+    ///
+    /// # Arguments
+    /// * `rev_reg_pub` - Reference that contain revocation registry instance pointer.
+    ///  * rev_idx` - index of the user in the accumulator
+    ///
+    /// # Example
+    /// ```
+    /// use cl::issuer::Issuer;
+    /// use cl::prover::Prover;
+    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+    /// claim_schema_builder.add_attr("sex").unwrap();
+    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    ///
+    /// let (pub_key, priv_key) = Issuer::new_keys(&claim_schema, true).unwrap();
+    /// let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&pub_key, 1).unwrap();
+    /// let master_secret = Prover::new_master_secret().unwrap();
+    /// let (blinded_master_secret, _) = Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
+    ///
+    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let claim_values = claim_values_builder.finalize().unwrap();
+    ///
+    /// let claim_signature = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                           &blinded_master_secret,
+    ///                                           &claim_values,
+    ///                                           &pub_key,
+    ///                                           &priv_key,
+    ///                                           Some(1), Some(&mut rev_reg_pub), Some(&rev_reg_priv)).unwrap();
+    /// Issuer::revoke_claim(&mut rev_reg_pub, 1).unwrap();
+    /// ```
     pub fn revoke_claim(rev_reg_pub: &mut RevocationRegistryPublic,
                         rev_idx: u32) -> Result<(), IndyCryptoError> {
         if !rev_reg_pub.acc.v.remove(&rev_idx) {
@@ -153,11 +259,11 @@ impl Issuer {
         Ok(())
     }
 
-    fn _new_primary_keys(attrs: &ClaimSchema) -> Result<(IssuerPrimaryPublicKey,
-                                                         IssuerPrimaryPrivateKey), IndyCryptoError> {
+    fn _new_primary_keys(claim_schema: &ClaimSchema) -> Result<(IssuerPrimaryPublicKey,
+                                                                IssuerPrimaryPrivateKey), IndyCryptoError> {
         let mut ctx = BigNumber::new_context()?;
 
-        if attrs.attrs.len() == 0 {
+        if claim_schema.attrs.len() == 0 {
             return Err(IndyCryptoError::InvalidStructure(format!("List of attributes is empty")));
         }
 
@@ -175,7 +281,7 @@ impl Issuer {
         let xz = gen_x(&p, &q)?;
         let mut r: HashMap<String, BigNumber> = HashMap::new();
 
-        for attribute in &attrs.attrs {
+        for attribute in &claim_schema.attrs {
             r.insert(attribute.to_owned(), s.mod_exp(&gen_x(&p, &q)?, &n, Some(&mut ctx))?);
         }
 
@@ -236,7 +342,7 @@ impl Issuer {
                           issuer_pub_key: &IssuerPublicKey,
                           issuer_priv_key: &IssuerPrivateKey,
                           blnd_ms: &BlindedMasterSecret,
-                          attrs_values: &ClaimValues) -> Result<PrimaryClaimSignature, IndyCryptoError> {
+                          claim_values: &ClaimValues) -> Result<PrimaryClaimSignature, IndyCryptoError> {
         let v = generate_v_prime_prime()?;
 
         let e_start = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_E_START)?, None)?;
@@ -245,7 +351,7 @@ impl Issuer {
             .add(&e_start)?;
 
         let e = generate_prime_in_range(&e_start, &e_end)?;
-        let a = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &m_2, &attrs_values, &v, blnd_ms, &e)?;
+        let a = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &m_2, &claim_values, &v, blnd_ms, &e)?;
 
         Ok(PrimaryClaimSignature { m_2: m_2.clone()?, a, e, v })
     }
@@ -253,7 +359,7 @@ impl Issuer {
     fn _sign_primary_claim(p_pub_key: &IssuerPublicKey,
                            p_priv_key: &IssuerPrivateKey,
                            m_2: &BigNumber,
-                           attrs_values: &ClaimValues,
+                           claim_values: &ClaimValues,
                            v: &BigNumber,
                            blnd_ms: &BlindedMasterSecret,
                            e: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
@@ -263,7 +369,7 @@ impl Issuer {
         let mut context = BigNumber::new_context()?;
         let mut rx = BigNumber::from_u32(1)?;
 
-        for (key, value) in &attrs_values.attrs_values {
+        for (key, value) in &claim_values.attrs_values {
             let pk_r = p_pub_key.r
                 .get(key)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
@@ -302,8 +408,8 @@ impl Issuer {
                                  blnd_ms: &BlindedMasterSecret,
                                  issuer_pub_key: &IssuerPublicKey,
                                  issuer_priv_key: &IssuerPrivateKey,
-                                 r_reg_pub: &mut RevocationRegistryPublic,
-                                 r_reg_priv: &RevocationRegistryPrivate) -> Result<NonRevocationClaimSignature, IndyCryptoError> {
+                                 rev_reg_pub: &mut RevocationRegistryPublic,
+                                 rev_reg_priv: &RevocationRegistryPrivate) -> Result<NonRevocationClaimSignature, IndyCryptoError> {
         let ur = blnd_ms.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secred.")))?;
 
@@ -315,9 +421,9 @@ impl Issuer {
             .as_ref()
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in issuer private key.")))?;
 
-        let r_acc: &mut RevocationAccumulator = &mut r_reg_pub.acc;
-        let r_acc_tails: &mut RevocationAccumulatorTails = &mut r_reg_pub.tails;
-        let r_acc_priv_key: &RevocationAccumulatorPrivateKey = &r_reg_priv.key;
+        let r_acc: &mut RevocationAccumulator = &mut rev_reg_pub.acc;
+        let r_acc_tails: &mut RevocationAccumulatorTails = &mut rev_reg_pub.tails;
+        let r_acc_priv_key: &RevocationAccumulatorPrivateKey = &rev_reg_priv.key;
 
         if r_acc.is_full() {
             return Err(IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(format!("Revocation accumulator is full.")));
@@ -392,16 +498,16 @@ mod tests {
 
     #[test]
     fn generate_context_attribute_works() {
-        let accumulator_id = 110;
+        let rev_idx = 110;
         let user_id = "111";
         let answer = BigNumber::from_dec("59059690488564137142247698318091397258460906844819605876079330034815387295451").unwrap();
-        let result = Issuer::_calc_m2(user_id, Some(accumulator_id)).unwrap();
+        let result = Issuer::_calc_m2(user_id, Some(rev_idx)).unwrap();
         assert_eq!(result, answer);
     }
 
     #[test]
     fn claim_schema_builder_works() {
-        let mut claim_schema_builder = ClaimSchemaBuilder::new().unwrap();
+        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
         claim_schema_builder.add_attr("sex").unwrap();
         claim_schema_builder.add_attr("name").unwrap();
         claim_schema_builder.add_attr("age").unwrap();
@@ -415,7 +521,7 @@ mod tests {
 
     #[test]
     fn claim_values_builder_works() {
-        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
         claim_values_builder.add_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
         claim_values_builder.add_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
         let claim_values = claim_values_builder.finalize().unwrap();
@@ -478,20 +584,20 @@ mod tests {
     }
 
     #[test]
-    fn new_claim_works() {
+    fn sign_claim_works() {
         let (pub_key, priv_key) = Issuer::new_keys(&mocks::claim_schema(), false).unwrap();
         let master_secret = Prover::new_master_secret().unwrap();
         let (blinded_master_secret, _) =
             Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
 
-        let claim = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                       &blinded_master_secret,
-                                       &mocks::claim_values(),
-                                       &pub_key,
-                                       &priv_key,
-                                       Some(1), None, None).unwrap();
+        let claim_signature = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                 &blinded_master_secret,
+                                                 &mocks::claim_values(),
+                                                 &pub_key,
+                                                 &priv_key,
+                                                 Some(1), None, None).unwrap();
 
-        assert_eq!(mocks::primary_claim(), claim.p_claim);
+        assert_eq!(mocks::primary_claim(), claim_signature.p_claim);
     }
 }
 

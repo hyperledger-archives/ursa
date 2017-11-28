@@ -8,7 +8,7 @@ use libc::c_char;
 
 use std::os::raw::c_void;
 
-/// Creates a master secret
+/// Creates a master secret.
 ///
 /// Note that master secret deallocation must be performed by
 /// calling indy_crypto_cl_master_secret_free
@@ -148,7 +148,7 @@ pub extern fn indy_crypto_cl_master_secret_blinding_data_free(master_secret_blin
 /// * `claim_signature` - Reference that contain claim signature instance pointer.
 /// * `master_secret_blinding_data` - Reference that contain master secret blinding data instance pointer.
 /// * `issuer_pub_key` - Reference that containissuer public key instance pointer.
-/// * `rev_reg_pub` - Reference that contain revocation registry instance pointer.
+/// * `rev_reg_pub` - (Optional) Reference that contain revocation registry instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_prover_process_claim_signature(claim_signature: *const c_void,
                                                             master_secret_blinding_data: *const c_void,
@@ -178,6 +178,8 @@ pub extern fn indy_crypto_cl_prover_process_claim_signature(claim_signature: *co
 }
 
 /// Creates and returns proof builder.
+///
+/// The purpose of proof builder is building of proof entity according to the given request .
 ///
 /// Note that proof builder deallocation must be performed by
 /// calling indy_crypto_cl_proof_builder_finalize
@@ -210,12 +212,12 @@ pub extern fn indy_crypto_cl_prover_new_proof_builder(proof_builder_p: *mut *con
 ///
 /// # Arguments
 /// * `proof_builder` - Reference that contain proof builder instance pointer.
-/// * `key_id` - unique claim_signature identifier.
+/// * `key_id` - unique claim identifier.
 /// * `claim_schema` - Reference that contain claim schema instance pointer.
 /// * `claim_signature` - Reference that contain claim signature instance pointer.
 /// * `claim_values` - Reference that contain claim values instance pointer.
-/// * `issuer_pub_key` - Reference that contain public key instance pointer.
-/// * `rev_reg_bub` - Reference that contain public revocation registry instance pointer.
+/// * `issuer_pub_key` - Reference that contain issuer public key instance pointer.
+/// * `rev_reg_pub` - Reference that contain public revocation registry instance pointer.
 /// * `sub_proof_request` - Reference that contain requested attributes and predicates instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: *const c_void,
@@ -617,9 +619,9 @@ pub mod mocks {
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!proof.is_null());
 
-        //        _free_claim_schema(claim_schema);
-        //        _free_claim_values(claim_values);
-        //        _free_sub_proof_request(sub_proof_request);
+        _free_claim_schema(claim_schema);
+        _free_claim_values(claim_values);
+        _free_sub_proof_request(sub_proof_request);
 
         proof
     }

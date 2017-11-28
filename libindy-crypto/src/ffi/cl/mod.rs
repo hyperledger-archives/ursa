@@ -1,4 +1,6 @@
 use cl::*;
+use cl::issuer::Issuer;
+use cl::verifier::Verifier;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
@@ -27,7 +29,7 @@ pub extern fn indy_crypto_cl_claim_schema_builder_new(claim_schema_builder_p: *m
 
     check_useful_c_ptr!(claim_schema_builder_p, ErrorCode::CommonInvalidParam1);
 
-    let res = match ClaimSchemaBuilder::new() {
+    let res = match Issuer::new_claim_schema_builder() {
         Ok(claim_schema_builder) => {
             trace!("indy_crypto_cl_claim_schema_builder_new: claim_schema_builder: {:?}", claim_schema_builder);
             unsafe {
@@ -138,7 +140,7 @@ pub extern fn indy_crypto_cl_claim_values_builder_new(claim_values_builder_p: *m
 
     check_useful_c_ptr!(claim_values_builder_p, ErrorCode::CommonInvalidParam1);
 
-    let res = match ClaimValuesBuilder::new() {
+    let res = match Issuer::new_claim_values_builder() {
         Ok(claim_values_builder) => {
             trace!("indy_crypto_cl_claim_values_builder_new: claim_values_builder: {:?}", claim_values_builder);
             unsafe {
@@ -253,7 +255,7 @@ pub extern fn indy_crypto_cl_sub_proof_request_builder_new(sub_proof_request_bui
 
     check_useful_c_ptr!(sub_proof_request_builder_p, ErrorCode::CommonInvalidParam1);
 
-    let res = match SubProofRequestBuilder::new() {
+    let res = match Verifier::new_sub_proof_request() {
         Ok(sub_proof_request_builder) => {
             trace!("indy_crypto_cl_sub_proof_request_builder_new: sub_proof_request_builder: {:?}", sub_proof_request_builder);
             unsafe {

@@ -256,7 +256,7 @@ pub extern fn indy_crypto_cl_claim_signature_free(claim_signature: *const c_void
     res
 }
 
-/// Revokes a claim_signature by a revoc_id in a given revoc-registry
+/// Revokes a claim by a revoc_id in a given revoc-registry
 ///
 /// # Arguments
 /// * `rev_reg_pub` - Reference that contain revocation registry instance pointer.
@@ -436,7 +436,7 @@ pub mod mocks {
         assert!(!issuer_pub_key.is_null());
         assert!(!issuer_priv_key.is_null());
 
-        //        _free_claim_schema(claim_schema);
+        _free_claim_schema(claim_schema);
 
         (issuer_pub_key, issuer_priv_key)
     }
@@ -489,7 +489,7 @@ pub mod mocks {
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!claim_signature.is_null());
 
-        //        _free_claim_values(claim_values);
+        _free_claim_values(claim_values);
 
         claim_signature
     }
