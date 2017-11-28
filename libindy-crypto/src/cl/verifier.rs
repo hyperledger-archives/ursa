@@ -17,17 +17,15 @@ impl Verifier {
     ///
     /// # Example
     /// ```
-    /// use cl::verifier::Verifier;
+    /// use indy_crypto::cl::verifier::Verifier;
+    /// use indy_crypto::cl::Predicate;
     /// let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
     /// sub_proof_request_builder.add_revealed_attr("name").unwrap();
     ///
     /// let predicate = Predicate::new("age", "GE", 18).unwrap();
     /// sub_proof_request_builder.add_predicate(&predicate).unwrap();
     ///
-    /// let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
-    ///
-    /// assert!(sub_proof_request.revealed_attrs.contains("name"));
-    /// assert!(sub_proof_request.predicates.contains(&predicate));
+    /// let _sub_proof_request = sub_proof_request_builder.finalize().unwrap();
     /// ```
     pub fn new_sub_proof_request() -> Result<SubProofRequestBuilder, IndyCryptoError> {
         let res = SubProofRequestBuilder::new()?;
@@ -38,8 +36,8 @@ impl Verifier {
     ///
     /// # Example
     /// ```
-    /// use cl::verifier::Verifier;
-    /// let nonce = Verifier::new_nonce().unwrap();
+    /// use indy_crypto::cl::verifier::Verifier;
+    /// let _nonce = Verifier::new_nonce().unwrap();
     /// ```
     pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
         Ok(Nonce {
@@ -53,8 +51,8 @@ impl Verifier {
     ///
     /// # Example
     /// ```
-    /// use cl::verifier::Verifier;
-    /// let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+    /// use indy_crypto::cl::verifier::Verifier;
+    /// let _proof_verifier = Verifier::new_proof_verifier().unwrap();
     /// ```
     pub fn new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError> {
         Ok(ProofVerifier {
@@ -279,6 +277,7 @@ mod tests {
     use super::*;
     use cl::prover;
     use cl::issuer;
+    use cl::helpers::MockHelper;
 
     #[test]
     fn sub_proof_request_builder_works() {
@@ -296,6 +295,8 @@ mod tests {
 
     #[test]
     fn verify_equlity_works() {
+        MockHelper::inject();
+
         let proof = prover::mocks::eq_proof();
         let pk = issuer::mocks::issuer_primary_public_key();
         let c_h = prover::mocks::aggregated_proof().c_hash;
@@ -319,6 +320,8 @@ mod tests {
 
     #[test]
     fn _verify_ge_predicate_works() {
+        MockHelper::inject();
+
         let proof = prover::mocks::ge_proof();
         let c_h = prover::mocks::aggregated_proof().c_hash;
         let pk = issuer::mocks::issuer_primary_public_key();

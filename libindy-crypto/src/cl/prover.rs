@@ -1,8 +1,8 @@
 use bn::BigNumber;
 use cl::*;
+use cl::constants::*;
 use errors::IndyCryptoError;
 use pair::*;
-use super::constants::*;
 use super::helpers::*;
 
 use std::collections::{HashMap, HashSet};
@@ -15,8 +15,8 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use cl::prover::Prover;
-    /// let master_secret = Prover::new_master_secret().unwrap();
+    /// use indy_crypto::cl::prover::Prover;
+    /// let _master_secret = Prover::new_master_secret().unwrap();
     /// ```
     pub fn new_master_secret() -> Result<MasterSecret, IndyCryptoError> {
         Ok(MasterSecret {
@@ -32,15 +32,15 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use cl::issuer::Issuer;
-    /// use cl::prover::Prover;
+    /// use indy_crypto::cl::issuer::Issuer;
+    /// use indy_crypto::cl::prover::Prover;
     /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
     /// claim_schema_builder.add_attr("sex").unwrap();
     /// claim_schema_builder.add_attr("name").unwrap();
     /// let claim_schema = claim_schema_builder.finalize().unwrap();
     /// let (pub_key, _) = Issuer::new_keys(&claim_schema, false).unwrap();
     /// let master_secret = Prover::new_master_secret().unwrap();
-    /// let (blinded_master_secret, master_secret_blinding_data) = Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
+    /// let (_blinded_master_secret, _master_secret_blinding_data) = Prover::blind_master_secret(&pub_key, &master_secret).unwrap();
     /// ```
     pub fn blind_master_secret(issuer_pub_key: &IssuerPublicKey,
                                master_secret: &MasterSecret) -> Result<(BlindedMasterSecret,
@@ -97,8 +97,8 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use cl::issuer::Issuer;
-    /// use cl::prover::Prover;
+    /// use indy_crypto::cl::issuer::Issuer;
+    /// use indy_crypto::cl::prover::Prover;
     /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
     /// claim_schema_builder.add_attr("sex").unwrap();
     /// let claim_schema = claim_schema_builder.finalize().unwrap();
@@ -190,8 +190,8 @@ impl Prover {
     /// The purpose of proof builder is building of proof entity according to the given request .
     /// # Example
     /// ```
-    /// use cl::prover::Prover;
-    /// let proof_builder = Prover::new_proof_builder();
+    /// use indy_crypto::cl::prover::Prover;
+    /// let _proof_builder = Prover::new_proof_builder();
     pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
         Ok(ProofBuilder {
             m1_tilde: bn_rand(LARGE_M2_TILDE)?,
@@ -334,7 +334,7 @@ impl ProofBuilder {
     fn _update_non_revocation_claim(claim: &mut NonRevocationClaimSignature,
                                     accum: &RevocationAccumulator, tails: &HashMap<u32, PointG2>) -> Result<(), IndyCryptoError> {
         if !accum.v.contains(&claim.i) {
-            return Err(IndyCryptoError::InvalidState("Can not update Witness. Claim revoked.".to_string()));
+            return Err(IndyCryptoError::AnoncredsClaimRevoked("Can not update Witness. Claim revoked.".to_string()));
         }
 
         if claim.witness.v != accum.v {
@@ -772,16 +772,20 @@ impl ProofBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::issuer;
+    use cl::issuer;
 
     #[test]
     fn generate_master_secret_works() {
+        MockHelper::inject();
+
         let ms = Prover::new_master_secret().unwrap();
         assert_eq!(ms.ms.to_dec().unwrap(), mocks::master_secret().ms.to_dec().unwrap());
     }
 
     #[test]
     fn generate_blinded_primary_master_secret_works() {
+        MockHelper::inject();
+
         let pk = issuer::mocks::issuer_primary_public_key();
         let ms = mocks::master_secret();
 
@@ -791,12 +795,16 @@ mod tests {
 
     #[test]
     fn generate_blinded_revocation_master_secret_works() {
+        MockHelper::inject();
+
         let r_pk = issuer::mocks::revocation_pub_key();
         Prover::_generate_blinded_revocation_master_secret(&r_pk).unwrap();
     }
 
     #[test]
     fn generate_blinded_master_secret_works() {
+        MockHelper::inject();
+
         let pk = issuer::mocks::issuer_public_key();
         let ms = super::mocks::master_secret();
 
@@ -810,6 +818,8 @@ mod tests {
 
     #[test]
     fn process_primary_claim_works() {
+        MockHelper::inject();
+
         let mut claim = issuer::mocks::primary_claim();
         let v_prime = mocks::primary_master_secret_blinding_data().v_prime;
 
@@ -820,6 +830,8 @@ mod tests {
 
     #[test]
     fn process_claim_works() {
+        MockHelper::inject();
+
         let mut claim = issuer::mocks::claim();
         let pk = issuer::mocks::issuer_public_key();
         let master_secret_blinding_data = mocks::master_secret_blinding_data();
@@ -831,6 +843,8 @@ mod tests {
 
     #[test]
     fn init_eq_proof_works() {
+        MockHelper::inject();
+
         let pk = issuer::mocks::issuer_primary_public_key();
         let claim_schema = issuer::mocks::claim_schema();
         let claim = mocks::primary_claim();
@@ -849,6 +863,8 @@ mod tests {
 
     #[test]
     fn init_ge_proof_works() {
+        MockHelper::inject();
+
         let pk = issuer::mocks::issuer_primary_public_key();
         let init_eq_proof = mocks::primary_equal_init_proof();
         let predicate = mocks::predicate();
@@ -864,6 +880,8 @@ mod tests {
 
     #[test]
     fn init_primary_proof_works() {
+        MockHelper::inject();
+
         let pk = issuer::mocks::issuer_primary_public_key();
         let claim_schema = issuer::mocks::claim_schema();
         let claim = mocks::claim();
@@ -883,6 +901,8 @@ mod tests {
 
     #[test]
     fn finalize_eq_proof_works() {
+        MockHelper::inject();
+
         let ms = mocks::master_secret();
         let c_h = mocks::aggregated_proof().c_hash;
         let init_proof = mocks::primary_equal_init_proof();
@@ -902,6 +922,8 @@ mod tests {
 
     #[test]
     fn finalize_ge_proof_works() {
+        MockHelper::inject();
+
         let c_h = mocks::aggregated_proof().c_hash;
         let ge_proof = mocks::primary_ge_init_proof();
         let eq_proof = mocks::eq_proof();
@@ -914,6 +936,8 @@ mod tests {
 
     #[test]
     fn finalize_primary_proof_works() {
+        MockHelper::inject();
+
         let proof = mocks::primary_init_proof();
         let ms = mocks::master_secret();
         let c_h = mocks::aggregated_proof().c_hash;
@@ -966,7 +990,6 @@ mod tests {
 pub mod mocks {
     use std::iter::FromIterator;
     use super::*;
-    use super::super::issuer;
 
     pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 

@@ -61,6 +61,9 @@ pub enum ErrorCode
 
     // Invalid revocation accumulator index
     AnoncredsInvalidRevocationAccumulatorIndex = 116,
+
+    // Claim revoked
+    AnoncredsClaimRevoked = 117,
 }
 
 #[no_mangle]

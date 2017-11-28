@@ -215,15 +215,17 @@ mod tests {
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!proof_verifier_p.is_null());
 
+        _add_sub_proof_request(proof_verifier_p, key_id, claim_schema, issuer_pub_key, rev_reg_pub, sub_proof_request);
+        _free_proof_verifier(proof_verifier_p, proof, nonce);
+
         _free_issuer_keys(issuer_pub_key, issuer_priv_key);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
         _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
         _free_nonce(nonce);
+        _free_claim_schema(claim_schema);
+        _free_sub_proof_request(sub_proof_request);
         _free_claim_signature(claim_signature);
-
-        _add_sub_proof_request(proof_verifier_p, key_id, claim_schema, issuer_pub_key, rev_reg_pub, sub_proof_request);
-        _free_proof_verifier(proof_verifier_p, proof, nonce);
     }
 
     #[test]
@@ -341,7 +343,6 @@ pub mod mocks {
 
     pub fn _free_proof_verifier(proof_verifier: *const c_void, proof: *const c_void, nonce: *const c_void) {
         let mut valid = false;
-
         let err_code = indy_crypto_cl_proof_verifier_verify(proof_verifier, proof, nonce, &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
     }
