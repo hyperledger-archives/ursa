@@ -64,6 +64,9 @@ pub enum ErrorCode
 
     // Claim revoked
     AnoncredsClaimRevoked = 117,
+
+    // Proof rejected
+    AnoncredsProofRejected = 118,
 }
 
 #[no_mangle]

@@ -5,6 +5,7 @@ use cl::helpers::*;
 use errors::IndyCryptoError;
 
 use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 /// Party that wants to check that prover has some credentials provided by issuer.
 pub struct Verifier {}
@@ -83,12 +84,35 @@ impl ProofVerifier {
                                  rev_reg_pub: Option<&RevocationRegistryPublic>,
                                  sub_proof_request: &SubProofRequest,
                                  claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+        ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, claim_schema)?;
+
         self.claims.insert(key_id.to_string(), VerifyClaim {
             pub_key: issuer_pub_key.clone()?,
             r_reg: rev_reg_pub.map(Clone::clone),
             sub_proof_request: sub_proof_request.clone(),
             claim_schema: claim_schema.clone(),
         });
+        Ok(())
+    }
+
+    fn _check_add_sub_proof_request_params_consistency(sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, claim_schema: {:?}", sub_proof_request, claim_schema);
+
+        if sub_proof_request.revealed_attrs.difference(&claim_schema.attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
+        }
+
+        let predicates_attrs =
+            sub_proof_request.predicates.iter()
+                .map(|predicate| predicate.attr_name.clone())
+                .collect::<HashSet<String>>();
+
+        if predicates_attrs.difference(&claim_schema.attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
+        }
+
+        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
+
         Ok(())
     }
 
@@ -103,13 +127,13 @@ impl ProofVerifier {
                   nonce: &Nonce) -> Result<bool, IndyCryptoError> {
         trace!("ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}", proof, nonce);
 
-        //TODO check self.claims.sub_proof_request against proof.proofs.primary proof
+        ProofVerifier::_check_verify_params_consistency(&self.claims, proof)?;
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
 
         for (issuer_key_id, proof_item) in &proof.proofs {
-            let claim: &VerifyClaim = self.claims.get(issuer_key_id)
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Schema is not found")))?;
+            let claim = self.claims.get(issuer_key_id)
+                .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Schema is not found")))?;
 
             if let (Some(non_revocation_proof), Some(pkr), Some(revoc_reg)) = (proof_item.non_revoc_proof.as_ref(),
                                                                                claim.pub_key.r_key.as_ref(),
@@ -150,6 +174,34 @@ impl ProofVerifier {
         Ok(valid)
     }
 
+    fn _check_verify_params_consistency(claims: &HashMap<String, VerifyClaim>, proof: &Proof) -> Result<(), IndyCryptoError> {
+        trace!("ProofVerifier::_check_verify_params_consistency: >>> claims: {:?}, proof: {:?}", claims, proof);
+
+        for (key_id, claim) in claims {
+            let proof_for_claim = proof.proofs.get(key_id.as_str()).
+                ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Proof not found")))?;
+
+            let proof_revealed_attrs = HashSet::from_iter(proof_for_claim.primary_proof.eq_proof.revealed_attrs.keys().cloned());
+
+            if proof_revealed_attrs != claim.sub_proof_request.revealed_attrs {
+                return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof revealed attributes not correspond to requested attributes")));
+            }
+
+            let proof_predicates =
+                proof_for_claim.primary_proof.ge_proofs.iter()
+                    .map(|ge_proof| ge_proof.predicate.clone())
+                    .collect::<HashSet<Predicate>>();
+
+            if proof_predicates != claim.sub_proof_request.predicates {
+                return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof predicates not correspond to requested predicates")));
+            }
+        }
+
+        trace!("ProofVerifier::_check_verify_params_consistency: <<<");
+
+        Ok(())
+    }
+
     fn _verify_primary_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c_hash: &BigNumber,
                              primary_proof: &PrimaryProof, claim_schema: &ClaimSchema, sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
         trace!("ProofVerifier::_verify_primary_proof: >>> issuer_pub_key: {:?}, c_hash: {:?}, primary_proof: {:?}, sub_proof_request: {:?}",
@@ -185,7 +237,7 @@ impl ProofVerifier {
 
         for (attr, encoded_value) in &proof.revealed_attrs {
             let cur_r = issuer_pub_key.r.get(attr)
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", attr)))?;
+                .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in pk.r", attr)))?;
 
             rar = cur_r
                 .mod_exp(encoded_value, &issuer_pub_key.n, Some(&mut ctx))?
@@ -226,7 +278,7 @@ impl ProofVerifier {
 
         for i in 0..ITERATION {
             let cur_t = proof.t.get(&i.to_string())
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in proof.t", i)))?;
+                .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", i)))?;
 
             tau_list[i] = cur_t
                 .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
@@ -236,7 +288,7 @@ impl ProofVerifier {
         }
 
         let delta = proof.t.get("DELTA")
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
+            .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
         tau_list[ITERATION] = issuer_pub_key.z
             .mod_exp(

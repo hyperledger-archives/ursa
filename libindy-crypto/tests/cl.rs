@@ -309,6 +309,46 @@ mod test {
     }
 
     #[test]
+    fn anoncreds_works_for_full_accumulator() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys(with revocation keys)
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, true).unwrap();
+
+        // 3. Issuer creates revocation registry for only 1 claim
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 1).unwrap();
+
+        // 4. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 5. Prover blinds master secret
+        let (blinded_ms, _) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 6. Issuer creates and sign first claim values
+        let claim_values = helpers::gvt_claim_values();
+        Issuer::sign_claim(PROVER_ID,
+                           &blinded_ms,
+                           &claim_values,
+                           &issuer_pub_key,
+                           &issuer_priv_key,
+                           Some(1),
+                           Some(&mut rev_reg_pub),
+                           Some(&rev_reg_priv)).unwrap();
+
+        // 7. Issuer creates and sign second claim values
+        let res = Issuer::sign_claim(PROVER_ID,
+                                     &blinded_ms,
+                                     &claim_values,
+                                     &issuer_pub_key,
+                                     &issuer_priv_key,
+                                     Some(2),
+                                     Some(&mut rev_reg_pub),
+                                     Some(&rev_reg_priv));
+        assert_eq!(ErrorCode::AnoncredsRevocationAccumulatorIsFull, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
     #[ignore]
     fn anoncreds_works_for_reissue_claim() {
         // 1. Issuer creates claim schema
@@ -417,7 +457,7 @@ mod test {
     }
 
     #[test]
-    fn issuer_sign_claim_works_for_claim_values_not_correspond_to_issuer_keys() {
+    fn anoncreds_works_for_missed_process_claim_step() {
         // 1. Issuer creates claim schema
         let claim_schema = helpers::gvt_claim_schema();
 
@@ -430,73 +470,42 @@ mod test {
         // 4. Prover blinds master secret
         let (blinded_ms, _) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
 
-        // 5. Issuer creates claim values not correspondent to issuer keys
-        let claim_values = helpers::xyz_claim_values();
-
-        // 6. Issuer signs wrong claim values
-        let res = Issuer::sign_claim(PROVER_ID,
-                                     &blinded_ms,
-                                     &claim_values,
-                                     &issuer_pub_key,
-                                     &issuer_priv_key,
-                                     None,
-                                     None,
-                                     None);
-
-
-        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
-    }
-
-    #[test]
-    fn add_sub_proof_works_for_claim_values_not_correspond_to_issued_claim() {
-        // 1. Issuer creates claim schema
-        let claim_schema = helpers::gvt_claim_schema();
-
-        // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
-
-        // 3. Prover creates master secret
-        let master_secret = Prover::new_master_secret().unwrap();
-
-        // 4. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
-
         // 5. Issuer creates and signs claim values
         let claim_values = helpers::gvt_claim_values();
-        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
-                                                     &blinded_ms,
-                                                     &claim_values,
-                                                     &issuer_pub_key,
-                                                     &issuer_priv_key,
-                                                     None,
-                                                     None,
-                                                     None).unwrap();
+        let claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                 &blinded_ms,
+                                                 &claim_values,
+                                                 &issuer_pub_key,
+                                                 &issuer_priv_key,
+                                                 None,
+                                                 None,
+                                                 None).unwrap();
 
-        // 6. Prover processes claim signature
-        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
-
-        // 7. Prover creates proof
-        let mut proof_builder = Prover::new_proof_builder().unwrap();
-
-        // Wrong claim values
-        let claim_values = helpers::xyz_claim_values();
-
+        // 6. Verifier creates nonce and sub proof request
+        let nonce = Verifier::new_nonce().unwrap();
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
+        // 7. Prover creates proof by sub proof request not corresponded to verifier proof request
         let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &claim_signature,
-                                                      &claim_values,
-                                                      &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
 
-        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request(key_id,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &issuer_pub_key,
+                                            None,
+                                            &sub_proof_request,
+                                            &claim_schema).unwrap();
+        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+
+        // 8. Verifier verifies proof
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
     #[test]
-    fn add_sub_proof_works_for_claim_not_correspond_to_sub_proof_request() {
+    fn anoncreds_works_for_proof_created_with_wrong_master_secret() {
         // 1. Issuer creates claim schema
         let claim_schema = helpers::gvt_claim_schema();
 
@@ -509,8 +518,63 @@ mod test {
         // 4. Prover blinds master secret
         let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
 
-        // 5. Issuer creates and signs claim values
+        // 5. Issuer creates and signs claim values wrong keys
         let claim_values = helpers::gvt_claim_values();
+
+        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                     &blinded_ms,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     None,
+                                                     None,
+                                                     None).unwrap();
+
+        // 6. Prover processes claim signature
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        // 7. Verifier creates nonce and sub proof request
+        let nonce = Verifier::new_nonce().unwrap();
+        let sub_proof_request = helpers::gvt_sub_proof_request();
+
+        // 8. Prover creates proof by sub proof request not corresponded to verifier proof request
+        let key_id = "key_id";
+
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request(key_id,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &issuer_pub_key,
+                                            None,
+                                            &sub_proof_request,
+                                            &claim_schema).unwrap();
+
+        let another_master_secret = Prover::new_master_secret().unwrap();
+        let proof = proof_builder.finalize(&nonce, &another_master_secret).unwrap();
+
+        // 9. Verifier verifies proof
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
+    }
+
+    #[test]
+    fn anoncreds_works_for_used_different_nonce() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates and signs claim values wrong keys
+        let claim_values = helpers::gvt_claim_values();
+
         let mut claim_signature = Issuer::sign_claim(PROVER_ID,
                                                      &blinded_ms,
                                                      &claim_values,
@@ -524,73 +588,33 @@ mod test {
         Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
         // 7. Verifier creates sub proof request
-        let sub_proof_request = helpers::xyz_sub_proof_request();
+        let sub_proof_request = helpers::gvt_sub_proof_request();
 
-        // 8. Prover creates proof by claim not correspondent to proof request
-        let mut proof_builder = Prover::new_proof_builder().unwrap();
-
+        // 8. Prover creates proof by sub proof request not corresponded to verifier proof request
         let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &claim_signature,
-                                                      &claim_values,
-                                                      &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
-        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+        let nonce_for_proof_creation = Verifier::new_nonce().unwrap();
+
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request(key_id,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &issuer_pub_key,
+                                            None,
+                                            &sub_proof_request,
+                                            &claim_schema).unwrap();
+
+        let proof = proof_builder.finalize(&nonce_for_proof_creation, &master_secret).unwrap();
+
+        // 9. Verifier verifies proof
+        let nonce_for_proof_verification = Verifier::new_nonce().unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        assert_eq!(false, proof_verifier.verify(&proof, &nonce_for_proof_verification).unwrap());
     }
 
     #[test]
-    fn add_sub_proof_works_for_claim_not_satisfy_requested_predicate() {
-        // 1. Issuer creates claim schema
-        let claim_schema = helpers::gvt_claim_schema();
-
-        // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
-
-        // 3. Prover creates master secret
-        let master_secret = Prover::new_master_secret().unwrap();
-
-        // 4. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
-
-        // 5. Issuer creates and signs claim values
-        let claim_values = helpers::gvt_claim_values();
-        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
-                                                     &blinded_ms,
-                                                     &claim_values,
-                                                     &issuer_pub_key,
-                                                     &issuer_priv_key,
-                                                     None,
-                                                     None,
-                                                     None).unwrap();
-
-        // 6. Prover processes claim signature
-        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
-
-        // 7. Verifier creates sub proof request
-        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
-        gvt_sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        let predicate = Predicate::new("age", "GE", 50).unwrap();
-        gvt_sub_proof_request_builder.add_predicate(&predicate).unwrap();
-        let sub_proof_request = gvt_sub_proof_request_builder.finalize().unwrap();
-
-        // 8. Prover creates proof by claim value not satisfied predicate
-        let mut proof_builder = Prover::new_proof_builder().unwrap();
-
-        let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &claim_signature,
-                                                      &claim_values,
-                                                      &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
-        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
-    }
-
-    #[test]
-    fn add_sub_proof_works_for_proof_not_correspond_to_verifier_proof_request() {
+    fn anoncreds_works_for_proof_not_correspond_to_verifier_proof_request() {
         // 1. Issuer creates claim schema
         let claim_schema = helpers::gvt_claim_schema();
 
@@ -641,6 +665,286 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(key_id, &xyz_issuer_pub_key, None, &xyz_sub_proof_request, &xyz_claim_schema).unwrap();
         let res = proof_verifier.verify(&proof, &nonce);
+        assert_eq!(ErrorCode::AnoncredsProofRejected, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn issuer_create_keys_works_for_empty_claim_schema() {
+        // 1. Issuer creates claim schema
+        let claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+        let claim_schema = claim_schema_builder.finalize().unwrap();
+
+        // 2. Issuer creates keys(with revocation keys)
+        let res = Issuer::new_keys(&claim_schema, false);
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn issuer_create_revocation_registry_works_for_keys_without_revocation_part() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys(without revocation part)
+        let (issuer_pub_key, _) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Issuer creates revocation registry
+        let res = Issuer::new_revocation_registry(&issuer_pub_key, 5);
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn issuer_revoke_works_for_invalid_revocation_index() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys(with revocation keys)
+        let (issuer_pub_key, _) = Issuer::new_keys(&claim_schema, true).unwrap();
+
+        // 3. Issuer creates revocation registry
+        let (mut rev_reg_pub, _) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+
+        // 4. Issuer tries revoke not not added index
+        let rev_idx = 1;
+        let res = Issuer::revoke_claim(&mut rev_reg_pub, rev_idx);
+        assert_eq!(ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn issuer_sign_claim_works_for_claim_values_not_correspond_to_issuer_keys() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, _) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates claim values not correspondent to issuer keys
+        let claim_values = helpers::xyz_claim_values();
+
+        // 6. Issuer signs wrong claim values
+        let res = Issuer::sign_claim(PROVER_ID,
+                                     &blinded_ms,
+                                     &claim_values,
+                                     &issuer_pub_key,
+                                     &issuer_priv_key,
+                                     None,
+                                     None,
+                                     None);
+
+
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn proof_builder_add_sub_proof_works_for_claim_values_not_correspond_to_claim_schema() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates and signs claim values
+        let claim_values = helpers::gvt_claim_values();
+        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                     &blinded_ms,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     None,
+                                                     None,
+                                                     None).unwrap();
+
+        // 6. Prover processes claim signature
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        // 7. Prover creates proof
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+
+        // Wrong claim values
+        let claim_values = helpers::xyz_claim_values();
+
+        let sub_proof_request = helpers::gvt_sub_proof_request();
+
+        let key_id = "key_id";
+        let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &claim_signature,
+                                                      &claim_values,
+                                                      &issuer_pub_key,
+                                                      None,
+                                                      &sub_proof_request,
+                                                      &claim_schema);
+
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn proof_builder_add_sub_proof_works_for_claim_not_satisfy_to_sub_proof_request() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates and signs claim values
+        let claim_values = helpers::gvt_claim_values();
+        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                     &blinded_ms,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     None,
+                                                     None,
+                                                     None).unwrap();
+
+        // 6. Prover processes claim signature
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        // 7. Verifier creates sub proof request
+        let sub_proof_request = helpers::xyz_sub_proof_request();
+
+        // 8. Prover creates proof by claim not correspondent to proof request
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+
+        let key_id = "key_id";
+        let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &claim_signature,
+                                                      &claim_values,
+                                                      &issuer_pub_key,
+                                                      None,
+                                                      &sub_proof_request,
+                                                      &claim_schema);
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn proof_builder_add_sub_proof_works_for_claim_not_contained_requested_attribute() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates and signs claim values
+        let claim_values = helpers::gvt_claim_values();
+        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                     &blinded_ms,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     None,
+                                                     None,
+                                                     None).unwrap();
+
+        // 6. Prover processes claim signature
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        // 7. Verifier creates sub proof request
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        sub_proof_request_builder.add_revealed_attr("status").unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        // 8. Prover creates proof by claim not contained requested attribute
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+
+        let key_id = "key_id";
+        let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &claim_signature,
+                                                      &claim_values,
+                                                      &issuer_pub_key,
+                                                      None,
+                                                      &sub_proof_request,
+                                                      &claim_schema);
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn proof_builder_add_sub_proof_works_for_claim_not_satisfied_requested_predicate() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // 4. Prover blinds master secret
+        let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        // 5. Issuer creates and signs claim values
+        let claim_values = helpers::gvt_claim_values();
+        let mut claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                     &blinded_ms,
+                                                     &claim_values,
+                                                     &issuer_pub_key,
+                                                     &issuer_priv_key,
+                                                     None,
+                                                     None,
+                                                     None).unwrap();
+
+        // 6. Prover processes claim signature
+        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        // 7. Verifier creates sub proof request
+        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        gvt_sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        let predicate = Predicate::new("age", "GE", 50).unwrap();
+        gvt_sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        let sub_proof_request = gvt_sub_proof_request_builder.finalize().unwrap();
+
+        // 8. Prover creates proof by claim value not satisfied predicate
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+
+        let key_id = "key_id";
+        let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &claim_signature,
+                                                      &claim_values,
+                                                      &issuer_pub_key,
+                                                      None,
+                                                      &sub_proof_request,
+                                                      &claim_schema);
+        assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+    }
+
+    #[test]
+    fn proof_verifier_add_sub_proof_request_works_for_claim_schema_not_satisfied_to_sub_proof_request() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
+
+        // 2. Issuer creates keys
+        let (issuer_pub_key, _) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        // 3. Verifier build proof verifier
+        let key_id = "key_id";
+        let sub_proof_request = helpers::gvt_sub_proof_request();
+        let xyz_claim_schema = helpers::xyz_claim_schema();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+
+        let res = proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &xyz_claim_schema);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 }

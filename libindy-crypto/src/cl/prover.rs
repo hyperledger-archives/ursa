@@ -6,6 +6,7 @@ use pair::*;
 use super::helpers::*;
 
 use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 /// Credentials owner that can proof and partially disclose the credentials to verifier.
 pub struct Prover {}
@@ -265,6 +266,8 @@ impl ProofBuilder {
         rev_reg_pub: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
                key_id, claim_signature, claim_values, issuer_pub_key, rev_reg_pub, sub_proof_request, claim_schema);
 
+        ProofBuilder::_check_add_sub_proof_request_params_consistency(claim_values, sub_proof_request, claim_schema)?;
+
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
@@ -300,6 +303,34 @@ impl ProofBuilder {
         self.init_proofs.insert(key_id.to_owned(), init_proof);
 
         trace!("ProofBuilder::add_sub_proof_request: <<<");
+
+        Ok(())
+    }
+
+    fn _check_add_sub_proof_request_params_consistency(claim_values: &ClaimValues, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: >>> claim_values: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
+               claim_values, sub_proof_request, claim_schema);
+
+        let claim_attrs = HashSet::from_iter(claim_values.attrs_values.keys().cloned());
+
+        if claim_schema.attrs != claim_attrs {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't correspond to claim schema")));
+        }
+
+        if sub_proof_request.revealed_attrs.difference(&claim_attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
+        }
+
+        let predicates_attrs =
+            sub_proof_request.predicates.iter()
+                .map(|predicate| predicate.attr_name.clone())
+                .collect::<HashSet<String>>();
+
+        if predicates_attrs.difference(&claim_attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
+        }
+
+        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
 
         Ok(())
     }
@@ -495,7 +526,7 @@ impl ProofBuilder {
         let mut ctx = BigNumber::new_context()?;
         let (k, value) = (&predicate.attr_name, predicate.value);
 
-        let attr_value = claim_values.attrs_values.get(&k[..])
+        let attr_value = claim_values.attrs_values.get(k.as_str())
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in claim_values", k)))?
             .to_dec()?
             .parse::<i32>()
@@ -557,7 +588,7 @@ impl ProofBuilder {
         r_tilde.insert("DELTA".to_string(), bn_rand(LARGE_RTILDE)?);
         let alpha_tilde = bn_rand(LARGE_ALPHATILDE)?;
 
-        let mj = m_tilde.get(&k[..])
+        let mj = m_tilde.get(k.as_str())
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", k)))?;
 
         let tau_list = calc_tge(&issuer_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t)?;

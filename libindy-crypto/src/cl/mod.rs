@@ -187,7 +187,7 @@ pub struct RevocationAccumulator {
 
 impl RevocationAccumulator {
     pub fn is_full(&self) -> bool {
-        self.v.len() > self.max_claim_num as usize
+        self.v.len() >= self.max_claim_num as usize
     }
     pub fn is_idx_used(&self, idx: u32) -> bool {
         self.v.contains(&idx)

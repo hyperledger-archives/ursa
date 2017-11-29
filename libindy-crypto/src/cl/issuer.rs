@@ -467,7 +467,7 @@ impl Issuer {
         }
 
         if r_acc.is_idx_used(rev_idx) {
-            return Err(IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(format!("Revocation index is already used.")));
+            return Err(IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(format!("Revocation index is already used."))); //TODO Is it correct error?
         }
 
         let i = rev_idx;

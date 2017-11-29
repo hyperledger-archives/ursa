@@ -24,6 +24,7 @@ pub enum IndyCryptoError {
     AnoncredsRevocationAccumulatorIsFull(String),
     AnoncredsInvalidRevocationAccumulatorIndex(String),
     AnoncredsClaimRevoked(String),
+    AnoncredsProofRejected(String),
 }
 
 impl fmt::Display for IndyCryptoError {
@@ -44,6 +45,7 @@ impl fmt::Display for IndyCryptoError {
             IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
             IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
             IndyCryptoError::AnoncredsClaimRevoked(ref description) => write!(f, "Claim revoked: {}", description),
+            IndyCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
         }
     }
 }
@@ -66,6 +68,7 @@ impl Error for IndyCryptoError {
             IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
             IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
             IndyCryptoError::AnoncredsClaimRevoked(ref description) => description,
+            IndyCryptoError::AnoncredsProofRejected(ref description) => description,
         }
     }
 
@@ -86,6 +89,7 @@ impl Error for IndyCryptoError {
             IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
             IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
             IndyCryptoError::AnoncredsClaimRevoked(_) => None,
+            IndyCryptoError::AnoncredsProofRejected(_) => None,
         }
     }
 }
@@ -108,6 +112,7 @@ impl ToErrorCode for IndyCryptoError {
             IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
             IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
             IndyCryptoError::AnoncredsClaimRevoked(_) => ErrorCode::AnoncredsClaimRevoked,
+            IndyCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
         }
     }
 }
