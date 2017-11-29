@@ -14,13 +14,155 @@ mod test {
 
     #[test]
     fn anoncreds_demo() {
-        // 1. Issuer creates claim schema
+        // 1. Prover creates master secret
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        // Issuer creates GVT claim
+        // 2. Issuer creates GVT claim schema
         let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
         claim_schema_builder.add_attr("name").unwrap();
         claim_schema_builder.add_attr("sex").unwrap();
         claim_schema_builder.add_attr("age").unwrap();
         claim_schema_builder.add_attr("height").unwrap();
-        let claim_schema = claim_schema_builder.finalize().unwrap();
+        let gvt_claim_schema = claim_schema_builder.finalize().unwrap();
+
+        // 3. Issuer creates keys
+        let (gvt_issuer_pub_key, gvt_issuer_priv_key) = Issuer::new_keys(&gvt_claim_schema, true).unwrap();
+
+        // 4. Issuer creates GVT revocation registry
+        let (mut gvt_rev_reg_pub, gvt_rev_reg_priv) =
+            Issuer::new_revocation_registry(&gvt_issuer_pub_key, 5).unwrap();
+
+        // 5. Prover blinds master secret
+        let (gvt_blinded_ms, gvt_master_secret_blinding_data) =
+            Prover::blind_master_secret(&gvt_issuer_pub_key, &master_secret).unwrap();
+
+        // 6. Issuer creates GVT claim values
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        claim_values_builder.add_value("age", "28").unwrap();
+        claim_values_builder.add_value("height", "175").unwrap();
+        let gvt_claim_values = claim_values_builder.finalize().unwrap();
+
+        // 7. Issuer signs GVT claim values
+        let mut gvt_claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                         &gvt_blinded_ms,
+                                                         &gvt_claim_values,
+                                                         &gvt_issuer_pub_key,
+                                                         &gvt_issuer_priv_key,
+                                                         Some(1),
+                                                         Some(&mut gvt_rev_reg_pub),
+                                                         Some(&gvt_rev_reg_priv)).unwrap();
+
+        // 8. Prover processes GVT claim signature
+        Prover::process_claim_signature(&mut gvt_claim_signature,
+                                        &gvt_master_secret_blinding_data,
+                                        &gvt_issuer_pub_key,
+                                        Some(&gvt_rev_reg_pub)).unwrap();
+
+        // Issuer creates XYZ claim
+        // 9. Issuer creates XYZ claim schema
+        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+        claim_schema_builder.add_attr("period").unwrap();
+        claim_schema_builder.add_attr("status").unwrap();
+        let xyz_claim_schema = claim_schema_builder.finalize().unwrap();
+
+        // 10. Issuer creates keys
+        let (xyz_issuer_pub_key, xyz_issuer_priv_key) = Issuer::new_keys(&xyz_claim_schema, true).unwrap();
+
+        // 11. Issuer creates XYZ revocation registry
+        let (mut xyz_rev_reg_pub, xyz_rev_reg_priv) =
+            Issuer::new_revocation_registry(&xyz_issuer_pub_key, 5).unwrap();
+
+        // 12. Prover blinds master secret
+        let (xyz_blinded_ms, xyz_master_secret_blinding_data) =
+            Prover::blind_master_secret(&xyz_issuer_pub_key, &master_secret).unwrap();
+
+        // 13. Issuer creates XYZ claim values
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+        claim_values_builder.add_value("status", "51792877103171595686471452153480627530895").unwrap();
+        claim_values_builder.add_value("period", "8").unwrap();
+        let xyz_claim_values = claim_values_builder.finalize().unwrap();
+
+        // 14. Issuer signs XYZ claim values
+        let mut xyz_claim_signature = Issuer::sign_claim(PROVER_ID,
+                                                         &xyz_blinded_ms,
+                                                         &xyz_claim_values,
+                                                         &xyz_issuer_pub_key,
+                                                         &xyz_issuer_priv_key,
+                                                         Some(1),
+                                                         Some(&mut xyz_rev_reg_pub),
+                                                         Some(&xyz_rev_reg_priv)).unwrap();
+
+        // 15. Prover processes XYZ claim signature
+        Prover::process_claim_signature(&mut xyz_claim_signature,
+                                        &xyz_master_secret_blinding_data,
+                                        &xyz_issuer_pub_key,
+                                        Some(&xyz_rev_reg_pub)).unwrap();
+
+        // 16. Verifier creates sub proof request related to GVT claim
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        let predicate = Predicate::new("age", "GE", 18).unwrap();
+        sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        let gvt_sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        // 17. Verifier creates sub proof request related to XYZ claim
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        sub_proof_request_builder.add_revealed_attr("status").unwrap();
+        let predicate = Predicate::new("period", "GE", 4).unwrap();
+        sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        let xyz_sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        // 18. Verifier creates nonce
+        let nonce = Verifier::new_nonce().unwrap();
+
+        // 19. Prover creates proof for two sub proof requests
+        let gvt_key_id = "gvt_key_id";
+        let xyz_key_id = "xyz_key_id";
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+
+        proof_builder.add_sub_proof_request(gvt_key_id,
+                                            &gvt_sub_proof_request,
+                                            &gvt_claim_schema,
+                                            &gvt_claim_signature,
+                                            &gvt_claim_values,
+                                            &gvt_issuer_pub_key,
+                                            Some(&gvt_rev_reg_pub)).unwrap();
+
+        proof_builder.add_sub_proof_request(xyz_key_id,
+                                            &xyz_sub_proof_request,
+                                            &xyz_claim_schema,
+                                            &xyz_claim_signature,
+                                            &xyz_claim_values,
+                                            &xyz_issuer_pub_key,
+                                            Some(&xyz_rev_reg_pub)).unwrap();
+
+
+        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+
+        // 20. Verifier verifies proof
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(gvt_key_id,
+                                             &gvt_sub_proof_request,
+                                             &gvt_claim_schema,
+                                             &gvt_issuer_pub_key,
+                                             Some(&gvt_rev_reg_pub)).unwrap();
+
+        proof_verifier.add_sub_proof_request(xyz_key_id,
+                                             &xyz_sub_proof_request,
+                                             &xyz_claim_schema,
+                                             &xyz_issuer_pub_key,
+                                             Some(&xyz_rev_reg_pub)).unwrap();
+
+        assert!(proof_verifier.verify(&proof, &nonce).unwrap());
+    }
+
+    #[test]
+    fn anoncreds_works_for_primary_only() {
+        // 1. Issuer creates claim schema
+        let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
         let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
@@ -32,12 +174,7 @@ mod test {
         let (blinded_ms, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
 
         // 5. Issuer creates claim values
-        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        claim_values_builder.add_value("age", "28").unwrap();
-        claim_values_builder.add_value("height", "175").unwrap();
-        let claim_values = claim_values_builder.finalize().unwrap();
+        let claim_values = helpers::gvt_claim_values();
 
         // 6. Issuer signs claim values
         let mut claim_signature = Issuer::sign_claim(PROVER_ID,
@@ -52,12 +189,7 @@ mod test {
         Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
         // 8. Verifier create sub proof request
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
-        sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        let predicate = Predicate::new("age", "GE", 18).unwrap();
-        sub_proof_request_builder.add_predicate(&predicate).unwrap();
-        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
-
+        let sub_proof_request = helpers::gvt_sub_proof_request();
         let key_id = "issuer_key_id_1";
 
         // 9. Verifier creates nonce
@@ -75,7 +207,7 @@ mod test {
     }
 
     #[test]
-    fn anoncreds_works_for_multiply_claims_used_for_proof() {
+    fn anoncreds_works_for_multiple_claims_used_for_proof() {
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
 
