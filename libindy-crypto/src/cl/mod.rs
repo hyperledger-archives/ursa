@@ -1,3 +1,5 @@
+extern crate serde_json;
+
 mod constants;
 mod helpers;
 pub mod issuer;
@@ -7,6 +9,7 @@ pub mod verifier;
 use bn::BigNumber;
 use errors::IndyCryptoError;
 use pair::*;
+use utils::json::{JsonEncodable, JsonDecodable};
 
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
@@ -85,7 +88,7 @@ impl ClaimValuesBuilder {
 /// One for signing primary claims and second for signing non-revocation claims.
 /// These keys are used to proof that claim was issued and doesn’t revoked by this issuer.
 /// Issuer keys have global identifier that must be known to all parties.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IssuerPublicKey {
     p_key: IssuerPrimaryPublicKey,
     r_key: Option<IssuerRevocationPublicKey>,
@@ -100,16 +103,24 @@ impl IssuerPublicKey {
     }
 }
 
+impl JsonEncodable for IssuerPublicKey {}
+
+impl<'a> JsonDecodable<'a> for IssuerPublicKey {}
+
 /// `Issuer Private Key`: contains 2 internal parts.
 /// One for signing primary claims and second for signing non-revocation claims.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IssuerPrivateKey {
     p_key: IssuerPrimaryPrivateKey,
     r_key: Option<IssuerRevocationPrivateKey>,
 }
 
+impl JsonEncodable for IssuerPrivateKey {}
+
+impl<'a> JsonDecodable<'a> for IssuerPrivateKey {}
+
 /// `Primary Public Key` is used to prove that claim was issued and satisfy the proof request.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct IssuerPrimaryPublicKey {
     n: BigNumber,
     s: BigNumber,
@@ -133,14 +144,14 @@ impl IssuerPrimaryPublicKey {
 }
 
 /// `Primary Private Key` is used for signing Claim
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct IssuerPrimaryPrivateKey {
     p: BigNumber,
     q: BigNumber
 }
 
 /// `Revocation Public Key` is used to prove that claim wasn’t revoked by Issuer.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct IssuerRevocationPublicKey {
     g: PointG1,
     g_dash: PointG2,
@@ -156,7 +167,7 @@ pub struct IssuerRevocationPublicKey {
 }
 
 /// `Revocation Private Key` is used for signing Claim.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IssuerRevocationPrivateKey {
     x: GroupOrderElement,
     sk: GroupOrderElement
@@ -165,20 +176,28 @@ pub struct IssuerRevocationPrivateKey {
 /// `Revocation Registry Public` contain revocation keys, accumulator and accumulator tails.
 /// Must be shared by Issuer in trusted place
 /// Can be used to proof that concrete claim wasn’t revoked.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationRegistryPublic {
     key: RevocationAccumulatorPublicKey,
     acc: RevocationAccumulator,
     tails: RevocationAccumulatorTails,
 }
 
+impl JsonEncodable for RevocationRegistryPublic {}
+
+impl<'a> JsonDecodable<'a> for RevocationRegistryPublic {}
+
 /// `Revocation Registry Private` used for adding claims in the accumulator.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RevocationRegistryPrivate {
     key: RevocationAccumulatorPrivateKey,
 }
 
-#[derive(Debug, Clone)]
+impl JsonEncodable for RevocationRegistryPrivate {}
+
+impl<'a> JsonDecodable<'a> for RevocationRegistryPrivate {}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationAccumulator {
     acc: PointG2,
     v: HashSet<u32> /* used indexes */,
@@ -194,30 +213,34 @@ impl RevocationAccumulator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RevocationAccumulatorPrivateKey {
     gamma: GroupOrderElement
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationAccumulatorPublicKey {
     z: Pair
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationAccumulatorTails {
     tails: HashMap<u32 /* index in acc */, PointG1>,
     tails_dash: HashMap<u32 /* index in acc */, PointG2>,
 }
 
 /// Signed by the Issuer part of the Claim.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ClaimSignature {
     p_claim: PrimaryClaimSignature,
     r_claim: Option<NonRevocationClaimSignature> /* will be used to proof is claim revoked preparation */,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl JsonEncodable for ClaimSignature {}
+
+impl<'a> JsonDecodable<'a> for ClaimSignature {}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryClaimSignature {
     m_2: BigNumber,
     a: BigNumber,
@@ -225,7 +248,7 @@ pub struct PrimaryClaimSignature {
     v: BigNumber
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NonRevocationClaimSignature {
     sigma: PointG1,
     c: GroupOrderElement,
@@ -236,7 +259,7 @@ pub struct NonRevocationClaimSignature {
     m2: GroupOrderElement
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Witness {
     sigma_i: PointG2,
     u_i: PointG2,
@@ -250,24 +273,36 @@ pub struct Witness {
 /// and sends “Blinded Master Secret” to Isseur that uses “Blinded Master Secret” in claim creation.
 /// “Master Secret Blinding Dat” uses by Prover for post processing of claims received from Issuer
 /// It allows to use this claim by prover only.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecret {
     ms: BigNumber,
 }
 
+impl JsonEncodable for MasterSecret {}
+
+impl<'a> JsonDecodable<'a> for MasterSecret {}
+
 /// `Blinded Master Secret` uses by Issuer in claim creation.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BlindedMasterSecret {
     u: BigNumber,
     ur: Option<PointG1>
 }
 
+impl JsonEncodable for BlindedMasterSecret {}
+
+impl<'a> JsonDecodable<'a> for BlindedMasterSecret {}
+
 /// `Master Secret Blinding Data` uses by Prover for post processing of claims received from Issuer.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecretBlindingData {
     v_prime: BigNumber,
     vr_prime: Option<GroupOrderElement>
 }
+
+impl JsonEncodable for MasterSecretBlindingData {}
+
+impl<'a> JsonDecodable<'a> for MasterSecretBlindingData {}
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct PrimaryBlindedMasterSecretData {
@@ -321,7 +356,7 @@ impl SubProofRequestBuilder {
 }
 
 /// Some condition that must be proven.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Predicate {
     attr_name: String,
     p_type: PredicateType,
@@ -343,8 +378,12 @@ impl Predicate {
     }
 }
 
+impl JsonEncodable for Predicate {}
+
+impl<'a> JsonDecodable<'a> for Predicate {}
+
 /// Condition type (Currently GE only).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum PredicateType {
     GE
 }
@@ -353,31 +392,35 @@ pub enum PredicateType {
 /// 1) Owns claims issued with specific issuer keys (identified by key id)
 /// 2) Claim contains attributes with specific values that prover wants to disclose
 /// 3) Claim contains attributes with valid predicates that prover wants to disclose
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Proof {
     proofs: HashMap<String /* issuer pub key id */, SubProof>,
     aggregated_proof: AggregatedProof,
 }
 
-#[derive(Debug)]
+impl JsonEncodable for Proof {}
+
+impl<'a> JsonDecodable<'a> for Proof {}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SubProof {
     primary_proof: PrimaryProof,
     non_revoc_proof: Option<NonRevocProof>
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct AggregatedProof {
     c_hash: BigNumber,
     c_list: Vec<Vec<u8>>
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryProof {
     eq_proof: PrimaryEqualProof,
     ge_proofs: Vec<PrimaryPredicateGEProof>
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryEqualProof {
     revealed_attrs: HashMap<String /* attr_name of revealed */, BigNumber>,
     a_prime: BigNumber,
@@ -388,7 +431,7 @@ pub struct PrimaryEqualProof {
     m2: BigNumber
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryPredicateGEProof {
     u: HashMap<String, BigNumber>,
     r: HashMap<String, BigNumber>,
@@ -398,7 +441,7 @@ pub struct PrimaryPredicateGEProof {
     predicate: Predicate
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct NonRevocProof {
     x_list: NonRevocProofXList,
     c_list: NonRevocProofCList
@@ -505,7 +548,7 @@ impl PrimaryPredicateGEInitProof {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NonRevocProofXList {
     rho: GroupOrderElement,
     r: GroupOrderElement,
@@ -549,7 +592,7 @@ impl NonRevocProofXList {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NonRevocProofCList {
     e: PointG1,
     d: PointG1,
@@ -587,10 +630,14 @@ impl NonRevocProofTauList {
 }
 
 /// Random BigNumber that uses `Prover` for proof generation and `Verifier` for proof verification.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Nonce {
     value: BigNumber
 }
+
+impl JsonEncodable for Nonce {}
+
+impl<'a> JsonDecodable<'a> for Nonce {}
 
 #[derive(Debug)]
 pub struct VerifyClaim {
@@ -641,8 +688,8 @@ impl AppendByteArray for Vec<Vec<u8>> {
     }
 }
 
-pub fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>)
-                                              -> Result<HashMap<K, BigNumber>, IndyCryptoError> {
+fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>)
+                                          -> Result<HashMap<K, BigNumber>, IndyCryptoError> {
     let mut res: HashMap<K, BigNumber> = HashMap::new();
     for (k, v) in other {
         res.insert(k.clone(), v.clone()?);

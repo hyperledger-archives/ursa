@@ -3,6 +3,7 @@ use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
+use utils::json::{JsonEncodable, JsonDecodable};
 
 use libc::c_char;
 
@@ -34,6 +35,71 @@ pub extern fn indy_crypto_cl_prover_new_master_secret(master_secret_p: *mut *con
     };
 
     trace!("indy_crypto_cl_prover_new_master_secret: <<< res: {:?}", res);
+    res
+}
+
+/// Returns json representation of master secret.
+///
+/// # Arguments
+/// * `master_secret` - master secret pointer
+/// * `master_secret_json_p` - Pointer that will contain master secret json
+#[no_mangle]
+pub extern fn indy_crypto_cl_master_secret_to_json(master_secret: *const c_void,
+                                                   master_secret_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_master_secret_to_json: >>> master_secret: {:?}, master_secret_json_p: {:?}", master_secret, master_secret_json_p);
+
+    check_useful_c_reference!(master_secret, MasterSecret, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(master_secret_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_master_secret_to_json: entity >>> master_secret: {:?}", master_secret);
+
+    let res = match master_secret.to_json() {
+        Ok(master_secret_json) => {
+            trace!("indy_crypto_cl_master_secret_to_json: master_secret_json: {:?}", master_secret_json);
+            unsafe {
+                let master_secret_json = CTypesUtils::string_to_cstring(master_secret_json);
+                *master_secret_json_p = master_secret_json.into_raw();
+                trace!("indy_crypto_cl_master_secret_to_json: master_secret_json_p: {:?}", *master_secret_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_master_secret_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns master secret from json.
+///
+/// Note: Master secret instance deallocation must be performed by calling indy_crypto_cl_master_secret_free
+///
+/// # Arguments
+/// * `master_secret_json` - Pointer that contains master secret json
+/// * `master_secret_p` - Pointer that will contain master secret instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_cl_master_secret_from_json(master_secret_json: *const c_char,
+                                                     master_secret_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_master_secret_from_json: >>> master_secret_json: {:?}, master_secret_p: {:?}", master_secret_json, master_secret_p);
+
+    check_useful_c_str!(master_secret_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(master_secret_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_master_secret_from_json: entity: master_secret_json: {:?}", master_secret_json);
+
+    let res = match MasterSecret::from_json(&master_secret_json) {
+        Ok(master_secret) => {
+            trace!("indy_crypto_cl_master_secret_from_json: master_secret: {:?}", master_secret);
+            unsafe {
+                *master_secret_p = Box::into_raw(Box::new(master_secret)) as *const c_void;
+                trace!("indy_crypto_cl_master_secret_from_json: *master_secret_p: {:?}", *master_secret_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_master_secret_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -104,6 +170,72 @@ pub extern fn indy_crypto_cl_prover_blind_master_secret(issuer_pub_key: *const c
     res
 }
 
+/// Returns json representation of blinded master secret.
+///
+/// # Arguments
+/// * `blinded_master_secret` - blinded master secret pointer
+/// * `blinded_master_secret_json_p` - Pointer that will contain blinded master secret json
+#[no_mangle]
+pub extern fn indy_crypto_cl_blinded_master_secret_to_json(blinded_master_secret: *const c_void,
+                                                           blinded_master_secret_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_blinded_master_secret_to_json: >>> blinded_master_secret: {:?}, blinded_master_secret_json_p: {:?}", blinded_master_secret, blinded_master_secret_json_p);
+
+    check_useful_c_reference!(blinded_master_secret, BlindedMasterSecret, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(blinded_master_secret_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_blinded_master_secret_to_json: entity >>> blinded_master_secret: {:?}", blinded_master_secret);
+
+    let res = match blinded_master_secret.to_json() {
+        Ok(blinded_master_secret_json) => {
+            trace!("indy_crypto_cl_blinded_master_secret_to_json: blinded_master_secret_json: {:?}", blinded_master_secret_json);
+            unsafe {
+                let blinded_master_secret_json = CTypesUtils::string_to_cstring(blinded_master_secret_json);
+                *blinded_master_secret_json_p = blinded_master_secret_json.into_raw();
+
+                trace!("indy_crypto_cl_blinded_master_secret_to_json: blinded_master_secret_json_p: {:?}", *blinded_master_secret_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_blinded_master_secret_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns blinded master secret from json.
+///
+/// Note: Blinded master secret instance deallocation must be performed by calling indy_crypto_cl_blinded_master_secret_free
+///
+/// # Arguments
+/// * `blinded_master_secret_json` - Pointer that contains blinded master secret json
+/// * `blinded_master_secret_p` - Pointer that will contain blinded master secret instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_cl_blinded_master_secret_from_json(blinded_master_secret_json: *const c_char,
+                                                             blinded_master_secret_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_blinded_master_secret_from_json: >>> blinded_master_secret_json: {:?}, blinded_master_secret_p: {:?}", blinded_master_secret_json, blinded_master_secret_p);
+
+    check_useful_c_str!(blinded_master_secret_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(blinded_master_secret_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_blinded_master_secret_from_json: entity: blinded_master_secret_json: {:?}", blinded_master_secret_json);
+
+    let res = match BlindedMasterSecret::from_json(&blinded_master_secret_json) {
+        Ok(blinded_master_secret) => {
+            trace!("indy_crypto_cl_blinded_master_secret_from_json: blinded_master_secret: {:?}", blinded_master_secret);
+            unsafe {
+                *blinded_master_secret_p = Box::into_raw(Box::new(blinded_master_secret)) as *const c_void;
+                trace!("indy_crypto_cl_blinded_master_secret_from_json: *blinded_master_secret_p: {:?}", *blinded_master_secret_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_blinded_master_secret_from_json: <<< res: {:?}", res);
+    res
+}
+
 /// Deallocates  blinded master secret instance.
 ///
 /// # Arguments
@@ -123,10 +255,75 @@ pub extern fn indy_crypto_cl_blinded_master_secret_free(blinded_master_secret: *
     res
 }
 
+/// Returns json representation of master secret blinding data.
+///
+/// # Arguments
+/// * `master_secret_blinding_data` - Master secret blinding data pointer
+/// * `master_secret_blinding_data_json_p` - Pointer that will contain master secret blinding data json
+#[no_mangle]
+pub extern fn indy_crypto_cl_master_secret_blinding_data_to_json(master_secret_blinding_data: *const c_void,
+                                                                 master_secret_blinding_data_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_master_secret_blinding_data_to_json: >>> master_secret_blinding_data: {:?}, master_secret_blinding_data_json_p: {:?}", master_secret_blinding_data, master_secret_blinding_data_json_p);
+
+    check_useful_c_reference!(master_secret_blinding_data, MasterSecretBlindingData, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(master_secret_blinding_data_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_master_secret_blinding_data_to_json: entity >>> master_secret_blinding_data: {:?}", master_secret_blinding_data);
+
+    let res = match master_secret_blinding_data.to_json() {
+        Ok(master_secret_blinding_data_json) => {
+            trace!("indy_crypto_cl_master_secret_blinding_data_to_json: master_secret_blinding_data_json: {:?}", master_secret_blinding_data_json);
+            unsafe {
+                let master_secret_blinding_data_json = CTypesUtils::string_to_cstring(master_secret_blinding_data_json);
+                *master_secret_blinding_data_json_p = master_secret_blinding_data_json.into_raw();
+                trace!("indy_crypto_cl_master_secret_blinding_data_to_json: master_secret_blinding_data_json_p: {:?}", *master_secret_blinding_data_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_blinded_master_secret_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns master secret blinding data json.
+///
+/// Note: Master secret blinding data instance deallocation must be performed by calling indy_crypto_cl_master_secret_blinding_data_free
+///
+/// # Arguments
+/// * `master_secret_blinding_data_json` - Pointer that contains master secret blinding data json
+/// * `blinded_master_secret_p` - Pointer that will contain master secret blinding data instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_cl_master_secret_blinding_data_from_json(master_secret_blinding_data_json: *const c_char,
+                                                                   master_secret_blinding_data_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_master_secret_blinding_data_from_json: >>> master_secret_blinding_data_json: {:?}, blinded_master_secret_p: {:?}", master_secret_blinding_data_json, master_secret_blinding_data_p);
+
+    check_useful_c_str!(master_secret_blinding_data_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(master_secret_blinding_data_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_master_secret_blinding_data_from_json: entity: master_secret_blinding_data_json: {:?}", master_secret_blinding_data_json);
+
+    let res = match MasterSecretBlindingData::from_json(&master_secret_blinding_data_json) {
+        Ok(master_secret_blinding_data) => {
+            trace!("indy_crypto_cl_master_secret_blinding_data_from_json: master_secret_blinding_data: {:?}", master_secret_blinding_data);
+            unsafe {
+                *master_secret_blinding_data_p = Box::into_raw(Box::new(master_secret_blinding_data)) as *const c_void;
+                trace!("indy_crypto_cl_master_secret_blinding_data_from_json: *blinded_master_secret_p: {:?}", *master_secret_blinding_data_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_master_secret_blinding_data_from_json: <<< res: {:?}", res);
+    res
+}
+
 /// Deallocates master secret blinding data instance.
 ///
 /// # Arguments
-/// * `master_secret_blinding_data` - Master secret instance pointer
+/// * `master_secret_blinding_data` - Master secret  blinding data instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_blinding_data_free(master_secret_blinding_data: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_master_secret_blinding_data_free: >>> master_secret_blinding_data: {:?}", master_secret_blinding_data);
@@ -305,6 +502,71 @@ pub extern fn indy_crypto_cl_proof_builder_finalize(proof_builder: *const c_void
     res
 }
 
+/// Returns json representation of proof.
+///
+/// # Arguments
+/// * `proof` - Proof
+/// * `proof_json_p` - Pointer that will contain proof json
+#[no_mangle]
+pub extern fn indy_crypto_cl_proof_to_json(proof: *const c_void,
+                                           proof_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_proof_to_json: >>> proof: {:?}, proof_json_p: {:?}", proof, proof_json_p);
+
+    check_useful_c_reference!(proof, Proof, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(proof_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_proof_to_json: entity >>> proof: {:?}", proof);
+
+    let res = match proof.to_json() {
+        Ok(proof_json) => {
+            trace!("indy_crypto_cl_proof_to_json: proof_json: {:?}", proof_json);
+            unsafe {
+                let proof_json = CTypesUtils::string_to_cstring(proof_json);
+                *proof_json_p = proof_json.into_raw();
+                trace!("indy_crypto_cl_proof_to_json: proof_json_p: {:?}", *proof_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_proof_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns proof json.
+///
+/// Note: Proof instance deallocation must be performed by calling indy_crypto_cl_proof_free
+///
+/// # Arguments
+/// * `proof_json` - Pointer that contains proof json
+/// * `proof_p` - Pointer that will contain proof instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_cl_proof_from_json(proof_json: *const c_char,
+                                             proof_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_proof_from_json: >>> proof_json: {:?}, proof_p: {:?}", proof_json, proof_p);
+
+    check_useful_c_str!(proof_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(proof_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_proof_from_json: entity: proof_json: {:?}", proof_json);
+
+    let res = match Proof::from_json(&proof_json) {
+        Ok(proof) => {
+            trace!("indy_crypto_cl_proof_from_json: proof: {:?}", proof);
+            unsafe {
+                *proof_p = Box::into_raw(Box::new(proof)) as *const c_void;
+                trace!("indy_crypto_cl_proof_from_json: *proof_p: {:?}", *proof_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_proof_from_json: <<< res: {:?}", res);
+    res
+}
+
 /// Deallocates proof instance.
 ///
 /// # Arguments
@@ -347,6 +609,32 @@ mod tests {
     }
 
     #[test]
+    fn indy_crypto_cl_master_secret_to_json_works() {
+        let master_secret = _master_secret();
+
+        let mut master_secret_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_master_secret_to_json(master_secret, &mut master_secret_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_master_secret(master_secret)
+    }
+
+    #[test]
+    fn indy_crypto_cl_master_secret_from_json_works() {
+        let master_secret = _master_secret();
+
+        let mut master_secret_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_master_secret_to_json(master_secret, &mut master_secret_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut master_secret_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_master_secret_from_json(master_secret_json_p, &mut master_secret_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_master_secret(master_secret)
+    }
+
+    #[test]
     fn indy_crypto_cl_prover_master_secret_free_works() {
         let master_secret = _master_secret();
 
@@ -362,8 +650,10 @@ mod tests {
         let mut blinded_master_secret_p: *const c_void = ptr::null();
         let mut master_secret_blinding_data_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_prover_blind_master_secret(pub_keys, master_secret,
-                                                                 &mut blinded_master_secret_p, &mut master_secret_blinding_data_p);
+        let err_code = indy_crypto_cl_prover_blind_master_secret(pub_keys,
+                                                                 master_secret,
+                                                                 &mut blinded_master_secret_p,
+                                                                 &mut master_secret_blinding_data_p);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!blinded_master_secret_p.is_null());
         assert!(!master_secret_blinding_data_p.is_null());
@@ -375,7 +665,6 @@ mod tests {
     fn indy_crypto_cl_prover_blinded_master_secret_free_works() {
         let master_secret = _master_secret();
         let (pub_keys, _) = _issuer_keys();
-
         let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(pub_keys, master_secret);
 
         let err_code = indy_crypto_cl_blinded_master_secret_free(blinded_master_secret);
@@ -411,7 +700,6 @@ mod tests {
     fn indy_crypto_cl_prover_proof_builder_new_works() {
         let mut proof_builder: *const c_void = ptr::null();
         let err_code = indy_crypto_cl_prover_new_proof_builder(&mut proof_builder);
-
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!proof_builder.is_null());
 
@@ -431,25 +719,23 @@ mod tests {
         let claim_values = _claim_values();
         let sub_proof_request = _sub_proof_request();
         let claim_schema = _claim_schema();
-
         let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
         _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
-
         let proof_builder = _proof_builder();
 
-        indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
-                                                           uuid.as_ptr(),
-                                                           claim_schema,
-                                                           claim_signature,
-                                                           claim_values,
-                                                           issuer_pub_key,
-                                                           rev_reg_pub,
-                                                           sub_proof_request);
+        let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
+                                                                          uuid.as_ptr(),
+                                                                          claim_schema,
+                                                                          claim_signature,
+                                                                          claim_values,
+                                                                          issuer_pub_key,
+                                                                          rev_reg_pub,
+                                                                          sub_proof_request);
+        assert_eq!(err_code, ErrorCode::Success);
 
         let nonce = _nonce();
 
         _free_proof_builder(proof_builder, nonce, master_secret);
-
         _free_issuer_keys(issuer_pub_key, issuer_priv_key);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
@@ -471,24 +757,22 @@ mod tests {
         let claim_schema = _claim_schema();
         let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
         _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
-
         let proof_builder = _proof_builder();
 
-        indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
-                                                           uuid.as_ptr(),
-                                                           claim_schema,
-                                                           claim_signature,
-                                                           claim_values,
-                                                           issuer_pub_key,
-                                                           rev_reg_pub,
-                                                           sub_proof_request);
+        let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
+                                                                          uuid.as_ptr(),
+                                                                          claim_schema,
+                                                                          claim_signature,
+                                                                          claim_values,
+                                                                          issuer_pub_key,
+                                                                          rev_reg_pub,
+                                                                          sub_proof_request);
+        assert_eq!(err_code, ErrorCode::Success);
+
         let nonce = _nonce();
 
         let mut proof: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_proof_builder_finalize(proof_builder,
-                                                             nonce,
-                                                             master_secret,
-                                                             &mut proof);
+        let err_code = indy_crypto_cl_proof_builder_finalize(proof_builder, nonce, master_secret, &mut proof);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!proof.is_null());
 
@@ -503,9 +787,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_proof_free_works() {
-        super::super::super::indy_crypto_init_logger();
-
+    fn indy_crypto_cl_proof_to_json_works() {
         let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
@@ -513,7 +795,59 @@ mod tests {
         let nonce = _nonce();
         let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
         _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
 
+        let mut proof_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_proof_to_json(proof, &mut proof_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_revocation_registry(rev_reg_pub, rev_reg_priv);
+        _free_master_secret(master_secret);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
+        _free_nonce(nonce);
+        _free_claim_signature(claim_signature);
+        _free_proof(proof);
+    }
+
+    #[test]
+    fn indy_crypto_cl_proof_from_json_works() {
+        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
+        let master_secret = _master_secret();
+        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
+        let nonce = _nonce();
+        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
+        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
+
+        let mut proof_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_proof_to_json(proof, &mut proof_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut proof_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_proof_from_json(proof_json_p, &mut proof_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_revocation_registry(rev_reg_pub, rev_reg_priv);
+        _free_master_secret(master_secret);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
+        _free_nonce(nonce);
+        _free_claim_signature(claim_signature);
+        _free_proof(proof);
+
+    }
+
+    #[test]
+    fn indy_crypto_cl_proof_free_works() {
+        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
+        let master_secret = _master_secret();
+        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
+        let nonce = _nonce();
+        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
+        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
         let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
 
         _free_issuer_keys(issuer_pub_key, issuer_priv_key);

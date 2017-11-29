@@ -1,3 +1,5 @@
+extern crate serde_json;
+
 use ffi::ErrorCode;
 
 use std::error::Error;
@@ -114,5 +116,11 @@ impl ToErrorCode for IndyCryptoError {
             IndyCryptoError::AnoncredsClaimRevoked(_) => ErrorCode::AnoncredsClaimRevoked,
             IndyCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
         }
+    }
+}
+
+impl From<serde_json::Error> for IndyCryptoError {
+    fn from(err: serde_json::Error) -> IndyCryptoError {
+        IndyCryptoError::InvalidStructure(err.description().to_string())
     }
 }
