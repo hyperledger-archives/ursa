@@ -738,16 +738,18 @@ mod test {
         }).unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request("issuer_key_id_1", &claim_signature, &claim_values,
-                                            &issuer_pub_key,
-                                            None,
+        proof_builder.add_sub_proof_request("issuer_key_id_1",
                                             &sub_proof_request,
-                                            &claim_schema).unwrap();
+                                            &claim_schema,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &issuer_pub_key,
+                                            None).unwrap();
         let nonce = Verifier::new_nonce().unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request("issuer_key_id_1", &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request("issuer_key_id_1", &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
         assert_eq!(true, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 }

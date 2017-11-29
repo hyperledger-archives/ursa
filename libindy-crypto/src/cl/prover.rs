@@ -70,41 +70,6 @@ impl Prover {
         Ok((blinded_master_secret, master_secret_blinding_data))
     }
 
-    fn _generate_blinded_primary_master_secret(p_pub_key: &IssuerPrimaryPublicKey,
-                                               master_secret: &MasterSecret) -> Result<PrimaryBlindedMasterSecretData, IndyCryptoError> {
-        trace!("Prover::_generate_blinded_primary_master_secret: >>> p_pub_key: {:?}, master_secret: {:?}", p_pub_key, master_secret);
-
-        let mut ctx = BigNumber::new_context()?;
-        let v_prime = bn_rand(LARGE_VPRIME)?;
-
-        let u = p_pub_key.s
-            .mod_exp(&v_prime, &p_pub_key.n, Some(&mut ctx))?
-            .mul(
-                &p_pub_key.rms.mod_exp(&master_secret.ms, &p_pub_key.n, Some(&mut ctx))?,
-                None
-            )?
-            .modulus(&p_pub_key.n, Some(&mut ctx))?;
-
-        let primary_blinded_master_secret = PrimaryBlindedMasterSecretData { u, v_prime };
-
-        trace!("Prover::_generate_blinded_primary_master_secret: <<< primary_blinded_master_secret: {:?}", primary_blinded_master_secret);
-
-        Ok(primary_blinded_master_secret)
-    }
-
-    fn _generate_blinded_revocation_master_secret(r_pub_key: &IssuerRevocationPublicKey) -> Result<RevocationBlindedMasterSecretData, IndyCryptoError> {
-        trace!("Prover::_generate_blinded_revocation_master_secret: >>> r_pub_key: {:?}", r_pub_key);
-
-        let vr_prime = GroupOrderElement::new()?;
-        let ur = r_pub_key.h2.mul(&vr_prime)?;
-
-        let revocation_blinded_master_secret = RevocationBlindedMasterSecretData { ur, vr_prime };
-
-        trace!("Prover::_generate_blinded_revocation_master_secret: <<< revocation_blinded_master_secret: {:?}", revocation_blinded_master_secret);
-
-        Ok(revocation_blinded_master_secret)
-    }
-
     /// Updates the claim signature by a master secret blinding data.
     ///
     /// # Arguments
@@ -159,6 +124,57 @@ impl Prover {
         trace!("Prover::process_claim_signature: <<<");
 
         Ok(())
+    }
+
+    /// Creates and returns proof builder.
+    ///
+    /// The purpose of proof builder is building of proof entity according to the given request .
+    /// # Example
+    /// ```
+    /// use indy_crypto::cl::prover::Prover;
+    /// let _proof_builder = Prover::new_proof_builder();
+    pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
+        Ok(ProofBuilder {
+            m1_tilde: bn_rand(LARGE_M2_TILDE)?,
+            init_proofs: HashMap::new(),
+            c_list: Vec::new(),
+            tau_list: Vec::new()
+        })
+    }
+
+    fn _generate_blinded_primary_master_secret(p_pub_key: &IssuerPrimaryPublicKey,
+                                               master_secret: &MasterSecret) -> Result<PrimaryBlindedMasterSecretData, IndyCryptoError> {
+        trace!("Prover::_generate_blinded_primary_master_secret: >>> p_pub_key: {:?}, master_secret: {:?}", p_pub_key, master_secret);
+
+        let mut ctx = BigNumber::new_context()?;
+        let v_prime = bn_rand(LARGE_VPRIME)?;
+
+        let u = p_pub_key.s
+            .mod_exp(&v_prime, &p_pub_key.n, Some(&mut ctx))?
+            .mul(
+                &p_pub_key.rms.mod_exp(&master_secret.ms, &p_pub_key.n, Some(&mut ctx))?,
+                None
+            )?
+            .modulus(&p_pub_key.n, Some(&mut ctx))?;
+
+        let primary_blinded_master_secret = PrimaryBlindedMasterSecretData { u, v_prime };
+
+        trace!("Prover::_generate_blinded_primary_master_secret: <<< primary_blinded_master_secret: {:?}", primary_blinded_master_secret);
+
+        Ok(primary_blinded_master_secret)
+    }
+
+    fn _generate_blinded_revocation_master_secret(r_pub_key: &IssuerRevocationPublicKey) -> Result<RevocationBlindedMasterSecretData, IndyCryptoError> {
+        trace!("Prover::_generate_blinded_revocation_master_secret: >>> r_pub_key: {:?}", r_pub_key);
+
+        let vr_prime = GroupOrderElement::new()?;
+        let ur = r_pub_key.h2.mul(&vr_prime)?;
+
+        let revocation_blinded_master_secret = RevocationBlindedMasterSecretData { ur, vr_prime };
+
+        trace!("Prover::_generate_blinded_revocation_master_secret: <<< revocation_blinded_master_secret: {:?}", revocation_blinded_master_secret);
+
+        Ok(revocation_blinded_master_secret)
     }
 
     fn _process_primary_claim(p_claim: &mut PrimaryClaimSignature,
@@ -222,22 +238,6 @@ impl Prover {
 
         Ok(())
     }
-
-    /// Creates and returns proof builder.
-    ///
-    /// The purpose of proof builder is building of proof entity according to the given request .
-    /// # Example
-    /// ```
-    /// use indy_crypto::cl::prover::Prover;
-    /// let _proof_builder = Prover::new_proof_builder();
-    pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
-        Ok(ProofBuilder {
-            m1_tilde: bn_rand(LARGE_M2_TILDE)?,
-            init_proofs: HashMap::new(),
-            c_list: Vec::new(),
-            tau_list: Vec::new()
-        })
-    }
 }
 
 #[derive(Debug)]
@@ -250,18 +250,19 @@ pub struct ProofBuilder {
 
 impl ProofBuilder {
     /// Add sub proof request to proof builder which will be used fo building of proof.
+    /// Part of proof request related to a particular schema-key.
     ///
     /// # Arguments
     /// * `proof_builder` - Proof builder.
     /// * `key_id` - unique claim identifier.
+    /// * `sub_proof_request` -Requested attributes and predicates.
+    /// * `claim_schema` - Claim schema.
     /// * `claim_signature` - Claim signature.
     /// * `claim_values` - Claim values.
     /// * `issuer_pub_key` - Issuer public key.
     /// * `rev_reg_pub` - (Optional) Revocation registry public.
-    /// * `sub_proof_request` -Requested attributes and predicates.
-    /// * `claim_schema` - Claim schema.
-    pub fn add_sub_proof_request(&mut self, key_id: &str, claim_signature: &ClaimSignature, claim_values: &ClaimValues, issuer_pub_key: &IssuerPublicKey,
-                                 rev_reg_pub: Option<&RevocationRegistryPublic>, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+    pub fn add_sub_proof_request(&mut self, key_id: &str, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema, claim_signature: &ClaimSignature,
+                                 claim_values: &ClaimValues, issuer_pub_key: &IssuerPublicKey, rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
         trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, \
         rev_reg_pub: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
                key_id, claim_signature, claim_values, issuer_pub_key, rev_reg_pub, sub_proof_request, claim_schema);
@@ -303,34 +304,6 @@ impl ProofBuilder {
         self.init_proofs.insert(key_id.to_owned(), init_proof);
 
         trace!("ProofBuilder::add_sub_proof_request: <<<");
-
-        Ok(())
-    }
-
-    fn _check_add_sub_proof_request_params_consistency(claim_values: &ClaimValues, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
-        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: >>> claim_values: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
-               claim_values, sub_proof_request, claim_schema);
-
-        let claim_attrs = HashSet::from_iter(claim_values.attrs_values.keys().cloned());
-
-        if claim_schema.attrs != claim_attrs {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't correspond to claim schema")));
-        }
-
-        if sub_proof_request.revealed_attrs.difference(&claim_attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
-        }
-
-        let predicates_attrs =
-            sub_proof_request.predicates.iter()
-                .map(|predicate| predicate.attr_name.clone())
-                .collect::<HashSet<String>>();
-
-        if predicates_attrs.difference(&claim_attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
-        }
-
-        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
 
         Ok(())
     }
@@ -377,6 +350,34 @@ impl ProofBuilder {
         trace!("ProofBuilder::finalize: <<< proof: {:?}", proof);
 
         Ok(proof)
+    }
+
+    fn _check_add_sub_proof_request_params_consistency(claim_values: &ClaimValues, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: >>> claim_values: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
+               claim_values, sub_proof_request, claim_schema);
+
+        let claim_attrs = HashSet::from_iter(claim_values.attrs_values.keys().cloned());
+
+        if claim_schema.attrs != claim_attrs {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't correspond to claim schema")));
+        }
+
+        if sub_proof_request.revealed_attrs.difference(&claim_attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
+        }
+
+        let predicates_attrs =
+            sub_proof_request.predicates.iter()
+                .map(|predicate| predicate.attr_name.clone())
+                .collect::<HashSet<String>>();
+
+        if predicates_attrs.difference(&claim_attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
+        }
+
+        trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
+
+        Ok(())
     }
 
     fn _init_primary_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_values: &ClaimValues, claim_schema: &ClaimSchema,

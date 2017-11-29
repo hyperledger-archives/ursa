@@ -65,12 +65,12 @@ mod test {
 
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id, &claim_signature, &claim_values, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_builder.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &claim_signature, &claim_values, &issuer_pub_key, None).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
         assert!(proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -124,32 +124,32 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
         let gvt_key_id = "gvt_key_id";
-        // 9. Prover adds XYZ sub proof request
+        // 9. Prover adds GVT sub proof request
         proof_builder.add_sub_proof_request(gvt_key_id,
+                                            &gvt_sub_proof_request,
+                                            &gvt_claim_schema,
                                             &gvt_claim_signature,
                                             &gvt_claim_values,
                                             &gvt_issuer_pub_key,
-                                            None,
-                                            &gvt_sub_proof_request,
-                                            &gvt_claim_schema).unwrap();
+                                            None).unwrap();
 
-        // 10. Prover adds GVT sub proof request
+        // 10. Prover adds XYZ sub proof request
         let xyz_key_id = "xyz_key_id";
         proof_builder.add_sub_proof_request(xyz_key_id,
+                                            &xyz_sub_proof_request,
+                                            &xyz_claim_schema,
                                             &xyz_claim_signature,
                                             &xyz_claim_values,
                                             &xyz_issuer_pub_key,
-                                            None,
-                                            &xyz_sub_proof_request,
-                                            &xyz_claim_schema).unwrap();
+                                            None).unwrap();
 
         // 11. Prover gets proof which contains sub proofs for GVT and XYZ sub proof requests
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 12. Verifier verifies proof for GVT and XYZ sub proof requests
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(gvt_key_id, &gvt_issuer_pub_key, None, &gvt_sub_proof_request, &gvt_claim_schema).unwrap();
-        proof_verifier.add_sub_proof_request(xyz_key_id, &xyz_issuer_pub_key, None, &xyz_sub_proof_request, &xyz_claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(gvt_key_id, &gvt_sub_proof_request, &gvt_claim_schema, &gvt_issuer_pub_key, None).unwrap();
+        proof_verifier.add_sub_proof_request(xyz_key_id, &xyz_sub_proof_request, &xyz_claim_schema, &xyz_issuer_pub_key, None).unwrap();
 
         assert!(proof_verifier.verify(&proof, &nonce).unwrap());
     }
@@ -194,12 +194,12 @@ mod test {
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_builder.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert!(proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -244,7 +244,7 @@ mod test {
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_builder.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 11. Issuer revokes claim used for proof building
@@ -252,7 +252,7 @@ mod test {
 
         // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -299,12 +299,12 @@ mod test {
 
         let key_id = "key_id";
         let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &sub_proof_request,
+                                                      &claim_schema,
                                                       &claim_signature,
                                                       &claim_values,
                                                       &issuer_pub_key,
-                                                      Some(&rev_reg_pub),
-                                                      &sub_proof_request,
-                                                      &claim_schema);
+                                                      Some(&rev_reg_pub));
         assert_eq!(ErrorCode::AnoncredsClaimRevoked, res.unwrap_err().to_error_code());
     }
 
@@ -392,12 +392,12 @@ mod test {
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_builder.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &claim_signature, &claim_values, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
 
         // 12. Issuer revokes claim used for proof building
@@ -405,7 +405,7 @@ mod test {
 
         // 13. Verifier verifies proof after revocation
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
 
         // Reissue claim with different values but same rev_index
@@ -436,23 +436,23 @@ mod test {
         let mut new_proof_builder = Prover::new_proof_builder().unwrap();
 
         new_proof_builder.add_sub_proof_request(key_id,
+                                                &sub_proof_request,
+                                                &claim_schema,
                                                 &new_claim_signature,
                                                 &claim_values,
                                                 &issuer_pub_key,
-                                                Some(&rev_reg_pub),
-                                                &sub_proof_request,
-                                                &claim_schema).unwrap();
+                                                Some(&rev_reg_pub)).unwrap();
 
         let new_proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 18. Verifier verifies proof created by new claim
         let mut new_proof_verifier = Verifier::new_proof_verifier().unwrap();
-        new_proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        new_proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert!(new_proof_verifier.verify(&new_proof, &nonce).unwrap());
 
         // 19. Verifier verifies proof created before the first claim had been revoked
         let mut old_proof_verifier = Verifier::new_proof_verifier().unwrap();
-        old_proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, Some(&rev_reg_pub), &sub_proof_request, &claim_schema).unwrap();
+        old_proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, Some(&rev_reg_pub)).unwrap();
         assert_eq!(false, old_proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -490,17 +490,17 @@ mod test {
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request(key_id,
+                                            &sub_proof_request,
+                                            &claim_schema,
                                             &claim_signature,
                                             &claim_values,
                                             &issuer_pub_key,
-                                            None,
-                                            &sub_proof_request,
-                                            &claim_schema).unwrap();
+                                            None).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 8. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -542,19 +542,19 @@ mod test {
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request(key_id,
+                                            &sub_proof_request,
+                                            &claim_schema,
                                             &claim_signature,
                                             &claim_values,
                                             &issuer_pub_key,
-                                            None,
-                                            &sub_proof_request,
-                                            &claim_schema).unwrap();
+                                            None).unwrap();
 
         let another_master_secret = Prover::new_master_secret().unwrap();
         let proof = proof_builder.finalize(&nonce, &another_master_secret).unwrap();
 
         // 9. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
     }
 
@@ -596,12 +596,12 @@ mod test {
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request(key_id,
+                                            &sub_proof_request,
+                                            &claim_schema,
                                             &claim_signature,
                                             &claim_values,
                                             &issuer_pub_key,
-                                            None,
-                                            &sub_proof_request,
-                                            &claim_schema).unwrap();
+                                            None).unwrap();
 
         let proof = proof_builder.finalize(&nonce_for_proof_creation, &master_secret).unwrap();
 
@@ -609,7 +609,7 @@ mod test {
         let nonce_for_proof_verification = Verifier::new_nonce().unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce_for_proof_verification).unwrap());
     }
 
@@ -649,12 +649,12 @@ mod test {
 
         let key_id = "key_id";
         proof_builder.add_sub_proof_request(key_id,
+                                            &sub_proof_request,
+                                            &claim_schema,
                                             &claim_signature,
                                             &claim_values,
                                             &issuer_pub_key,
-                                            None,
-                                            &sub_proof_request,
-                                            &claim_schema).unwrap();
+                                            None).unwrap();
         let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
 
         // 8. Verifier verifies proof
@@ -663,7 +663,7 @@ mod test {
         let xyz_sub_proof_request = helpers::xyz_sub_proof_request();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id, &xyz_issuer_pub_key, None, &xyz_sub_proof_request, &xyz_claim_schema).unwrap();
+        proof_verifier.add_sub_proof_request(key_id, &xyz_sub_proof_request, &xyz_claim_schema, &xyz_issuer_pub_key, None).unwrap();
         let res = proof_verifier.verify(&proof, &nonce);
         assert_eq!(ErrorCode::AnoncredsProofRejected, res.unwrap_err().to_error_code());
     }
@@ -778,12 +778,12 @@ mod test {
 
         let key_id = "key_id";
         let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &sub_proof_request,
+                                                      &claim_schema,
                                                       &claim_signature,
                                                       &claim_values,
                                                       &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
+                                                      None);
 
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
@@ -824,12 +824,12 @@ mod test {
 
         let key_id = "key_id";
         let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &sub_proof_request,
+                                                      &claim_schema,
                                                       &claim_signature,
                                                       &claim_values,
                                                       &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
+                                                      None);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -871,12 +871,12 @@ mod test {
 
         let key_id = "key_id";
         let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &sub_proof_request,
+                                                      &claim_schema,
                                                       &claim_signature,
                                                       &claim_values,
                                                       &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
+                                                      None);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -920,12 +920,12 @@ mod test {
 
         let key_id = "key_id";
         let res = proof_builder.add_sub_proof_request(key_id,
+                                                      &sub_proof_request,
+                                                      &claim_schema,
                                                       &claim_signature,
                                                       &claim_values,
                                                       &issuer_pub_key,
-                                                      None,
-                                                      &sub_proof_request,
-                                                      &claim_schema);
+                                                      None);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -944,7 +944,7 @@ mod test {
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
-        let res = proof_verifier.add_sub_proof_request(key_id, &issuer_pub_key, None, &sub_proof_request, &xyz_claim_schema);
+        let res = proof_verifier.add_sub_proof_request(key_id, &sub_proof_request, &xyz_claim_schema, &issuer_pub_key, None);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 }

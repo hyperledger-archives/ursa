@@ -12,6 +12,7 @@ pub struct Verifier {}
 
 impl Verifier {
     /// Creates and returns sub proof request entity builder.
+    /// Part of proof request related to a particular schema-key.
     ///
     /// The purpose of sub proof request builder is building of sub proof request entity that
     /// represents requested attributes and predicates.
@@ -80,10 +81,10 @@ impl ProofVerifier {
     /// * `sub_proof_request` - Requested attributes and predicates instance pointer.
     pub fn add_sub_proof_request(&mut self,
                                  key_id: &str,
-                                 issuer_pub_key: &IssuerPublicKey,
-                                 rev_reg_pub: Option<&RevocationRegistryPublic>,
                                  sub_proof_request: &SubProofRequest,
-                                 claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
+                                 claim_schema: &ClaimSchema,
+                                 issuer_pub_key: &IssuerPublicKey,
+                                 rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
         ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, claim_schema)?;
 
         self.claims.insert(key_id.to_string(), VerifyClaim {
