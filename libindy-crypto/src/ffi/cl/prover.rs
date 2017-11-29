@@ -12,7 +12,7 @@ use std::os::raw::c_void;
 /// Creates a master secret.
 ///
 /// Note that master secret deallocation must be performed by
-/// calling indy_crypto_cl_master_secret_free
+/// calling indy_crypto_cl_master_secret_free.
 ///
 /// # Arguments
 /// * `master_secret_p` - Reference that will contain master secret instance pointer.
@@ -41,8 +41,8 @@ pub extern fn indy_crypto_cl_prover_new_master_secret(master_secret_p: *mut *con
 /// Returns json representation of master secret.
 ///
 /// # Arguments
-/// * `master_secret` - master secret pointer
-/// * `master_secret_json_p` - Pointer that will contain master secret json
+/// * `master_secret` - Reference that contains master secret instance pointer.
+/// * `master_secret_json_p` - Reference that will contain master secret json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_to_json(master_secret: *const c_void,
                                                    master_secret_json_p: *mut *const c_char) -> ErrorCode {
@@ -72,11 +72,12 @@ pub extern fn indy_crypto_cl_master_secret_to_json(master_secret: *const c_void,
 
 /// Creates and returns master secret from json.
 ///
-/// Note: Master secret instance deallocation must be performed by calling indy_crypto_cl_master_secret_free
+/// Note: Master secret instance deallocation must be performed
+/// by calling indy_crypto_cl_master_secret_free.
 ///
 /// # Arguments
-/// * `master_secret_json` - Pointer that contains master secret json
-/// * `master_secret_p` - Pointer that will contain master secret instance pointer
+/// * `master_secret_json` - Reference that contains master secret json.
+/// * `master_secret_p` - Reference that will contain master secret instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_from_json(master_secret_json: *const c_char,
                                                      master_secret_p: *mut *const c_void) -> ErrorCode {
@@ -106,7 +107,7 @@ pub extern fn indy_crypto_cl_master_secret_from_json(master_secret_json: *const 
 /// Deallocates master secret instance.
 ///
 /// # Arguments
-/// * `master_secret` - Master secret instance pointer
+/// * `master_secret` - Reference that contains master secret instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_free(master_secret: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_master_secret_free: >>> master_secret: {:?}", master_secret);
@@ -122,17 +123,17 @@ pub extern fn indy_crypto_cl_master_secret_free(master_secret: *const c_void) ->
     res
 }
 
-/// Creates blinded master secret for given issuer key and master secret
+/// Creates blinded master secret for given issuer key and master secret.
 ///
 /// Note that blinded master secret deallocation must be performed by
-/// calling indy_crypto_cl_blinded_master_secret_free
+/// calling indy_crypto_cl_blinded_master_secret_free.
 ///
 /// Note that master secret blinding data deallocation must be performed by
-/// calling indy_crypto_cl_master_secret_blinding_data_free
+/// calling indy_crypto_cl_master_secret_blinding_data_free.
 ///
 /// # Arguments
-/// * `issuer_pub_key` - Reference that contain public keys instance pointer.
-/// * `master_secret` - Reference that contain master secret instance pointer.
+/// * `issuer_pub_key` - Reference that contains public keys instance pointer.
+/// * `master_secret` - Reference that contains master secret instance pointer.
 /// * `blinded_master_secret_p` - Reference that will contain blinded master secret instance pointer.
 /// * `master_secret_blinding_data_p` - Reference that will contain master secret blinding data instance pointer.
 #[no_mangle]
@@ -173,8 +174,8 @@ pub extern fn indy_crypto_cl_prover_blind_master_secret(issuer_pub_key: *const c
 /// Returns json representation of blinded master secret.
 ///
 /// # Arguments
-/// * `blinded_master_secret` - blinded master secret pointer
-/// * `blinded_master_secret_json_p` - Pointer that will contain blinded master secret json
+/// * `blinded_master_secret` - Reference that contains Blinded master secret pointer.
+/// * `blinded_master_secret_json_p` - Reference that will contain blinded master secret json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_blinded_master_secret_to_json(blinded_master_secret: *const c_void,
                                                            blinded_master_secret_json_p: *mut *const c_char) -> ErrorCode {
@@ -205,11 +206,12 @@ pub extern fn indy_crypto_cl_blinded_master_secret_to_json(blinded_master_secret
 
 /// Creates and returns blinded master secret from json.
 ///
-/// Note: Blinded master secret instance deallocation must be performed by calling indy_crypto_cl_blinded_master_secret_free
+/// Note: Blinded master secret instance deallocation must be performed
+/// by calling indy_crypto_cl_blinded_master_secret_free
 ///
 /// # Arguments
-/// * `blinded_master_secret_json` - Pointer that contains blinded master secret json
-/// * `blinded_master_secret_p` - Pointer that will contain blinded master secret instance pointer
+/// * `blinded_master_secret_json` - Reference that contains blinded master secret json.
+/// * `blinded_master_secret_p` - Reference that will contain blinded master secret instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_blinded_master_secret_from_json(blinded_master_secret_json: *const c_char,
                                                              blinded_master_secret_p: *mut *const c_void) -> ErrorCode {
@@ -239,7 +241,7 @@ pub extern fn indy_crypto_cl_blinded_master_secret_from_json(blinded_master_secr
 /// Deallocates  blinded master secret instance.
 ///
 /// # Arguments
-/// * `blinded_master_secret` - Blinded master secret instance pointer
+/// * `blinded_master_secret` - Reference that contains blinded master secret instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_blinded_master_secret_free(blinded_master_secret: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_blinded_master_secret_free: >>> blinded_master_secret: {:?}", blinded_master_secret);
@@ -258,8 +260,8 @@ pub extern fn indy_crypto_cl_blinded_master_secret_free(blinded_master_secret: *
 /// Returns json representation of master secret blinding data.
 ///
 /// # Arguments
-/// * `master_secret_blinding_data` - Master secret blinding data pointer
-/// * `master_secret_blinding_data_json_p` - Pointer that will contain master secret blinding data json
+/// * `master_secret_blinding_data` - Reference that contains master secret blinding data pointer.
+/// * `master_secret_blinding_data_json_p` - Reference that will contain master secret blinding data json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_blinding_data_to_json(master_secret_blinding_data: *const c_void,
                                                                  master_secret_blinding_data_json_p: *mut *const c_char) -> ErrorCode {
@@ -289,11 +291,12 @@ pub extern fn indy_crypto_cl_master_secret_blinding_data_to_json(master_secret_b
 
 /// Creates and returns master secret blinding data json.
 ///
-/// Note: Master secret blinding data instance deallocation must be performed by calling indy_crypto_cl_master_secret_blinding_data_free
+/// Note: Master secret blinding data instance deallocation must be performed
+/// by calling indy_crypto_cl_master_secret_blinding_data_free.
 ///
 /// # Arguments
-/// * `master_secret_blinding_data_json` - Pointer that contains master secret blinding data json
-/// * `blinded_master_secret_p` - Pointer that will contain master secret blinding data instance pointer
+/// * `master_secret_blinding_data_json` - Reference that contains master secret blinding data json.
+/// * `blinded_master_secret_p` - Reference that will contain master secret blinding data instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_blinding_data_from_json(master_secret_blinding_data_json: *const c_char,
                                                                    master_secret_blinding_data_p: *mut *const c_void) -> ErrorCode {
@@ -323,7 +326,7 @@ pub extern fn indy_crypto_cl_master_secret_blinding_data_from_json(master_secret
 /// Deallocates master secret blinding data instance.
 ///
 /// # Arguments
-/// * `master_secret_blinding_data` - Master secret  blinding data instance pointer
+/// * `master_secret_blinding_data` - Reference that contains master secret  blinding data instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_master_secret_blinding_data_free(master_secret_blinding_data: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_master_secret_blinding_data_free: >>> master_secret_blinding_data: {:?}", master_secret_blinding_data);
@@ -379,7 +382,7 @@ pub extern fn indy_crypto_cl_prover_process_claim_signature(claim_signature: *co
 /// The purpose of proof builder is building of proof entity according to the given request .
 ///
 /// Note that proof builder deallocation must be performed by
-/// calling indy_crypto_cl_proof_builder_finalize
+/// calling indy_crypto_cl_proof_builder_finalize.
 ///
 /// # Arguments
 /// * `proof_builder_p` - Reference that will contain proof builder instance pointer.
@@ -409,12 +412,12 @@ pub extern fn indy_crypto_cl_prover_new_proof_builder(proof_builder_p: *mut *con
 ///
 /// # Arguments
 /// * `proof_builder` - Reference that contain proof builder instance pointer.
-/// * `key_id` - unique claim identifier.
+/// * `key_id` - Reference that contains unique claim identifier.
 /// * `claim_schema` - Reference that contain claim schema instance pointer.
 /// * `claim_signature` - Reference that contain claim signature instance pointer.
 /// * `claim_values` - Reference that contain claim values instance pointer.
 /// * `issuer_pub_key` - Reference that contain issuer public key instance pointer.
-/// * `rev_reg_pub` - Reference that contain public revocation registry instance pointer.
+/// * `rev_reg_pub` - (Optional) Reference that contain public revocation registry instance pointer.
 /// * `sub_proof_request` - Reference that contain requested attributes and predicates instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: *const c_void,
@@ -458,10 +461,10 @@ pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: 
 }
 
 
-/// Finalize proof
+/// Finalize proof.
 ///
 /// Note that proof deallocation must be performed by
-/// calling indy_crypto_cl_proof_free
+/// calling indy_crypto_cl_proof_free.
 ///
 /// # Arguments
 /// * `proof_builder` - Reference that contain proof builder instance pointer.
@@ -505,8 +508,8 @@ pub extern fn indy_crypto_cl_proof_builder_finalize(proof_builder: *const c_void
 /// Returns json representation of proof.
 ///
 /// # Arguments
-/// * `proof` - Proof
-/// * `proof_json_p` - Pointer that will contain proof json
+/// * `proof` - Reference that contains proof instance pointer.
+/// * `proof_json_p` - Reference that will contain proof json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_to_json(proof: *const c_void,
                                            proof_json_p: *mut *const c_char) -> ErrorCode {
@@ -536,11 +539,11 @@ pub extern fn indy_crypto_cl_proof_to_json(proof: *const c_void,
 
 /// Creates and returns proof json.
 ///
-/// Note: Proof instance deallocation must be performed by calling indy_crypto_cl_proof_free
+/// Note: Proof instance deallocation must be performed by calling indy_crypto_cl_proof_free.
 ///
 /// # Arguments
-/// * `proof_json` - Pointer that contains proof json
-/// * `proof_p` - Pointer that will contain proof instance pointer
+/// * `proof_json` - Reference that contains proof json.
+/// * `proof_p` - Reference that will contain proof instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_from_json(proof_json: *const c_char,
                                              proof_p: *mut *const c_void) -> ErrorCode {
@@ -570,7 +573,7 @@ pub extern fn indy_crypto_cl_proof_from_json(proof_json: *const c_char,
 /// Deallocates proof instance.
 ///
 /// # Arguments
-/// * `proof` - Proof instance pointer
+/// * `proof` - Reference that contains proof instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_free(proof: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_proof_free: >>> proof: {:?}", proof);

@@ -15,7 +15,7 @@ use std::os::raw::c_void;
 /// calling indy_crypto_cl_issuer_public_key_free and indy_crypto_cl_issuer_private_key_free.
 ///
 /// # Arguments
-/// * `claim_schema` - claim schema instance pointer.
+/// * `claim_schema` - Reference that contains claim schema instance pointer.
 /// * `non_revocation_part` - If true non revocation part of issuer keys will be generated.
 /// * `issuer_pub_key_p` - Reference that will contain issuer public key instance pointer.
 /// * `issuer_priv_key_p` - Reference that will contain issuer private key instance pointer.
@@ -53,8 +53,8 @@ pub extern fn indy_crypto_cl_issuer_new_keys(claim_schema: *const c_void,
 /// Returns json representation of issuer public key.
 ///
 /// # Arguments
-/// * `issuer_pub_key` - Issuer public key instance pointer
-/// * `issuer_pub_key_p` - Pointer that will contain issuer public key json
+/// * `issuer_pub_key` - Reference that contains issuer public key instance pointer.
+/// * `issuer_pub_key_p` - Reference that will contain issuer public key json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_public_key_to_json(issuer_pub_key: *const c_void,
                                                        issuer_pub_key_json_p: *mut *const c_char) -> ErrorCode {
@@ -84,11 +84,12 @@ pub extern fn indy_crypto_cl_issuer_public_key_to_json(issuer_pub_key: *const c_
 
 /// Creates and returns issuer public key from json.
 ///
-/// Note: Issuer public key instance deallocation must be performed by calling indy_crypto_cl_issuer_public_key_free
+/// Note: Issuer public key instance deallocation must be performed
+/// by calling indy_crypto_cl_issuer_public_key_free
 ///
 /// # Arguments
-/// * `issuer_pub_key_json` - Pointer that contains issuer public key json
-/// * `issuer_pub_key_p` - Pointer that will contain issuer public key instance pointer
+/// * `issuer_pub_key_json` - Reference that contains issuer public key json.
+/// * `issuer_pub_key_p` - Reference that will contain issuer public key instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_public_key_from_json(issuer_pub_key_json: *const c_char,
                                                          issuer_pub_key_p: *mut *const c_void) -> ErrorCode {
@@ -118,7 +119,7 @@ pub extern fn indy_crypto_cl_issuer_public_key_from_json(issuer_pub_key_json: *c
 /// Deallocates issuer public key instance.
 ///
 /// # Arguments
-/// * `issuer_pub_key` - Issuer public key instance pointer
+/// * `issuer_pub_key` - Reference that contains issuer public key instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_public_key_free(issuer_pub_key: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_issuer_public_key_free: >>> issuer_pub_key: {:?}", issuer_pub_key);
@@ -137,8 +138,8 @@ pub extern fn indy_crypto_cl_issuer_public_key_free(issuer_pub_key: *const c_voi
 /// Returns json representation of issuer private key.
 ///
 /// # Arguments
-/// * `issuer_priv_key` - Issuer private key instance pointer
-/// * `issuer_pub_key_p` - Pointer that will contain issuer private key json
+/// * `issuer_priv_key` - Reference that contains issuer private key instance pointer.
+/// * `issuer_pub_key_p` - Reference that will contain issuer private key json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_private_key_to_json(issuer_priv_key: *const c_void,
                                                         issuer_priv_key_json_p: *mut *const c_char) -> ErrorCode {
@@ -168,11 +169,12 @@ pub extern fn indy_crypto_cl_issuer_private_key_to_json(issuer_priv_key: *const 
 
 /// Creates and returns issuer private key from json.
 ///
-/// Note: Issuer private key instance deallocation must be performed by calling indy_crypto_cl_issuer_private_key_free
+/// Note: Issuer private key instance deallocation must be performed
+/// by calling indy_crypto_cl_issuer_private_key_free
 ///
 /// # Arguments
-/// * `issuer_priv_key_json` - Pointer that contains issuer private key json
-/// * `issuer_priv_key_p` - Pointer that will contain issuer private key instance pointer
+/// * `issuer_priv_key_json` - Reference that contains issuer private key json.
+/// * `issuer_priv_key_p` - Reference that will contain issuer private key instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_private_key_from_json(issuer_priv_key_json: *const c_char,
                                                           issuer_priv_key_p: *mut *const c_void) -> ErrorCode {
@@ -202,7 +204,7 @@ pub extern fn indy_crypto_cl_issuer_private_key_from_json(issuer_priv_key_json: 
 /// Deallocates issuer private key instance.
 ///
 /// # Arguments
-/// * `issuer_priv_key` - Issuer private key instance pointer
+/// * `issuer_priv_key` - Reference that contains issuer private key instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_private_key_free(issuer_priv_key: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_issuer_private_key_free: >>> issuer_priv_key: {:?}", issuer_priv_key);
@@ -225,7 +227,7 @@ pub extern fn indy_crypto_cl_issuer_private_key_free(issuer_priv_key: *const c_v
 /// indy_crypto_cl_revocation_registry_private_free.
 ///
 /// # Arguments
-/// * `issuer_pub_key` - Issuer pub key instance pointer.
+/// * `issuer_pub_key` - Reference that contains issuer pub key instance pointer.
 /// * `max_claim_num` - Max claim number in generated registry.
 /// * `rev_reg_pub_p` - Reference that will contain revocation registry public instance pointer.
 /// * `rev_reg_priv_p` - Reference that will contain revocation registry private instance pointer.
@@ -263,8 +265,8 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry(issuer_pub_key: *con
 /// Returns json representation of revocation registry public.
 ///
 /// # Arguments
-/// * `rev_reg_public` - Issuer revocation registry public pointer
-/// * `rev_reg_public_json_p` - Pointer that will contain revocation registry public json
+/// * `rev_reg_public` - Reference that contains issuer revocation registry public pointer.
+/// * `rev_reg_public_json_p` - Reference that will contain revocation registry public json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_public_to_json(rev_reg_public: *const c_void,
                                                                 rev_reg_public_json_p: *mut *const c_char) -> ErrorCode {
@@ -294,11 +296,12 @@ pub extern fn indy_crypto_cl_revocation_registry_public_to_json(rev_reg_public: 
 
 /// Creates and returns revocation registry public from json.
 ///
-/// Note: Revocation registry public instance deallocation must be performed by calling indy_crypto_cl_revocation_registry_public_free
+/// Note: Revocation registry public instance deallocation must be performed
+/// by calling indy_crypto_cl_revocation_registry_public_free
 ///
 /// # Arguments
-/// * `rev_reg_public_json` - Pointer that contains revocation registry public json
-/// * `rev_reg_public_p` - Pointer that will contain revocation registry public instance pointer
+/// * `rev_reg_public_json` - Reference that contains revocation registry public json.
+/// * `rev_reg_public_p` - Reference that will contain revocation registry public instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_public_from_json(rev_reg_public_json: *const c_char,
                                                                   rev_reg_public_p: *mut *const c_void) -> ErrorCode {
@@ -328,7 +331,7 @@ pub extern fn indy_crypto_cl_revocation_registry_public_from_json(rev_reg_public
 /// Deallocates revocation registry public instance.
 ///
 /// # Arguments
-/// * `rev_reg_pub` - Revocation registry public instance pointer
+/// * `rev_reg_pub` - Reference that contains revocation registry public instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_public_free(rev_reg_pub: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_revocation_registry_public_free: >>> rev_reg_pub: {:?}", rev_reg_pub);
@@ -346,8 +349,8 @@ pub extern fn indy_crypto_cl_revocation_registry_public_free(rev_reg_pub: *const
 /// Returns json representation of revocation registry private.
 ///
 /// # Arguments
-/// * `rev_reg_private` - Issuer revocation registry private pointer
-/// * `rev_reg_private_json_p` - Pointer that will contain revocation registry private json
+/// * `rev_reg_private` - Reference that contains issuer revocation registry private pointer.
+/// * `rev_reg_private_json_p` - Reference that will contain revocation registry private json
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_private_to_json(rev_reg_private: *const c_void,
                                                                  rev_reg_private_json_p: *mut *const c_char) -> ErrorCode {
@@ -377,11 +380,12 @@ pub extern fn indy_crypto_cl_revocation_registry_private_to_json(rev_reg_private
 
 /// Creates and returns revocation registry private from json.
 ///
-/// Note: Revocation registry private instance deallocation must be performed by calling indy_crypto_cl_revocation_registry_private_free
+/// Note: Revocation registry private instance deallocation must be performed
+/// by calling indy_crypto_cl_revocation_registry_private_free
 ///
 /// # Arguments
-/// * `rev_reg_private_json` - Pointer that contains revocation registry private json
-/// * `rev_reg_private_p` - Pointer that will contain revocation registry private instance pointer
+/// * `rev_reg_private_json` - Reference that contains revocation registry private json.
+/// * `rev_reg_private_p` - Reference that will contain revocation registry private instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_private_from_json(rev_reg_private_json: *const c_char,
                                                                    rev_reg_private_p: *mut *const c_void) -> ErrorCode {
@@ -411,7 +415,7 @@ pub extern fn indy_crypto_cl_revocation_registry_private_from_json(rev_reg_priva
 /// Deallocates revocation registry private instance.
 ///
 /// # Arguments
-/// * `rev_reg_priv` - Revocation registry private instance pointer
+/// * `rev_reg_priv` - Reference that contains revocation registry private instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_revocation_registry_private_free(rev_reg_priv: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_revocation_registry_private_free: >>> rev_reg_priv: {:?}", rev_reg_priv);
@@ -430,17 +434,17 @@ pub extern fn indy_crypto_cl_revocation_registry_private_free(rev_reg_priv: *con
 /// Sign given claim values instance.
 ///
 /// Note that claim_signature deallocation must be performed by
-/// calling indy_crypto_cl_claim_signature_free
+/// calling indy_crypto_cl_claim_signature_free.
 ///
 /// # Arguments
-/// * `prover_id` - Prover identifier as null terminated string.
-/// * `blinded_ms` - Blinded master secret instance pointer.
-/// * `claim_values` - Claim values instance pointer.
-/// * `issuer_pub_key` - Issuer public key instance pointer.
-/// * `issuer_priv_key` - Issuer private key instance pointer.
+/// * `prover_id` - Reference that contains prover identifier as null terminated string.
+/// * `blinded_ms` - Reference that contains blinded master secret instance pointer.
+/// * `claim_values` - Reference that contains claim values instance pointer.
+/// * `issuer_pub_key` - Reference that contains issuer public key instance pointer.
+/// * `issuer_priv_key` - Reference that contains issuer private key instance pointer.
 /// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation claim_signature part generation.
-/// * `rev_reg_pub` - (Optional) Revocation registry public instance pointer.
-/// * `rev_reg_priv` - (Optional) Revocation registry private instance pointer.
+/// * `rev_reg_pub` - (Optional) Reference that contains revocation registry public instance pointer.
+/// * `rev_reg_priv` - (Optional) Reference that contains revocation registry private instance pointer.
 /// * `claim_signature_p` - Reference that will contain claim signature instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_sign_claim(prover_id: *const c_char,
@@ -501,8 +505,8 @@ pub extern fn indy_crypto_cl_issuer_sign_claim(prover_id: *const c_char,
 /// Returns json representation of claim signature.
 ///
 /// # Arguments
-/// * `claim_signature` - claim signature private pointer
-/// * `claim_signature_json_p` - Pointer that will contain claim signature json
+/// * `claim_signature` - Reference that contains claim signature private pointer.
+/// * `claim_signature_json_p` - Reference that will contain claim signature json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_claim_signature_to_json(claim_signature: *const c_void,
                                                      claim_signature_json_p: *mut *const c_char) -> ErrorCode {
@@ -532,11 +536,12 @@ pub extern fn indy_crypto_cl_claim_signature_to_json(claim_signature: *const c_v
 
 /// Creates and returns claim signature from json.
 ///
-/// Note: Claim signature instance deallocation must be performed by calling indy_crypto_cl_claim_signature_free
+/// Note: Claim signature instance deallocation must be performed
+/// by calling indy_crypto_cl_claim_signature_free
 ///
 /// # Arguments
-/// * `claim_signature_json` - Pointer that contains claim signature json
-/// * `claim_signature_p` - Pointer that will contain claim signature instance pointer
+/// * `claim_signature_json` - Reference that contains claim signature json.
+/// * `claim_signature_p` - Reference that will contain claim signature instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_claim_signature_from_json(claim_signature_json: *const c_char,
                                                        claim_signature_p: *mut *const c_void) -> ErrorCode {
@@ -563,10 +568,10 @@ pub extern fn indy_crypto_cl_claim_signature_from_json(claim_signature_json: *co
     res
 }
 
-/// Deallocates claim_signature signature instance.
+/// Deallocates claim signature signature instance.
 ///
 /// # Arguments
-/// * `claim_signature` - Revocation claim_signature signature instance pointer
+/// * `claim_signature` - Reference that contains claim signature instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_claim_signature_free(claim_signature: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_claim_signature_free: >>> claim_signature: {:?}", claim_signature);
@@ -581,7 +586,7 @@ pub extern fn indy_crypto_cl_claim_signature_free(claim_signature: *const c_void
     res
 }
 
-/// Revokes a claim by a revoc_id in a given revoc-registry
+/// Revokes a claim by a revoc_id in a given revoc-registry.
 ///
 /// # Arguments
 /// * `rev_reg_pub` - Reference that contain revocation registry instance pointer.

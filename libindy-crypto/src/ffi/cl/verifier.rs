@@ -9,9 +9,9 @@ use libc::c_char;
 
 use std::os::raw::c_void;
 
-/// Creates random nonce
+/// Creates random nonce.
 ///
-/// Note that nonce deallocation must be performed by calling indy_crypto_cl_nonce_free
+/// Note that nonce deallocation must be performed by calling indy_crypto_cl_nonce_free.
 ///
 /// # Arguments
 /// * `nonce_p` - Reference that will contain nonce instance pointer.
@@ -40,8 +40,8 @@ pub extern fn indy_crypto_cl_verifier_new_nonce(nonce_p: *mut *const c_void) -> 
 /// Returns json representation of nonce.
 ///
 /// # Arguments
-/// * `nonce` - Nonce
-/// * `nonce_json_p` - Pointer that will contain nonce json
+/// * `nonce` - Reference that contains nonce instance pointer.
+/// * `nonce_json_p` - Reference that will contain nonce json.
 #[no_mangle]
 pub extern fn indy_crypto_cl_nonce_to_json(nonce: *const c_void,
                                            nonce_json_p: *mut *const c_char) -> ErrorCode {
@@ -71,11 +71,11 @@ pub extern fn indy_crypto_cl_nonce_to_json(nonce: *const c_void,
 
 /// Creates and returns nonce json.
 ///
-/// Note: Nonce instance deallocation must be performed by calling indy_crypto_cl_nonce_free
+/// Note: Nonce instance deallocation must be performed by calling indy_crypto_cl_nonce_free.
 ///
 /// # Arguments
-/// * `nonce_json` - Pointer that contains nonce json
-/// * `nonce_p` - Pointer that will contain nonce instance pointer
+/// * `nonce_json` - Reference that contains nonce json.
+/// * `nonce_p` - Reference that will contain nonce instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_nonce_from_json(nonce_json: *const c_char,
                                              nonce_p: *mut *const c_void) -> ErrorCode {
@@ -105,7 +105,7 @@ pub extern fn indy_crypto_cl_nonce_from_json(nonce_json: *const c_char,
 /// Deallocates nonce instance.
 ///
 /// # Arguments
-/// * `nonce` - Nonce instance pointer
+/// * `nonce` - Reference that contains nonce instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_nonce_free(nonce: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_nonce_free: >>> nonce: {:?}", nonce);
@@ -124,7 +124,7 @@ pub extern fn indy_crypto_cl_nonce_free(nonce: *const c_void) -> ErrorCode {
 /// Creates and returns proof verifier.
 ///
 /// Note that proof verifier deallocation must be performed by
-/// calling indy_crypto_cl_proof_verifier_finalize
+/// calling indy_crypto_cl_proof_verifier_finalize.
 ///
 /// # Arguments
 /// * `proof_verifier_p` - Reference that will contain proof verifier instance pointer.
@@ -154,7 +154,7 @@ pub extern fn indy_crypto_cl_verifier_new_proof_verifier(proof_verifier_p: *mut 
 ///
 /// # Arguments
 /// * `proof_verifier` - Reference that contain proof verifier instance pointer.
-/// * `key_id` - unique claim identifier.
+/// * `key_id` - Reference that contains unique claim identifier.
 /// * `claim_schema` - Reference that contain claim schema instance pointer.
 /// * `issuer_pub_key` - Reference that contain public key instance pointer.
 /// * `rev_reg_pub` - Reference that contain public revocation registry instance pointer.
