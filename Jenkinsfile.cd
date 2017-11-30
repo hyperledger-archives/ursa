@@ -133,8 +133,14 @@ def windowsTesting() {
 
             try {
                 dir('libindy-crypto') {
+                    echo "Windows Test: Download prebuilt dependencies"
+                    bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libindy_crypto/deps/indy-crypto-deps.zip"'
+                    bat 'unzip prebuilt.zip -d prebuilt'
+
                     echo "Windows Test: Build"
                     withEnv([
+                            "OPENSSL_DIR=$WORKSPACE\\libindy\\prebuilt",
+                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy\\prebuilt",
                             "RUST_BACKTRACE=1"
                     ]) {
                         bat "cargo test --release --no-run"
@@ -203,8 +209,14 @@ def windowsPublishing() {
                 version = getSrcVersion()
 
                 dir('libindy-crypto') {
+                    echo "Windows Test: Download prebuilt dependencies"
+                    bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libindy_crypto/deps/indy-crypto-deps.zip"'
+                    bat 'unzip prebuilt.zip -d prebuilt'
+
                     echo "Publish Windows files: Build"
                     withEnv([
+                            "OPENSSL_DIR=$WORKSPACE\\libindy\\prebuilt",
+                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy\\prebuilt",
                             "RUST_BACKTRACE=1"
                     ]) {
                         bat "cargo build --release"
