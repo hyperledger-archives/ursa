@@ -139,8 +139,8 @@ def windowsTesting() {
 
                     echo "Windows Test: Build"
                     withEnv([
-                            "OPENSSL_DIR=$WORKSPACE\\libindy\\prebuilt",
-                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy\\prebuilt",
+                            "OPENSSL_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
+                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
                             "RUST_BACKTRACE=1"
                     ]) {
                         bat "cargo test --release --no-run"
@@ -215,8 +215,8 @@ def windowsPublishing() {
 
                     echo "Publish Windows files: Build"
                     withEnv([
-                            "OPENSSL_DIR=$WORKSPACE\\libindy\\prebuilt",
-                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy\\prebuilt",
+                            "OPENSSL_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
+                            "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
                             "RUST_BACKTRACE=1"
                     ]) {
                         bat "cargo build --release"
