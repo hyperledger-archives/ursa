@@ -211,7 +211,7 @@ pub extern fn indy_crypto_cl_issuer_private_key_free(issuer_priv_key: *const c_v
 
     check_useful_c_ptr!(issuer_priv_key, ErrorCode::CommonInvalidParam1);
 
-    let issuer_priv_key = unsafe { Box::from_raw(issuer_priv_key as *mut IssuerPrimaryPrivateKey); };
+    let issuer_priv_key = unsafe { Box::from_raw(issuer_priv_key as *mut IssuerPrivateKey); };
     trace!("indy_crypto_cl_issuer_private_key_free: entity: issuer_priv_key: {:?}", issuer_priv_key);
 
     let res = ErrorCode::Success;

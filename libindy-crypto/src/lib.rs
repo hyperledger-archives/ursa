@@ -7,7 +7,7 @@ extern crate sha2;
 
 // To use macros from util inside of other modules it must me loaded first.
 #[macro_use]
-mod utils;
+pub mod utils;
 
 #[cfg(feature = "serialization")]
 extern crate serde;

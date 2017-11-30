@@ -425,9 +425,9 @@ impl ProofBuilder {
         Ok(r_init_proof)
     }
 
-    fn _update_non_revocation_claim(r_claim: &mut NonRevocationClaimSignature,
-                                    accum: &RevocationAccumulator, tails: &HashMap<u32, PointG2>) -> Result<(), IndyCryptoError> {
-        trace!("ProofBuilder::_update_non_revocation_claim: >>> r_claim: {:?}, accum: {:?}", r_claim, accum);
+    fn _update_non_revocation_claim(r_claim: &mut NonRevocationClaimSignature, accum: &RevocationAccumulator,
+                                    tails_dash: &HashMap<u32, PointG2>) -> Result<(), IndyCryptoError> {
+        trace!("ProofBuilder::_update_non_revocation_claim: >>> r_claim: {:?}, accum: {:?}, tails_dash: {:?}", r_claim, accum, tails_dash);
 
         if !accum.v.contains(&r_claim.i) {
             return Err(IndyCryptoError::AnoncredsClaimRevoked("Can not update Witness. Claim revoked.".to_string()));
@@ -439,15 +439,15 @@ impl ProofBuilder {
             let mut omega_denom = PointG2::new_inf()?;
             for j in v_old_minus_new.iter() {
                 omega_denom = omega_denom.add(
-                    tails.get(&(accum.max_claim_num + 1 - j + r_claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
+                    tails_dash.get(&(accum.max_claim_num + 1 - j + r_claim.i))
+                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
             }
             let mut omega_num = PointG2::new_inf()?;
             let mut new_omega: PointG2 = r_claim.witness.omega.clone();
             for j in v_old_minus_new.iter() {
                 omega_num = omega_num.add(
-                    tails.get(&(accum.max_claim_num + 1 - j + r_claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
+                    tails_dash.get(&(accum.max_claim_num + 1 - j + r_claim.i))
+                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
                 new_omega = new_omega.add(
                     &omega_num.sub(&omega_denom)?
                 )?;

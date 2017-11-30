@@ -647,7 +647,7 @@ pub struct VerifyClaim {
     claim_schema: ClaimSchema
 }
 
-pub trait BytesView {
+trait BytesView {
     fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError>;
 }
 
@@ -675,7 +675,7 @@ impl BytesView for Pair {
     }
 }
 
-pub trait AppendByteArray {
+trait AppendByteArray {
     fn append_vec<T: BytesView>(&mut self, other: &Vec<T>) -> Result<(), IndyCryptoError>;
 }
 
