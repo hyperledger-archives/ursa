@@ -35,6 +35,16 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
    cargo test
    ```
 
+### Windows build dependency
+System OpenSSL library is required.
+- Download the prebuilt dependencies [here](https://repo.sovrin.org/windows/libindy_crypto/deps/)
+- Extract them into the folder _C:\BIN\x64_
+> It really doesn't matter where you put these as long as you remember where so you can set
+> the environment variables to this path
+- Point path to this directory using environment variables:
+  - set INDY_CRYPTO_PREBUILT_DEPS_DIR=C:\BIN\x64
+  - set OPENSSL_DIR=C:\BIN\x64
+
 ## API Documentation
 
 API documentation is now available as rust doc in code. See:
