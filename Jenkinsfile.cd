@@ -209,7 +209,7 @@ def windowsPublishing() {
                 version = getSrcVersion()
 
                 dir('libindy-crypto') {
-                    echo "Windows Test: Download prebuilt dependencies"
+                    echo "Publish Windows files: Download prebuilt dependencies"
                     bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libindy_crypto/deps/indy-crypto-deps.zip"'
                     bat 'unzip prebuilt.zip -d prebuilt'
 
