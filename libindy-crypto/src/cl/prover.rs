@@ -1375,7 +1375,7 @@ pub mod mocks {
     pub fn sub_proof_request() -> SubProofRequest {
         let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        sub_proof_request_builder.add_predicate(&predicate()).unwrap();
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
         sub_proof_request_builder.finalize().unwrap()
     }
 

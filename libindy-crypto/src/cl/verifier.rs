@@ -20,16 +20,12 @@ impl Verifier {
     /// # Example
     /// ```
     /// use indy_crypto::cl::verifier::Verifier;
-    /// use indy_crypto::cl::Predicate;
-    /// let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+    /// let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
     /// sub_proof_request_builder.add_revealed_attr("name").unwrap();
-    ///
-    /// let predicate = Predicate::new("age", "GE", 18).unwrap();
-    /// sub_proof_request_builder.add_predicate(&predicate).unwrap();
-    ///
+    /// sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
     /// let _sub_proof_request = sub_proof_request_builder.finalize().unwrap();
     /// ```
-    pub fn new_sub_proof_request() -> Result<SubProofRequestBuilder, IndyCryptoError> {
+    pub fn new_sub_proof_request_builder() -> Result<SubProofRequestBuilder, IndyCryptoError> {
         let res = SubProofRequestBuilder::new()?;
         Ok(res)
     }
@@ -349,19 +345,17 @@ mod tests {
     use cl::prover;
     use cl::issuer;
     use cl::helpers::MockHelper;
+    use cl::prover::mocks::*;
 
     #[test]
     fn sub_proof_request_builder_works() {
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-
-        let predicate = Predicate::new("age", "GE", 18).unwrap();
-        sub_proof_request_builder.add_predicate(&predicate).unwrap();
-
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
         assert!(sub_proof_request.revealed_attrs.contains("name"));
-        assert!(sub_proof_request.predicates.contains(&predicate));
+        assert!(sub_proof_request.predicates.contains(&predicate()));
     }
 
     #[test]

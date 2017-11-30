@@ -102,17 +102,15 @@ mod test {
                                         Some(&xyz_rev_reg_pub)).unwrap();
 
         // 16. Verifier creates sub proof request related to GVT claim
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        let predicate = Predicate::new("age", "GE", 18).unwrap();
-        sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
         let gvt_sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
         // 17. Verifier creates sub proof request related to XYZ claim
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("status").unwrap();
-        let predicate = Predicate::new("period", "GE", 4).unwrap();
-        sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        sub_proof_request_builder.add_predicate("period", "GE", 4).unwrap();
         let xyz_sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
         // 18. Verifier creates nonce
@@ -994,7 +992,7 @@ mod test {
         Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
         // 7. Verifier creates sub proof request
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("status").unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
@@ -1041,10 +1039,9 @@ mod test {
         Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
         // 7. Verifier creates sub proof request
-        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         gvt_sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        let predicate = Predicate::new("age", "GE", 50).unwrap();
-        gvt_sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        gvt_sub_proof_request_builder.add_predicate("age", "GE", 50).unwrap();
         let sub_proof_request = gvt_sub_proof_request_builder.finalize().unwrap();
 
         // 8. Prover creates proof by claim value not satisfied predicate
@@ -1118,18 +1115,16 @@ mod helpers {
     }
 
     pub fn gvt_sub_proof_request() -> SubProofRequest {
-        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut gvt_sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         gvt_sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        let predicate = Predicate::new("age", "GE", 18).unwrap();
-        gvt_sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        gvt_sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
         gvt_sub_proof_request_builder.finalize().unwrap()
     }
 
     pub fn xyz_sub_proof_request() -> SubProofRequest {
-        let mut xyz_sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut xyz_sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         xyz_sub_proof_request_builder.add_revealed_attr("status").unwrap();
-        let predicate = Predicate::new("period", "GE", 4).unwrap();
-        xyz_sub_proof_request_builder.add_predicate(&predicate).unwrap();
+        xyz_sub_proof_request_builder.add_predicate("period", "GE", 4).unwrap();
         xyz_sub_proof_request_builder.finalize().unwrap()
     }
 }

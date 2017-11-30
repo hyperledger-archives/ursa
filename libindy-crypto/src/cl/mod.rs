@@ -345,8 +345,19 @@ impl SubProofRequestBuilder {
         Ok(())
     }
 
-    pub fn add_predicate(&mut self, predicate: &Predicate) -> Result<(), IndyCryptoError> {
-        self.value.predicates.insert(predicate.clone());
+    pub fn add_predicate(&mut self, attr_name: &str, p_type: &str, value: i32) -> Result<(), IndyCryptoError> {
+        let p_type = match p_type {
+            "GE" => PredicateType::GE,
+            p_type => return Err(IndyCryptoError::InvalidStructure(format!("Invalid predicate type: {:?}", p_type)))
+        };
+
+        let predicate = Predicate {
+            attr_name: attr_name.to_owned(),
+            p_type,
+            value
+        };
+
+        self.value.predicates.insert(predicate);
         Ok(())
     }
 
@@ -362,25 +373,6 @@ pub struct Predicate {
     p_type: PredicateType,
     value: i32,
 }
-
-impl Predicate {
-    pub fn new(attr_name: &str, p_type: &str, value: i32) -> Result<Predicate, IndyCryptoError> {
-        let p_type = match p_type {
-            "GE" => PredicateType::GE,
-            p_type => return Err(IndyCryptoError::InvalidStructure(format!("Invalid predicate type: {:?}", p_type)))
-        };
-
-        Ok(Predicate {
-            attr_name: attr_name.to_owned(),
-            p_type,
-            value
-        })
-    }
-}
-
-impl JsonEncodable for Predicate {}
-
-impl<'a> JsonDecodable<'a> for Predicate {}
 
 /// Condition type (Currently GE only).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -729,13 +721,9 @@ mod test {
                                                      Some(1), None, None).unwrap();
         Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
 
-        let mut sub_proof_request_builder = Verifier::new_sub_proof_request().unwrap();
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        sub_proof_request_builder.add_predicate(&Predicate {
-            attr_name: "age".to_string(),
-            value: 18,
-            p_type: PredicateType::GE,
-        }).unwrap();
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request("issuer_key_id_1",

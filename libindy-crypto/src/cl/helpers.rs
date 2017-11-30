@@ -33,12 +33,6 @@ impl MockHelper {
         });
     }
 
-    pub fn reject() {
-        USE_MOCKS.with(|use_mocks| {
-            *use_mocks.borrow_mut() = false;
-        });
-    }
-
     pub fn is_injected() -> bool {
         USE_MOCKS.with(|use_mocks| {
             return *use_mocks.borrow();
