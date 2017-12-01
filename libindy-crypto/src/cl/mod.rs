@@ -88,7 +88,7 @@ impl ClaimValuesBuilder {
 /// One for signing primary claims and second for signing non-revocation claims.
 /// These keys are used to proof that claim was issued and doesn’t revoked by this issuer.
 /// Issuer keys have global identifier that must be known to all parties.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct IssuerPublicKey {
     p_key: IssuerPrimaryPublicKey,
     r_key: Option<IssuerRevocationPublicKey>,
@@ -166,7 +166,7 @@ pub struct IssuerPrimaryPrivateKey {
 }
 
 /// `Revocation Public Key` is used to prove that claim wasn’t revoked by Issuer.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct IssuerRevocationPublicKey {
     g: PointG1,
     g_dash: PointG2,
