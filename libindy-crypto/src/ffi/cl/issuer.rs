@@ -465,7 +465,7 @@ pub extern fn indy_crypto_cl_issuer_sign_claim(prover_id: *const c_char,
     check_useful_c_reference!(claim_values, ClaimValues, ErrorCode::CommonInvalidParam3);
     check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam4);
     check_useful_c_reference!(issuer_priv_key, IssuerPrivateKey, ErrorCode::CommonInvalidParam5);
-    check_useful_opt_c_reference!(rev_reg_priv, RevocationRegistryPrivate, ErrorCode::CommonInvalidParam8);
+    check_useful_opt_c_reference!(rev_reg_priv, RevocationRegistryPrivate);
     check_useful_c_ptr!(claim_signature_p, ErrorCode::CommonInvalidParam9);
 
     let rev_idx = if rev_idx != -1 { Some(rev_idx as u32) } else { None };

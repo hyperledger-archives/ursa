@@ -175,7 +175,7 @@ pub extern fn indy_crypto_cl_proof_verifier_add_sub_proof_request(proof_verifier
     check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
     check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam4);
     check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam5);
-    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic, ErrorCode::CommonInvalidParam6);
+    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic);
 
     trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: entities: proof_verifier: {:?}, key_id: {:?}, sub_proof_request: {:?},\
             issuer_pub_key: {:?}, rev_reg_pub: {:?}", proof_verifier, key_id, sub_proof_request, issuer_pub_key, rev_reg_pub);

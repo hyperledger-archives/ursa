@@ -1,6 +1,5 @@
 extern crate indy_crypto;
 
-use indy_crypto::cl::Predicate;
 use indy_crypto::cl::issuer::Issuer;
 use indy_crypto::cl::prover::Prover;
 use indy_crypto::cl::verifier::Verifier;

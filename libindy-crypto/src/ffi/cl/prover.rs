@@ -360,7 +360,7 @@ pub extern fn indy_crypto_cl_prover_process_claim_signature(claim_signature: *co
     check_useful_mut_c_reference!(claim_signature, ClaimSignature, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(master_secret_blinding_data, MasterSecretBlindingData, ErrorCode::CommonInvalidParam2);
     check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam3);
-    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic, ErrorCode::CommonInvalidParam4);
+    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic);
 
     trace!("indy_crypto_cl_prover_process_claim_signature: entities: claim_signature: {:?}, master_secret_blinding_data: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
            claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
@@ -440,7 +440,7 @@ pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: 
     check_useful_c_reference!(claim_signature, ClaimSignature, ErrorCode::CommonInvalidParam5);
     check_useful_c_reference!(claim_values, ClaimValues, ErrorCode::CommonInvalidParam6);
     check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam7);
-    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic, ErrorCode::CommonInvalidParam8);
+    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic);
 
     trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: entities: proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, claim_schema: {:?}, \
             claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",

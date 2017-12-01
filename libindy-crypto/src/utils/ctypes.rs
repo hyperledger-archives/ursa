@@ -74,13 +74,12 @@ macro_rules! check_useful_mut_c_reference {
 }
 
 macro_rules! check_useful_opt_c_reference {
-    ($ptr:ident, $type:ty, $err:expr) => {
-        if $ptr.is_null() {
-            let $ptr: Option<$type> = None;
-        }
-
-        let $ptr: Option<&$type> = Some(unsafe { & *($ptr as *const $type) });
-
+    ($ptr:ident, $type:ty) => {
+        let $ptr: Option<&$type> = if $ptr.is_null() {
+            None
+        } else {
+            Some(unsafe { & *($ptr as *const $type) })
+        };
     }
 }
 
