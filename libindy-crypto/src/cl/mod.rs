@@ -101,6 +101,21 @@ impl IssuerPublicKey {
             r_key: self.r_key.clone()
         })
     }
+
+    pub fn get_primary_key(&self) -> Result<IssuerPrimaryPublicKey, IndyCryptoError> {
+        Ok(self.p_key.clone()?)
+    }
+
+    pub fn get_revocation_key(&self) -> Result<Option<IssuerRevocationPublicKey>, IndyCryptoError> {
+        Ok(self.r_key.clone())
+    }
+
+    pub fn build_from_parts(p_key: &IssuerPrimaryPublicKey, r_key: Option<&IssuerRevocationPublicKey>) -> Result<IssuerPublicKey, IndyCryptoError> {
+        Ok(IssuerPublicKey {
+            p_key: p_key.clone()?,
+            r_key: r_key.map(|key| key.clone())
+        })
+    }
 }
 
 impl JsonEncodable for IssuerPublicKey {}
@@ -181,6 +196,28 @@ pub struct RevocationRegistryPublic {
     key: RevocationAccumulatorPublicKey,
     acc: RevocationAccumulator,
     tails: RevocationAccumulatorTails,
+}
+
+impl RevocationRegistryPublic {
+    pub fn get_accumulator_key(&self) -> Result<RevocationAccumulatorPublicKey, IndyCryptoError> {
+        Ok(self.key.clone())
+    }
+
+    pub fn get_accumulator(&self) -> Result<RevocationAccumulator, IndyCryptoError> {
+        Ok(self.acc.clone())
+    }
+
+    pub fn get_tails(&self) -> Result<RevocationAccumulatorTails, IndyCryptoError> {
+        Ok(self.tails.clone())
+    }
+
+    pub fn build_from_parts(key: &RevocationAccumulatorPublicKey, acc: &RevocationAccumulator, tails: &RevocationAccumulatorTails) -> Result<RevocationRegistryPublic, IndyCryptoError> {
+        Ok(RevocationRegistryPublic {
+            key: key.clone(),
+            acc: acc.clone(),
+            tails: tails.clone()
+        })
+    }
 }
 
 impl JsonEncodable for RevocationRegistryPublic {}
