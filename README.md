@@ -48,8 +48,12 @@ System OpenSSL library is required.
 ## API Documentation
 
 API documentation is now available as rust doc in code. See:
-* [C API](libindy-crypto/src/ffi/bls.rs)
-* [Rust API](libindy-crypto/src/bls/mod.rs)
+* C API
+    - [BLS](libindy-crypto/src/ffi/bls.rs)
+    - [CL](libindy-crypto/src/ffi/cl)
+* Rust API
+    - [BLS](libindy-crypto/src/bls/mod.rs)
+    - [CL](libindy-crypto/src/cl)
 
 ## Wrappers documentation
 
@@ -69,6 +73,7 @@ Also Ubundu deb packages can be installed from APT repository:
 ```
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
 sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
-sudo apt-get install -y libindy
+sudo apt-get update
+sudo apt-get install -y libindy-crypto
 ```
 
