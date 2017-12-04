@@ -659,10 +659,7 @@ impl NonRevocProofTauList {
 }
 
 /// Random BigNumber that uses `Prover` for proof generation and `Verifier` for proof verification.
-#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct Nonce {
-    value: BigNumber
-}
+pub type Nonce = BigNumber;
 
 impl JsonEncodable for Nonce {}
 

@@ -38,9 +38,7 @@ impl Verifier {
     /// let _nonce = Verifier::new_nonce().unwrap();
     /// ```
     pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
-        Ok(Nonce {
-            value: bn_rand(LARGE_NONCE)?
-        })
+        Ok(bn_rand(LARGE_NONCE)?)
     }
 
     /// Creates and returns proof verifier.
@@ -158,7 +156,7 @@ impl ProofVerifier {
 
         values.extend_from_slice(&tau_list);
         values.extend_from_slice(&proof.aggregated_proof.c_list);
-        values.push(nonce.value.to_bytes()?);
+        values.push(nonce.to_bytes()?);
 
         let c_hver = get_hash_as_int(&mut values)?;
 

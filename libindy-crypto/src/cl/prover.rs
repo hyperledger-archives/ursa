@@ -320,7 +320,7 @@ impl ProofBuilder {
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
         values.extend_from_slice(&self.c_list);
-        values.push(nonce.value.to_bytes()?);
+        values.push(nonce.to_bytes()?);
 
         let c_h = get_hash_as_int(&mut values)?;
 
