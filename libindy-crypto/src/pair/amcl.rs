@@ -334,9 +334,13 @@ impl GroupOrderElement {
 
     pub fn new_from_seed(seed: &[u8]) -> Result<GroupOrderElement, IndyCryptoError> {
         // returns random element in 0, ..., GroupOrder-1
+        if seed.len() != MODBYTES {
+            return Err(IndyCryptoError::InvalidStructure(
+                format!("Invalid len of seed: expected {}, actual {}", MODBYTES, seed.len())));
+        }
         let mut rng = RAND::new();
         rng.clean();
-        rng.seed(MODBYTES, seed);
+        rng.seed(seed.len(), seed);
 
         Ok(GroupOrderElement {
             bn: BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng)
@@ -581,6 +585,14 @@ impl<'a> Deserialize<'a> for Pair {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use errors::ToErrorCode;
+    use ffi::ErrorCode;
+
+    #[test]
+    fn group_order_element_new_from_seed_works_for_invalid_seed_len() {
+        let err = GroupOrderElement::new_from_seed(&[0, 1, 2]).unwrap_err();
+        assert_eq!(err.to_error_code(), ErrorCode::CommonInvalidStructure);
+    }
 
     #[test]
     fn pairing_definition_bilinearity() {
