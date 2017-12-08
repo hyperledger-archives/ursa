@@ -23,9 +23,9 @@ def sign_key1() -> SignKey:
 
 @pytest.fixture
 def sign_key2() -> SignKey:
-    seed = bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4,
-                  5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8,
-                  9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8])
+    seed = bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                  11, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                  21, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31, 32])
     sign_key = SignKey.new(seed)
 
     assert type(sign_key) is SignKey
