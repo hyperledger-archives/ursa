@@ -762,9 +762,9 @@ mod tests {
     fn indy_crypto_bls_sign_key_new_works_for_seed() {
         let mut sign_key: *const c_void = ptr::null();
 
-        let seed_v = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4,
-                          5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8,
-                          9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8];
+        let seed_v = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                          11, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                          21, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31, 32];
         let seed = seed_v.as_ptr();
         let seed_len = seed_v.len();
 
