@@ -294,12 +294,7 @@ impl BigNumber {
         let mut sha256 = Hasher::new(MessageDigest::sha256())?;
 
         for num in nums.iter() {
-            let index =
-                num.iter()
-                    .position(|&value| value != 0)
-                    .unwrap_or(num.len());
-
-            sha256.update(&num[index..])?;
+            sha256.update(&num)?;
         }
 
         Ok(sha256.finish2()?.to_vec())
