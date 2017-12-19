@@ -4,21 +4,21 @@ Initial version of anoncreds protocol was implemented as part of Indy SDK (https
 ## Main ideas
 1. Indy-crypto will not provide high level anoncreds protocol details and persistence. It will operate low level crypto entities only. 
 1. API defines 3 actors:
-  * Issuer - trust source that provides credentials to prover
-  * Prover - credentials owner that can proof and partially disclose the credentials to verifier
-  * Verifier - party that wants to check that prover has some credentials provided by issuer
+    * Issuer - trust source that provides credentials to prover
+    * Prover - credentials owner that can proof and partially disclose the credentials to verifier
+    * Verifier - party that wants to check that prover has some credentials provided by issuer
 1. The list of entities that indy-crypto operates:
-  * Claim Schema” - a list of attributes a Claim is based on
-  * “Claim Values” - values of attributes from Claim Schema (must be integers)
-  * “Claim Signature” - signed by the Issuer part of the Claim
-  * “Issuer public key” and “issuer private key”. Keys will contain 2 internal parts. One for signing primary claims and second for signing non-revocation claims. These keys are used to proof that claim was issued and doesn’t revoked by this issuer. Issuer keys have global identifier that must be known to all parties.
-  * “Revocation registry public” and “revocation registry private”. Internally them will contain revocation keys, accumulator and accumulator tails. Public part of revocation registry must be shared by issuer in trusted place and can be used to proof that concrete claim wasn’t revoked.
-  * “Master secret” - secret prover data that is used to proof that prover owns the claim. Prover blinds master secret be generating “blinded master secret” and “master secret blinding data” and sends “blinded master secret” to isser that uses “blinded master secret” in claim creation. It allows to use this claim by prover only.
-  * “Proof” is complex crypto structure created by proved over multiple claims that allows to proof that prover:
-    * Owns claims issued with specific issuer keys (identified by key id)
-    * Claim contains attributes with specific values that prover wants to disclose
-    * Claim contains attributes with valid predicates that prover wants to disclose
-  * “Sub Proof request” - input to create a Proof for a claim; contains attrs to be revealed and predicates.
+    * Claim Schema” - a list of attributes a Claim is based on
+    * “Claim Values” - values of attributes from Claim Schema (must be integers)
+    * “Claim Signature” - signed by the Issuer part of the Claim
+    * “Issuer public key” and “issuer private key”. Keys will contain 2 internal parts. One for signing primary claims and second for signing non-revocation claims. These keys are used to proof that claim was issued and doesn’t revoked by this issuer. Issuer keys have global identifier that must be known to all parties.
+    * “Revocation registry public” and “revocation registry private”. Internally them will contain revocation keys, accumulator and accumulator tails. Public part of revocation registry must be shared by issuer in trusted place and can be used to proof that concrete claim wasn’t revoked.
+    * “Master secret” - secret prover data that is used to proof that prover owns the claim. Prover blinds master secret be generating “blinded master secret” and “master secret blinding data” and sends “blinded master secret” to isser that uses “blinded master secret” in claim creation. It allows to use this claim by prover only.
+    * “Proof” is complex crypto structure created by proved over multiple claims that allows to proof that prover:
+      * Owns claims issued with specific issuer keys (identified by key id)
+      * Claim contains attributes with specific values that prover wants to disclose
+      * Claim contains attributes with valid predicates that prover wants to disclose
+    * “Sub Proof request” - input to create a Proof for a claim; contains attrs to be revealed and predicates.
 1. For each entity API will provide the methods to perform serialization and deserialization that will allow network entities transfer between actors.
 1. FFI C API will use OpenSSL style entities handling. Entities referenced will be represent as untyped pointers. Library will provide functions for entities allocation, manipulation and deallocation. 
 
