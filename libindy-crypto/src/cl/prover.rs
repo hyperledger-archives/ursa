@@ -60,14 +60,14 @@ impl Prover {
             ur: blinded_revocation_master_secret.as_ref().map(|d| d.ur)
         };
 
-        let master_secret_blinding_data = MasterSecretBlindingData {
+        let master_secret_blinding_factor = MasterSecretBlindingData {
             v_prime: blinded_primary_master_secret.v_prime,
             vr_prime: blinded_revocation_master_secret.map(|d| d.vr_prime)
         };
 
-        trace!("Prover::blind_master_secret: <<< blinded_master_secret: {:?}, master_secret_blinding_data: {:?}", blinded_master_secret, master_secret_blinding_data);
+        trace!("Prover::blind_master_secret: <<< blinded_master_secret: {:?}, master_secret_blinding_factor: {:?}", blinded_master_secret, master_secret_blinding_factor);
 
-        Ok((blinded_master_secret, master_secret_blinding_data))
+        Ok((blinded_master_secret, master_secret_blinding_factor))
     }
 
     /// Updates the claim signature by a master secret blinding data.
@@ -322,19 +322,19 @@ impl ProofBuilder {
         values.extend_from_slice(&self.c_list);
         values.push(nonce.to_bytes()?);
 
-        let c_h = get_hash_as_int(&mut values)?;
+        let challenge = get_hash_as_int(&mut values)?;
 
         let mut proofs: HashMap<String, SubProof> = HashMap::new();
 
         for (proof_claim_uuid, init_proof) in self.init_proofs.iter() {
             let mut non_revoc_proof: Option<NonRevocProof> = None;
             if let Some(ref non_revoc_init_proof) = init_proof.non_revoc_init_proof {
-                non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(&non_revoc_init_proof, &c_h)?);
+                non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(&non_revoc_init_proof, &challenge)?);
             }
 
             let primary_proof = ProofBuilder::_finalize_primary_proof(&master_secret.ms,
                                                                       &init_proof.primary_init_proof,
-                                                                      &c_h,
+                                                                      &challenge,
                                                                       &init_proof.claim_schema,
                                                                       &init_proof.claim_values,
                                                                       &init_proof.sub_proof_request)?;
@@ -343,7 +343,7 @@ impl ProofBuilder {
             proofs.insert(proof_claim_uuid.to_owned(), proof);
         }
 
-        let aggregated_proof = AggregatedProof { c_hash: c_h, c_list: self.c_list.clone() };
+        let aggregated_proof = AggregatedProof { c_hash: challenge, c_list: self.c_list.clone() };
 
         let proof = Proof { proofs, aggregated_proof };
 
@@ -611,18 +611,18 @@ impl ProofBuilder {
         Ok(primary_predicate_ge_init_proof)
     }
 
-    fn _finalize_eq_proof(master_secret: &BigNumber, init_proof: &PrimaryEqualInitProof, c_h: &BigNumber,
+    fn _finalize_eq_proof(master_secret: &BigNumber, init_proof: &PrimaryEqualInitProof, challenge: &BigNumber,
                           claim_schema: &ClaimSchema, claim_values: &ClaimValues, sub_proof_request: &SubProofRequest) -> Result<PrimaryEqualProof, IndyCryptoError> {
-        trace!("ProofBuilder::_finalize_eq_proof: >>> master_secret: {:?}, init_proof: {:?}, c_h: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
-               master_secret, init_proof, c_h, claim_schema, claim_values, sub_proof_request);
+        trace!("ProofBuilder::_finalize_eq_proof: >>> master_secret: {:?}, init_proof: {:?}, challenge: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
+               master_secret, init_proof, challenge, claim_schema, claim_values, sub_proof_request);
 
         let mut ctx = BigNumber::new_context()?;
 
-        let e = c_h
+        let e = challenge
             .mul(&init_proof.e_prime, Some(&mut ctx))?
             .add(&init_proof.e_tilde)?;
 
-        let v = c_h
+        let v = challenge
             .mul(&init_proof.v_prime, Some(&mut ctx))?
             .add(&init_proof.v_tilde)?;
 
@@ -641,18 +641,18 @@ impl ProofBuilder {
             let cur_val = claim_values.attrs_values.get(k)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in attributes_values", k)))?;
 
-            let val = c_h
+            let val = challenge
                 .mul(&cur_val, Some(&mut ctx))?
                 .add(&cur_mtilde)?;
 
             m.insert(k.clone(), val);
         }
 
-        let m1 = c_h
+        let m1 = challenge
             .mul(&master_secret, Some(&mut ctx))?
             .add(&init_proof.m1_tilde)?;
 
-        let m2 = c_h
+        let m2 = challenge
             .mul(&init_proof.m2, Some(&mut ctx))?
             .add(&init_proof.m2_tilde)?;
 
@@ -754,17 +754,17 @@ impl ProofBuilder {
         Ok(primary_predicate_ge_proof)
     }
 
-    fn _finalize_primary_proof(master_secret: &BigNumber, init_proof: &PrimaryInitProof, c_h: &BigNumber,
+    fn _finalize_primary_proof(master_secret: &BigNumber, init_proof: &PrimaryInitProof, challenge: &BigNumber,
                                claim_schema: &ClaimSchema, claim_values: &ClaimValues, sub_proof_request: &SubProofRequest)
                                -> Result<PrimaryProof, IndyCryptoError> {
-        trace!("ProofBuilder::_finalize_primary_proof: >>> master_secret: {:?}, init_proof: {:?}, c_h: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
-               master_secret, init_proof, c_h, claim_schema, claim_values, sub_proof_request);
+        trace!("ProofBuilder::_finalize_primary_proof: >>> master_secret: {:?}, init_proof: {:?}, challenge: {:?}, claim_schema: {:?}, claim_values: {:?}, sub_proof_request: {:?}",
+               master_secret, init_proof, challenge, claim_schema, claim_values, sub_proof_request);
 
-        let eq_proof = ProofBuilder::_finalize_eq_proof(master_secret, &init_proof.eq_proof, c_h, claim_schema, claim_values, sub_proof_request)?;
+        let eq_proof = ProofBuilder::_finalize_eq_proof(master_secret, &init_proof.eq_proof, challenge, claim_schema, claim_values, sub_proof_request)?;
         let mut ge_proofs: Vec<PrimaryPredicateGEProof> = Vec::new();
 
         for init_ge_proof in init_proof.ge_proofs.iter() {
-            let ge_proof = ProofBuilder::_finalize_ge_proof(c_h, init_ge_proof, &eq_proof)?;
+            let ge_proof = ProofBuilder::_finalize_ge_proof(challenge, init_ge_proof, &eq_proof)?;
             ge_proofs.push(ge_proof);
         }
 

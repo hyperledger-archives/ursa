@@ -331,6 +331,7 @@ impl JsonEncodable for BlindedMasterSecret {}
 impl<'a> JsonDecodable<'a> for BlindedMasterSecret {}
 
 /// `Master Secret Blinding Data` uses by Prover for post processing of claims received from Issuer.
+/// TODO: Should be renamed `MasterSecretBlindingFactors`
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecretBlindingData {
     v_prime: BigNumber,
