@@ -388,13 +388,13 @@ impl Issuer {
 
     fn _sign_primary_claim(p_pub_key: &IssuerPublicKey,
                            p_priv_key: &IssuerPrivateKey,
-                           context: &BigNumber,
+                           claim_context: &BigNumber,
                            claim_values: &ClaimValues,
                            v: &BigNumber,
                            blnd_ms: &BlindedMasterSecret,
                            e: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
-        trace!("Issuer::_sign_primary_claim: >>> p_pub_key: {:?}, p_priv_key: {:?}, context: {:?}, claim_values: {:?}, v: {:?}, blnd_ms: {:?}, e: {:?}",
-               p_pub_key, p_priv_key, context, claim_values, v, blnd_ms, e);
+        trace!("Issuer::_sign_primary_claim: >>> p_pub_key: {:?}, p_priv_key: {:?}, claim_context: {:?}, claim_values: {:?}, v: {:?}, blnd_ms: {:?}, e: {:?}",
+               p_pub_key, p_priv_key, claim_context, claim_values, v, blnd_ms, e);
 
         let p_pub_key = &p_pub_key.p_key;
         let p_priv_key = &p_priv_key.p_key;
@@ -413,7 +413,7 @@ impl Issuer {
             )?;
         }
 
-        rx = p_pub_key.rctxt.mod_exp(&context, &p_pub_key.n, Some(&mut context))?
+        rx = p_pub_key.rctxt.mod_exp(&claim_context, &p_pub_key.n, Some(&mut context))?
             .mul(&rx, Some(&mut context))?;
 
         if blnd_ms.u != BigNumber::from_u32(0)? {
