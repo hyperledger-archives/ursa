@@ -189,9 +189,9 @@ impl Issuer {
         trace!("Issuer::sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_idx: {:?}, \
         rev_reg_pub: {:?}, rev_reg_priv: {:?}", prover_id, blinded_ms, claim_values, issuer_pub_key, issuer_priv_key, rev_idx, rev_reg_pub, rev_reg_priv);
 
-        let context = Issuer::_gen_context(prover_id, rev_idx)?;
+        let claim_context = Issuer::_gen_claim_context(prover_id, rev_idx)?;
 
-        let p_claim = Issuer::_new_primary_claim(&context,
+        let p_claim = Issuer::_new_primary_claim(&claim_context,
                                                  issuer_pub_key,
                                                  issuer_priv_key,
                                                  blinded_ms,
@@ -199,7 +199,7 @@ impl Issuer {
 
         let r_claim = if let (Some(rev_idx_2), Some(r_reg_pub), Some(r_reg_priv)) = (rev_idx, rev_reg_pub, rev_reg_priv) {
             Some(Issuer::_new_non_revocation_claim(rev_idx_2,
-                                                   &context,
+                                                   &claim_context,
                                                    blinded_ms,
                                                    issuer_pub_key,
                                                    issuer_priv_key,
@@ -340,7 +340,7 @@ impl Issuer {
         Ok((issuer_rev_pub_key, issuer_rev_priv_key))
     }
 
-    fn _gen_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
+    fn _gen_claim_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
         trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, rev_idx);
 
         let rev_idx = rev_idx.map(|i| i as i32).unwrap_or(-1);
@@ -354,20 +354,20 @@ impl Issuer {
 
         /* TODO: FIXME: use const!!! */
         let pow_2 = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_MASTER_SECRET)?, None)?;
-        let m_2 = get_hash_as_int(&mut s)?.modulus(&pow_2, None)?;
+        let claim_context = get_hash_as_int(&mut s)?.modulus(&pow_2, None)?;
 
-        trace!("Issuer::_calc_m2: <<< m_2: {:?}", m_2);
+        trace!("Issuer::_gen_claim_context: <<< claim_context: {:?}", claim_context);
 
-        Ok(m_2)
+        Ok(claim_context)
     }
 
-    fn _new_primary_claim(context: &BigNumber,
+    fn _new_primary_claim(claim_context: &BigNumber,
                           issuer_pub_key: &IssuerPublicKey,
                           issuer_priv_key: &IssuerPrivateKey,
                           blnd_ms: &BlindedMasterSecret,
                           claim_values: &ClaimValues) -> Result<PrimaryClaimSignature, IndyCryptoError> {
-        trace!("Issuer::_new_primary_claim: >>> context: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, blnd_ms: {:?}, claim_values: {:?}",
-               context, issuer_pub_key, issuer_priv_key, blnd_ms, claim_values);
+        trace!("Issuer::_new_primary_claim: >>> claim_context: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, blnd_ms: {:?}, claim_values: {:?}",
+               claim_context, issuer_pub_key, issuer_priv_key, blnd_ms, claim_values);
 
         let v = generate_v_prime_prime()?;
 
@@ -377,9 +377,9 @@ impl Issuer {
             .add(&e_start)?;
 
         let e = generate_prime_in_range(&e_start, &e_end)?;
-        let a = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &context, &claim_values, &v, blnd_ms, &e)?;
+        let a = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &claim_context, &claim_values, &v, blnd_ms, &e)?;
 
-        let pr_claim_signature = PrimaryClaimSignature { m_2: context.clone()?, a, e, v };
+        let pr_claim_signature = PrimaryClaimSignature { m_2: claim_context.clone()?, a, e, v };
 
         trace!("Issuer::_new_primary_claim: <<< pr_claim_signature: {:?}", pr_claim_signature);
 
@@ -438,14 +438,14 @@ impl Issuer {
     }
 
     fn _new_non_revocation_claim(rev_idx: u32,
-                                 context: &BigNumber,
+                                 claim_context: &BigNumber,
                                  blnd_ms: &BlindedMasterSecret,
                                  issuer_pub_key: &IssuerPublicKey,
                                  issuer_priv_key: &IssuerPrivateKey,
                                  rev_reg_pub: &mut RevocationRegistryPublic,
                                  rev_reg_priv: &RevocationRegistryPrivate) -> Result<NonRevocationClaimSignature, IndyCryptoError> {
-        trace!("Issuer::_new_non_revocation_claim: >>> rev_idx: {:?}, context: {:?}, blnd_ms: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_reg_pub: {:?}, rev_reg_priv: {:?}",
-               rev_idx, context, blnd_ms, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
+        trace!("Issuer::_new_non_revocation_claim: >>> rev_idx: {:?}, claim_context: {:?}, blnd_ms: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_reg_pub: {:?}, rev_reg_priv: {:?}",
+               rev_idx, claim_context, blnd_ms, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
 
         let ur = blnd_ms.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secred.")))?;
@@ -474,7 +474,7 @@ impl Issuer {
 
         let vr_prime_prime = GroupOrderElement::new()?;
         let c = GroupOrderElement::new()?;
-        let m2 = GroupOrderElement::from_bytes(&context.to_bytes()?)?;
+        let m2 = GroupOrderElement::from_bytes(&claim_context.to_bytes()?)?;
 
         let g_i = r_acc_tails.tails
             .get(&i)
@@ -542,7 +542,7 @@ mod tests {
         let rev_idx = 110;
         let user_id = "111";
         let answer = BigNumber::from_dec("59059690488564137142247698318091397258460906844819605876079330034815387295451").unwrap();
-        let result = Issuer::_gen_context(user_id, Some(rev_idx)).unwrap();
+        let result = Issuer::_gen_claim_context(user_id, Some(rev_idx)).unwrap();
         assert_eq!(result, answer);
     }
 
