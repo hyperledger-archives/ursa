@@ -252,29 +252,36 @@ def getSuffix(isRelease, target) {
     return suffix
 }
 
+def clean() {
+    sh "rm -rf debian"
+    sh "rm -rf debs"
+    sh "rm -rf sovrin-packaging"
+}
+
 def libindyCryptoDebPublishing(testEnv) {
     dir('libindy-crypto') {
         echo 'Publish Libindy-Crypto deb files to Apt'
         testEnv.inside('-u 0:0') {
-            sh 'chmod -R 755 ci/*.sh'
+            try {
+                sh 'chmod -R 755 ci/*.sh'
 
-            def suffix = "~$env.BUILD_NUMBER"
+                def suffix = "~$env.BUILD_NUMBER"
 
-            dir('sovrin-packaging') {
-                downloadPackagingUtils()
-            }
+                dir('sovrin-packaging') {
+                    downloadPackagingUtils()
+                }
 
-            withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_key')]) {
-                try {
+                withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_key')]) {
                     sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $suffix $SOVRIN_SDK_REPO_NAME $SOVRIN_REPO_HOST $sovrin_key"
 
                     if (env.BRANCH_NAME == 'rc') {
                         stash includes: 'debs/*', name: 'libindyCryptoDebs'
                     }
+
                 }
-                finally {
-                    sh "rm -rf debian"
-                }
+            }
+            finally {
+                clean()
             }
         }
     }
@@ -383,26 +390,36 @@ def publishLibindyCryptoWindowsFilesRCtoStable(version) {
 }
 
 def publishLibindyCryptoDebRCtoStable(testEnv, version) {
-    testEnv.inside('-u 0:0') {
-        rcFullVersion = "${version}~${env.BUILD_NUMBER}"
+    testEnv.inside {
+        try {
+            rcFullVersion = "${version}~${env.BUILD_NUMBER}"
 
-        unstash name: 'libindyCryptoDebs'
+            unstash name: 'libindyCryptoDebs'
 
-        sh "deb-reversion -v $version debs/libindy-crypto_\"$rcFullVersion\"_amd64.deb"
-        sh "deb-reversion -v $version debs/libindy-crypto-dev_\"$rcFullVersion\"_amd64.deb"
+            sh "fakeroot deb-reversion -v $version debs/libindy-crypto_\"$rcFullVersion\"_amd64.deb"
+            sh "fakeroot deb-reversion -v $version debs/libindy-crypto-dev_\"$rcFullVersion\"_amd64.deb"
 
-        uploadDebianFilesToStable()
+            uploadDebianFilesToStable()
+        }
+        finally {
+            clean()
+        }
     }
 }
 
 def publishPythonWrapperDebRCtoStable(testEnv, version) {
-    testEnv.inside('-u 0:0') {
-        rcFullVersion = "${version}~${env.BUILD_NUMBER}"
+    testEnv.inside {
+        try {
+            rcFullVersion = "${version}~${env.BUILD_NUMBER}"
 
-        unstash name: 'PythonWrapperDebs'
-        sh "deb-reversion -v $version debs/python3-indy-crypto_\"$rcFullVersion\"_amd64.deb"
+            unstash name: 'PythonWrapperDebs'
+            sh "fakeroot deb-reversion -v $version debs/python3-indy-crypto_\"$rcFullVersion\"_amd64.deb"
 
-        uploadDebianFilesToStable()
+            uploadDebianFilesToStable()
+        }
+        finally {
+            clean()
+        }
     }
 }
 
