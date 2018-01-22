@@ -322,6 +322,7 @@ impl ProofBuilder {
         values.extend_from_slice(&self.c_list);
         values.push(nonce.to_bytes()?);
 
+        // In the anoncreds whitepaper, `challenge` is denoted by `c_h`
         let challenge = get_hash_as_int(&mut values)?;
 
         let mut proofs: HashMap<String, SubProof> = HashMap::new();

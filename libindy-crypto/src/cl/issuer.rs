@@ -189,6 +189,7 @@ impl Issuer {
         trace!("Issuer::sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_idx: {:?}, \
         rev_reg_pub: {:?}, rev_reg_priv: {:?}", prover_id, blinded_ms, claim_values, issuer_pub_key, issuer_priv_key, rev_idx, rev_reg_pub, rev_reg_priv);
 
+        // In the anoncreds whitepaper, `claim context` is denoted by `m2`
         let claim_context = Issuer::_gen_claim_context(prover_id, rev_idx)?;
 
         let p_claim = Issuer::_new_primary_claim(&claim_context,
@@ -340,6 +341,7 @@ impl Issuer {
         Ok((issuer_rev_pub_key, issuer_rev_priv_key))
     }
 
+    // In the anoncreds whitepaper, `claim context` is denoted by `m2`
     fn _gen_claim_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
         trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, rev_idx);
 
