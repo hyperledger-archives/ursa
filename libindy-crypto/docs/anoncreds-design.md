@@ -1,24 +1,29 @@
-# Shared anoncreds math in Indy Crypto
+# Anonymous Credentials (anoncreds) crypto support
 Initial version of anoncreds protocol was implemented as part of Indy SDK (https://github.com/hyperledger/indy-sdk). After some discussion and community requests we decided to move low level anoncreds crypto code to indy-crypto project. This should allow the crypto to be audited and shared with other projects.
 
 ## Main ideas
-1. Indy-crypto will not provide high level anoncreds protocol details and persistence. It will operate low level crypto entities only. 
+1. Indy-crypto will not provide high level anoncreds protocol details and persistence. It will support low level crypto entities only. 
 1. API defines 3 actors:
     * Issuer - trust source that provides credentials to prover
     * Prover - credentials owner that can proof and partially disclose the credentials to verifier
     * Verifier - party that wants to check that prover has some credentials provided by issuer
-1. The list of entities that indy-crypto operates:
-    * Claim Schema” - a list of attributes a Claim is based on
-    * “Claim Values” - values of attributes from Claim Schema (must be integers)
-    * “Claim Signature” - signed by the Issuer part of the Claim
-    * “Issuer public key” and “issuer private key”. Keys will contain 2 internal parts. One for signing primary claims and second for signing non-revocation claims. These keys are used to proof that claim was issued and doesn’t revoked by this issuer. Issuer keys have global identifier that must be known to all parties.
-    * “Revocation registry public” and “revocation registry private”. Internally them will contain revocation keys, accumulator and accumulator tails. Public part of revocation registry must be shared by issuer in trusted place and can be used to proof that concrete claim wasn’t revoked.
-    * “Master secret” - secret prover data that is used to proof that prover owns the claim. Prover blinds master secret be generating “blinded master secret” and “master secret blinding data” and sends “blinded master secret” to isser that uses “blinded master secret” in claim creation. It allows to use this claim by prover only.
-    * “Proof” is complex crypto structure created by proved over multiple claims that allows to proof that prover:
-      * Owns claims issued with specific issuer keys (identified by key id)
+1. The list of entities that indy-crypto operates on:
+    * Claim Schema - a list of attribute names in a Claim
+    * Claim Values - values of a Claim Schema's attributes corresponding to a specific prover (must be integers)
+    * Claim Signature - Issuer's signature over Claim Values
+    * Issuer keys (public). Contains 2 parts. One for signing primary claims (claim values) and second for signing non-revocation part of the claim. These keys are used to prove that claim was issued and has not been revoked by the issuer. Issuer keys must be uniquely identifiable and accessible by all parties.
+    * Revocation Registry. Contains revocation keys, accumulator and accumulator tails. Public part of revocation registry must be published by Issuer on a tamper-evident and highly available storage and can be used to prove that the claim hasn't been revoked.
+    * Master secret - Secret key encoded in a claim that is used to prove that prover owns the claim. Prover blinds the master secret, gives it to the issuer who then encodes this blinded secret in the claim. The objective of blinding the master secret is preventing the "identity leak" of the prover even if the Issuer and Verifier collude.
+    * Predicate - Some condition that must be satisfied. The verifier can either ask the prover to reveal the attributes or satisfy some predicate over the attribute.
+    * Proof is complex crypto structure created by prover over multiple claims that allows to prove that prover:
+      * Knows signature over claims issued with specific issuer keys (identified by key id)
       * Claim contains attributes with specific values that prover wants to disclose
-      * Claim contains attributes with valid predicates that prover wants to disclose
-    * “Sub Proof request” - input to create a Proof for a claim; contains attrs to be revealed and predicates.
+      * Claim contains attributes with valid predicates that verifier wants the prover to satisfy.
+    * Sub Proof request - input to create a Proof from a specific claim; contains attributes to be revealed and predicates to be satisfied. A proof can be composed of several Sub proofs.
+    * Revocation - An issuer while issuing a claim can embed an special attribute called revocation id/index. To revoke the claim, the issuer publishes to the world that claim with a particular id is revoked.  
+    * Accumulator - A data structure used to hold the ids of non-revoked claims. While issuing the claim, issuer adds the revocation id to the accumulator and while revoking that claim, the issuer removes that claim's id from the accumulator. Since an accumulator can hold only a fixed number of elements, multiple accumulators can be used by the issuer.
+    * Witness - Data required by the prover to prove that a particular claim is not revoked; i.e claim id is present in accumulator.
+    * Tails - The user's witness has to be updated each time a claim is revoked, the user calculates the updates witness using already published data by the Issuer, this data is called validity tails or just "tails". The "tails" don't change with the accumulator. 
 1. For each entity API will provide the methods to perform serialization and deserialization that will allow network entities transfer between actors.
 1. FFI C API will use OpenSSL style entities handling. Entities referenced will be represent as untyped pointers. Library will provide functions for entities allocation, manipulation and deallocation. 
 

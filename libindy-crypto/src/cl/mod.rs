@@ -134,7 +134,7 @@ impl JsonEncodable for IssuerPrivateKey {}
 
 impl<'a> JsonDecodable<'a> for IssuerPrivateKey {}
 
-/// `Primary Public Key` is used to prove that claim was issued and satisfy the proof request.
+/// Issuer's "Public Key" is used to verify the Issuer's signature over the Claim's attributes' values (primary claim).
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct IssuerPrimaryPublicKey {
     n: BigNumber,
@@ -158,14 +158,14 @@ impl IssuerPrimaryPublicKey {
     }
 }
 
-/// `Primary Private Key` is used for signing Claim
+/// Issuer's "Private Key" used for signing Claim's attributes' values (primary claim)
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct IssuerPrimaryPrivateKey {
     p: BigNumber,
     q: BigNumber
 }
 
-/// `Revocation Public Key` is used to prove that claim wasn’t revoked by Issuer.
+/// `Revocation Public Key` is used to verify that claim was'nt revoked by Issuer.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct IssuerRevocationPublicKey {
     g: PointG1,
@@ -188,9 +188,9 @@ pub struct IssuerRevocationPrivateKey {
     sk: GroupOrderElement
 }
 
-/// `Revocation Registry Public` contain revocation keys, accumulator and accumulator tails.
-/// Must be shared by Issuer in trusted place
-/// Can be used to proof that concrete claim wasn’t revoked.
+/// `Revocation Registry Public` contains revocation keys, accumulator and accumulator tails.
+/// Must be published by Issuer on a tamper-evident and highly available storage
+/// Used by prover to prove that a claim hasn't revoked by the issuer
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationRegistryPublic {
     key: RevocationAccumulatorPublicKey,
@@ -266,7 +266,7 @@ pub struct RevocationAccumulatorTails {
     tails_dash: HashMap<u32 /* index in acc */, PointG2>,
 }
 
-/// Signed by the Issuer part of the Claim.
+/// Issuer's signature over Claim attribute values.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClaimSignature {
     p_claim: PrimaryClaimSignature,
@@ -305,11 +305,11 @@ pub struct Witness {
     v: HashSet<u32>
 }
 
-/// Secret prover data that is used to proof that prover owns the claim.
-/// Prover blinds master secret by generating “Blinded Master Secret” and “Master Secret Blinding Data”
-/// and sends “Blinded Master Secret” to Isseur that uses “Blinded Master Secret” in claim creation.
-/// “Master Secret Blinding Dat” uses by Prover for post processing of claims received from Issuer
-/// It allows to use this claim by prover only.
+/// Secret key encoded in a claim that is used to prove that prover owns the claim; can be used to
+/// prove linkage across claims.
+/// Prover blinds master secret, generating `BlindedMasterSecret` and `MasterSecretBlindingData` (blinding factors)
+/// and sends the `BlindedMasterSecret` to Issuer who then encodes it claim creation.
+/// The blinding factors are used by Prover for post processing of issued claims.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecret {
     ms: BigNumber,
@@ -319,7 +319,7 @@ impl JsonEncodable for MasterSecret {}
 
 impl<'a> JsonDecodable<'a> for MasterSecret {}
 
-/// `Blinded Master Secret` uses by Issuer in claim creation.
+/// Blinded Master Secret uses by Issuer in claim creation.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlindedMasterSecret {
     u: BigNumber,
@@ -330,7 +330,7 @@ impl JsonEncodable for BlindedMasterSecret {}
 
 impl<'a> JsonDecodable<'a> for BlindedMasterSecret {}
 
-/// `Master Secret Blinding Data` uses by Prover for post processing of claims received from Issuer.
+/// `Master Secret Blinding Data` used by Prover for post processing of claims received from Issuer.
 /// TODO: Should be renamed `MasterSecretBlindingFactors`
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecretBlindingData {
@@ -404,7 +404,7 @@ impl SubProofRequestBuilder {
     }
 }
 
-/// Some condition that must be proven.
+/// Some condition that must be satisfied.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct Predicate {
     attr_name: String,
@@ -418,10 +418,10 @@ pub enum PredicateType {
     GE
 }
 
-/// Proof is complex crypto structure created by proved over multiple claims that allows to proof that prover:
-/// 1) Owns claims issued with specific issuer keys (identified by key id)
+/// Proof is complex crypto structure created by prover over multiple claims that allows to prove that prover:
+/// 1) Knows signature over claims issued with specific issuer keys (identified by key id)
 /// 2) Claim contains attributes with specific values that prover wants to disclose
-/// 3) Claim contains attributes with valid predicates that prover wants to disclose
+/// 3) Claim contains attributes with valid predicates that verifier wants the prover to satisfy.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Proof {
     proofs: HashMap<String /* issuer pub key id */, SubProof>,

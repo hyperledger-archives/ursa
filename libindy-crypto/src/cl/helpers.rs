@@ -395,11 +395,13 @@ fn largest_square_less_than(delta: usize) -> usize {
     (delta as f64).sqrt().floor() as usize
 }
 
+//Express the natural number `delta` as a sum of four integer squares,
+// i.e `delta = a^2 + b^2 + c^2 + d^2` using Lagrange's four-square theorem
 pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, IndyCryptoError> {
     trace!("Helpers::four_squares: >>> delta: {:?}", delta);
 
     if delta < 0 {
-        return Err(IndyCryptoError::InvalidStructure(format!("Cannot get the four squares for delta {} ", delta)));
+        return Err(IndyCryptoError::InvalidStructure(format!("Cannot express a negative number as sum of four squares {} ", delta)));
     }
 
     let d = delta as usize;
