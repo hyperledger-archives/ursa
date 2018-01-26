@@ -4,6 +4,7 @@ use cl::verifier::Verifier;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
+use utils::json::{JsonEncodable, JsonDecodable};
 
 use libc::c_char;
 
@@ -384,6 +385,118 @@ pub extern fn indy_crypto_cl_sub_proof_request_free(sub_proof_request: *const c_
     res
 }
 
+/// Creates random nonce.
+///
+/// Note that nonce deallocation must be performed by calling indy_crypto_cl_nonce_free.
+///
+/// # Arguments
+/// * `nonce_p` - Reference that will contain nonce instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_new_nonce(nonce_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_new_nonce: >>> {:?}", nonce_p);
+
+    check_useful_c_ptr!(nonce_p, ErrorCode::CommonInvalidParam1);
+
+    let res = match new_nonce() {
+        Ok(nonce) => {
+            trace!("indy_crypto_cl_new_nonce: nonce: {:?}", nonce);
+            unsafe {
+                *nonce_p = Box::into_raw(Box::new(nonce)) as *const c_void;
+                trace!("indy_crypto_cl_new_nonce: *nonce_p: {:?}", *nonce_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_new_nonce: <<< res: {:?}", res);
+    res
+}
+
+/// Returns json representation of nonce.
+///
+/// # Arguments
+/// * `nonce` - Reference that contains nonce instance pointer.
+/// * `nonce_json_p` - Reference that will contain nonce json.
+#[no_mangle]
+pub extern fn indy_crypto_cl_nonce_to_json(nonce: *const c_void,
+                                           nonce_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_nonce_to_json: >>> nonce: {:?}, nonce_json_p: {:?}", nonce, nonce_json_p);
+
+    check_useful_c_reference!(nonce, Nonce, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(nonce_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_nonce_to_json: entity >>> nonce: {:?}", nonce);
+
+    let res = match nonce.to_json() {
+        Ok(nonce_json) => {
+            trace!("indy_crypto_cl_nonce_to_json: nonce_json: {:?}", nonce_json);
+            unsafe {
+                let nonce_json = CTypesUtils::string_to_cstring(nonce_json);
+                *nonce_json_p = nonce_json.into_raw();
+                trace!("indy_crypto_cl_nonce_to_json: nonce_json_p: {:?}", *nonce_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_nonce_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns nonce json.
+///
+/// Note: Nonce instance deallocation must be performed by calling indy_crypto_cl_nonce_free.
+///
+/// # Arguments
+/// * `nonce_json` - Reference that contains nonce json.
+/// * `nonce_p` - Reference that will contain nonce instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_nonce_from_json(nonce_json: *const c_char,
+                                             nonce_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_nonce_from_json: >>> nonce_json: {:?}, nonce_p: {:?}", nonce_json, nonce_p);
+
+    check_useful_c_str!(nonce_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(nonce_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_nonce_from_json: entity: nonce_json: {:?}", nonce_json);
+
+    let res = match Nonce::from_json(&nonce_json) {
+        Ok(nonce) => {
+            trace!("indy_crypto_cl_nonce_from_json: nonce: {:?}", nonce);
+            unsafe {
+                *nonce_p = Box::into_raw(Box::new(nonce)) as *const c_void;
+                trace!("indy_crypto_cl_nonce_from_json: *nonce_p: {:?}", *nonce_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_nonce_from_json: <<< res: {:?}", res);
+    res
+}
+
+/// Deallocates nonce instance.
+///
+/// # Arguments
+/// * `nonce` - Reference that contains nonce instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_nonce_free(nonce: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_nonce_free: >>> nonce: {:?}", nonce);
+
+    check_useful_c_ptr!(nonce, ErrorCode::CommonInvalidParam1);
+
+    let nonce = unsafe { Box::from_raw(nonce as *mut Nonce); };
+    trace!("indy_crypto_cl_nonce_free: entity: nonce: {:?}", nonce);
+
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_cl_nonce_free: <<< res: {:?}", res);
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -550,6 +663,50 @@ mod tests {
         let sub_proof_request = _sub_proof_request();
 
         let err_code = indy_crypto_cl_sub_proof_request_free(sub_proof_request);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_cl_new_nonce_works() {
+        let mut nonce_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_new_nonce(&mut nonce_p);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!nonce_p.is_null());
+
+        _free_nonce(nonce_p)
+    }
+
+    #[test]
+    fn indy_crypto_cl_nonce_to_json_works() {
+        let nonce = _nonce();
+
+        let mut nonce_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_nonce_to_json(nonce, &mut nonce_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_nonce(nonce)
+    }
+
+    #[test]
+    fn indy_crypto_cl_nonce_from_json_works() {
+        let nonce = _nonce();
+
+        let mut nonce_json_p: *const c_char = ptr::null();
+        let err_code = indy_crypto_cl_nonce_to_json(nonce, &mut nonce_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut nonce_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_nonce_from_json(nonce_json_p, &mut nonce_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_nonce(nonce)
+    }
+
+    #[test]
+    fn indy_crypto_cl_nonce_free_works() {
+        let nonce = _nonce();
+
+        let err_code = indy_crypto_cl_nonce_free(nonce);
         assert_eq!(err_code, ErrorCode::Success);
     }
 }
@@ -725,6 +882,20 @@ pub mod mocks {
 
     pub fn _free_sub_proof_request(sub_proof_request: *const c_void) {
         let err_code = indy_crypto_cl_sub_proof_request_free(sub_proof_request);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    pub fn _nonce() -> *const c_void {
+        let mut nonce_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_new_nonce(&mut nonce_p);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!nonce_p.is_null());
+
+        nonce_p
+    }
+
+    pub fn _free_nonce(nonce: *const c_void) {
+        let err_code = indy_crypto_cl_nonce_free(nonce);
         assert_eq!(err_code, ErrorCode::Success);
     }
 }

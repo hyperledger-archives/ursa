@@ -1,6 +1,6 @@
 use bn::BigNumber;
 use cl::*;
-use cl::constants::{LARGE_E_START, ITERATION, LARGE_NONCE};
+use cl::constants::{LARGE_E_START, ITERATION};
 use cl::helpers::*;
 use errors::IndyCryptoError;
 
@@ -28,17 +28,6 @@ impl Verifier {
     pub fn new_sub_proof_request_builder() -> Result<SubProofRequestBuilder, IndyCryptoError> {
         let res = SubProofRequestBuilder::new()?;
         Ok(res)
-    }
-
-    /// Creates random nonce
-    ///
-    /// # Example
-    /// ```
-    /// use indy_crypto::cl::verifier::Verifier;
-    /// let _nonce = Verifier::new_nonce().unwrap();
-    /// ```
-    pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
-        Ok(bn_rand(LARGE_NONCE)?)
     }
 
     /// Creates and returns proof verifier.
@@ -225,7 +214,7 @@ impl ProofVerifier {
                 .collect::<HashSet<String>>();
 
         let t1: BigNumber = calc_teq(&issuer_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m,
-                                     &proof.m1, &proof.m2, &unrevealed_attrs)?;
+                                     &proof.m1,  &unrevealed_attrs)?;
 
         let mut ctx = BigNumber::new_context()?;
         let mut rar = BigNumber::from_dec("1")?;
@@ -375,10 +364,11 @@ mod tests {
                                                                   &claim_schema,
                                                                   &sub_proof_request).unwrap();
 
-        assert_eq!("7482119769466399985453964851245160858083213139582181384392546015391266465526851030277921408409258064077698298124641650660813004229404233357607661770\
-        7349015173216066298469796629848379475742662270634373967221781036145898302079498084911189254205359080720863996359684543833466536415829603044441714644215231961048\
-        8185863374642452252262537639796626459270165235687616182451932827771166420110852842258328296215336523679907850550512281026511049364855879504226754090322982687515\
-        11838487572303641236062952085251651696655442524160504107798338763119112728565616246769765635577446028951291604888490982944375208275466186869182747994", res[0].to_dec().unwrap());
+        assert_eq!("3244062837825939877355398753335576762403779212910548417296028712572753639133880653921424323908456621620705414286865752361291176478578705\
+        1742124188311427893565891715152818963909527715369772434715830553565681499716728229912915477119874045373150677043941128999316988158843846136627859328\
+        8075682307083361377634797389672262273858354718309456151099682648763687227923591942453532062687180951061471211851637033495523057952140909198259878657\
+        9396086264342034026347813444781432257127889652418736405330424786494219483933558679052143041909500650252125009406468108370890162315614530618564932092\
+        7357600692595749159140612029210410917", res[0].to_dec().unwrap());
     }
 
     #[test]

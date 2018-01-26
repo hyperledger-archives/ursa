@@ -133,34 +133,49 @@ pub extern fn indy_crypto_cl_master_secret_free(master_secret: *const c_void) ->
 ///
 /// # Arguments
 /// * `issuer_pub_key` - Reference that contains public keys instance pointer.
+/// * `issuer_key_correctness_proof` - Reference that contains issuer key correctness proof instance pointer.
 /// * `master_secret` - Reference that contains master secret instance pointer.
+/// * `master_secret_blinding_nonce` - Reference that contains nonce instance pointer.
 /// * `blinded_master_secret_p` - Reference that will contain blinded master secret instance pointer.
 /// * `master_secret_blinding_data_p` - Reference that will contain master secret blinding data instance pointer.
+/// * `blinded_master_secret_correctness_proof_p` - Reference that will contain blinded master secret correctness proof instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_prover_blind_master_secret(issuer_pub_key: *const c_void,
+                                                        issuer_key_correctness_proof: *const c_void,
                                                         master_secret: *const c_void,
+                                                        master_secret_blinding_nonce: *const c_void,
                                                         blinded_master_secret_p: *mut *const c_void,
-                                                        master_secret_blinding_data_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_prover_blind_master_secret: >>> issuer_pub_key: {:?}, master_secret: {:?}, blinded_master_secret_p: {:?}, master_secret_blinding_data_p: {:?}",
-           issuer_pub_key, master_secret, blinded_master_secret_p, master_secret_blinding_data_p);
+                                                        master_secret_blinding_data_p: *mut *const c_void,
+                                                        blinded_master_secret_correctness_proof_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_prover_blind_master_secret: >>> issuer_pub_key: {:?}, issuer_key_correctness_proof: {:?}, master_secret: {:?}, \
+    master_secret_blinding_nonce: {:?}, blinded_master_secret_p: {:?}, master_secret_blinding_data_p: {:?}, blinded_master_secret_correctness_proof_p: {:?}",
+           issuer_pub_key, issuer_key_correctness_proof, master_secret, master_secret_blinding_nonce, blinded_master_secret_p,
+           master_secret_blinding_data_p, blinded_master_secret_correctness_proof_p);
 
     check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam1);
-    check_useful_c_reference!(master_secret, MasterSecret, ErrorCode::CommonInvalidParam2);
-    check_useful_c_ptr!(blinded_master_secret_p, ErrorCode::CommonInvalidParam3);
-    check_useful_c_ptr!(master_secret_blinding_data_p, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(issuer_key_correctness_proof, KeyCorrectnessProof, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(master_secret, MasterSecret, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(master_secret_blinding_nonce, Nonce, ErrorCode::CommonInvalidParam4);
+    check_useful_c_ptr!(blinded_master_secret_p, ErrorCode::CommonInvalidParam5);
+    check_useful_c_ptr!(master_secret_blinding_data_p, ErrorCode::CommonInvalidParam6);
+    check_useful_c_ptr!(blinded_master_secret_correctness_proof_p, ErrorCode::CommonInvalidParam7);
 
-    trace!("indy_crypto_cl_prover_blind_master_secret: entities: issuer_pub_key: {:?}, master_secret: {:?}, blinded_master_secret_p: {:?}, master_secret_blinding_data_p: {:?}",
-           issuer_pub_key, master_secret, blinded_master_secret_p, master_secret_blinding_data_p);
+    trace!("indy_crypto_cl_prover_blind_master_secret: entities: issuer_pub_key: {:?}, issuer_key_correctness_proof: {:?}, master_secret: {:?}, \
+    master_secret_blinding_nonce: {:?}, blinded_master_secret_p: {:?}, master_secret_blinding_data_p: {:?}",
+           issuer_pub_key, issuer_key_correctness_proof, master_secret, master_secret_blinding_nonce, blinded_master_secret_p, master_secret_blinding_data_p);
 
-    let res = match Prover::blind_master_secret(issuer_pub_key, master_secret) {
-        Ok((blinded_master_secret, master_secret_blinding_data)) => {
-            trace!("indy_crypto_cl_prover_blind_master_secret: blinded_master_secret: {:?}, master_secret_blinding_data: {:?}",
-                   blinded_master_secret, master_secret_blinding_data);
+    let res = match Prover::blind_master_secret(issuer_pub_key, issuer_key_correctness_proof, master_secret, master_secret_blinding_nonce) {
+        Ok((blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof)) => {
+            trace!("indy_crypto_cl_prover_blind_master_secret: blinded_master_secret: {:?}, master_secret_blinding_data: {:?}, \
+            blinded_master_secret_correctness_proof: {:?}",
+                   blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
             unsafe {
                 *blinded_master_secret_p = Box::into_raw(Box::new(blinded_master_secret)) as *const c_void;
                 *master_secret_blinding_data_p = Box::into_raw(Box::new(master_secret_blinding_data)) as *const c_void;
-                trace!("indy_crypto_cl_prover_blind_master_secret: *blinded_master_secret_p: {:?}, *master_secret_blinding_data_p: {:?}",
-                       *blinded_master_secret_p, *master_secret_blinding_data_p);
+                *blinded_master_secret_correctness_proof_p = Box::into_raw(Box::new(blinded_master_secret_correctness_proof)) as *const c_void;
+                trace!("indy_crypto_cl_prover_blind_master_secret: *blinded_master_secret_p: {:?}, *master_secret_blinding_data_p: {:?}, \
+                *blinded_master_secret_correctness_proof_p: {:?}",
+                       *blinded_master_secret_p, *master_secret_blinding_data_p, *blinded_master_secret_correctness_proof_p);
             }
             ErrorCode::Success
         }
@@ -342,32 +357,139 @@ pub extern fn indy_crypto_cl_master_secret_blinding_data_free(master_secret_blin
     res
 }
 
+/// Returns json representation of blinded master secret correctness proof.
+///
+/// # Arguments
+/// * `blinded_master_secret_correctness_proof` - Reference that contains blinded master_secret correctness proof pointer.
+/// * `blinded_master_secret_correctness_proof_json_p` - Reference that will contain blinded master secret correctness proof json.
+#[no_mangle]
+pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_to_json(blinded_master_secret_correctness_proof: *const c_void,
+                                                                             blinded_master_secret_correctness_proof_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: >>> blinded_master_secret_correctness_proof: {:?},\
+     blinded_master_secret_correctness_proof_json_p: {:?}", blinded_master_secret_correctness_proof, blinded_master_secret_correctness_proof_json_p);
+
+    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretProofCorrectness, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(blinded_master_secret_correctness_proof_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: entity >>> blinded_master_secret_correctness_proof: {:?}",
+           blinded_master_secret_correctness_proof);
+
+    let res = match blinded_master_secret_correctness_proof.to_json() {
+        Ok(blinded_master_secret_correctness_proof_json) => {
+            trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: blinded_master_secret_correctness_proof: {:?}",
+                   blinded_master_secret_correctness_proof_json);
+            unsafe {
+                let blinded_master_secret_correctness_proof_json = CTypesUtils::string_to_cstring(blinded_master_secret_correctness_proof_json);
+                *blinded_master_secret_correctness_proof_json_p = blinded_master_secret_correctness_proof_json.into_raw();
+                trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: blinded_master_secret_correctness_proof_json_p: {:?}",
+                       *blinded_master_secret_correctness_proof_json_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns blinded master secret correctness proof json.
+///
+/// Note: Blinded master secret correctness proof instance deallocation must be performed
+/// by calling indy_crypto_cl_blinded_master_secret_correctness_proof_free.
+///
+/// # Arguments
+/// * `blinded_master_secret_correctness_proof_json` - Reference that contains blinded master secret correctness proof json.
+/// * `blinded_master_secret_correctness_proof_p` - Reference that will contain blinded master secret correctness proof instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_from_json(blinded_master_secret_correctness_proof_json: *const c_char,
+                                                                               blinded_master_secret_correctness_proof_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: >>> blinded_master_secret_correctness_proof_json: {:?},\
+     blinded_master_secret_correctness_proof_p: {:?}", blinded_master_secret_correctness_proof_json, blinded_master_secret_correctness_proof_p);
+
+    check_useful_c_str!(blinded_master_secret_correctness_proof_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(blinded_master_secret_correctness_proof_p, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: entity: blinded_master_secret_correctness_proof_json: {:?}",
+           blinded_master_secret_correctness_proof_json);
+
+    let res = match BlindedMasterSecretProofCorrectness::from_json(&blinded_master_secret_correctness_proof_json) {
+        Ok(blinded_master_secret_correctness_proof) => {
+            trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: blinded_master_secret_correctness_proof: {:?}",
+                   blinded_master_secret_correctness_proof);
+            unsafe {
+                *blinded_master_secret_correctness_proof_p = Box::into_raw(Box::new(blinded_master_secret_correctness_proof)) as *const c_void;
+                trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: *blinded_master_secret_p: {:?}", *blinded_master_secret_correctness_proof_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: <<< res: {:?}", res);
+    res
+}
+
+/// Deallocates blinded master secret correctness proof instance.
+///
+/// # Arguments
+/// * `blinded_master_secret_correctness_proof` - Reference that contains blinded master_secret correctness proof instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_free(blinded_master_secret_correctness_proof: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_free: >>> blinded_master_secret_correctness_proof: {:?}",
+           blinded_master_secret_correctness_proof);
+
+    check_useful_c_ptr!(blinded_master_secret_correctness_proof, ErrorCode::CommonInvalidParam1);
+
+    let blinded_master_secret_correctness_proof = unsafe { Box::from_raw(blinded_master_secret_correctness_proof as *mut BlindedMasterSecretProofCorrectness); };
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_free: entity: blinded_master_secret_correctness_proof: {:?}", blinded_master_secret_correctness_proof);
+
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_free: <<< res: {:?}", res);
+    res
+}
+
 /// Updates the claim signature by a master secret blinding data.
 ///
 /// # Arguments
 /// * `claim_signature` - Reference that contain claim signature instance pointer.
+/// * `signature_correctness_proof` - Reference that contain signature correctness proof instance pointer.
 /// * `master_secret_blinding_data` - Reference that contain master secret blinding data instance pointer.
-/// * `issuer_pub_key` - Reference that containissuer public key instance pointer.
+/// * `master_secret` - Reference that contain master secret instance pointer.
+/// * `issuer_pub_key` - Reference that contain issuer public key instance pointer.
+/// * `claim_issuance_nonce` - Reference that contain claim issuance nonce instance pointer.
 /// * `rev_reg_pub` - (Optional) Reference that contain revocation registry instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_prover_process_claim_signature(claim_signature: *const c_void,
+                                                            signature_correctness_proof: *const c_void,
                                                             master_secret_blinding_data: *const c_void,
+                                                            master_secret: *const c_void,
                                                             issuer_pub_key: *const c_void,
+                                                            claim_issuance_nonce: *const c_void,
                                                             rev_reg_pub: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_prover_process_claim_signature: >>> claim_signature: {:?}, master_secret_blinding_data: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
-           claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+    trace!("indy_crypto_cl_prover_process_claim_signature: >>> claim_signature: {:?}, signature_correctness_proof: {:?}, master_secret_blinding_data: {:?}, \
+    master_secret: {:?}, issuer_pub_key: {:?}, claim_issuance_nonce: {:?}, rev_reg_pub: {:?}",
+           claim_signature, signature_correctness_proof, master_secret_blinding_data, master_secret, issuer_pub_key, claim_issuance_nonce, rev_reg_pub);
 
     check_useful_mut_c_reference!(claim_signature, ClaimSignature, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(signature_correctness_proof, SignatureCorrectnessProof, ErrorCode::CommonInvalidParam2);
     check_useful_c_reference!(master_secret_blinding_data, MasterSecretBlindingData, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(master_secret, MasterSecret, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(claim_issuance_nonce, Nonce, ErrorCode::CommonInvalidParam6);
     check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic);
 
-    trace!("indy_crypto_cl_prover_process_claim_signature: entities: claim_signature: {:?}, master_secret_blinding_data: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
-           claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+    trace!("indy_crypto_cl_prover_process_claim_signature: >>> claim_signature: {:?}, signature_correctness_proof: {:?}, master_secret_blinding_data: {:?}, \
+    master_secret: {:?}, issuer_pub_key: {:?}, claim_issuance_nonce: {:?}, rev_reg_pub: {:?}",
+           claim_signature, signature_correctness_proof, master_secret_blinding_data, master_secret, issuer_pub_key, claim_issuance_nonce, rev_reg_pub);
 
     let res = match Prover::process_claim_signature(claim_signature,
+                                                    signature_correctness_proof,
                                                     master_secret_blinding_data,
+                                                    master_secret,
                                                     issuer_pub_key,
+                                                    claim_issuance_nonce,
                                                     rev_reg_pub) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.to_error_code()
@@ -600,7 +722,6 @@ mod tests {
     use ffi::cl::mocks::*;
     use ffi::cl::issuer::mocks::*;
     use ffi::cl::prover::mocks::*;
-    use ffi::cl::verifier::mocks::*;
 
     #[test]
     fn indy_crypto_cl_prover_new_master_secret_works() {
@@ -649,55 +770,93 @@ mod tests {
     #[test]
     fn indy_crypto_cl_prover_blind_master_secret_works() {
         let master_secret = _master_secret();
-        let (pub_keys, _) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
+        let master_secret_blinding_nonce = _nonce();
 
         let mut blinded_master_secret_p: *const c_void = ptr::null();
         let mut master_secret_blinding_data_p: *const c_void = ptr::null();
+        let mut blinded_master_secret_correctness_proof_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_prover_blind_master_secret(pub_keys,
+        let err_code = indy_crypto_cl_prover_blind_master_secret(issuer_pub_key,
+                                                                 issuer_key_correctness_proof,
                                                                  master_secret,
+                                                                 master_secret_blinding_nonce,
                                                                  &mut blinded_master_secret_p,
-                                                                 &mut master_secret_blinding_data_p);
+                                                                 &mut master_secret_blinding_data_p,
+                                                                 &mut blinded_master_secret_correctness_proof_p);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!blinded_master_secret_p.is_null());
         assert!(!master_secret_blinding_data_p.is_null());
 
-        _free_blinded_master_secret(blinded_master_secret_p, master_secret_blinding_data_p);
+        _free_blinded_master_secret(blinded_master_secret_p,
+                                    master_secret_blinding_data_p,
+                                    blinded_master_secret_correctness_proof_p);
+        _free_master_secret(master_secret);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
     }
 
     #[test]
     fn indy_crypto_cl_prover_blinded_master_secret_free_works() {
         let master_secret = _master_secret();
-        let (pub_keys, _) = _issuer_keys();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(pub_keys, master_secret);
-
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let err_code = indy_crypto_cl_blinded_master_secret_free(blinded_master_secret);
         assert_eq!(err_code, ErrorCode::Success);
 
         let err_code = indy_crypto_cl_master_secret_blinding_data_free(master_secret_blinding_data);
         assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_cl_blinded_master_secret_correctness_proof_free(blinded_master_secret_correctness_proof);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
+        _free_master_secret(master_secret);
+        _free_nonce(master_secret_blinding_nonce);
     }
 
     #[test]
     fn indy_crypto_cl_prover_process_claim_signature_signature_works() {
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
 
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
         let err_code = indy_crypto_cl_prover_process_claim_signature(claim_signature,
+                                                                     signature_correctness_proof,
                                                                      master_secret_blinding_data,
+                                                                     master_secret,
                                                                      issuer_pub_key,
+                                                                     claim_issuance_nonce,
                                                                      rev_reg_pub);
         assert_eq!(err_code, ErrorCode::Success);
 
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
         _free_master_secret(master_secret);
-        _free_claim_signature(claim_signature);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
     }
 
     #[test]
@@ -716,15 +875,33 @@ mod tests {
     #[test]
     fn indy_crypto_cl_prover_proof_builder_add_sub_proof_request_works() {
         let uuid = CString::new("uuid").unwrap();
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let claim_values = _claim_values();
         let sub_proof_request = _sub_proof_request();
         let claim_schema = _claim_schema();
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
+        _process_claim_signature(claim_signature,
+                                 signature_correctness_proof,
+                                 master_secret_blinding_data,
+                                 master_secret,
+                                 issuer_pub_key,
+                                 claim_issuance_nonce, rev_reg_pub);
         let proof_builder = _proof_builder();
 
         let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
@@ -740,27 +917,48 @@ mod tests {
         let nonce = _nonce();
 
         _free_proof_builder(proof_builder, nonce, master_secret);
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
         _free_claim_values(claim_values);
         _free_sub_proof_request(sub_proof_request);
-        _free_claim_signature(claim_signature);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
     }
 
     #[test]
     fn indy_crypto_cl_prover_proof_builder_finalize_works() {
         let uuid = CString::new("uuid").unwrap();
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let claim_values = _claim_values();
         let sub_proof_request = _sub_proof_request();
         let claim_schema = _claim_schema();
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
+        _process_claim_signature(claim_signature,
+                                 signature_correctness_proof,
+                                 master_secret_blinding_data,
+                                 master_secret,
+                                 issuer_pub_key,
+                                 claim_issuance_nonce,
+                                 rev_reg_pub);
         let proof_builder = _proof_builder();
 
         let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
@@ -780,50 +978,94 @@ mod tests {
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!proof.is_null());
 
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
         _free_claim_values(claim_values);
         _free_sub_proof_request(sub_proof_request);
-        _free_claim_signature(claim_signature);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
         _free_proof(proof);
     }
 
     #[test]
     fn indy_crypto_cl_proof_to_json_works() {
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
-        let nonce = _nonce();
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
-        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
+        _process_claim_signature(claim_signature,
+                                 signature_correctness_proof,
+                                 master_secret_blinding_data,
+                                 master_secret,
+                                 issuer_pub_key,
+                                 claim_issuance_nonce,
+                                 rev_reg_pub);
+
+        let proof_building_nonce = _nonce();
+        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, proof_building_nonce, master_secret);
 
         let mut proof_json_p: *const c_char = ptr::null();
         let err_code = indy_crypto_cl_proof_to_json(proof, &mut proof_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
-        _free_nonce(nonce);
-        _free_claim_signature(claim_signature);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
+        _free_nonce(proof_building_nonce);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
         _free_proof(proof);
     }
 
     #[test]
     fn indy_crypto_cl_proof_from_json_works() {
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
-        let nonce = _nonce();
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
-        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
+        _process_claim_signature(claim_signature,
+                                 signature_correctness_proof,
+                                 master_secret_blinding_data,
+                                 master_secret,
+                                 issuer_pub_key,
+                                 claim_issuance_nonce,
+                                 rev_reg_pub);
+
+        let proof_building_nonce = _nonce();
+        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, proof_building_nonce, master_secret);
 
         let mut proof_json_p: *const c_char = ptr::null();
         let err_code = indy_crypto_cl_proof_to_json(proof, &mut proof_json_p);
@@ -833,32 +1075,55 @@ mod tests {
         let err_code = indy_crypto_cl_proof_from_json(proof_json_p, &mut proof_p);
         assert_eq!(err_code, ErrorCode::Success);
 
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
-        _free_nonce(nonce);
-        _free_claim_signature(claim_signature);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
+        _free_nonce(proof_building_nonce);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
         _free_proof(proof);
     }
 
     #[test]
     fn indy_crypto_cl_proof_free_works() {
-        let (issuer_pub_key, issuer_priv_key) = _issuer_keys();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
         let (rev_reg_pub, rev_reg_priv) = _revocation_registry(issuer_pub_key);
         let master_secret = _master_secret();
-        let (blinded_master_secret, master_secret_blinding_data) = _blinded_master_secret(issuer_pub_key, master_secret);
-        let nonce = _nonce();
-        let claim_signature = _claim_signature(blinded_master_secret, issuer_pub_key, issuer_priv_key, rev_reg_pub, rev_reg_priv);
-        _process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
-        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, nonce, master_secret);
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
+        let claim_issuance_nonce = _nonce();
+        let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
+                                                                              blinded_master_secret_correctness_proof,
+                                                                              master_secret_blinding_nonce,
+                                                                              claim_issuance_nonce,
+                                                                              issuer_pub_key,
+                                                                              issuer_priv_key,
+                                                                              rev_reg_pub,
+                                                                              rev_reg_priv);
+        _process_claim_signature(claim_signature,
+                                 signature_correctness_proof,
+                                 master_secret_blinding_data,
+                                 master_secret,
+                                 issuer_pub_key,
+                                 claim_issuance_nonce,
+                                 rev_reg_pub);
+        let proof_building_nonce = _nonce();
+        let proof = _proof(issuer_pub_key, rev_reg_pub, claim_signature, proof_building_nonce, master_secret);
 
-        _free_issuer_keys(issuer_pub_key, issuer_priv_key);
+        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
         _free_revocation_registry(rev_reg_pub, rev_reg_priv);
         _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data);
-        _free_nonce(nonce);
-        _free_claim_signature(claim_signature);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(claim_issuance_nonce);
+        _free_nonce(proof_building_nonce);
+        _free_claim_signature(claim_signature, signature_correctness_proof);
 
         let err_code = indy_crypto_cl_proof_free(proof);
         assert_eq!(err_code, ErrorCode::Success);
@@ -887,30 +1152,51 @@ pub mod mocks {
         assert_eq!(err_code, ErrorCode::Success);
     }
 
-    pub fn _blinded_master_secret(issuer_pub_key: *const c_void, master_secret: *const c_void) -> (*const c_void, *const c_void) {
+    pub fn _blinded_master_secret(issuer_pub_key: *const c_void,
+                                  issuer_key_correctness_proof: *const c_void,
+                                  master_secret: *const c_void,
+                                  master_secret_blinding_nonce: *const c_void) -> (*const c_void, *const c_void, *const c_void) {
         let mut blinded_master_secret_p: *const c_void = ptr::null();
         let mut master_secret_blinding_data_p: *const c_void = ptr::null();
+        let mut blinded_master_secret_correctness_proof_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_prover_blind_master_secret(issuer_pub_key, master_secret,
-                                                                 &mut blinded_master_secret_p, &mut master_secret_blinding_data_p);
+        let err_code = indy_crypto_cl_prover_blind_master_secret(issuer_pub_key,
+                                                                 issuer_key_correctness_proof,
+                                                                 master_secret,
+                                                                 master_secret_blinding_nonce,
+                                                                 &mut blinded_master_secret_p,
+                                                                 &mut master_secret_blinding_data_p,
+                                                                 &mut blinded_master_secret_correctness_proof_p);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!blinded_master_secret_p.is_null());
         assert!(!master_secret_blinding_data_p.is_null());
+        assert!(!blinded_master_secret_correctness_proof_p.is_null());
 
-        (blinded_master_secret_p, master_secret_blinding_data_p)
+        (blinded_master_secret_p, master_secret_blinding_data_p, blinded_master_secret_correctness_proof_p)
     }
 
-    pub fn _free_blinded_master_secret(blinded_master_secret: *const c_void, master_secret_blinding_data: *const c_void) {
+    pub fn _free_blinded_master_secret(blinded_master_secret: *const c_void, master_secret_blinding_data: *const c_void,
+                                       blinded_master_secret_correctness_proof: *const c_void) {
         let err_code = indy_crypto_cl_blinded_master_secret_free(blinded_master_secret);
         assert_eq!(err_code, ErrorCode::Success);
 
         let err_code = indy_crypto_cl_master_secret_blinding_data_free(master_secret_blinding_data);
         assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_cl_blinded_master_secret_correctness_proof_free(blinded_master_secret_correctness_proof);
+        assert_eq!(err_code, ErrorCode::Success);
     }
 
-    pub fn _process_claim_signature(claim_signature: *const c_void, master_secret_blinding_data: *const c_void,
-                                    issuer_pub_key: *const c_void, rev_reg_pub: *const c_void) {
-        let err_code = indy_crypto_cl_prover_process_claim_signature(claim_signature, master_secret_blinding_data, issuer_pub_key, rev_reg_pub);
+    pub fn _process_claim_signature(claim_signature: *const c_void, signature_correctness_proof: *const c_void,
+                                    master_secret_blinding_data: *const c_void, master_secret: *const c_void,
+                                    issuer_pub_key: *const c_void, claim_issuance_nonce: *const c_void, rev_reg_pub: *const c_void) {
+        let err_code = indy_crypto_cl_prover_process_claim_signature(claim_signature,
+                                                                     signature_correctness_proof,
+                                                                     master_secret_blinding_data,
+                                                                     master_secret,
+                                                                     issuer_pub_key,
+                                                                     claim_issuance_nonce,
+                                                                     rev_reg_pub);
         assert_eq!(err_code, ErrorCode::Success);
     }
 

@@ -11,8 +11,19 @@ use errors::IndyCryptoError;
 use pair::*;
 use utils::json::{JsonEncodable, JsonDecodable};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
+
+/// Creates random nonce
+///
+/// # Example
+/// ```
+/// use indy_crypto::cl::new_nonce;
+/// let _nonce = new_nonce().unwrap();
+/// ```
+pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
+    Ok(helpers::bn_rand(constants::LARGE_NONCE)?)
+}
 
 /// A list of attributes a Claim is based on.
 #[derive(Debug, Clone)]
@@ -140,8 +151,7 @@ pub struct IssuerPrimaryPublicKey {
     n: BigNumber,
     s: BigNumber,
     rms: BigNumber,
-    r: HashMap<String /* attr_name */, BigNumber>,
-    rctxt: BigNumber,
+    r: BTreeMap<String /* attr_name */, BigNumber>,
     z: BigNumber
 }
 
@@ -151,8 +161,7 @@ impl IssuerPrimaryPublicKey {
             n: self.n.clone()?,
             s: self.s.clone()?,
             rms: self.rms.clone()?,
-            r: clone_bignum_map(&self.r)?,
-            rctxt: self.rctxt.clone()?,
+            r: clone_btree_bignum_map(&self.r)?,
             z: self.z.clone()?
         })
     }
@@ -164,6 +173,25 @@ pub struct IssuerPrimaryPrivateKey {
     p: BigNumber,
     q: BigNumber
 }
+
+/// `Primary Public Key Metadata` required for building of Proof Correctness of `Issuer Public Key`
+#[derive(Debug)]
+pub struct IssuerPrimaryPublicKeyMetadata {
+    xz: BigNumber,
+    xr: BTreeMap<String, BigNumber>
+}
+
+/// Proof of `Issuer Public Key` correctness
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct KeyCorrectnessProof {
+    c: BigNumber,
+    xz_cap: BigNumber,
+    xr_cap: BTreeMap<String, BigNumber>
+}
+
+impl JsonEncodable for KeyCorrectnessProof {}
+
+impl<'a> JsonDecodable<'a> for KeyCorrectnessProof {}
 
 /// `Revocation Public Key` is used to verify that claim was'nt revoked by Issuer.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -282,7 +310,8 @@ pub struct PrimaryClaimSignature {
     m_2: BigNumber,
     a: BigNumber,
     e: BigNumber,
-    v: BigNumber
+    v: BigNumber,
+    claim_values: HashMap<String, BigNumber>
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -295,6 +324,16 @@ pub struct NonRevocationClaimSignature {
     i: u32,
     m2: GroupOrderElement
 }
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct SignatureCorrectnessProof {
+    se: BigNumber,
+    c: BigNumber
+}
+
+impl JsonEncodable for SignatureCorrectnessProof {}
+
+impl<'a> JsonDecodable<'a> for SignatureCorrectnessProof {}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Witness {
@@ -353,6 +392,17 @@ pub struct RevocationBlindedMasterSecretData {
     ur: PointG1,
     vr_prime: GroupOrderElement,
 }
+
+#[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct BlindedMasterSecretProofCorrectness {
+    c: BigNumber,
+    v_dash_cap: BigNumber,
+    ms_cap: BigNumber
+}
+
+impl JsonEncodable for BlindedMasterSecretProofCorrectness {}
+
+impl<'a> JsonDecodable<'a> for BlindedMasterSecretProofCorrectness {}
 
 /// “Sub Proof Request” - input to create a Proof for a claim;
 /// Contains attributes to be revealed and predicates.
@@ -724,6 +774,15 @@ fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>)
     Ok(res)
 }
 
+fn clone_btree_bignum_map<K: Clone + Eq + Hash + Ord>(other: &BTreeMap<K, BigNumber>)
+                                                      -> Result<BTreeMap<K, BigNumber>, IndyCryptoError> {
+    let mut res: BTreeMap<K, BigNumber> = BTreeMap::new();
+    for (k, v) in other {
+        res.insert(k.clone(), v.clone()?);
+    }
+    Ok(res)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -739,22 +798,46 @@ mod test {
         claim_schema_builder.add_attr("age").unwrap();
         claim_schema_builder.add_attr("height").unwrap();
         let claim_schema = claim_schema_builder.finalize().unwrap();
-        let (issuer_pub_key, issuer_priv_key) = Issuer::new_keys(&claim_schema, false).unwrap();
+
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
 
         let master_secret = Prover::new_master_secret().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data) = Prover::blind_master_secret(&issuer_pub_key, &master_secret).unwrap();
+
+        let master_secret_blinding_nonce = new_nonce().unwrap();
+
+        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+            Prover::blind_master_secret(&issuer_pub_key,
+                                        &issuer_key_correctness_proof,
+                                        &master_secret,
+                                        &master_secret_blinding_nonce).unwrap();
+
         let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
         claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
         claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
         claim_values_builder.add_value("age", "28").unwrap();
         claim_values_builder.add_value("height", "175").unwrap();
         let claim_values = claim_values_builder.finalize().unwrap();
-        let mut claim_signature = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW", &blinded_master_secret,
-                                                     &claim_values,
-                                                     &issuer_pub_key,
-                                                     &issuer_priv_key,
-                                                     Some(1), None, None).unwrap();
-        Prover::process_claim_signature(&mut claim_signature, &master_secret_blinding_data, &issuer_pub_key, None).unwrap();
+
+        let claim_issuance_nonce = new_nonce().unwrap();
+
+        let (mut claim_signature, signature_correctness_proof) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                          &blinded_master_secret,
+                                                                                          &blinded_master_secret_correctness_proof,
+                                                                                          &master_secret_blinding_nonce,
+                                                                                          &claim_issuance_nonce,
+                                                                                          &claim_values,
+                                                                                          &issuer_pub_key,
+                                                                                          &issuer_priv_key,
+                                                                                          Some(1),
+                                                                                          None,
+                                                                                          None).unwrap();
+        Prover::process_claim_signature(&mut claim_signature,
+                                        &signature_correctness_proof,
+                                        &master_secret_blinding_data,
+                                        &master_secret,
+                                        &issuer_pub_key,
+                                        &claim_issuance_nonce,
+                                        None).unwrap();
 
         let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -768,11 +851,11 @@ mod test {
                                             &claim_values,
                                             &issuer_pub_key,
                                             None).unwrap();
-        let nonce = Verifier::new_nonce().unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proov_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request("issuer_key_id_1", &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
-        assert_eq!(true, proof_verifier.verify(&proof, &nonce).unwrap());
+        assert_eq!(true, proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
     }
 }
