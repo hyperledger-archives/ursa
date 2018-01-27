@@ -138,10 +138,6 @@ impl BigNumber {
         })
     }
 
-    pub fn num_bytes(&self) -> Result<i32, IndyCryptoError> {
-        Ok(self.openssl_bn.num_bytes())
-    }
-
     pub fn to_dec(&self) -> Result<String, IndyCryptoError> {
         let result = self.openssl_bn.to_dec_str()?;
         Ok(result.to_string())
@@ -215,18 +211,6 @@ impl BigNumber {
             None => {
                 let mut ctx = BigNumber::new_context()?;
                 BigNumRef::mod_sub(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
-            }
-        }
-        Ok(bn)
-    }
-
-    pub fn mod_add(&self, a: &BigNumber, n: &BigNumber, ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, IndyCryptoError> {
-        let mut bn = BigNumber::new()?;
-        match ctx {
-            Some(context) => BigNumRef::mod_add(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut context.openssl_bn_context)?,
-            None => {
-                let mut ctx = BigNumber::new_context()?;
-                BigNumRef::mod_add(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
             }
         }
         Ok(bn)
@@ -309,12 +293,6 @@ impl BigNumber {
                 BigNumRef::mod_inverse(&mut bn.openssl_bn, &self.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
             }
         }
-        Ok(bn)
-    }
-
-    pub fn set_negative(&self) -> Result<BigNumber, IndyCryptoError> {
-        let mut bn = self.clone()?;
-        BigNumRef::set_negative(&mut bn.openssl_bn, true);
         Ok(bn)
     }
 

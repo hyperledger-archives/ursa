@@ -210,7 +210,7 @@ impl Prover {
         for (key, r_value) in pr_pub_key.r.iter() {
             let xr_cap_value = key_correctness_proof.xr_cap
                 .get(key)
-                .ok_or(IndyCryptoError::InvalidState(format!("Value by key '{}' not found in key_correctness_proof.xr_cap", key)))?;
+                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in key_correctness_proof.xr_cap", key)))?;
 
             let val = r_value
                 .inverse(&pr_pub_key.n, Some(&mut ctx))?
@@ -230,7 +230,7 @@ impl Prover {
             values.extend_from_slice(&val.to_bytes()?);
         }
         values.extend_from_slice(&z_cap.to_bytes()?);
-        for values in r_cap.values() {
+        for val in r_cap.values() {
             values.extend_from_slice(&val.to_bytes()?);
         }
 
