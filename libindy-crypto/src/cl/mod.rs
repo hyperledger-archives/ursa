@@ -507,8 +507,7 @@ pub struct PrimaryEqualProof {
     e: BigNumber,
     v: BigNumber,
     m: HashMap<String /* attr_name of all except revealed */, BigNumber>,
-    m1: BigNumber,
-    m2: BigNumber
+    m1: BigNumber
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -591,7 +590,6 @@ pub struct PrimaryEqualInitProof {
     v_prime: BigNumber,
     m_tilde: HashMap<String, BigNumber>,
     m1_tilde: BigNumber,
-    m2_tilde: BigNumber,
     m2: BigNumber
 }
 
@@ -821,16 +819,16 @@ mod test {
         let claim_issuance_nonce = new_nonce().unwrap();
 
         let (mut claim_signature, signature_correctness_proof) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                          &blinded_master_secret,
-                                                                                          &blinded_master_secret_correctness_proof,
-                                                                                          &master_secret_blinding_nonce,
-                                                                                          &claim_issuance_nonce,
-                                                                                          &claim_values,
-                                                                                          &issuer_pub_key,
-                                                                                          &issuer_priv_key,
-                                                                                          Some(1),
-                                                                                          None,
-                                                                                          None).unwrap();
+                                                                                    &blinded_master_secret,
+                                                                                    &blinded_master_secret_correctness_proof,
+                                                                                    &master_secret_blinding_nonce,
+                                                                                    &claim_issuance_nonce,
+                                                                                    &claim_values,
+                                                                                    &issuer_pub_key,
+                                                                                    &issuer_priv_key,
+                                                                                    Some(1),
+                                                                                    None,
+                                                                                    None).unwrap();
         Prover::process_claim_signature(&mut claim_signature,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,

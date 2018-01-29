@@ -309,13 +309,13 @@ pub fn get_mtilde(unrevealed_attrs: &HashSet<String>) -> Result<HashMap<String, 
 }
 
 pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
-                m_tilde: &HashMap<String, BigNumber>, m1_tilde: &BigNumber,
-                unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
+                m_tilde: &HashMap<String, BigNumber>, m1_tilde: &BigNumber, unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
     trace!("Helpers::calc_teq: >>> issuer_pub_key: {:?}, issuer_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m1_tilde: {:?}, unrevealed_attrs: {:?}",
            issuer_pub_key, a_prime, e, v, m_tilde, m1_tilde, unrevealed_attrs);
 
     let mut ctx = BigNumber::new_context()?;
-    let mut result: BigNumber = BigNumber::from_dec("1")?;
+    let mut result: BigNumber = a_prime
+        .mod_exp(&e, &issuer_pub_key.n, Some(&mut ctx))?;
 
     for k in unrevealed_attrs.iter() {
         let cur_r = issuer_pub_key.r.get(k)
@@ -325,21 +325,16 @@ pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e:
 
         result = cur_r
             .mod_exp(&cur_m, &issuer_pub_key.n, Some(&mut ctx))?
-            .mul(&result, Some(&mut ctx))?;
+            .mod_mul(&result, &issuer_pub_key.n, Some(&mut ctx))?;
     }
-
-    result = issuer_pub_key.rms
-        .mod_exp(&m1_tilde, &issuer_pub_key.n, Some(&mut ctx))?
-        .mul(&result, Some(&mut ctx))?;
-
-    result = a_prime
-        .mod_exp(&e, &issuer_pub_key.n, Some(&mut ctx))?
-        .mul(&result, Some(&mut ctx))?;
 
     result = issuer_pub_key.s
         .mod_exp(&v, &issuer_pub_key.n, Some(&mut ctx))?
-        .mul(&result, Some(&mut ctx))?
-        .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
+        .mod_mul(&result, &issuer_pub_key.n, Some(&mut ctx))?;
+
+    result = issuer_pub_key.rms
+        .mod_exp(&m1_tilde, &issuer_pub_key.n, Some(&mut ctx))?
+        .mod_mul(&result, &issuer_pub_key.n, Some(&mut ctx))?;
 
     trace!("Helpers::calc_teq: <<< t: {:?}", result);
 
@@ -461,10 +456,6 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, IndyCrypto
     trace!("Helpers::four_squares: <<< res: {:?}", res);
 
     Ok(res)
-}
-
-pub fn group_element_to_bignum(el: &GroupOrderElement) -> Result<BigNumber, IndyCryptoError> {
-    Ok(BigNumber::from_bytes(&el.to_bytes()?)?)
 }
 
 pub fn bignum_to_group_element(num: &BigNumber) -> Result<GroupOrderElement, IndyCryptoError> {

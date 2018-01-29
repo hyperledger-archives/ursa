@@ -213,11 +213,18 @@ impl ProofVerifier {
                 .map(|attr| attr.clone())
                 .collect::<HashSet<String>>();
 
-        let t1: BigNumber = calc_teq(&issuer_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m,
-                                     &proof.m1,  &unrevealed_attrs)?;
+        let t1: BigNumber = calc_teq(&issuer_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m1, &unrevealed_attrs)?;
 
         let mut ctx = BigNumber::new_context()?;
-        let mut rar = BigNumber::from_dec("1")?;
+
+        let degree: BigNumber =
+            BigNumber::from_dec("2")?
+                .exp(
+                    &BigNumber::from_dec(&LARGE_E_START.to_string())?,
+                    Some(&mut ctx)
+                )?;
+
+        let mut rar = proof.a_prime.mod_exp(&degree, &issuer_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
             let cur_r = issuer_pub_key.r.get(attr)
@@ -225,28 +232,15 @@ impl ProofVerifier {
 
             rar = cur_r
                 .mod_exp(encoded_value, &issuer_pub_key.n, Some(&mut ctx))?
-                .mul(&rar, Some(&mut ctx))?;
+                .mod_mul(&rar, &issuer_pub_key.n, Some(&mut ctx))?;
         }
-
-        let tmp: BigNumber =
-            BigNumber::from_dec("2")?
-                .exp(
-                    &BigNumber::from_dec(&LARGE_E_START.to_string())?,
-                    Some(&mut ctx)
-                )?;
-
-        rar = proof.a_prime
-            .mod_exp(&tmp, &issuer_pub_key.n, Some(&mut ctx))?
-            .mul(&rar, Some(&mut ctx))?;
 
         let t2: BigNumber = issuer_pub_key.z
             .mod_div(&rar, &issuer_pub_key.n)?
-            .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
-            .inverse(&issuer_pub_key.n, Some(&mut ctx))?;
+            .inverse(&issuer_pub_key.n, Some(&mut ctx))?
+            .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?;
 
-        let t: BigNumber = t1
-            .mul(&t2, Some(&mut ctx))?
-            .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
+        let t: BigNumber = t1.mod_mul(&t2, &issuer_pub_key.n, Some(&mut ctx))?;
 
         trace!("ProofVerifier::_verify_equality: <<< t: {:?}", t);
 
@@ -267,8 +261,7 @@ impl ProofVerifier {
             tau_list[i] = cur_t
                 .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
                 .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-                .mul(&tau_list[i], Some(&mut ctx))?
-                .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
+                .mod_mul(&tau_list[i], &issuer_pub_key.n, Some(&mut ctx))?;
         }
 
         let delta = proof.t.get("DELTA")
@@ -281,14 +274,12 @@ impl ProofVerifier {
             .mul(&delta, Some(&mut ctx))?
             .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
             .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-            .mul(&tau_list[ITERATION], Some(&mut ctx))?
-            .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
+            .mod_mul(&tau_list[ITERATION], &issuer_pub_key.n, Some(&mut ctx))?;
 
         tau_list[ITERATION + 1] = delta
             .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
             .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-            .mul(&tau_list[ITERATION + 1], Some(&mut ctx))?
-            .modulus(&issuer_pub_key.n, Some(&mut ctx))?;
+            .mod_mul(&tau_list[ITERATION + 1], &issuer_pub_key.n, Some(&mut ctx))?;
 
         trace!("ProofVerifier::_verify_ge_predicate: <<< tau_list: {:?},", tau_list);
 
