@@ -152,6 +152,7 @@ pub struct IssuerPrimaryPublicKey {
     s: BigNumber,
     rms: BigNumber,
     r: BTreeMap<String /* attr_name */, BigNumber>,
+    rctxt: BigNumber,
     z: BigNumber
 }
 
@@ -162,6 +163,7 @@ impl IssuerPrimaryPublicKey {
             s: self.s.clone()?,
             rms: self.rms.clone()?,
             r: clone_btree_bignum_map(&self.r)?,
+            rctxt: self.rctxt.clone()?,
             z: self.z.clone()?
         })
     }
@@ -506,7 +508,8 @@ pub struct PrimaryEqualProof {
     e: BigNumber,
     v: BigNumber,
     m: HashMap<String /* attr_name of all except revealed */, BigNumber>,
-    m1: BigNumber
+    m1: BigNumber,
+    m2: BigNumber
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -589,6 +592,7 @@ pub struct PrimaryEqualInitProof {
     v_prime: BigNumber,
     m_tilde: HashMap<String, BigNumber>,
     m1_tilde: BigNumber,
+    m2_tilde: BigNumber,
     m2: BigNumber
 }
 

@@ -309,9 +309,10 @@ pub fn get_mtilde(unrevealed_attrs: &HashSet<String>) -> Result<HashMap<String, 
 }
 
 pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
-                m_tilde: &HashMap<String, BigNumber>, m1_tilde: &BigNumber, unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
-    trace!("Helpers::calc_teq: >>> issuer_pub_key: {:?}, issuer_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m1_tilde: {:?}, unrevealed_attrs: {:?}",
-           issuer_pub_key, a_prime, e, v, m_tilde, m1_tilde, unrevealed_attrs);
+                m_tilde: &HashMap<String, BigNumber>, m1_tilde: &BigNumber, m2tilde: &BigNumber,
+                unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
+    trace!("Helpers::calc_teq: >>> issuer_pub_key: {:?}, issuer_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m1_tilde: {:?}, m2tilde: {:?}, \
+    unrevealed_attrs: {:?}", issuer_pub_key, a_prime, e, v, m_tilde, m1_tilde, m2tilde, unrevealed_attrs);
 
     let mut ctx = BigNumber::new_context()?;
     let mut result: BigNumber = a_prime
@@ -334,6 +335,10 @@ pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e:
 
     result = issuer_pub_key.rms
         .mod_exp(&m1_tilde, &issuer_pub_key.n, Some(&mut ctx))?
+        .mod_mul(&result, &issuer_pub_key.n, Some(&mut ctx))?;
+
+    result = issuer_pub_key.rctxt
+        .mod_exp(&m2tilde, &issuer_pub_key.n, Some(&mut ctx))?
         .mod_mul(&result, &issuer_pub_key.n, Some(&mut ctx))?;
 
     trace!("Helpers::calc_teq: <<< t: {:?}", result);
@@ -458,6 +463,10 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, IndyCrypto
     Ok(res)
 }
 
+pub fn group_element_to_bignum(el: &GroupOrderElement) -> Result<BigNumber, IndyCryptoError> {
+    Ok(BigNumber::from_bytes(&el.to_bytes()?)?)
+}
+
 pub fn bignum_to_group_element(num: &BigNumber) -> Result<GroupOrderElement, IndyCryptoError> {
     Ok(GroupOrderElement::from_bytes(&num.to_bytes()?)?)
 }
@@ -545,7 +554,6 @@ pub fn create_tau_list_values(issuer_r_pub_key: &IssuerRevocationPublicKey, accu
 
     Ok(non_revoc_proof_tau_list)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -687,13 +695,12 @@ mod tests {
         let unrevealed_attrs = prover::mocks::unrevealed_attrs();
 
         let res = calc_teq(&pk, &proof.a_prime, &proof.e, &proof.v,
-                           &proof.m, &proof.m1, &unrevealed_attrs);
+                           &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs);
 
         assert!(res.is_ok());
-        assert_eq!("267097986501302682242405862087649325661623882671649463089382965157378933161430309108161929870330049058794331153722055222976792956174825535\
-        725159104180853022819031207474399924609375394450112566376350526279507204903045861729378870026505523045668978094060887393913780491449376619176203202490\
-        053848228610260747374892086852684075570092592057852454998295045009525762738130872377929355794843154722211445367511638919405290946957980210001571369949\
-        493542624508041004263806855900920791087331143089284794544174190460105677854153251857591226280321235542891969524612661371661635227398416071067080514602\
-        87245205922468904469927647073", res.unwrap().to_dec().unwrap());
+        assert_eq!("232791935071797966551176855164973067578919953572587470495762481141254570100893062071605371616915963935985280066412256657289607060301196628087145782897\
+        080273529456804508856101034172198657914377342911634070133671458468196275011900674183725366096571089971320212390014348816950554318530776148312113051502780590992077\
+        257817286587487280671523330116919418726442827322191017629492979583225594278059842562698837924629559059814448006364519421854928411300346886130212925888233268204665\
+        26701518775278387982283324827510201172386163306838934227038194613946777442788325576385162364479902531371081681758079069094746742332856921799237", res.unwrap().to_dec().unwrap());
     }
 }
