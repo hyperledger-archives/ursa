@@ -134,6 +134,7 @@ impl Prover {
     ///                                                                            &priv_key,
     ///                                                                            None, None, None).unwrap();
     /// Prover::process_claim_signature(&mut claim_signature,
+    ///                                 &claim_values,
     ///                                 &signature_correctness_proof,
     ///                                 &master_secret_blinding_data,
     ///                                 &master_secret,
@@ -142,6 +143,7 @@ impl Prover {
     ///                                 None).unwrap();
     /// ```
     pub fn process_claim_signature(claim_signature: &mut ClaimSignature,
+                                   claim_values: &ClaimValues,
                                    signature_correctness_proof: &SignatureCorrectnessProof,
                                    master_secret_blinding_data: &MasterSecretBlindingData,
                                    master_secret: &MasterSecret,
@@ -155,6 +157,7 @@ impl Prover {
         Prover::_process_primary_claim(&mut claim_signature.p_claim, &master_secret_blinding_data.v_prime)?;
 
         Prover::_check_signature_correctness_proof(&claim_signature.p_claim,
+                                                   claim_values,
                                                    signature_correctness_proof,
                                                    master_secret,
                                                    &issuer_pub_key.p_key,
@@ -352,6 +355,7 @@ impl Prover {
     }
 
     pub fn _check_signature_correctness_proof(p_claim_sig: &PrimaryClaimSignature,
+                                              claim_values: &ClaimValues,
                                               signature_correctness_proof: &SignatureCorrectnessProof,
                                               master_secret: &MasterSecret,
                                               p_pub_key: &IssuerPrimaryPublicKey,
@@ -373,7 +377,7 @@ impl Prover {
             Some(&mut ctx)
         )?;
 
-        for (key, value) in &p_claim_sig.claim_values {
+        for (key, value) in claim_values.attrs_values.iter() {
             let pk_r = p_pub_key.r
                 .get(key)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
@@ -1166,17 +1170,18 @@ mod tests {
     fn process_claim_works() {
         MockHelper::inject();
 
-        let mut claim = issuer::mocks::claim();
+        let mut claim_signature = issuer::mocks::claim();
+        let claim_values = issuer::mocks::claim_values();
         let pk = issuer::mocks::issuer_public_key();
         let master_secret_blinding_data = mocks::master_secret_blinding_data();
         let signature_correctness_proof = issuer::mocks::signature_correctness_proof();
         let master_secret = mocks::master_secret();
         let nonce = new_nonce().unwrap();
 
-        Prover::process_claim_signature(&mut claim, &signature_correctness_proof,
+        Prover::process_claim_signature(&mut claim_signature, &claim_values, &signature_correctness_proof,
                                         &master_secret_blinding_data, &master_secret, &pk, &nonce, None).unwrap();
 
-        assert_eq!(mocks::primary_claim(), claim.p_claim);
+        assert_eq!(mocks::primary_claim(), claim_signature.p_claim);
     }
 
     #[test]
@@ -1380,8 +1385,7 @@ pub mod mocks {
             m_2: BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap(),
             a: BigNumber::from_dec("68690949659894297235384983835988854490487151876243208489402419335321780650280333249503800601452424310099788311862293988424744651634729117889823323912267412938126122433273147945683565551001164878112371056194349886299160760564848617774808785834442092342591960990848691879664745547923406527849798262399736845049204318877547719820647065592810397776364153639580578386697285830620415711995452686019091604836982133528240065362041912712217643603426311908933237665798362213422789541212874150113892436827919196194423739145517561814503100221940188379617987815555279082958082577116606245381313021485775834054143793735707998117203").unwrap(),
             e: BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881").unwrap(),
-            v: BigNumber::from_dec("6620937836014079781509458870800001917950459774302786434315639456568768602266735503527631640833663968617512880802104566048179854406925811731340920442625764155409951969854303612644127544973467090784833169581477025096651956458587024481106269073426545688878633368395090950721246745797130514914475184220252785922714892764536041334549342283500382915967329086709002330282037812607548379718641877595592743676836398647524633348205332354808351273389207425490367080293557186321576642355686995967422099839906367044852871358174711678743078106239862383119503287568833606375474359241383490799700740580296717320354647238288294827855343155547056851646090370313395520915221874011198982966904484363631910557996205942678772502957389321620232931357572315089162587705606682143499451357592399858038685832965830759409094928957246320485487746463").unwrap(),
-            claim_values: issuer::mocks::claim_values().attrs_values
+            v: BigNumber::from_dec("6620937836014079781509458870800001917950459774302786434315639456568768602266735503527631640833663968617512880802104566048179854406925811731340920442625764155409951969854303612644127544973467090784833169581477025096651956458587024481106269073426545688878633368395090950721246745797130514914475184220252785922714892764536041334549342283500382915967329086709002330282037812607548379718641877595592743676836398647524633348205332354808351273389207425490367080293557186321576642355686995967422099839906367044852871358174711678743078106239862383119503287568833606375474359241383490799700740580296717320354647238288294827855343155547056851646090370313395520915221874011198982966904484363631910557996205942678772502957389321620232931357572315089162587705606682143499451357592399858038685832965830759409094928957246320485487746463").unwrap()
         }
     }
 

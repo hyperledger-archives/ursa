@@ -310,8 +310,7 @@ pub struct PrimaryClaimSignature {
     m_2: BigNumber,
     a: BigNumber,
     e: BigNumber,
-    v: BigNumber,
-    claim_values: HashMap<String, BigNumber>
+    v: BigNumber
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -830,6 +829,7 @@ mod test {
                                                                                     None,
                                                                                     None).unwrap();
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,

@@ -68,6 +68,7 @@ mod test {
 
         // 10. Prover processes GVT claim signature
         Prover::process_claim_signature(&mut gvt_claim_signature,
+                                        &gvt_claim_values,
                                         &gvt_signature_correctness_proof,
                                         &gvt_master_secret_blinding_data,
                                         &master_secret,
@@ -121,6 +122,7 @@ mod test {
 
         // 19. Prover processes XYZ claim signature
         Prover::process_claim_signature(&mut xyz_claim_signature,
+                                        &xyz_claim_values,
                                         &xyz_signature_correctness_proof,
                                         &xyz_master_secret_blinding_data,
                                         &master_secret,
@@ -223,6 +225,7 @@ mod test {
 
         // 9. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -284,6 +287,7 @@ mod test {
 
         // 3. Prover processes GVT claim
         Prover::process_claim_signature(&mut gvt_claim_signature,
+                                        &gvt_claim_values,
                                         &gvt_signature_correctness_proof,
                                         &gvt_master_secret_blinding_data,
                                         &master_secret,
@@ -321,6 +325,7 @@ mod test {
 
         // 5. Prover processes XYZ claim
         Prover::process_claim_signature(&mut xyz_claim_signature,
+                                        &xyz_claim_values,
                                         &xyz_signature_correctness_proof,
                                         &xyz_master_secret_blinding_data,
                                         &master_secret,
@@ -411,6 +416,7 @@ mod test {
 
         // 9. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -480,6 +486,7 @@ mod test {
 
         // 9. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -552,6 +559,7 @@ mod test {
 
         // 9. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -682,6 +690,7 @@ mod test {
 
         // 9. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -752,6 +761,7 @@ mod test {
 
         // 20. Prover processes new claim signature
         Prover::process_claim_signature(&mut new_claim_signature,
+                                        &claim_values,
                                         &new_signature_correctness_proof,
                                         &new_master_secret_blinding_data,
                                         &master_secret,
@@ -883,6 +893,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -955,6 +966,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1028,6 +1040,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1186,6 +1199,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1253,6 +1267,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1317,6 +1332,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1383,6 +1399,7 @@ mod test {
 
         // 8. Prover processes claim signature
         Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
                                         &signature_correctness_proof,
                                         &master_secret_blinding_data,
                                         &master_secret,
@@ -1620,6 +1637,7 @@ mod test {
 
         // 9. Prover processes claim signature
         let res = Prover::process_claim_signature(&mut claim_signature,
+                                                  &claim_values,
                                                   &signature_correctness_proof,
                                                   &master_secret_blinding_data,
                                                   &master_secret,
@@ -1683,6 +1701,7 @@ mod test {
 
         // 10. Prover processes claim signature
         let res = Prover::process_claim_signature(&mut claim_signature,
+                                                  &claim_values,
                                                   &signature_correctness_proof,
                                                   &master_secret_blinding_data,
                                                   &master_secret,
@@ -1735,6 +1754,7 @@ mod test {
 
         // 10. Prover processes claim signature
         let res = Prover::process_claim_signature(&mut claim_signature,
+                                                  &claim_values,
                                                   &signature_correctness_proof,
                                                   &master_secret_blinding_data,
                                                   &master_secret,
@@ -1785,6 +1805,7 @@ mod test {
 
         // 9. Prover processes claim signature
         let res = Prover::process_claim_signature(&mut claim_signature,
+                                                  &claim_values,
                                                   &signature_correctness_proof,
                                                   &master_secret_blinding_data,
                                                   &master_secret,
