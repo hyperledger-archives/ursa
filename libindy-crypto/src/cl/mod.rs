@@ -355,6 +355,12 @@ pub struct MasterSecret {
     ms: BigNumber,
 }
 
+impl MasterSecret {
+    pub fn clone(&self) -> Result<MasterSecret, IndyCryptoError> {
+        Ok(MasterSecret { ms: self.ms.clone()? })
+    }
+}
+
 impl JsonEncodable for MasterSecret {}
 
 impl<'a> JsonDecodable<'a> for MasterSecret {}
