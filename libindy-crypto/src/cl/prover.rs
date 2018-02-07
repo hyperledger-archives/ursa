@@ -4,7 +4,7 @@ use cl::constants::*;
 use errors::IndyCryptoError;
 use pair::*;
 use super::helpers::*;
-use utils::commitment::get_pedersen_commitment;
+use utils::commitment::{get_pedersen_commitment, get_exponentiated_generators};
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
@@ -348,30 +348,20 @@ impl Prover {
             return Err(IndyCryptoError::InvalidStructure(format!("Invalid Signature correctness proof")));
         }
 
-        let mut rx = p_pub_key.s.mod_exp(&p_claim_sig.v, &p_pub_key.n, Some(&mut ctx))?;
-
-        rx = rx.mod_mul(
-            &p_pub_key.rms.mod_exp(&master_secret.ms, &p_pub_key.n, Some(&mut ctx))?,
-            &p_pub_key.n,
-            Some(&mut ctx)
-        )?;
-
-        rx = rx.mod_mul(
-            &p_pub_key.rctxt.mod_exp(&p_claim_sig.m_2, &p_pub_key.n, Some(&mut ctx))?,
-            &p_pub_key.n,
-            Some(&mut ctx)
-        )?;
+        let mut generators_and_exponents = Vec::new();
+        generators_and_exponents.push((&p_pub_key.s, &p_claim_sig.v));
+        generators_and_exponents.push((&p_pub_key.rms, &master_secret.ms));
+        generators_and_exponents.push((&p_pub_key.rctxt, &p_claim_sig.m_2));
 
         for (key, value) in claim_values.attrs_values.iter() {
             let pk_r = p_pub_key.r
                 .get(key)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
 
-            rx = rx.mul(
-                &pk_r.mod_exp(&value, &p_pub_key.n, Some(&mut ctx))?,
-                Some(&mut ctx)
-            )?;
+            generators_and_exponents.push((&pk_r, &value));
         }
+
+        let rx = get_exponentiated_generators(generators_and_exponents, &p_pub_key.n, &mut ctx)?;
 
         let q = p_pub_key.z.mod_div(&rx, &p_pub_key.n)?;
 
