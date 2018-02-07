@@ -403,9 +403,9 @@ impl Issuer {
 
         let mut ctx = BigNumber::new_context()?;
 
-        let xz_tilda = gen_x(&pr_priv_key.p, &pr_priv_key.q)?;
-
         let func = gen_x;
+
+        let xz_tilda = func(&pr_priv_key.p, &pr_priv_key.q)?;
 
         let mut xr_tilda = BTreeMap::new();
         for key in pr_pub_key.r.keys() {

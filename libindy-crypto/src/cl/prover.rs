@@ -262,7 +262,7 @@ impl Prover {
             .mod_mul(
                 &p_pub_key.rms.mod_exp(&master_secret.ms, &p_pub_key.n, Some(&mut ctx))?,
                 &p_pub_key.n,
-                None
+                Some(&mut ctx)
             )?;
 
         let primary_blinded_master_secret = PrimaryBlindedMasterSecretData { u, v_prime };
@@ -302,7 +302,7 @@ impl Prover {
                 .mod_mul(
                     &p_pub_key.s.mod_exp(&v_dash_tilde, &p_pub_key.n, Some(&mut ctx))?,
                     &p_pub_key.n,
-                    None
+                    Some(&mut ctx)
                 )?;
 
         let mut values: Vec<u8> = Vec::new();
