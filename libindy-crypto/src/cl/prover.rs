@@ -4,6 +4,7 @@ use cl::constants::*;
 use errors::IndyCryptoError;
 use pair::*;
 use super::helpers::*;
+use utils::commitment::get_pedersen_commitment;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::iter::FromIterator;
@@ -199,15 +200,9 @@ impl Prover {
 
         let mut ctx = BigNumber::new_context()?;
 
-        let z_cap =
-            pr_pub_key.z
-                .inverse(&pr_pub_key.n, Some(&mut ctx))?
-                .mod_exp(&key_correctness_proof.c, &pr_pub_key.n, Some(&mut ctx))?
-                .mod_mul(
-                    &pr_pub_key.s.mod_exp(&key_correctness_proof.xz_cap, &pr_pub_key.n, Some(&mut ctx))?,
-                    &pr_pub_key.n,
-                    Some(&mut ctx)
-                )?;
+        let z_inverse = pr_pub_key.z.inverse(&pr_pub_key.n, Some(&mut ctx))?;
+        let z_cap = get_pedersen_commitment(&z_inverse, &key_correctness_proof.c,
+                                            &pr_pub_key.s, &key_correctness_proof.xz_cap, &pr_pub_key.n, &mut ctx)?;
 
         let mut r_cap: BTreeMap<String, BigNumber> = BTreeMap::new();
         for (key, r_value) in pr_pub_key.r.iter() {
@@ -215,14 +210,9 @@ impl Prover {
                 .get(key)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in key_correctness_proof.xr_cap", key)))?;
 
-            let val = r_value
-                .inverse(&pr_pub_key.n, Some(&mut ctx))?
-                .mod_exp(&key_correctness_proof.c, &pr_pub_key.n, Some(&mut ctx))?
-                .mod_mul(
-                    &pr_pub_key.s.mod_exp(&xr_cap_value, &pr_pub_key.n, Some(&mut ctx))?,
-                    &pr_pub_key.n,
-                    Some(&mut ctx)
-                )?;
+            let r_inverse = r_value.inverse(&pr_pub_key.n, Some(&mut ctx))?;
+            let val = get_pedersen_commitment(&r_inverse, &key_correctness_proof.c,
+                                              &pr_pub_key.s, &xr_cap_value, &pr_pub_key.n, &mut ctx)?;
 
             r_cap.insert(key.to_owned(), val);
         }
@@ -257,13 +247,8 @@ impl Prover {
         let mut ctx = BigNumber::new_context()?;
         let v_prime = bn_rand(LARGE_VPRIME)?;
 
-        let u = p_pub_key.s
-            .mod_exp(&v_prime, &p_pub_key.n, Some(&mut ctx))?
-            .mod_mul(
-                &p_pub_key.rms.mod_exp(&master_secret.ms, &p_pub_key.n, Some(&mut ctx))?,
-                &p_pub_key.n,
-                Some(&mut ctx)
-            )?;
+        let u = get_pedersen_commitment(&p_pub_key.s, &v_prime, &p_pub_key.rms,
+                                        &master_secret.ms, &p_pub_key.n, &mut ctx)?;
 
         let primary_blinded_master_secret = PrimaryBlindedMasterSecretData { u, v_prime };
 
@@ -297,14 +282,8 @@ impl Prover {
         let ms_tilde = bn_rand(LARGE_MTILDE)?;
         let v_dash_tilde = bn_rand(LARGE_VPRIME_TILDE)?;
 
-        let u_tilde =
-            &p_pub_key.rms.mod_exp(&ms_tilde, &p_pub_key.n, Some(&mut ctx))?
-                .mod_mul(
-                    &p_pub_key.s.mod_exp(&v_dash_tilde, &p_pub_key.n, Some(&mut ctx))?,
-                    &p_pub_key.n,
-                    Some(&mut ctx)
-                )?;
-
+        let u_tilde = get_pedersen_commitment(&p_pub_key.rms, &ms_tilde, &p_pub_key.s,
+                                              &v_dash_tilde, &p_pub_key.n, &mut ctx)?;
         let mut values: Vec<u8> = Vec::new();
         values.extend_from_slice(&blinded_master_secret.u.to_bytes()?);
         values.extend_from_slice(&u_tilde.to_bytes()?);
@@ -770,12 +749,8 @@ impl ProofBuilder {
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in u1", i)))?;
 
             let cur_r = bn_rand(LARGE_VPRIME)?;
-
-            let cut_t = issuer_pub_key.z
-                .mod_exp(&cur_u, &issuer_pub_key.n, Some(&mut ctx))?
-                .mod_mul(
-                    &issuer_pub_key.s.mod_exp(&cur_r, &issuer_pub_key.n, Some(&mut ctx))?,
-                    &issuer_pub_key.n, Some(&mut ctx))?;
+            let cut_t = get_pedersen_commitment(&issuer_pub_key.z, &cur_u, &issuer_pub_key.s,
+                                                &cur_r, &issuer_pub_key.n, &mut ctx)?;
 
             r.insert(i.to_string(), cur_r);
             t.insert(i.to_string(), cut_t.clone()?);
@@ -784,11 +759,8 @@ impl ProofBuilder {
 
         let r_delta = bn_rand(LARGE_VPRIME)?;
 
-        let t_delta = issuer_pub_key.z
-            .mod_exp(&BigNumber::from_dec(&delta.to_string())?, &issuer_pub_key.n, Some(&mut ctx))?
-            .mod_mul(
-                &issuer_pub_key.s.mod_exp(&r_delta, &issuer_pub_key.n, Some(&mut ctx))?,
-                &issuer_pub_key.n, Some(&mut ctx))?;
+        let t_delta = get_pedersen_commitment(&issuer_pub_key.z, &BigNumber::from_dec(&delta.to_string())?,
+                                              &issuer_pub_key.s, &r_delta, &issuer_pub_key.n, &mut ctx)?;
 
         r.insert("DELTA".to_string(), r_delta);
         t.insert("DELTA".to_string(), t_delta.clone()?);
