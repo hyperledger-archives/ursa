@@ -629,6 +629,10 @@ impl ProofBuilder {
         if r_claim.witness.v != accum.v {
             let v_old_minus_new: HashSet<u32> =
                 r_claim.witness.v.difference(&accum.v).cloned().collect();
+            let v_new_minus_old: HashSet<u32> =
+                accum.v.difference(&r_claim.witness.v).cloned().collect();
+
+
             let mut omega_denom = PointG2::new_inf()?;
             for j in v_old_minus_new.iter() {
                 omega_denom = omega_denom.add(
@@ -636,15 +640,15 @@ impl ProofBuilder {
                         .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
             }
             let mut omega_num = PointG2::new_inf()?;
-            let mut new_omega: PointG2 = r_claim.witness.omega.clone();
-            for j in v_old_minus_new.iter() {
+            for j in v_new_minus_old.iter() {
                 omega_num = omega_num.add(
                     tails_dash.get(&(accum.max_claim_num + 1 - j + r_claim.i))
                         .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
-                new_omega = new_omega.add(
-                    &omega_num.sub(&omega_denom)?
-                )?;
             }
+
+            let new_omega: PointG2 = r_claim.witness.omega.add(
+                &omega_num.sub(&omega_denom)?
+            )?;
 
             r_claim.witness.v = accum.v.clone();
             r_claim.witness.omega = new_omega;
