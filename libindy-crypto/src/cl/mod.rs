@@ -292,7 +292,6 @@ pub struct RevocationAccumulatorPublicKey {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationAccumulatorTails {
-    tails: HashMap<u32 /* index in acc */, PointG1>,
     tails_dash: HashMap<u32 /* index in acc */, PointG2>,
 }
 

@@ -148,10 +148,7 @@ def windowsTesting() {
                         bat "cargo test --release --no-run"
 
                         echo "Windows Test: Run tests"
-                        withEnv([
-                                "RUST_TEST_THREADS=1",
-                                "RUST_LOG=trace",
-                        ]) {
+                        withEnv(["RUST_LOG=trace"]) {
                             bat "cargo test --release"
                         }
                     }

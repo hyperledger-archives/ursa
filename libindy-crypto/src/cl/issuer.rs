@@ -94,7 +94,6 @@ impl Issuer {
             .as_ref()
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in issuer key.")))?;
 
-        let mut g: HashMap<u32, PointG1> = HashMap::new();
         let gamma = GroupOrderElement::new()?;
         let mut g_dash: HashMap<u32, PointG2> = HashMap::new();
 
@@ -103,7 +102,6 @@ impl Issuer {
                 let i_bytes = transform_u32_to_array_of_u8(i);
                 let mut pow = GroupOrderElement::from_bytes(&i_bytes)?;
                 pow = gamma.pow_mod(&pow)?;
-                g.insert(i, r_pub_key.g.mul(&pow)?);
                 g_dash.insert(i, r_pub_key.g_dash.mul(&pow)?);
             }
         }
@@ -118,8 +116,7 @@ impl Issuer {
         let rev_reg_pub = RevocationRegistryPublic {
             acc: RevocationAccumulator { acc, v, max_claim_num },
             key: RevocationAccumulatorPublicKey { z },
-            tails: RevocationAccumulatorTails { tails: g, tails_dash: g_dash },
-
+            tails: RevocationAccumulatorTails { tails_dash: g_dash },
         };
 
         let rev_reg_priv = RevocationRegistryPrivate {
@@ -662,14 +659,17 @@ impl Issuer {
         let c = GroupOrderElement::new()?;
         let m2 = GroupOrderElement::from_bytes(&claim_context.to_bytes()?)?;
 
-        let g_i = r_acc_tails.tails
-            .get(&i)
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in tails.g", i)))?;
+        let g_i = {
+            let i_bytes = transform_u32_to_array_of_u8(i);
+            let mut pow = GroupOrderElement::from_bytes(&i_bytes)?;
+            pow = rev_reg_priv.key.gamma.pow_mod(&pow)?;
+            r_pub_key.g.mul(&pow)?
+        };
 
         let sigma =
             r_pub_key.h0.add(&r_pub_key.h1.mul(&m2)?)?
                 .add(&ur)?
-                .add(g_i)?
+                .add(&g_i)?
                 .add(&r_pub_key.h2.mul(&vr_prime_prime)?)?
                 .mul(&r_priv_key.x.add_mod(&c)?.inverse()?)?;
 
@@ -1030,7 +1030,6 @@ pub mod mocks {
 
 
         RevocationAccumulatorTails {
-            tails,
             tails_dash
         }
     }
