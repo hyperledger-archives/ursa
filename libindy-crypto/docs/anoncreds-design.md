@@ -8,22 +8,22 @@ Initial version of anoncreds protocol was implemented as part of Indy SDK (https
     * Prover - credentials owner that can proof and partially disclose the credentials to verifier
     * Verifier - party that wants to check that prover has some credentials provided by issuer
 1. The list of entities that indy-crypto operates on:
-    * Claim Schema - a list of attribute names in a Claim
-    * Claim Values - values of a Claim Schema's attributes corresponding to a specific prover (must be integers)
-    * Claim Signature - Issuer's signature over Claim Values
-    * Issuer keys (public). Contains 2 parts. One for signing primary claims (claim values) and second for signing non-revocation part of the claim. These keys are used to prove that claim was issued and has not been revoked by the issuer. Issuer keys must be uniquely identifiable and accessible by all parties.
-    * Revocation Registry. Contains revocation keys, accumulator and accumulator tails. Public part of revocation registry must be published by Issuer on a tamper-evident and highly available storage and can be used to prove that the claim hasn't been revoked.
-    * Master secret - Secret key encoded in a claim that is used to prove that prover owns the claim. Prover blinds the master secret, gives it to the issuer who then encodes this blinded secret in the claim. The objective of blinding the master secret is preventing the "identity leak" of the prover even if the Issuer and Verifier collude.
+    * Credential Schema - a list of attribute names in a Credential
+    * Credential Values - values of a Credential Schema's attributes corresponding to a specific prover (must be integers)
+    * Credential Signature - Issuer's signature over Credential Values
+    * Issuer keys (public). Contains 2 parts. One for signing primary credentials (credential values) and second for signing non-revocation part of the credential. These keys are used to prove that credential was issued and has not been revoked by the issuer. Issuer keys must be uniquely identifiable and accessible by all parties.
+    * Revocation Registry. Contains revocation keys, accumulator and accumulator tails. Public part of revocation registry must be published by Issuer on a tamper-evident and highly available storage and can be used to prove that the credential hasn't been revoked.
+    * Master secret - Secret key encoded in a credential that is used to prove that prover owns the credential. Prover blinds the master secret, gives it to the issuer who then encodes this blinded secret in the credential. The objective of blinding the master secret is preventing the "identity leak" of the prover even if the Issuer and Verifier collude.
     * Predicate - Some condition that must be satisfied. The verifier can either ask the prover to reveal the attributes or satisfy some predicate over the attribute.
-    * Proof is complex crypto structure created by prover over multiple claims that allows to prove that prover:
-      * Knows signature over claims issued with specific issuer keys (identified by key id)
-      * Claim contains attributes with specific values that prover wants to disclose
-      * Claim contains attributes with valid predicates that verifier wants the prover to satisfy.
-    * Sub Proof request - input to create a Proof from a specific claim; contains attributes to be revealed and predicates to be satisfied. A proof can be composed of several Sub proofs.
-    * Revocation - An issuer while issuing a claim can embed an special attribute called revocation id/index. To revoke the claim, the issuer publishes to the world that claim with a particular id is revoked.  
-    * Accumulator - A data structure used to hold the ids of non-revoked claims. While issuing the claim, issuer adds the revocation id to the accumulator and while revoking that claim, the issuer removes that claim's id from the accumulator. Since an accumulator can hold only a fixed number of elements, multiple accumulators can be used by the issuer.
-    * Witness - Data required by the prover to prove that a particular claim is not revoked; i.e claim id is present in accumulator.
-    * Tails - The user's witness has to be updated each time a claim is revoked, the user calculates the updates witness using already published data by the Issuer, this data is called validity tails or just "tails". The "tails" don't change with the accumulator. 
+    * Proof is complex crypto structure created by prover over multiple credentials that allows to prove that prover:
+      * Knows signature over credentials issued with specific issuer keys (identified by key id)
+      * Credential contains attributes with specific values that prover wants to disclose
+      * Credential contains attributes with valid predicates that verifier wants the prover to satisfy.
+    * Sub Proof request - input to create a Proof from a specific credential; contains attributes to be revealed and predicates to be satisfied. A proof can be composed of several Sub proofs.
+    * Revocation - An issuer while issuing a credential can embed an special attribute called revocation id/index. To revoke the credential, the issuer publishes to the world that credential with a particular id is revoked.
+    * Accumulator - A data structure used to hold the ids of non-revoked credentials. While issuing the credential, issuer adds the revocation id to the accumulator and while revoking that credential, the issuer removes that credential's id from the accumulator. Since an accumulator can hold only a fixed number of elements, multiple accumulators can be used by the issuer.
+    * Witness - Data required by the prover to prove that a particular credential is not revoked; i.e credential id is present in accumulator.
+    * Tails - The user's witness has to be updated each time a credential is revoked, the user calculates the updates witness using already published data by the Issuer, this data is called validity tails or just "tails". The "tails" don't change with the accumulator.
 1. For each entity API will provide the methods to perform serialization and deserialization that will allow network entities transfer between actors.
 1. FFI C API will use OpenSSL style entities handling. Entities referenced will be represent as untyped pointers. Library will provide functions for entities allocation, manipulation and deallocation. 
 
@@ -40,22 +40,21 @@ Instead of it, TailsGenerator will be returned to generate all tails one by one 
 * `Witness` now became in separate entity and should be updated out of call `ProofBuilder::add_sub_proof_request`
 * IndyCrypto defines `RevocationTailAccessor` trait. Application should implement this and handle calls from IndyCrypto such as `access_tail(id, indy_crypto_cb(tail))`
 
-### Claim and Proof attributes builders
+### Credential and Proof attributes builders
 ```Rust
-ClaimSchemaBuilder::new() -> Result<ClaimSchemaBuilder, IndyCryptoError>
+CredentialSchemaBuilder::new() -> Result<CredentialSchemaBuilder, IndyCryptoError>
 
-ClaimSchemaBuilder::add_attr(mut self, attr: &str) ->  
-                                       Result<ClaimSchemaBuilder, IndyCryptoError>
+CredentialSchemaBuilder::add_attr(mut self, attr: &str) ->
+                                       Result<CredentialSchemaBuilder, IndyCryptoError>
 
-ClaimSchemaBuilder::finalize(self) -> Result<ClaimSchema, IndyCryptoError>
+CredentialSchemaBuilder::finalize(self) -> Result<CredentialSchema, IndyCryptoError>
 
-ClaimValuesBuilder::new() -> Result<ClaimValuesBuilder, IndyCryptoError>
+CredentialValuesBuilder::new() -> Result<CredentialValuesBuilder, IndyCryptoError>
 
-ClaimValuesBuilder::add_value(mut self, attr: &str, dec_value: &str) -> 
-                                 Result<ClaimValuesBuilder, IndyCryptoError>
+CredentialValuesBuilder::add_value(mut self, attr: &str, dec_value: &str) ->
+                                 Result<CredentialValuesBuilder, IndyCryptoError>
 
-ClaimValuesBuilder::finalize(self) -> Result<ClaimValues, 
-                                                                      IndyCryptoError>
+CredentialValuesBuilder::finalize(self) -> Result<CredentialValues, IndyCryptoError>
 
 SubProofRequestBuilder::new() -> Result<SubProofRequestBuilder, IndyCryptoError>
 
@@ -119,35 +118,35 @@ RevocationRegistryDelta::revert(&mut self, other: RevocationRegistryDelta) -> ()
 
 ### Issuer
 ```Rust
-Issuer::new_cred_def(attrs: &ClaimSchema, support_non_revocation: bool) ->
-                          Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError>
+Issuer::new_cred_def(attrs: &CredentialSchema, support_non_revocation: bool) ->
+                          Result<(CredentialPublicKey, CredentialPrivateKey), IndyCryptoError>
 
-Issuer::new_revocation_registry(issuer_pub_key: &IssuerPublicKey,
+Issuer::new_revocation_registry(issuer_pub_key: &CredentialPublicKey,
                                 issuence_by_default: bool,
-                                max_claim_num: u32) -> Result<(RevocationKeyPublic,
-                                                               RevocationKeyPrivate,
-                                                               RevocationRegistry,
-                                                               RevocationTailsGenerator),
-                                                              IndyCryptoError>
+                                max_credential_num: u32) -> Result<(RevocationKeyPublic,
+                                                                    RevocationKeyPrivate,
+                                                                    RevocationRegistry,
+                                                                    RevocationTailsGenerator),
+                                                                   IndyCryptoError>
 
-Issuer::sign_claim(prover_id: &str,
-                   blnd_ms: &BlindedMasterSecret,
-                   claim_values: &ClaimValues,
-                   issuer_pub_key: &IssuerPublicKey,
-                   issuer_priv_key: &IssuerPrivateKey,
-                   rev_idx: Option<u32>,
-                   max_claim_num: Option<u32>,
-                   r_reg: Option<&mut RevocationRegistry>,
-                   r_key_pub: Option<&RevocationKeyPublic>,
-                   r_key_priv: Option<&RevocationKeyPrivate>) ->
-                                        Result<(ClaimSignature, RevocationRegistryDelta), IndyCryptoError>
+Issuer::sign_credential(prover_id: &str,
+                        blnd_ms: &BlindedMasterSecret,
+                        credential_values: &CredentialValues,
+                        issuer_pub_key: &CredentialPublicKey,
+                        issuer_priv_key: &CredentialPrivateKey,
+                        rev_idx: Option<u32>,
+                        max_credential_num: Option<u32>,
+                        r_reg: Option<&mut RevocationRegistry>,
+                        r_key_pub: Option<&RevocationKeyPublic>,
+                        r_key_priv: Option<&RevocationKeyPrivate>) ->
+                                        Result<(CredentialSignature, RevocationRegistryDelta), IndyCryptoError>
 
-Issuer::revoke_claim<RTA>(r_key_pub: &RevocationKeyPublic,
-                          r_reg: &mut RevocationRegistry,
-                          rev_idx: u32,
-                          max_claim_num: u32,
-                          r_tails_accessor: RTA) -> Result<RevocationRegistryDelta, IndyCryptoError>
-                            where RTA: RevocationTailsAccessor
+Issuer::revoke_credential<RTA>(r_key_pub: &RevocationKeyPublic,
+                               r_reg: &mut RevocationRegistry,
+                               rev_idx: u32,
+                               max_credential_num: u32,
+                               r_tails_accessor: RTA) -> Result<RevocationRegistryDelta, IndyCryptoError>
+                                where RTA: RevocationTailsAccessor
 ```
 
 ### Prover
@@ -157,19 +156,19 @@ Prover::new_master_secret() -> Result<MasterSecret, IndyCryptoError>
 Prover::blind_master_secret(pub_key: &CredentialPublicKey,
                             ms: &MasterSecret) ->  Result<(BlindedMasterSecret,                                                                    
                                                            BlindedMasterSecretData), 
-                                                                     IndyCryptoError>
-Prover::process_claim_signature(claim_signature: &mut ClaimSignature,
-                      blinded_master_secret_data: &BlindedMasterSecretData,
-                      p_pub_key: &IssuerPublicKey,
-                      r_pub_key: Option<&RevocationKeyPublic>) -> Result<(), IndyCryptoError>
+                                                          IndyCryptoError>
+Prover::process_credential_signature(credential_signature: &mut CredentialSignature,
+                                     blinded_master_secret_data: &BlindedMasterSecretData,
+                                     p_pub_key: &CredentialPublicKey,
+                                     r_pub_key: Option<&RevocationKeyPublic>) -> Result<(), IndyCryptoError>
 Prover::new_proof_builder() -> Result<ProofBuilder, IndyCryptoError>
 
 ProofBuilder::add_sub_proof_request(&mut self,
                                     key_id: &str,
-                                    schema: &ClaimSchema,
-                                    claim_signature: &ClaimSignature,
-                                    claim_values: &ClaimValues,
-                                    pub_key: &IssuerPublicKey,
+                                    schema: &CredentialSchema,
+                                    credential_signature: &CredentialSignature,
+                                    credential_values: &CredentialValues,
+                                    pub_key: &CredentialPublicKey,
                                     r_reg: Option<&RevocationRegistry>
                                     witness: Option<&Witness>,
                                     sub_proof_req: &SubProofRequest)
@@ -188,8 +187,8 @@ Verifier::new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError>
 
 ProofVerifier::add_sub_proof_request(&mut self,
                                      key_id: &str,
-                                     schema: &ClaimSchema,
-                                     p_pub_key: &IssuerPublicKey,
+                                     schema: &CredentialSchema,
+                                     p_pub_key: &CredentialPublicKey,
                                      r_pub_key: Option<&RevocationKeyPublic>,
                                      sub_proof_req: &SubProofRequest)
                                             -> Result<(), IndyCryptoError>
