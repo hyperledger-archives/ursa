@@ -78,18 +78,19 @@ Tail::from_bytes(bytes: &[u8]) -> Result<Tail, IndyCryptoError>
 Tail::to_bytes(&self) -> Vec<u8>
 
 trait RevocationTailsAccessor {
-    fn access_tail(tail_id: u32, accessor: Box<Fn(&Tail)>) -> Result<(), IndyCryptoError)>
+    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError)>
 }
 ```
 
 ### Witness
 ```Rust
 Witness::new<RTA>(rev_idx: u32,
-                  delta: &RevocationRegisterDelta /* from initial moment to current */,
+                  max_cred_num: u32,
+                  r_reg_delta: &RevocationRegisterDelta /* from initial moment to current */,
                   r_tails_accessor: RTA) -> Result<Witness, IndyCryptoError>
                     where RTA: RevocationTailsAccessor
 
-Witness::update<RTA>(&mut self, delta: &RevocationRegisterDelta, rev_idx: u32, r_tails_accessor: RTA) ->
+Witness::update<RTA>(&mut self, delta: &RevocationRegisterDelta, rev_idx: u32, max_cred_num: u32, r_tails_accessor: RTA) ->
                      Result<(), IndyCryptoError>
                         where RTA: RevocationTailsAccessor
 ```
@@ -118,33 +119,36 @@ RevocationRegistryDelta::revert(&mut self, other: RevocationRegistryDelta) -> ()
 
 ### Issuer
 ```Rust
-Issuer::new_cred_def(attrs: &CredentialSchema, support_non_revocation: bool) ->
-                          Result<(CredentialPublicKey, CredentialPrivateKey), IndyCryptoError>
+Issuer::new_cred_def(attrs: &CredentialSchema, support_revocation: bool) ->
+                          Result<(CredentialPublicKey, CredentialPrivateKey, CredentialKeyCorrectnessProof), IndyCryptoError>
 
-Issuer::new_revocation_registry(issuer_pub_key: &CredentialPublicKey,
-                                issuence_by_default: bool,
-                                max_credential_num: u32) -> Result<(RevocationKeyPublic,
-                                                                    RevocationKeyPrivate,
-                                                                    RevocationRegistry,
-                                                                    RevocationTailsGenerator),
-                                                                   IndyCryptoError>
+Issuer::new_revocation_registry_def(issuer_pub_key: &CredentialPublicKey,
+                                    max_cred_num: u32,
+                                    issuence_by_default: bool) -> Result<(RevocationKeyPublic,
+                                                                          RevocationKeyPrivate,
+                                                                          RevocationRegistry,
+                                                                          RevocationTailsGenerator),
+                                                                         IndyCryptoError>
 
-Issuer::sign_credential(prover_id: &str,
-                        blnd_ms: &BlindedMasterSecret,
-                        credential_values: &CredentialValues,
-                        issuer_pub_key: &CredentialPublicKey,
-                        issuer_priv_key: &CredentialPrivateKey,
-                        rev_idx: Option<u32>,
-                        max_credential_num: Option<u32>,
-                        r_reg: Option<&mut RevocationRegistry>,
-                        r_key_pub: Option<&RevocationKeyPublic>,
-                        r_key_priv: Option<&RevocationKeyPrivate>) ->
-                                        Result<(CredentialSignature, RevocationRegistryDelta), IndyCryptoError>
+Issuer::sign_credential<RTA>(prover_id: &str,
+                             blinded_ms: &BlindedMasterSecret,
+                             blinded_master_secret_correctness_proof: &BlindedMasterSecretProofCorrectness,
+                             master_secret_blinding_nonce: &Nonce,
+                             claim_issuance_nonce: &Nonce,
+                             credential_values: &CredentialValues,
+                             issuer_pub_key: &CredentialPublicKey,
+                             issuer_priv_key: &CredentialPrivateKey,
+                             rev_idx: Option<u32>,
+                             max_cred_num: Option<u32>,
+                             r_reg: Option<&mut RevocationRegistry>,
+                             r_key_priv: Option<&RevocationKeyPrivate>,
+                             rev_tails_accessor: RTA) ->
+                                        Result<(CredentialSignature, SignatureCorrectnessProof, Optional<RevocationRegistryDelta>), IndyCryptoError>
+                                            where RTA: RevocationTailsAccessor
 
-Issuer::revoke_credential<RTA>(r_key_pub: &RevocationKeyPublic,
-                               r_reg: &mut RevocationRegistry,
+Issuer::revoke_credential<RTA>(r_reg: &mut RevocationRegistry,
+                               max_cred_num: u32,
                                rev_idx: u32,
-                               max_credential_num: u32,
                                r_tails_accessor: RTA) -> Result<RevocationRegistryDelta, IndyCryptoError>
                                 where RTA: RevocationTailsAccessor
 ```
@@ -153,10 +157,14 @@ Issuer::revoke_credential<RTA>(r_key_pub: &RevocationKeyPublic,
 ```Rust
 Prover::new_master_secret() -> Result<MasterSecret, IndyCryptoError>
 
-Prover::blind_master_secret(pub_key: &CredentialPublicKey,
-                            ms: &MasterSecret) ->  Result<(BlindedMasterSecret,                                                                    
-                                                           BlindedMasterSecretData), 
-                                                          IndyCryptoError>
+Prover::blind_master_secret(credential_pub_key: &CredentialPublicKey,
+                            credential_key_correctness_proof: &CredentialKeyCorrectnessProof,
+                            master_secret: &MasterSecret,
+                            master_secret_blinding_nonce: &Nonce) -> Result<(BlindedMasterSecret,
+                                                                             MasterSecretBlindingData,
+                                                                             BlindedMasterSecretProofCorrectness),
+                                                                            IndyCryptoError>
+
 Prover::process_credential_signature(credential_signature: &mut CredentialSignature,
                                      blinded_master_secret_data: &BlindedMasterSecretData,
                                      p_pub_key: &CredentialPublicKey,
@@ -165,13 +173,13 @@ Prover::new_proof_builder() -> Result<ProofBuilder, IndyCryptoError>
 
 ProofBuilder::add_sub_proof_request(&mut self,
                                     key_id: &str,
+                                    sub_proof_req: &SubProofRequest,
                                     schema: &CredentialSchema,
                                     credential_signature: &CredentialSignature,
                                     credential_values: &CredentialValues,
                                     pub_key: &CredentialPublicKey,
                                     r_reg: Option<&RevocationRegistry>
-                                    witness: Option<&Witness>,
-                                    sub_proof_req: &SubProofRequest)
+                                    witness: Option<&Witness>)
                                         -> Result<(),  IndyCryptoError>
 
 ProofBuilder::finalize(&mut self,
@@ -187,10 +195,11 @@ Verifier::new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError>
 
 ProofVerifier::add_sub_proof_request(&mut self,
                                      key_id: &str,
+                                     sub_proof_req: &SubProofRequest,
                                      schema: &CredentialSchema,
                                      p_pub_key: &CredentialPublicKey,
                                      r_pub_key: Option<&RevocationKeyPublic>,
-                                     sub_proof_req: &SubProofRequest)
+                                     rev_reg: Option<&RevocationRegistry>)
                                             -> Result<(), IndyCryptoError>
 
 
