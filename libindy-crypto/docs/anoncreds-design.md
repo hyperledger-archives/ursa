@@ -99,9 +99,9 @@ Witness::update<RTA>(&mut self, delta: &RevocationRegisterDelta, rev_idx: u32, r
 ```Rust
 struct RevocationRegistry {
     acc: PointG2,
-    max_claim_num: u32,
 }
 
+RevocationRegistry::from_json(&str)
 ```
 
 ### RevocationRegistryDelta
@@ -136,6 +136,7 @@ Issuer::sign_claim(prover_id: &str,
                    issuer_pub_key: &IssuerPublicKey,
                    issuer_priv_key: &IssuerPrivateKey,
                    rev_idx: Option<u32>,
+                   max_claim_num: Option<u32>,
                    r_reg: Option<&mut RevocationRegistry>,
                    r_key_pub: Option<&RevocationKeyPublic>,
                    r_key_priv: Option<&RevocationKeyPrivate>) ->
@@ -144,6 +145,7 @@ Issuer::sign_claim(prover_id: &str,
 Issuer::revoke_claim<RTA>(r_key_pub: &RevocationKeyPublic,
                           r_reg: &mut RevocationRegistry,
                           rev_idx: u32,
+                          max_claim_num: u32,
                           r_tails_accessor: RTA) -> Result<RevocationRegistryDelta, IndyCryptoError>
                             where RTA: RevocationTailsAccessor
 ```
