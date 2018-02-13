@@ -60,21 +60,21 @@ SubProofRequestBuilder::finalize(self) -> Result<SubProofRequest, IndyCryptoErro
 
 ### Issuer
 ```Rust
-Issuer::new_keys(attrs: &ClaimSchema, non_revocation_part: bool) ->    
-                          Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError>
+Issuer::new_cred_def(attrs: &ClaimSchema, support_revocation: bool) ->    
+                          Result<(CredentialPublicKey, CredentialPrivateKey), IndyCryptoError>
 
-Issuer::new_revocation_registry(issuer_pub_key: &IssuerPublicKey,
-                              max_claim_num: u32) -> Result<(RevocationRegistryPublic,                                                              
-                                                           RevocationRegistryPrivate), 
+Issuer::new_revocation_registry_def(issuer_pub_key: &CredentialPublicKey,
+                              max_claim_num: u32) -> Result<(RevocationRegistryDefPublic,                                                              
+                                                           RevocationRegistryDefPrivate), 
                                                                       IndyCryptoError>
 Issuer::sign_claim(prover_id: &str,
                  blnd_ms: &BlindedMasterSecret,
                  claim_values: &ClaimValues,
-                 issuer_pub_key: &IssuerPublicKey,
-                 issuer_priv_key: &IssuerPrivateKey,
+                 issuer_pub_key: &CredentialPublicKey,
+                 issuer_priv_key: &CredentialPrivateKey,
                  rev_idx: Option<u32>,
-                 r_reg_pub: Option<&mut RevocationRegistryPublic>,
-                 r_reg_priv: Option<&RevocationRegistryPrivate>) ->         
+                 r_reg_pub: Option<&mut RevocationRegistryDefPublic>,
+                 r_reg_priv: Option<&RevocationRegistryDefPrivate>) ->         
                                         Result<ClaimSignature, IndyCryptoError>
 
 Issuer::revoke_claim(r_reg_pub: &mutRevocationRegistryPublic,
@@ -85,14 +85,14 @@ Issuer::revoke_claim(r_reg_pub: &mutRevocationRegistryPublic,
 ```Rust
 Prover::new_master_secret() -> Result<MasterSecret, IndyCryptoError>
 
-Prover::blind_master_secret(pub_key: &IssuerPublicKey,
+Prover::blind_master_secret(pub_key: &CredentialPublicKey,
                             ms: &MasterSecret) ->  Result<(BlindedMasterSecret,                                                                    
                                                            BlindedMasterSecretData), 
                                                                      IndyCryptoError>
 Prover::process_claim_signature(claim_signature: &mut ClaimSignature,
                       blinded_master_secret_data: &BlindedMasterSecretData,
-                      pub_key: &IssuerPublicKey,
-                      r_reg: Option<&RevocationRegistryPublic>) -> Result<(), 
+                      pub_key: &CredentialPublicKey,
+                      r_reg: Option<&RevocationRegistryDefPublic>) -> Result<(), 
                                                                       IndyCryptoError>
 Prover::new_proof_builder() -> Result<ProofBuilder, IndyCryptoError>
 
@@ -101,8 +101,8 @@ ProofBuilder::add_sub_proof_request(&mut self,
                         schema: &ClaimSchema,
                         claim_signature: &ClaimSignature,
                         claim_values: &ClaimValues,
-                        pub_key: &IssuerPublicKey,
-                        r_reg: Option<&RevocationRegistryPublic>,
+                        pub_key: &CredentialPublicKey,
+                        r_reg: Option<&RevocationRegistryDefPublic>,
                         sub_proof_req: &SubProofRequest) 
                                     -> Result<(),  IndyCryptoError>
 
@@ -120,9 +120,9 @@ Verifier::new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError>
 ProofVerifier::add_sub_proof_request(&mut self,
                               key_id: &str,
                               schema: &ClaimSchema,
-                              p_pub_key: &IssuerPublicKey,
-                              r_pub_key: Option<&IssuerRevocationPublicKey>,
-                              r_reg: Option<&RevocationRegistryPublic>,
+                              p_pub_key: &CredentialPublicKey,
+                              r_pub_key: Option<&CredentialRevocationPublicKey>,
+                              r_reg: Option<&RevocationRegistryDefPublic>,
                               sub_proof_req: &SubProofRequest) 
                                            -> Result<(), IndyCryptoError>
 

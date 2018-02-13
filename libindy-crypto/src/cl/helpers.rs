@@ -308,7 +308,7 @@ pub fn get_mtilde(unrevealed_attrs: &HashSet<String>) -> Result<HashMap<String, 
     Ok(mtilde)
 }
 
-pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
+pub fn calc_teq(issuer_pub_key: &CredentialPrimaryPublicKey, a_prime: &BigNumber, e: &BigNumber, v: &BigNumber,
                 m_tilde: &HashMap<String, BigNumber>, m1_tilde: &BigNumber, m2tilde: &BigNumber,
                 unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
     trace!("Helpers::calc_teq: >>> issuer_pub_key: {:?}, issuer_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m1_tilde: {:?}, m2tilde: {:?}, \
@@ -346,7 +346,7 @@ pub fn calc_teq(issuer_pub_key: &IssuerPrimaryPublicKey, a_prime: &BigNumber, e:
     Ok(result)
 }
 
-pub fn calc_tge(issuer_pub_key: &IssuerPrimaryPublicKey, u: &HashMap<String, BigNumber>, r: &HashMap<String, BigNumber>,
+pub fn calc_tge(issuer_pub_key: &CredentialPrimaryPublicKey, u: &HashMap<String, BigNumber>, r: &HashMap<String, BigNumber>,
                 mj: &BigNumber, alpha: &BigNumber, t: &HashMap<String, BigNumber>) -> Result<Vec<BigNumber>, IndyCryptoError> {
     trace!("Helpers::calc_tge: >>> issuer_pub_key: {:?}, u: {:?}, r: {:?}, mj: {:?}, alpha: {:?}, t: {:?}", issuer_pub_key, u, r, mj, alpha, t);
 
@@ -471,17 +471,19 @@ pub fn bignum_to_group_element(num: &BigNumber) -> Result<GroupOrderElement, Ind
     Ok(GroupOrderElement::from_bytes(&num.to_bytes()?)?)
 }
 
-pub fn create_tau_list_expected_values(issuer_r_pub_key: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
-                                       accum_pk: &RevocationAccumulatorPublicKey, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
-    trace!("Helpers::create_tau_list_expected_values: >>> issuer_r_pub_key: {:?}, accumulator: {:?}, accum_pk: {:?}, proof_c: {:?}",
-           issuer_r_pub_key, accumulator, accum_pk, proof_c);
+pub fn create_tau_list_expected_values(issuer_r_pub_key: &CredentialRevocationPublicKey,
+                                       rev_reg: &RevocationRegistry,
+                                       rev_acc_pub_key: &RevocationKeyPublic,
+                                       proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
+    trace!("Helpers::create_tau_list_expected_values: >>> issuer_r_pub_key: {:?}, rev_reg: {:?}, rev_acc_pub_key: {:?}, proof_c: {:?}",
+           issuer_r_pub_key, rev_reg, rev_acc_pub_key, proof_c);
 
     let t1 = proof_c.e;
     let t2 = PointG1::new_inf()?;
     let t3 = Pair::pair(&issuer_r_pub_key.h0.add(&proof_c.g)?, &issuer_r_pub_key.h_cap)?
         .mul(&Pair::pair(&proof_c.a, &issuer_r_pub_key.y)?.inverse()?)?;
-    let t4 = Pair::pair(&proof_c.g, &accumulator.acc)?
-        .mul(&Pair::pair(&issuer_r_pub_key.g, &proof_c.w)?.mul(&accum_pk.z)?.inverse()?)?;
+    let t4 = Pair::pair(&proof_c.g, &rev_reg.accum)?
+        .mul(&Pair::pair(&issuer_r_pub_key.g, &proof_c.w)?.mul(&rev_acc_pub_key.z)?.inverse()?)?;
     let t5 = proof_c.d;
     let t6 = PointG1::new_inf()?;
     let t7 = Pair::pair(&issuer_r_pub_key.pk.add(&proof_c.g)?, &proof_c.s)?
@@ -505,10 +507,10 @@ pub fn create_tau_list_expected_values(issuer_r_pub_key: &IssuerRevocationPublic
     Ok(non_revoc_proof_tau_list)
 }
 
-pub fn create_tau_list_values(issuer_r_pub_key: &IssuerRevocationPublicKey, accumulator: &RevocationAccumulator,
+pub fn create_tau_list_values(issuer_r_pub_key: &CredentialRevocationPublicKey, rev_reg: &RevocationRegistry,
                               params: &NonRevocProofXList, proof_c: &NonRevocProofCList) -> Result<NonRevocProofTauList, IndyCryptoError> {
-    trace!("Helpers::create_tau_list_values: >>> issuer_r_pub_key: {:?}, accumulator: {:?}, params: {:?}, proof_c: {:?}",
-           issuer_r_pub_key, accumulator, params, proof_c);
+    trace!("Helpers::create_tau_list_values: >>> issuer_r_pub_key: {:?}, rev_reg: {:?}, params: {:?}, proof_c: {:?}",
+           issuer_r_pub_key, rev_reg, params, proof_c);
 
     let t1 = issuer_r_pub_key.h.mul(&params.rho)?.add(&issuer_r_pub_key.htilde.mul(&params.o)?)?;
     let mut t2 = proof_c.e.mul(&params.c)?
@@ -523,7 +525,7 @@ pub fn create_tau_list_values(issuer_r_pub_key: &IssuerRevocationPublicKey, accu
             .mul(&Pair::pair(&issuer_r_pub_key.htilde, &issuer_r_pub_key.h_cap)?.pow(&params.m)?)?
             .mul(&Pair::pair(&issuer_r_pub_key.h1, &issuer_r_pub_key.h_cap)?.pow(&params.m2)?)?
             .mul(&Pair::pair(&issuer_r_pub_key.h2, &issuer_r_pub_key.h_cap)?.pow(&params.s)?)?.inverse()?)?;
-    let t4 = Pair::pair(&issuer_r_pub_key.htilde, &accumulator.acc)?
+    let t4 = Pair::pair(&issuer_r_pub_key.htilde, &rev_reg.accum)?
         .pow(&params.r)?
         .mul(&Pair::pair(&issuer_r_pub_key.g.neg()?, &issuer_r_pub_key.h_cap)?.pow(&params.r_prime)?)?;
     let t5 = issuer_r_pub_key.g.mul(&params.r)?.add(&issuer_r_pub_key.htilde.mul(&params.o_prime)?)?;

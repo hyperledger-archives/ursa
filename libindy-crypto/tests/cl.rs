@@ -29,11 +29,11 @@ mod test {
 
         // 3. Issuer creates keys
         let (gvt_issuer_pub_key, gvt_issuer_priv_key, gvt_issuer_key_correctness_proof) =
-            Issuer::new_keys(&gvt_claim_schema, true).unwrap();
+            Issuer::new_cred_def(&gvt_claim_schema, true).unwrap();
 
         // 4. Issuer creates GVT revocation registry
         let (mut gvt_rev_reg_pub, gvt_rev_reg_priv) =
-            Issuer::new_revocation_registry(&gvt_issuer_pub_key, 5).unwrap();
+            Issuer::new_revocation_registry_def(&gvt_issuer_pub_key, 5).unwrap();
 
         // 5. Issuer creates nonce used Prover to blind master secret
         let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
@@ -85,11 +85,11 @@ mod test {
 
         // 12. Issuer creates keys
         let (xyz_issuer_pub_key, xyz_issuer_priv_key, xyz_issuer_key_correctness_proof) =
-            Issuer::new_keys(&xyz_claim_schema, true).unwrap();
+            Issuer::new_cred_def(&xyz_claim_schema, true).unwrap();
 
         // 13. Issuer creates XYZ revocation registry
         let (mut xyz_rev_reg_pub, xyz_rev_reg_priv) =
-            Issuer::new_revocation_registry(&xyz_issuer_pub_key, 5).unwrap();
+            Issuer::new_revocation_registry_def(&xyz_issuer_pub_key, 5).unwrap();
 
         // 14. Issuer creates nonce used Prover to blind master secret
         let xyz_master_secret_blinding_nonce = new_nonce().unwrap();
@@ -192,7 +192,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -259,7 +259,7 @@ mod test {
         // 2. Issuer creates and signs GVT claim for Prover
         let gvt_claim_schema = helpers::gvt_claim_schema();
         let (gvt_issuer_pub_key, gvt_issuer_priv_key, gvt_issuer_key_correctness_proof) =
-            Issuer::new_keys(&gvt_claim_schema, false).unwrap();
+            Issuer::new_cred_def(&gvt_claim_schema, false).unwrap();
 
         let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
 
@@ -298,7 +298,7 @@ mod test {
         // 4. Issuer creates and signs XYZ claim for Prover
         let xyz_claim_schema = helpers::xyz_claim_schema();
         let (xyz_issuer_pub_key, xyz_issuer_priv_key, xyz_issuer_key_correctness_proof) =
-            Issuer::new_keys(&xyz_claim_schema, false).unwrap();
+            Issuer::new_cred_def(&xyz_claim_schema, false).unwrap();
 
         let xyz_master_secret_blinding_nonce = new_nonce().unwrap();
 
@@ -379,10 +379,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -448,10 +448,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
 
         // 4. Issuer issues first claim
         let master_secret1 = Prover::new_master_secret().unwrap();
@@ -567,10 +567,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
 
         // 4. Issuer issues first claim
         let master_secret1 = Prover::new_master_secret().unwrap();
@@ -689,10 +689,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
 
 
         // 4. Issuer issues first claim
@@ -812,10 +812,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
         let rev_idx = 1;
 
         // 4. Prover creates master secret
@@ -885,10 +885,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
         let rev_idx = 1;
 
         // 4. Prover creates master secret
@@ -957,10 +957,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry for only 1 claim
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 1).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 1).unwrap();
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1015,10 +1015,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
         let rev_idx = 1;
 
         // FIRST Issue of claim
@@ -1162,7 +1162,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1223,7 +1223,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1296,7 +1296,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1370,7 +1370,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1430,7 +1430,7 @@ mod test {
 
         // 10. Verifier verifies proof
         let xyz_claim_schema = helpers::xyz_claim_schema();
-        let (xyz_issuer_pub_key, _, _) = Issuer::new_keys(&xyz_claim_schema, false).unwrap();
+        let (xyz_issuer_pub_key, _, _) = Issuer::new_cred_def(&xyz_claim_schema, false).unwrap();
         let xyz_sub_proof_request = helpers::xyz_sub_proof_request();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
@@ -1446,7 +1446,7 @@ mod test {
         let claim_schema = claim_schema_builder.finalize().unwrap();
 
         // 2. Issuer creates keys(with revocation keys)
-        let res = Issuer::new_keys(&claim_schema, false);
+        let res = Issuer::new_cred_def(&claim_schema, false);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -1456,10 +1456,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(without revocation part)
-        let (issuer_pub_key, _, _) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, _, _) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Issuer creates revocation registry
-        let res = Issuer::new_revocation_registry(&issuer_pub_key, 5);
+        let res = Issuer::new_revocation_registry_def(&issuer_pub_key, 5);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -1469,10 +1469,10 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys(with revocation keys)
-        let (issuer_pub_key, _, _) = Issuer::new_keys(&claim_schema, true).unwrap();
+        let (issuer_pub_key, _, _) = Issuer::new_cred_def(&claim_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
-        let (mut rev_reg_pub, _) = Issuer::new_revocation_registry(&issuer_pub_key, 5).unwrap();
+        let (mut rev_reg_pub, _) = Issuer::new_revocation_registry_def(&issuer_pub_key, 5).unwrap();
 
         // 4. Issuer tries revoke not not added index
         let rev_idx = 1;
@@ -1486,7 +1486,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1529,7 +1529,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1597,7 +1597,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1662,7 +1662,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1729,7 +1729,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1797,7 +1797,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, _, _) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, _, _) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Verifier build proof verifier
         let key_id = "key_id";
@@ -1818,12 +1818,12 @@ mod test {
         // 2. Issuer creates GVT claim definition
         let gvt_claim_schema = helpers::gvt_claim_schema();
         let (gvt_issuer_pub_key, _, _) =
-            Issuer::new_keys(&gvt_claim_schema, false).unwrap();
+            Issuer::new_cred_def(&gvt_claim_schema, false).unwrap();
 
         // 3. Issuer creates XYZ claim definition
         let xyz_claim_schema = helpers::xyz_claim_schema();
         let (_, _, xyz_issuer_key_correctness_proof) =
-            Issuer::new_keys(&xyz_claim_schema, false).unwrap();
+            Issuer::new_cred_def(&xyz_claim_schema, false).unwrap();
 
         // 4. Issuer creates nonce used Prover to blind master secret
         let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
@@ -1843,7 +1843,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1882,11 +1882,11 @@ mod test {
     fn issuer_sign_claim_works_for_keys_not_correspond_to_blinded_master_secret_correctness_proof() {
         // 1. Issuer creates GVT claim definition
         let claim_schema = helpers::gvt_claim_schema();
-        let (gvt_issuer_pub_key, _, gvt_issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (gvt_issuer_pub_key, _, gvt_issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 2. Issuer creates XYZ claim definition
         let claim_schema = helpers::gvt_claim_schema();
-        let (xyz_issuer_pub_key, xyz_issuer_priv_key, _) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (xyz_issuer_pub_key, xyz_issuer_priv_key, _) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1923,7 +1923,7 @@ mod test {
     fn issuer_sign_claim_works_for_blinded_master_secret_not_correspond_to_blinded_master_secret_correctness_proof() {
         // 1. Issuer creates GVT claim definition
         let claim_schema = helpers::gvt_claim_schema();
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 2. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -1966,7 +1966,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -2017,7 +2017,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -2081,7 +2081,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -2134,7 +2134,7 @@ mod test {
         let claim_schema = helpers::gvt_claim_schema();
 
         // 2. Issuer creates keys
-        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();

@@ -48,36 +48,37 @@ pub extern fn indy_crypto_cl_verifier_new_proof_verifier(proof_verifier_p: *mut 
 /// * `issuer_pub_key` - Reference that contain public key instance pointer.
 /// * `rev_reg_pub` - (Optional) Reference that contain public revocation registry instance pointer.
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn indy_crypto_cl_proof_verifier_add_sub_proof_request(proof_verifier: *const c_void,
                                                                   key_id: *const c_char,
                                                                   sub_proof_request: *const c_void,
                                                                   claim_schema: *const c_void,
                                                                   issuer_pub_key: *const c_void,
                                                                   rev_reg_pub: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: >>> proof_verifier: {:?}, key_id: {:?}, sub_proof_request: {:?} ,\
-            issuer_pub_key: {:?}, rev_reg_pub: {:?}", proof_verifier, key_id, sub_proof_request, issuer_pub_key, rev_reg_pub);
-
-    check_useful_mut_c_reference!(proof_verifier, ProofVerifier, ErrorCode::CommonInvalidParam1);
-    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
-    check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam4);
-    check_useful_c_reference!(issuer_pub_key, IssuerPublicKey, ErrorCode::CommonInvalidParam5);
-    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryPublic);
-
-    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: entities: proof_verifier: {:?}, key_id: {:?}, sub_proof_request: {:?},\
-            issuer_pub_key: {:?}, rev_reg_pub: {:?}", proof_verifier, key_id, sub_proof_request, issuer_pub_key, rev_reg_pub);
-
-    let res = match proof_verifier.add_sub_proof_request(&key_id,
-                                                         sub_proof_request,
-                                                         claim_schema,
-                                                         issuer_pub_key,
-                                                         rev_reg_pub) {
-        Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
-    };
-
-    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: <<< res: {:?}", res);
-    res
+    //    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: >>> proof_verifier: {:?}, key_id: {:?}, sub_proof_request: {:?} ,\
+    //            issuer_pub_key: {:?}, rev_reg_pub: {:?}", proof_verifier, key_id, sub_proof_request, issuer_pub_key, rev_reg_pub);
+    //
+    //    check_useful_mut_c_reference!(proof_verifier, ProofVerifier, ErrorCode::CommonInvalidParam1);
+    //    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
+    //    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
+    //    check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam4);
+    //    check_useful_c_reference!(issuer_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam5);
+    //    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryDefPublic);
+    //
+    //    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: entities: proof_verifier: {:?}, key_id: {:?}, sub_proof_request: {:?},\
+    //            issuer_pub_key: {:?}, rev_reg_pub: {:?}", proof_verifier, key_id, sub_proof_request, issuer_pub_key, rev_reg_pub);
+    //
+    //    let res = match proof_verifier.add_sub_proof_request(&key_id,
+    //                                                         sub_proof_request,
+    //                                                         claim_schema,
+    //                                                         issuer_pub_key,
+    //                                                         rev_reg_pub) {
+    //        Ok(()) => ErrorCode::Success,
+    //        Err(err) => err.to_error_code()
+    //    };
+    //
+    //    trace!("indy_crypto_cl_proof_verifier_add_sub_proof_request: <<< res: {:?}", res);
+    ErrorCode::Success
 }
 
 
@@ -140,9 +141,9 @@ mod tests {
         let master_secret_blinding_nonce = _nonce();
         let (blinded_master_secret, master_secret_blinding_data,
             blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
-                                                                                                    issuer_key_correctness_proof,
-                                                                                                    master_secret,
-                                                                                                    master_secret_blinding_nonce);
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let claim_issuance_nonce = _nonce();
         let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,
                                                                               blinded_master_secret_correctness_proof,
@@ -192,9 +193,9 @@ mod tests {
         let master_secret_blinding_nonce = _nonce();
         let (blinded_master_secret, master_secret_blinding_data,
             blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
-                                                                                                    issuer_key_correctness_proof,
-                                                                                                    master_secret,
-                                                                                                    master_secret_blinding_nonce);
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let claim_schema = _claim_schema();
         let sub_proof_request = _sub_proof_request();
         let claim_issuance_nonce = _nonce();
@@ -247,9 +248,9 @@ mod tests {
         let master_secret_blinding_nonce = _nonce();
         let (blinded_master_secret, master_secret_blinding_data,
             blinded_master_secret_correctness_proof) = _blinded_master_secret(issuer_pub_key,
-                                                                                                    issuer_key_correctness_proof,
-                                                                                                    master_secret,
-                                                                                                    master_secret_blinding_nonce);
+                                                                              issuer_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
         let claim_schema = _claim_schema();
         let claim_issuance_nonce = _nonce();
         let (claim_signature, signature_correctness_proof) = _claim_signature(blinded_master_secret,

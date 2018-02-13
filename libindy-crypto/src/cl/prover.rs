@@ -44,15 +44,15 @@ impl Prover {
     /// claim_schema_builder.add_attr("name").unwrap();
     /// let claim_schema = claim_schema_builder.finalize().unwrap();
     ///
-    /// let (pub_key, _, key_correctness_proof) = Issuer::new_keys(&claim_schema, false).unwrap();
+    /// let (pub_key, _, key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
     /// let (_blinded_master_secret, _master_secret_blinding_data, _blinded_master_secret_correctness_proof) =
     ///      Prover::blind_master_secret(&pub_key, &key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
     /// ```
-    pub fn blind_master_secret(issuer_pub_key: &IssuerPublicKey,
-                               issuer_key_correctness_proof: &KeyCorrectnessProof,
+    pub fn blind_master_secret(issuer_pub_key: &CredentialPublicKey,
+                               issuer_key_correctness_proof: &CredentialKeyCorrectnessProof,
                                master_secret: &MasterSecret,
                                master_secret_blinding_nonce: &Nonce) -> Result<(BlindedMasterSecret,
                                                                                 MasterSecretBlindingData,
@@ -112,7 +112,7 @@ impl Prover {
     /// claim_schema_builder.add_attr("sex").unwrap();
     /// let claim_schema = claim_schema_builder.finalize().unwrap();
     ///
-    /// let (pub_key, priv_key, key_correctness_proof) = Issuer::new_keys(&claim_schema, true).unwrap();
+    /// let (pub_key, priv_key, key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
@@ -148,9 +148,11 @@ impl Prover {
                                    signature_correctness_proof: &SignatureCorrectnessProof,
                                    master_secret_blinding_data: &MasterSecretBlindingData,
                                    master_secret: &MasterSecret,
-                                   issuer_pub_key: &IssuerPublicKey,
+                                   issuer_pub_key: &CredentialPublicKey,
                                    nonce: &Nonce,
-                                   rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
+                                   rev_reg_pub: Option<&RevocationRegistryDefPublic>,
+                                   rev_reg_entry: Option<&RevocationRegistryDelta>,
+                                   witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
         trace!("Prover::process_claim_signature: >>> claim_signature: {:?},signature_correctness_proof: {:?}, master_secret_blinding_data: {:?}, \
         master_secret: {:?}, issuer_pub_key: {:?}, nonce: {:?}, rev_reg_pub: {:?}",
                claim_signature, signature_correctness_proof, master_secret_blinding_data, master_secret, issuer_pub_key, nonce, rev_reg_pub);
@@ -164,14 +166,19 @@ impl Prover {
                                                    &issuer_pub_key.p_key,
                                                    nonce)?;
 
-        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key), Some(ref r_reg)) = (&mut claim_signature.r_claim,
-                                                                                                                   master_secret_blinding_data.vr_prime,
-                                                                                                                   &issuer_pub_key.r_key,
-                                                                                                                   rev_reg_pub) {
+        if let (&mut Some(ref mut non_revocation_claim), Some(ref vr_prime), &Some(ref r_key),
+            Some(ref r_reg), Some(ref r_reg_entry), Some(ref witness)) = (&mut claim_signature.r_claim,
+                                                                          master_secret_blinding_data.vr_prime,
+                                                                          &issuer_pub_key.r_key,
+                                                                          rev_reg_pub,
+                                                                          rev_reg_entry,
+                                                                          witness) {
             Prover::_process_non_revocation_claim(non_revocation_claim,
                                                   vr_prime,
                                                   &r_key,
-                                                  r_reg)?;
+                                                  r_reg,
+                                                  r_reg_entry,
+                                                  witness)?;
         }
 
         trace!("Prover::process_claim_signature: <<<");
@@ -195,7 +202,7 @@ impl Prover {
         })
     }
 
-    pub fn _check_key_correctness_proof(pr_pub_key: &IssuerPrimaryPublicKey, key_correctness_proof: &KeyCorrectnessProof) -> Result<(), IndyCryptoError> {
+    pub fn _check_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey, key_correctness_proof: &CredentialKeyCorrectnessProof) -> Result<(), IndyCryptoError> {
         trace!("Prover::_check_key_correctness_proof: >>> pr_pub_key: {:?}, key_correctness_proof: {:?}", pr_pub_key, key_correctness_proof);
 
         let mut ctx = BigNumber::new_context()?;
@@ -240,7 +247,7 @@ impl Prover {
         Ok(())
     }
 
-    fn _generate_blinded_primary_master_secret(p_pub_key: &IssuerPrimaryPublicKey,
+    fn _generate_blinded_primary_master_secret(p_pub_key: &CredentialPrimaryPublicKey,
                                                master_secret: &MasterSecret) -> Result<PrimaryBlindedMasterSecretData, IndyCryptoError> {
         trace!("Prover::_generate_blinded_primary_master_secret: >>> p_pub_key: {:?}, master_secret: {:?}", p_pub_key, master_secret);
 
@@ -257,7 +264,7 @@ impl Prover {
         Ok(primary_blinded_master_secret)
     }
 
-    fn _generate_blinded_revocation_master_secret(r_pub_key: &IssuerRevocationPublicKey) -> Result<RevocationBlindedMasterSecretData, IndyCryptoError> {
+    fn _generate_blinded_revocation_master_secret(r_pub_key: &CredentialRevocationPublicKey) -> Result<RevocationBlindedMasterSecretData, IndyCryptoError> {
         trace!("Prover::_generate_blinded_revocation_master_secret: >>> r_pub_key: {:?}", r_pub_key);
 
         let vr_prime = GroupOrderElement::new()?;
@@ -270,7 +277,7 @@ impl Prover {
         Ok(revocation_blinded_master_secret)
     }
 
-    pub fn _new_blinded_master_secret_correctness_proof(p_pub_key: &IssuerPrimaryPublicKey,
+    pub fn _new_blinded_master_secret_correctness_proof(p_pub_key: &CredentialPrimaryPublicKey,
                                                         blinded_master_secret: &PrimaryBlindedMasterSecretData,
                                                         nonce: &BigNumber,
                                                         master_secret: &MasterSecret) -> Result<BlindedMasterSecretProofCorrectness, IndyCryptoError> {
@@ -320,13 +327,16 @@ impl Prover {
 
     fn _process_non_revocation_claim(r_claim: &mut NonRevocationClaimSignature,
                                      vr_prime: &GroupOrderElement,
-                                     r_pub_key: &IssuerRevocationPublicKey,
-                                     rev_reg: &RevocationRegistryPublic) -> Result<(), IndyCryptoError> {
-        trace!("Prover::_process_non_revocation_claim: >>> r_claim: {:?}, vr_prime: {:?}, r_pub_key: {:?}, rev_reg: {:?}", r_claim, vr_prime, r_pub_key, rev_reg);
+                                     r_pub_key: &CredentialRevocationPublicKey,
+                                     rev_reg: &RevocationRegistryDefPublic,
+                                     rev_reg_entry: &RevocationRegistryDelta,
+                                     witness: &Witness) -> Result<(), IndyCryptoError> {
+        trace!("Prover::_process_non_revocation_claim: >>> r_claim: {:?}, vr_prime: {:?}, r_pub_key: {:?}, rev_reg_entry: {:?}, rev_reg: {:?}",
+               r_claim, vr_prime, r_pub_key, rev_reg_entry, rev_reg);
 
         let r_cnxt_m2 = BigNumber::from_bytes(&r_claim.m2.to_bytes()?)?;
         r_claim.vr_prime_prime = vr_prime.add_mod(&r_claim.vr_prime_prime)?;
-        Prover::_test_witness_credential(&r_claim, r_pub_key, rev_reg, &r_cnxt_m2)?;
+        Prover::_test_witness_credential(&r_claim, r_pub_key, rev_reg, rev_reg_entry, witness, &r_cnxt_m2)?;
 
         trace!("Prover::_process_non_revocation_claim: <<<");
 
@@ -337,7 +347,7 @@ impl Prover {
                                               claim_values: &ClaimValues,
                                               signature_correctness_proof: &SignatureCorrectnessProof,
                                               master_secret: &MasterSecret,
-                                              p_pub_key: &IssuerPrimaryPublicKey,
+                                              p_pub_key: &CredentialPrimaryPublicKey,
                                               nonce: &Nonce) -> Result<(), IndyCryptoError> {
         trace!("Prover::_check_signature_correctness_proof: >>> p_claim_sig: {:?}, master_secret: {:?}, p_pub_key: {:?}, signature_correctness_proof: {:?}, \
         nonce: {:?}", p_claim_sig, master_secret, p_pub_key, signature_correctness_proof, nonce);
@@ -397,17 +407,20 @@ impl Prover {
     }
 
     fn _test_witness_credential(r_claim: &NonRevocationClaimSignature,
-                                r_pub_key: &IssuerRevocationPublicKey,
-                                r_reg: &RevocationRegistryPublic,
+                                r_pub_key: &CredentialRevocationPublicKey,
+                                r_reg_pub: &RevocationRegistryDefPublic,
+                                r_reg_entry: &RevocationRegistryDelta,
+                                witness: &Witness,
                                 r_cnxt_m2: &BigNumber) -> Result<(), IndyCryptoError> {
-        trace!("Prover::_test_witness_credential: >>> r_claim: {:?}, r_pub_key: {:?}, r_reg: {:?}, r_cnxt_m2: {:?}", r_claim, r_pub_key, r_reg, r_cnxt_m2);
+        trace!("Prover::_test_witness_credential: >>> r_claim: {:?}, r_pub_key: {:?}, r_reg_pub: {:?}, r_reg_entry: {:?}, r_cnxt_m2: {:?}",
+               r_claim, r_pub_key, r_reg_pub, r_reg_entry, r_cnxt_m2);
 
-        let z_calc = Pair::pair(&r_claim.witness.g_i, &r_reg.acc.acc)?
-            .mul(&Pair::pair(&r_pub_key.g, &r_claim.witness.omega)?.inverse()?)?;
-        if z_calc != r_reg.key.z {
+        let z_calc = Pair::pair(&r_claim.witness_signature.g_i, &r_reg_entry.accum)?
+            .mul(&Pair::pair(&r_pub_key.g, &witness.omega)?.inverse()?)?;
+        if z_calc != r_reg_pub.key.z {
             return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
         }
-        let pair_gg_calc = Pair::pair(&r_pub_key.pk.add(&r_claim.g_i)?, &r_claim.witness.sigma_i)?;
+        let pair_gg_calc = Pair::pair(&r_pub_key.pk.add(&r_claim.g_i)?, &r_claim.witness_signature.sigma_i)?;
         let pair_gg = Pair::pair(&r_pub_key.g, &r_pub_key.g_dash)?;
         if pair_gg_calc != pair_gg {
             return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
@@ -454,21 +467,32 @@ impl ProofBuilder {
     /// * `claim_values` - Claim values.
     /// * `issuer_pub_key` - Issuer public key.
     /// * `rev_reg_pub` - (Optional) Revocation registry public.
-    pub fn add_sub_proof_request(&mut self, key_id: &str, sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema, claim_signature: &ClaimSignature,
-                                 claim_values: &ClaimValues, issuer_pub_key: &IssuerPublicKey, rev_reg_pub: Option<&RevocationRegistryPublic>) -> Result<(), IndyCryptoError> {
+    pub fn add_sub_proof_request(&mut self,
+                                 key_id: &str,
+                                 sub_proof_request: &SubProofRequest,
+                                 claim_schema: &ClaimSchema,
+                                 claim_signature: &ClaimSignature,
+                                 claim_values: &ClaimValues,
+                                 issuer_pub_key: &CredentialPublicKey,
+                                 rev_reg: Option<&RevocationRegistry>,
+                                 witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
         trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, \
-        rev_reg_pub: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
-               key_id, claim_signature, claim_values, issuer_pub_key, rev_reg_pub, sub_proof_request, claim_schema);
+        rev_reg: {:?}, sub_proof_request: {:?}, claim_schema: {:?}",
+               key_id, claim_signature, claim_values, issuer_pub_key, rev_reg, sub_proof_request, claim_schema);
 
         ProofBuilder::_check_add_sub_proof_request_params_consistency(claim_values, sub_proof_request, claim_schema)?;
 
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
-        if let (&Some(ref r_claim), &Some(ref r_reg), &Some(ref r_pub_key)) = (&claim_signature.r_claim,
-                                                                               &rev_reg_pub,
-                                                                               &issuer_pub_key.r_key) {
-            let proof = ProofBuilder::_init_non_revocation_proof(&mut r_claim.clone(), &r_reg, &r_pub_key)?;//TODO:FIXME
+        if let (&Some(ref r_claim), &Some(ref r_reg), &Some(ref r_pub_key), &Some(ref witness)) = (&claim_signature.r_claim,
+                                                                                                   &rev_reg,
+                                                                                                   &issuer_pub_key.r_key,
+                                                                                                   &witness) {
+            let proof = ProofBuilder::_init_non_revocation_proof(&r_claim,
+                                                                 &r_reg,
+                                                                 &r_pub_key,
+                                                                 &witness)?;
 
             self.c_list.extend_from_slice(&proof.as_c_list()?);
             self.tau_list.extend_from_slice(&proof.as_tau_list()?);
@@ -574,7 +598,7 @@ impl ProofBuilder {
         Ok(())
     }
 
-    fn _init_primary_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_values: &ClaimValues, claim_schema: &ClaimSchema,
+    fn _init_primary_proof(issuer_pub_key: &CredentialPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_values: &ClaimValues, claim_schema: &ClaimSchema,
                            sub_proof_request: &SubProofRequest, m1_t: &BigNumber, m2_t: Option<BigNumber>) -> Result<PrimaryInitProof, IndyCryptoError> {
         trace!("ProofBuilder::_init_primary_proof: >>> issuer_pub_key: {:?}, c1: {:?}, claim_values: {:?}, claim_schema: {:?}, sub_proof_request: {:?}, m1_t: {:?}, m2_t: {:?}",
                issuer_pub_key, c1, claim_values, claim_schema, sub_proof_request, m1_t, m2_t);
@@ -594,17 +618,21 @@ impl ProofBuilder {
         Ok(primary_init_proof)
     }
 
-    fn _init_non_revocation_proof(r_claim: &mut NonRevocationClaimSignature, rev_reg_pub: &RevocationRegistryPublic, issuer_rev_pub_key: &IssuerRevocationPublicKey)
-                                  -> Result<NonRevocInitProof, IndyCryptoError> {
-        trace!("ProofBuilder::_init_non_revocation_proof: >>> r_claim: {:?}, rev_reg_pub: {:?}, issuer_rev_pub_key: {:?}", r_claim, rev_reg_pub, issuer_rev_pub_key);
-
-        ProofBuilder::_update_non_revocation_claim(r_claim, &rev_reg_pub.acc, &rev_reg_pub.tails.tails_dash)?;
+    fn _init_non_revocation_proof(r_claim: &NonRevocationClaimSignature,
+                                  rev_reg: &RevocationRegistry,
+                                  cred_rev_pub_key: &CredentialRevocationPublicKey,
+                                  witness: &Witness) -> Result<NonRevocInitProof, IndyCryptoError> {
+        trace!("ProofBuilder::_init_non_revocation_proof: >>> r_claim: {:?}, rev_reg: {:?}, cred_rev_pub_key: {:?}, witness: {:?}",
+               r_claim, rev_reg, cred_rev_pub_key, witness);
 
         let c_list_params = ProofBuilder::_gen_c_list_params(&r_claim)?;
-        let c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &issuer_rev_pub_key)?;
+        let c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &cred_rev_pub_key, witness)?;
 
         let tau_list_params = ProofBuilder::_gen_tau_list_params()?;
-        let tau_list = create_tau_list_values(&issuer_rev_pub_key, &rev_reg_pub.acc, &tau_list_params, &c_list)?;
+        let tau_list = create_tau_list_values(&cred_rev_pub_key,
+                                              &rev_reg,
+                                              &tau_list_params,
+                                              &c_list)?;
 
         let r_init_proof = NonRevocInitProof {
             c_list_params,
@@ -618,48 +646,86 @@ impl ProofBuilder {
         Ok(r_init_proof)
     }
 
-    fn _update_non_revocation_claim(r_claim: &mut NonRevocationClaimSignature, accum: &RevocationAccumulator,
-                                    tails_dash: &HashMap<u32, PointG2>) -> Result<(), IndyCryptoError> {
-        trace!("ProofBuilder::_update_non_revocation_claim: >>> r_claim: {:?}, accum: {:?}, tails_dash: {:?}", r_claim, accum, tails_dash);
+    pub fn new_witness<RTA>(rev_idx: u32,
+                            max_cred_num: u32,
+                            rev_reg: &RevocationRegistry,
+                            rev_reg_delta: &RevocationRegistryDelta,
+                            rev_tails_accessor: RTA) -> Result<Witness, IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("ProofBuilder::new_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg: {:?}, rev_reg_delta: {:?}",
+               rev_idx, max_cred_num, rev_reg, rev_reg_delta);
 
-        if !accum.v.contains(&r_claim.i) {
-            return Err(IndyCryptoError::AnoncredsClaimRevoked("Can not update Witness. Claim revoked.".to_string()));
+        let mut omega = PointG2::new_inf()?;
+
+        if rev_reg_delta.issued.is_none() {
+            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
         }
 
-        if r_claim.witness.v != accum.v {
-            let v_old_minus_new: HashSet<u32> =
-                r_claim.witness.v.difference(&accum.v).cloned().collect();
-            let v_new_minus_old: HashSet<u32> =
-                accum.v.difference(&r_claim.witness.v).cloned().collect();
+        let issued = rev_reg_delta.issued.clone().unwrap();
 
+        for j in issued.iter() {
+            let index = max_cred_num + 1 - j + rev_idx;
+
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega = omega.add(tail).unwrap();
+            })?;
+        }
+
+        let witness = Witness {
+            omega,
+            v: issued
+        };
+
+        trace!("ProofBuilder::new_witness: <<< witness: {:?}", witness);
+
+        Ok(witness)
+    }
+
+    pub fn update_witness<RTA>(r_claim: &NonRevocationClaimSignature,
+                               rev_reg_def_pub: &RevocationRegistryDefPublic,
+                               rev_reg_delta: &RevocationRegistryDelta,
+                               witness: &mut Witness,
+                               rev_tails_accessor: RTA) -> Result<(), IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("ProofBuilder::update_witness: >>> r_claim: {:?}, rev_reg_def_pub: {:?}, rev_reg_delta: {:?}, witness: {:?}",
+               r_claim, rev_reg_def_pub, rev_reg_delta, witness);
+
+        if rev_reg_delta.issued.is_none() {
+            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+        }
+        let issued = rev_reg_delta.issued.clone().unwrap();
+
+        if witness.v != issued {
+            let v_old_minus_new: HashSet<u32> = witness.v.difference(&issued).cloned().collect();
+            let v_new_minus_old: HashSet<u32> = issued.difference(&witness.v).cloned().collect();
 
             let mut omega_denom = PointG2::new_inf()?;
             for j in v_old_minus_new.iter() {
-                omega_denom = omega_denom.add(
-                    tails_dash.get(&(accum.max_claim_num + 1 - j + r_claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
+                let index = rev_reg_def_pub.max_cred_num + 1 - j + r_claim.i;
+                rev_tails_accessor.access_tail(index, &mut |tail| {
+                    omega_denom = omega_denom.add(tail).unwrap();
+                })?;
             }
+
             let mut omega_num = PointG2::new_inf()?;
             for j in v_new_minus_old.iter() {
-                omega_num = omega_num.add(
-                    tails_dash.get(&(accum.max_claim_num + 1 - j + r_claim.i))
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Key not found {} in tails_dash", accum.max_claim_num + 1 - j + r_claim.i)))?)?;
+                let index = rev_reg_def_pub.max_cred_num + 1 - j + r_claim.i;
+                rev_tails_accessor.access_tail(index, &mut |tail| {
+                    omega_num = omega_num.add(tail).unwrap();
+                })?;
             }
 
-            let new_omega: PointG2 = r_claim.witness.omega.add(
-                &omega_num.sub(&omega_denom)?
-            )?;
+            let new_omega: PointG2 = witness.omega.add(
+                &omega_num.sub(&omega_denom)?)?;
 
-            r_claim.witness.v = accum.v.clone();
-            r_claim.witness.omega = new_omega;
+            witness.v = issued;
+            witness.omega = new_omega;
         }
 
-        trace!("ProofBuilder::_update_non_revocation_claim: <<<");
+        trace!("ProofBuilder::update_witness: <<<");
 
         Ok(())
     }
 
-    fn _init_eq_proof(issuer_pub_key: &IssuerPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_schema: &ClaimSchema,
+    fn _init_eq_proof(issuer_pub_key: &CredentialPrimaryPublicKey, c1: &PrimaryClaimSignature, claim_schema: &ClaimSchema,
                       sub_proof_request: &SubProofRequest, m1_tilde: &BigNumber, m2_t: Option<BigNumber>) -> Result<PrimaryEqualInitProof, IndyCryptoError> {
         trace!("ProofBuilder::_init_eq_proof: >>> issuer_pub_key: {:?}, c1: {:?}, claim_schema: {:?}, sub_proof_request: {:?}, m1_tilde: {:?}, m2_t: {:?}",
                issuer_pub_key, c1, claim_schema, sub_proof_request, m1_tilde, m2_t);
@@ -712,7 +778,7 @@ impl ProofBuilder {
         Ok(primary_equal_init_proof)
     }
 
-    fn _init_ge_proof(issuer_pub_key: &IssuerPrimaryPublicKey, m_tilde: &HashMap<String, BigNumber>,
+    fn _init_ge_proof(issuer_pub_key: &CredentialPrimaryPublicKey, m_tilde: &HashMap<String, BigNumber>,
                       claim_values: &ClaimValues, predicate: &Predicate) -> Result<PrimaryPredicateGEInitProof, IndyCryptoError> {
         trace!("ProofBuilder::_init_ge_proof: >>> issuer_pub_key: {:?}, m_tilde: {:?}, claim_values: {:?}, predicate: {:?}",
                issuer_pub_key, m_tilde, claim_values, predicate);
@@ -982,7 +1048,7 @@ impl ProofBuilder {
     }
 
     fn _create_c_list_values(r_claim: &NonRevocationClaimSignature, params: &NonRevocProofXList,
-                             r_pub_key: &IssuerRevocationPublicKey) -> Result<NonRevocProofCList, IndyCryptoError> {
+                             r_pub_key: &CredentialRevocationPublicKey, witness: &Witness) -> Result<NonRevocProofCList, IndyCryptoError> {
         trace!("ProofBuilder::_create_c_list_values: >>> r_claim: {:?}, r_pub_key: {:?}", r_claim, r_pub_key);
 
         let e = r_pub_key.h
@@ -1007,17 +1073,17 @@ impl ProofBuilder {
                 &r_pub_key.htilde.mul(&params.r)?
             )?;
 
-        let w = r_claim.witness.omega
+        let w = witness.omega
             .add(
                 &r_pub_key.h_cap.mul(&params.r_prime)?
             )?;
 
-        let s = r_claim.witness.sigma_i
+        let s = r_claim.witness_signature.sigma_i
             .add(
                 &r_pub_key.h_cap.mul(&params.r_prime_prime)?
             )?;
 
-        let u = r_claim.witness.u_i
+        let u = r_claim.witness_signature.u_i
             .add(
                 &r_pub_key.h_cap.mul(&params.r_prime_prime_prime)?
             )?;
@@ -1085,512 +1151,620 @@ impl ProofBuilder {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cl::issuer;
-
-    #[test]
-    fn generate_master_secret_works() {
-        MockHelper::inject();
-
-        let ms = Prover::new_master_secret().unwrap();
-        assert_eq!(ms.ms.to_dec().unwrap(), mocks::master_secret().ms.to_dec().unwrap());
-    }
-
-    #[test]
-    fn generate_blinded_primary_master_secret_works() {
-        MockHelper::inject();
-
-        let pk = issuer::mocks::issuer_primary_public_key();
-        let ms = mocks::master_secret();
-
-        let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&pk, &ms).unwrap();
-        assert_eq!(blinded_primary_master_secret, mocks::primary_blinded_master_secret_data());
-    }
-
-    #[test]
-    fn generate_blinded_revocation_master_secret_works() {
-        MockHelper::inject();
-
-        let r_pk = issuer::mocks::revocation_pub_key();
-        Prover::_generate_blinded_revocation_master_secret(&r_pk).unwrap();
-    }
-
-    #[test]
-    fn generate_blinded_master_secret_works() {
-        MockHelper::inject();
-
-        let pk = issuer::mocks::issuer_public_key();
-        let key_correctness_proof = issuer::mocks::issuer_key_correctness_proof();
-        let ms = super::mocks::master_secret();
-        let nonce = new_nonce().unwrap();
-
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&pk, &key_correctness_proof, &ms, &nonce).unwrap();
-
-        assert_eq!(blinded_master_secret.u, mocks::primary_blinded_master_secret_data().u);
-        assert_eq!(master_secret_blinding_data.v_prime, mocks::primary_blinded_master_secret_data().v_prime);
-        assert!(blinded_master_secret.ur.is_some());
-        assert!(master_secret_blinding_data.vr_prime.is_some());
-        assert_eq!(blinded_master_secret_correctness_proof, mocks::blinded_master_secret_correctness_proof())
-    }
-
-    #[test]
-    fn process_primary_claim_works() {
-        MockHelper::inject();
-
-        let mut claim = issuer::mocks::primary_claim();
-        let v_prime = mocks::primary_blinded_master_secret_data().v_prime;
-
-        Prover::_process_primary_claim(&mut claim, &v_prime).unwrap();
-
-        assert_eq!(mocks::primary_claim(), claim);
-    }
-
-    #[ignore]
-    #[test]
-    fn process_claim_works() {
-        MockHelper::inject();
-
-        let mut claim_signature = issuer::mocks::claim();
-        let claim_values = issuer::mocks::claim_values();
-        let pk = issuer::mocks::issuer_public_key();
-        let master_secret_blinding_data = mocks::master_secret_blinding_data();
-        let signature_correctness_proof = issuer::mocks::signature_correctness_proof();
-        let master_secret = mocks::master_secret();
-        let nonce = new_nonce().unwrap();
-
-        Prover::process_claim_signature(&mut claim_signature, &claim_values, &signature_correctness_proof,
-                                        &master_secret_blinding_data, &master_secret, &pk, &nonce, None).unwrap();
-
-        assert_eq!(mocks::primary_claim(), claim_signature.p_claim);
-    }
-
-    #[test]
-    fn init_eq_proof_works() {
-        MockHelper::inject();
-
-        let pk = issuer::mocks::issuer_primary_public_key();
-        let claim_schema = issuer::mocks::claim_schema();
-        let claim = mocks::primary_claim();
-        let sub_proof_request = mocks::sub_proof_request();
-        let m1_t = mocks::m1_t();
-
-        let init_eq_proof = ProofBuilder::_init_eq_proof(&pk,
-                                                         &claim,
-                                                         &claim_schema,
-                                                         &sub_proof_request,
-                                                         &m1_t,
-                                                         None).unwrap();
-
-        assert_eq!(mocks::primary_equal_init_proof(), init_eq_proof);
-    }
-
-    #[test]
-    fn init_ge_proof_works() {
-        MockHelper::inject();
-
-        let pk = issuer::mocks::issuer_primary_public_key();
-        let init_eq_proof = mocks::primary_equal_init_proof();
-        let predicate = mocks::predicate();
-        let claim_schema = issuer::mocks::claim_values();
-
-        let init_ge_proof = ProofBuilder::_init_ge_proof(&pk,
-                                                         &init_eq_proof.m_tilde,
-                                                         &claim_schema,
-                                                         &predicate).unwrap();
-
-        assert_eq!(mocks::primary_ge_init_proof(), init_ge_proof);
-    }
-
-    #[test]
-    fn init_primary_proof_works() {
-        MockHelper::inject();
-
-        let pk = issuer::mocks::issuer_primary_public_key();
-        let claim_schema = issuer::mocks::claim_schema();
-        let claim = mocks::claim();
-        let m1_t = mocks::m1_t();
-        let claim_values = issuer::mocks::claim_values();
-        let sub_proof_request = mocks::sub_proof_request();
-
-        let init_proof = ProofBuilder::_init_primary_proof(&pk,
-                                                           &claim.p_claim,
-                                                           &claim_values,
-                                                           &claim_schema,
-                                                           &sub_proof_request,
-                                                           &m1_t,
-                                                           None).unwrap();
-        assert_eq!(mocks::primary_init_proof(), init_proof);
-    }
-
-    #[test]
-    fn finalize_eq_proof_works() {
-        MockHelper::inject();
-
-        let ms = mocks::master_secret();
-        let c_h = mocks::aggregated_proof().c_hash;
-        let init_proof = mocks::primary_equal_init_proof();
-        let claim_values = issuer::mocks::claim_values();
-        let claim_schema = issuer::mocks::claim_schema();
-        let sub_proof_request = mocks::sub_proof_request();
-
-        let eq_proof = ProofBuilder::_finalize_eq_proof(&ms.ms,
-                                                        &init_proof,
-                                                        &c_h,
-                                                        &claim_schema,
-                                                        &claim_values,
-                                                        &sub_proof_request).unwrap();
-
-        assert_eq!(mocks::eq_proof(), eq_proof);
-    }
-
-    #[test]
-    fn finalize_ge_proof_works() {
-        MockHelper::inject();
-
-        let c_h = mocks::aggregated_proof().c_hash;
-        let ge_proof = mocks::primary_ge_init_proof();
-        let eq_proof = mocks::eq_proof();
-
-        let ge_proof = ProofBuilder::_finalize_ge_proof(&c_h,
-                                                        &ge_proof,
-                                                        &eq_proof).unwrap();
-        assert_eq!(mocks::ge_proof(), ge_proof);
-    }
-
-    #[test]
-    fn finalize_primary_proof_works() {
-        MockHelper::inject();
-
-        let proof = mocks::primary_init_proof();
-        let ms = mocks::master_secret();
-        let c_h = mocks::aggregated_proof().c_hash;
-        let claim_schema = issuer::mocks::claim_schema();
-        let claim_values = issuer::mocks::claim_values();
-        let sub_proof_request = mocks::sub_proof_request();
-
-        let proof = ProofBuilder::_finalize_primary_proof(&ms.ms,
-                                                          &proof,
-                                                          &c_h,
-                                                          &claim_schema,
-                                                          &claim_values,
-                                                          &sub_proof_request).unwrap();
-
-        assert_eq!(mocks::primary_proof(), proof);
-    }
-
-    #[test]
-    fn test_witness_credential_works() {
-        let mut r_claim = issuer::mocks::revocation_claim();
-        let r_key = issuer::mocks::revocation_pub_key();
-        let pub_rev_reg = issuer::mocks::revocation_reg_public();
-        let r_cnxt_m2 = issuer::mocks::r_cnxt_m2();
-
-        Prover::_test_witness_credential(&mut r_claim, &r_key, &pub_rev_reg, &r_cnxt_m2).unwrap();
-    }
-
-    #[test]
-    fn test_c_and_tau_list() {
-        let r_claim = issuer::mocks::revocation_claim();
-        let r_key = issuer::mocks::revocation_pub_key();
-        let pub_rev_reg = issuer::mocks::revocation_reg_public();
-
-        let c_list_params = ProofBuilder::_gen_c_list_params(&r_claim).unwrap();
-
-        let proof_c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &r_key).unwrap();
-
-        let proof_tau_list = create_tau_list_values(&r_key, &pub_rev_reg.acc,
-                                                    &c_list_params, &proof_c_list).unwrap();
-
-        let proof_tau_list_calc = create_tau_list_expected_values(&r_key,
-                                                                  &pub_rev_reg.acc,
-                                                                  &pub_rev_reg.key,
-                                                                  &proof_c_list).unwrap();
-
-        assert_eq!(proof_tau_list.as_slice().unwrap(), proof_tau_list_calc.as_slice().unwrap());
-    }
-}
-
-pub mod mocks {
-    use std::iter::FromIterator;
-    use super::*;
-
-    pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
-
-    pub fn master_secret() -> MasterSecret {
-        MasterSecret {
-            ms: BigNumber::from_dec("21578029250517794450984707538122537192839006240802068037273983354680998203845").unwrap()
-        }
-    }
-
-    pub fn blinded_master_secret() -> BlindedMasterSecret {
-        BlindedMasterSecret {
-            u: primary_blinded_master_secret_data().u,
-            ur: Some(PointG1::new().unwrap())
-        }
-    }
-
-    pub fn master_secret_blinding_data() -> MasterSecretBlindingData {
-        MasterSecretBlindingData {
-            v_prime: primary_blinded_master_secret_data().v_prime,
-            vr_prime: Some(GroupOrderElement::new().unwrap())
-        }
-    }
-
-    pub fn primary_blinded_master_secret_data() -> PrimaryBlindedMasterSecretData {
-        PrimaryBlindedMasterSecretData {
-            u: BigNumber::from_dec("62131613458491212647450749026110557315107248063999634018939493990510661547774785043368606327349972438752553705268389551695956681591088513470965951022916188426635920785711858270846103151952143962999882605158874187727930917543065819603904033232476213318716946483165845049857055843524772096401162219219325766151823342237298870123405045483888204774734861333194064636771376483246576553005091050395021110616183024926509075608486405908792354917392247618138553245001668496721002592137124689913074323672408089937272809493673139956967625985778946668553397964410414804110497637727146455394436693696946473591314513302670305281967").unwrap(),
-            v_prime: BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap()
-        }
-    }
-
-    pub fn blinded_master_secret_correctness_proof() -> BlindedMasterSecretProofCorrectness {
-        BlindedMasterSecretProofCorrectness {
-            c: BigNumber::from_dec("52137369980632673493737033552515064939059690422305746663811070172506104777402").unwrap(),
-            v_dash_cap: BigNumber::from_dec("100178004190656296709382768266993008006192123775546308472004838908263655980002661618812200326095517513896314235318396861641844081038339080245834294986311650268277002681501961202201354240585429054570148600990153497019833835914428296961607268346660960169537692713492348151980001678663537641011879357217094065860571602027702957622349600138469663504845636058906380091257296916263981409178122520880134668945366310455288500536044965599841374353463485072366621036299763735166990852126470485334333183557681132032478074913598666038536308397333451267604586296535112398514673382419863470564828872194942245571811574369529292047096277182779649038491125213094465380484398723691085901333739038351893040913174459790508752106395148017").unwrap(),
-            ms_cap: BigNumber::from_dec("10838856720335086997514321042683948406546868531902400157813178645110522107191934557397777281590228583921844895012204904115940161924029804276568405758117610916478858828990080308705").unwrap()
-        }
-    }
-
-    pub fn claim() -> ClaimSignature {
-        ClaimSignature {
-            p_claim: primary_claim(),
-            r_claim: Some(issuer::mocks::revocation_claim())
-        }
-    }
-
-    pub fn m1_t() -> BigNumber {
-        BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023506339911751676800452438014771736117676826911321621579680668201191205819012441197794443970687648330757835198888257781967404396196813475280544039772512800509").unwrap()
-    }
-
-    pub fn primary_claim() -> PrimaryClaimSignature {
-        PrimaryClaimSignature {
-            m_2: BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap(),
-            a: BigNumber::from_dec("49132363239670159787093110938226673449134304271682974269447432344742116194321299671237726890946751467604148940160960878389315018748968369324920041829812940290495892617484508167397279335797727252561964527234608788562556758908905751101202717778202353145195614091112566435036522962919148975492906117295892318112254557428194748194500923814804029097083178321689709119206691962548916694618289798605008896501236499585406286135857829085917853488040591522806635137841948126557076578432458560145981983607545219636425132731496278118460851115172092828609386003425340146394948070616734134255308348098680856366416432858457119085389").unwrap(),
-            e: BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881").unwrap(),
-            v: BigNumber::from_dec("6620937836014079781509458870800001917950459774302786434315639456568768602266735503527631640833663968617512880802104566048179854406925811731340920442625764155409951969854303612644127544973467090784833169581477025096651956458587024481106269073426545688878633368395090950721246745797130514914475184220252785922714892764536041334549342283500382915967329086709002330282037812607548379718641877595592743676836398647524633348205332354808351273389207425490367080293557186321576642355686995967422099839906367044852871358174711678743078106239862383119503287568833606375474359241383490799700740580296717320354647238288294827855343155547056851646090370313395520915221874011198982966904484363631910557996205942678772502957389321620232931357572315089162587705606682143499451357592399858038685832965830759409094928957246320485487746463").unwrap()
-        }
-    }
-
-    pub fn primary_init_proof() -> PrimaryInitProof {
-        PrimaryInitProof {
-            eq_proof: primary_equal_init_proof(),
-            ge_proofs: vec![primary_ge_init_proof()]
-        }
-    }
-
-    pub fn primary_equal_init_proof() -> PrimaryEqualInitProof {
-        let a_prime = BigNumber::from_dec("78898446861620412792842654750764062040328278229512305141968113883981382363496282144663134736579155174079489370417319571673509223278120964571470845241120645551554926623342854372134490258764319573521094387838327414281853828589221808686724921231593704540280532970373640199731641395199082059405080075465486634762457150037380987024458877755472383081895051555492507651039311433558129052743301554647361730000005427464464246044639541830130535925782175383878030954151669817492221872824859563277713273959367410746090482942312443321505241905381190352109064384380161190069276865755285156358570714184139481480304254835854046883548").unwrap();
-        let t = BigNumber::from_dec("37914978573013682015952967814616518692481372452542105037617069181070971905204966553219043437658169765912031143021675514514577011185656373414958242090351114594533636784052907330077014062209045618845579711804374387517660179011982489730203769871735698274791150764594282050172065273674092586808773775881050644266596441443533550303048063996952056765813548653973258606974460042186445095255377980703230984472995063940293700376667962671153418936388405441149268653617224146388772719618663280132182347760114744963580362159898202404232995554256561519180861258131147514023572009869216379017751386174351316118610777025755748506325").unwrap();
-        let e_tilde = BigNumber::from_dec("162083298053730499878539835193560156486733663622707027216327685550780519347628838870322946818623352681120371349972731968874009673965057322").unwrap();
-        let e_prime = BigNumber::from_dec("524456141360955985047633523128638545").unwrap();
-        let v_tilde = BigNumber::from_dec("241132863422049783305938184561371219250127488499746090592218003869595412171810997360214885239402274273939963489505434726467041932541499422544431299362364797699330176612923593931231233163363211565697860685967381420219969754969010598350387336530924879073366177641099382257720898488467175132844984811431059686249020737675861448309521855120928434488546976081485578773933300425198911646071284164884533755653094354378714645351464093907890440922615599556866061098147921890790915215227463991346847803620736586839786386846961213073783437136210912924729098636427160258710930323242639624389905049896225019051952864864612421360643655700799102439682797806477476049234033513929028472955119936073490401848509891547105031112859155855833089675654686301183778056755431562224990888545742379494795601542482680006851305864539769704029428620446639445284011289708313620219638324467338840766574612783533920114892847440641473989502440960354573501").unwrap();
-        let v_prime = BigNumber::from_dec("6122626610060688577826028713229499074477199356382901788064599481139201841946675307459429492073681684106974266732473283582251199684473394004038677069391278799297504466809439456560373351261561843732294201399342642485048861806520699838955215375938183164246905713902888830173868746004110336429406019431751890876414837974585857037931936009631605481447289893116786856562441832216311257042439806063785598342878372454731622929805073343996197573787090352073902245810345895873431467898909436762044613966967021911486188119609549831292025135993050932365492572744590585266402690739158346280929929978500499339008113747791946209747828024836255098012541106593813811665807502701513851726770557955311255012143102074491761548144980609065262303926782928259410970230923851333959833714917949253189276799418924788811164548907247060119625232347").unwrap();
-        let m_tilde = mocks::mtilde();
-
-        let m1_tilde = BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023506339911751676800452438014771736117676826911321621579680668201191205819012441197794443970687648330757835198888257781967404396196813475280544039772512800509").unwrap();
-        let m2_tilde = BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap();
-        let m2 = BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap();
-
-        PrimaryEqualInitProof {
-            a_prime,
-            t,
-            e_tilde,
-            e_prime,
-            v_tilde,
-            v_prime,
-            m_tilde,
-            m1_tilde,
-            m2_tilde,
-            m2
-        }
-    }
-
-    pub fn primary_ge_init_proof() -> PrimaryPredicateGEInitProof {
-        let c_list: Vec<BigNumber> = c_list();
-        let tau_list: Vec<BigNumber> = tau_list();
-
-        let mut u: HashMap<String, BigNumber> = HashMap::new();
-        u.insert("0".to_string(), BigNumber::from_dec("3").unwrap());
-        u.insert("1".to_string(), BigNumber::from_dec("1").unwrap());
-        u.insert("2".to_string(), BigNumber::from_dec("0").unwrap());
-        u.insert("3".to_string(), BigNumber::from_dec("0").unwrap());
-
-        let mut u_tilde = HashMap::new();
-        u_tilde.insert("3".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        u_tilde.insert("1".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        u_tilde.insert("2".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        u_tilde.insert("0".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-
-        let mut r = HashMap::new();
-        r.insert("3".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
-        r.insert("1".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
-        r.insert("2".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
-        r.insert("0".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
-        r.insert("DELTA".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
-
-        let mut r_tilde = HashMap::new();
-        r_tilde.insert("3".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
-        r_tilde.insert("1".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
-        r_tilde.insert("2".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
-        r_tilde.insert("0".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
-        r_tilde.insert("DELTA".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
-
-        let alpha_tilde = BigNumber::from_dec("15019832071918025992746443764672619814038193111378331515587108416842661492145380306078894142589602719572721868876278167686578705125701790763532708415180504799241968357487349133908918935916667492626745934151420791943681376124817051308074507483664691464171654649868050938558535412658082031636255658721308264295197092495486870266555635348911182100181878388728256154149188718706253259396012667950509304959158288841789791483411208523521415447630365867367726300467842829858413745535144815825801952910447948288047749122728907853947789264574578039991615261320141035427325207080621563365816477359968627596441227854436137047681372373555472236147836722255880181214889123172703767379416198854131024048095499109158532300492176958443747616386425935907770015072924926418668194296922541290395990933578000312885508514814484100785527174742772860178035596639").unwrap();
-        let predicate = predicate();
-
-        let mut t = HashMap::new();
-        t.insert("3".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        t.insert("1".to_string(), BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
-        t.insert("2".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        t.insert("0".to_string(), BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
-        t.insert("DELTA".to_string(), BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
-
-        PrimaryPredicateGEInitProof {
-            c_list,
-            tau_list,
-            u,
-            u_tilde,
-            r,
-            r_tilde,
-            alpha_tilde,
-            predicate,
-            t
-        }
-    }
-
-    pub fn c_list() -> Vec<BigNumber> {
-        let mut c_list: Vec<BigNumber> = Vec::new();
-        c_list.push(BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
-        c_list.push(BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
-        c_list.push(BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        c_list.push(BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        c_list.push(BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
-        c_list
-    }
-
-    pub fn tau_list() -> Vec<BigNumber> {
-        let mut tau_list: Vec<BigNumber> = Vec::new();
-        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
-        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
-        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
-        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
-        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
-        tau_list.push(BigNumber::from_dec("47065304866607958075946961264533928435933122536016679690080278659386698316132559908768761685743414728586341914305025339970537873714845915164843100776821561200343390749927996265246866447155790487554483555192805709960222015718787293872197230832464704800887153568636866026153126587657548580608446574507279965440247754859129693686186427399103313737110632413255017522482016458190003045641077338674019608347139399755470654452373975228190041980152120799403855480909173865431397307988238759767251890853580982844825639097363091181044515877489450972963624109587697097258041963985607958610791800500711857115582406526050626576194").unwrap());
-        tau_list
-    }
-
-    pub fn mtilde() -> HashMap<String, BigNumber> {
-        let mut mtilde = HashMap::new();
-        mtilde.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        mtilde.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        mtilde.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        mtilde
-    }
-
-    pub fn eq_proof() -> PrimaryEqualProof {
-        let mut revealed_attrs: HashMap<String, BigNumber> = HashMap::new();
-        revealed_attrs.insert("name".to_string(), BigNumber::from_dec("1139481716457488690172217916278103335").unwrap());
-
-        let mut m: HashMap<String, BigNumber> = HashMap::new();
-        m.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap());
-        m.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326573210330277861354501442113655769882988760097155977792459796092706040876245423440766971450670662675952825317632013652532469629317617583714945063045022245480").unwrap());
-        m.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126578939747270189080172212182414586274398455192612806812346160325332993411278449288").unwrap());
-
-        PrimaryEqualProof {
-            revealed_attrs,
-            a_prime: BigNumber::from_dec("78898446861620412792842654750764062040328278229512305141968113883981382363496282144663134736579155174079489370417319571673509223278120964571470845241120645551554926623342854372134490258764319573521094387838327414281853828589221808686724921231593704540280532970373640199731641395199082059405080075465486634762457150037380987024458877755472383081895051555492507651039311433558129052743301554647361730000005427464464246044639541830130535925782175383878030954151669817492221872824859563277713273959367410746090482942312443321505241905381190352109064384380161190069276865755285156358570714184139481480304254835854046883548").unwrap(),
-            e: BigNumber::from_dec("162083298053730499878539868675621169436369451197643364049023367091432000132455800020257076120708238452276269567894398158050524769029842452").unwrap(),
-            v: BigNumber::from_dec("241132863422049783305938575438970984968886174719777147285301544874444739988430486983952995820260097840839069440378394346753879604392851933586337358561654582254955422523682312898019724436529062720828313475600193232595180909715451462600156154893650696125774460890921102329846137078074382707757647774945043683720900258432094924802673704740906359826573881239743758685541361718016925837587696092410894740410057107458758557447620998360525272595382152876024857626077651578395225059761356087394593446798198952106185244345409492051630909148188459601119687896316694712657729049955088211383277523909796073178401612271233635772969741130113707687830672377452944696453914387935655490225348165302887058751092766205283395163137925794804058129811328946552494253968865890668669461930678189893633436518087402186509936569439729722305359388858552931085264558311600831146504998575898993873331466073087451895775323562065569650308485086554411659").unwrap(),
-            m,
-            m1: BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023507717485270084329765530473051446860852464706042958744244302789614711475323377257526784176458583145354771172858130808467331945526902877938301707061812969839").unwrap(),
-            m2: BigNumber::from_dec("6461691768834933403326578888105718505728223587635918716029631036880873089632406454446365479864836382766718108773927309946281006850562266201583930422493421759789521997998623210730").unwrap(),
-        }
-    }
-
-    pub fn aggregated_proof() -> AggregatedProof {
-        AggregatedProof {
-            c_list: vec![vec![1, 186, 92, 249, 189, 141, 143, 77, 171, 208, 34, 140, 90, 244, 94, 183, 45, 154, 176, 130, 60, 178, 12, 91, 106, 61, 126, 148, 197, 182, 25, 153, 96, 174, 3, 165, 20, 89, 43, 231, 112, 217, 35, 100, 69, 135, 47, 144, 253, 40, 158, 137, 14, 165, 152, 246, 60, 170, 0, 228, 18, 85, 19, 117, 184, 191, 8, 222, 140, 135, 204, 99, 152, 191, 200, 124, 95, 124, 138, 86, 120, 75, 160, 110, 21, 36, 100, 161, 60, 215, 45, 138, 147, 21, 211, 241, 40, 25, 98, 21, 41, 160, 115, 84, 184, 92, 113, 251, 138, 182, 201, 12, 42, 35, 243, 28, 13, 195, 2, 30, 119, 253, 227, 15, 51, 237, 221, 14, 193, 142, 152, 182, 63, 150, 188, 87, 216, 26, 201, 10, 166, 26, 223, 177, 210, 90, 123, 241, 43, 125, 37, 94, 48, 89, 240, 144, 246, 246, 202, 224, 86, 207, 134, 211, 140, 154, 77, 45, 168, 99, 192, 41, 142, 42, 106, 165, 64, 130, 26, 255, 247, 56, 250, 156, 193, 209, 139, 4, 234, 227, 138, 199, 99, 151, 3, 89, 46, 142, 137, 27, 152, 205, 147, 136, 121, 32, 126, 71, 112, 40, 0, 236, 30, 62, 12, 66, 74, 177, 19, 170, 170, 14, 149, 90, 43, 199, 68, 15, 239, 213, 131, 33, 112, 117, 13, 101, 181, 164, 202, 58, 143, 46, 105, 23, 171, 178, 36, 198, 189, 220, 128, 247, 59, 129, 189, 224, 171],
-                         vec![2, 108, 127, 101, 174, 218, 32, 134, 244, 38, 234, 207, 183, 66, 169, 248, 220, 152, 219, 224, 147, 85, 180, 138, 119, 9, 112, 56, 171, 119, 32, 85, 150, 21, 32, 246, 205, 201, 127, 46, 230, 100, 227, 32, 121, 190, 24, 173, 28, 86, 154, 44, 66, 119, 101, 162, 138, 185, 201, 243, 172, 229, 25, 147, 210, 51, 172, 170, 113, 11, 245, 227, 33, 4, 197, 168, 253, 19, 136, 59, 158, 255, 53, 184, 168, 158, 46, 232, 119, 185, 114, 41, 17, 179, 201, 109, 92, 53, 238, 69, 40, 13, 2, 122, 179, 99, 68, 189, 76, 41, 105, 70, 85, 127, 150, 192, 111, 167, 53, 48, 221, 242, 243, 164, 202, 56, 243, 146, 104, 122, 12, 173, 136, 61, 169, 225, 79, 41, 180, 155, 198, 21, 192, 140, 223, 100, 207, 167, 50, 100, 17, 2, 102, 161, 47, 187, 96, 210, 156, 24, 214, 179, 43, 158, 9, 191, 186, 75, 40, 216, 47, 145, 104, 23, 8, 119, 90, 69, 104, 83, 183, 200, 85, 140, 134, 172, 12, 251, 73, 172, 157, 33, 100, 226, 180, 51, 102, 151, 36, 253, 149, 15, 97, 191, 210, 246, 28, 120, 161, 126, 51, 99, 181, 225, 54, 24, 131, 91, 178, 164, 116, 32, 67, 30, 181, 227, 245, 241, 172, 153, 113, 14, 127, 6, 98, 199, 250, 43, 119, 146, 160, 105, 138, 190, 162, 9, 230, 81, 116, 42, 31, 84, 160, 67, 219, 53, 100],
-                         vec![1, 81, 185, 134, 123, 21, 18, 221, 49, 172, 39, 239, 236, 207, 16, 143, 240, 173, 88, 153, 7, 162, 166, 60, 151, 232, 163, 185, 151, 27, 178, 120, 14, 12, 201, 119, 144, 135, 130, 203, 231, 119, 46, 249, 128, 137, 136, 243, 91, 240, 120, 169, 203, 72, 35, 17, 151, 39, 246, 124, 44, 135, 141, 132, 178, 89, 195, 178, 253, 153, 216, 48, 226, 115, 1, 36, 137, 191, 159, 106, 192, 193, 254, 50, 97, 50, 204, 141, 202, 207, 8, 168, 100, 200, 247, 209, 198, 213, 58, 213, 202, 226, 82, 214, 206, 99, 143, 121, 91, 80, 19, 251, 59, 64, 79, 221, 234, 219, 244, 174, 44, 100, 141, 29, 163, 221, 175, 180, 131, 141, 42, 209, 0, 36, 199, 9, 10, 134, 93, 103, 96, 7, 11, 197, 228, 166, 132, 242, 31, 233, 228, 117, 242, 242, 64, 5, 21, 252, 184, 181, 124, 66, 168, 126, 165, 69, 30, 218, 112, 124, 134, 57, 143, 200, 9, 0, 71, 72, 251, 216, 5, 68, 126, 168, 209, 162, 147, 106, 245, 106, 240, 86, 56, 96, 124, 242, 119, 141, 132, 145, 104, 68, 224, 33, 61, 1, 16, 242, 210, 43, 56, 209, 209, 128, 200, 208, 54, 249, 111, 136, 246, 154, 105, 73, 64, 139, 81, 85, 177, 174, 214, 250, 59, 161, 159, 174, 38, 94, 195, 191, 120, 33, 69, 179, 235, 20, 106, 133, 209, 118, 61, 159, 242, 0, 101, 98, 104],
-                         vec![1, 111, 80, 91, 53, 214, 139, 10, 197, 79, 134, 183, 50, 233, 244, 130, 80, 173, 167, 5, 130, 151, 183, 162, 97, 134, 246, 146, 37, 151, 103, 45, 68, 33, 204, 18, 157, 21, 98, 230, 225, 30, 162, 172, 75, 159, 115, 94, 72, 113, 153, 155, 117, 233, 95, 251, 29, 1, 149, 38, 117, 63, 112, 213, 48, 29, 3, 131, 238, 120, 48, 141, 105, 31, 127, 51, 176, 32, 203, 191, 155, 159, 91, 29, 87, 223, 30, 92, 146, 250, 182, 181, 155, 67, 253, 33, 165, 142, 195, 146, 180, 221, 83, 62, 46, 74, 29, 83, 175, 218, 132, 93, 42, 93, 105, 173, 189, 254, 193, 230, 113, 39, 45, 137, 143, 124, 190, 42, 19, 77, 13, 220, 137, 202, 128, 170, 10, 22, 37, 177, 200, 186, 3, 73, 171, 232, 81, 144, 36, 46, 70, 237, 208, 26, 84, 26, 141, 19, 37, 200, 83, 60, 27, 175, 96, 233, 246, 144, 137, 178, 140, 213, 13, 36, 137, 82, 107, 0, 239, 192, 187, 126, 20, 205, 40, 203, 33, 238, 88, 121, 132, 31, 87, 91, 65, 207, 144, 15, 249, 66, 58, 98, 64, 61, 236, 103, 203, 207, 20, 205, 48, 202, 247, 22, 248, 197, 188, 21, 178, 187, 193, 152, 164, 247, 53, 15, 33, 170, 145, 3, 213, 63, 205, 55, 158, 170, 62, 157, 207, 162, 117, 157, 215, 125, 94, 77, 251, 251, 25, 209, 207, 119, 16, 186, 210, 190, 83],
-                         vec![1, 111, 80, 91, 53, 214, 139, 10, 197, 79, 134, 183, 50, 233, 244, 130, 80, 173, 167, 5, 130, 151, 183, 162, 97, 134, 246, 146, 37, 151, 103, 45, 68, 33, 204, 18, 157, 21, 98, 230, 225, 30, 162, 172, 75, 159, 115, 94, 72, 113, 153, 155, 117, 233, 95, 251, 29, 1, 149, 38, 117, 63, 112, 213, 48, 29, 3, 131, 238, 120, 48, 141, 105, 31, 127, 51, 176, 32, 203, 191, 155, 159, 91, 29, 87, 223, 30, 92, 146, 250, 182, 181, 155, 67, 253, 33, 165, 142, 195, 146, 180, 221, 83, 62, 46, 74, 29, 83, 175, 218, 132, 93, 42, 93, 105, 173, 189, 254, 193, 230, 113, 39, 45, 137, 143, 124, 190, 42, 19, 77, 13, 220, 137, 202, 128, 170, 10, 22, 37, 177, 200, 186, 3, 73, 171, 232, 81, 144, 36, 46, 70, 237, 208, 26, 84, 26, 141, 19, 37, 200, 83, 60, 27, 175, 96, 233, 246, 144, 137, 178, 140, 213, 13, 36, 137, 82, 107, 0, 239, 192, 187, 126, 20, 205, 40, 203, 33, 238, 88, 121, 132, 31, 87, 91, 65, 207, 144, 15, 249, 66, 58, 98, 64, 61, 236, 103, 203, 207, 20, 205, 48, 202, 247, 22, 248, 197, 188, 21, 178, 187, 193, 152, 164, 247, 53, 15, 33, 170, 145, 3, 213, 63, 205, 55, 158, 170, 62, 157, 207, 162, 117, 157, 215, 125, 94, 77, 251, 251, 25, 209, 207, 119, 16, 186, 210, 190, 83],
-                         vec![1, 185, 37, 77, 23, 245, 214, 239, 127, 18, 101, 63, 229, 201, 171, 193, 32, 182, 124, 45, 15, 127, 58, 172, 226, 30, 246, 70, 33, 19, 117, 183, 29, 157, 209, 237, 41, 58, 208, 4, 105, 26, 73, 26, 69, 72, 21, 78, 106, 28, 72, 117, 102, 144, 199, 148, 3, 98, 81, 251, 246, 106, 50, 235, 129, 14, 186, 108, 216, 29, 41, 207, 233, 7, 179, 86, 224, 230, 187, 138, 125, 62, 68, 31, 66, 147, 205, 93, 100, 9, 134, 225, 210, 57, 36, 71, 134, 26, 179, 85, 37, 194, 32, 137, 91, 4, 91, 214, 220, 134, 173, 148, 14, 95, 209, 232, 79, 87, 12, 180, 217, 148, 240, 242, 190, 36, 229, 189, 16, 208, 75, 176, 153, 239, 212, 255, 45, 42, 250, 234, 139, 40, 104, 74, 21, 30, 184, 221, 126, 185, 23, 69, 114, 104, 249, 242, 248, 210, 97, 100, 141, 61, 176, 93, 200, 148, 152, 138, 31, 66, 99, 61, 237, 210, 42, 205, 60, 241, 92, 247, 1, 146, 203, 116, 237, 0, 171, 235, 250, 128, 74, 56, 223, 65, 189, 176, 91, 243, 174, 2, 111, 216, 233, 227, 28, 22, 41, 102, 225, 1, 21, 156, 212, 16, 243, 9, 94, 61, 246, 153, 193, 243, 188, 187, 154, 109, 168, 36, 89, 48, 236, 113, 74, 179, 158, 103, 51, 38, 15, 148, 18, 89, 218, 144, 71, 198, 8, 144, 104, 135, 160, 224, 98, 243, 106, 228, 198]],
-            c_hash: BigNumber::from_dec("63841489063440422591549130255324272391231497635167479821265935688468807059914").unwrap()
-        }
-    }
-
-    pub fn ge_proof() -> PrimaryPredicateGEProof {
-        let mut m: HashMap<String, BigNumber> = HashMap::new();
-        m.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap());
-        m.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326573210330277861354501442113655769882988760097155977792459796092706040876245423440766971450670662675952825317632013652532469629317617583714945063045022245480").unwrap());
-        m.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126578939747270189080172212182414586274398455192612806812346160325332993411278449288").unwrap());
-
-        let mut u: HashMap<String, BigNumber> = HashMap::new();
-        u.insert("2".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-        u.insert("1".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567831328173150446641282633750159851002380912024287670857260052523199838850024252").unwrap());
-        u.insert("0".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567959011151277327486465732010670499547163375019558005816902584394576776464144080").unwrap());
-        u.insert("3".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
-
-        let mut r: HashMap<String, BigNumber> = HashMap::new();
-        r.insert("2".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
-        r.insert("1".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
-        r.insert("0".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
-        r.insert("3".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
-        r.insert("DELTA".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
-
-        let mut t: HashMap<String, BigNumber> = HashMap::new();
-        t.insert("2".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        t.insert("1".to_string(), BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
-        t.insert("0".to_string(), BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
-        t.insert("3".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
-        t.insert("DELTA".to_string(), BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
-
-        PrimaryPredicateGEProof {
-            u,
-            r,
-            mj: BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap(),
-            alpha: BigNumber::from_dec("15019832071918025992746443764672619814038193111378331515587108416842661492145380306078894142589602719572721868876278167686210705380338102691218393130393885672695618412529738419131694926443107219330694482439903234395193851871472925835039379909853454508267226053046255940557629449048653188523919553702545953724489357880127160704800260353007771778801244908160960828454115645487868830738739976138947949505366080323799159654252725215417470924265496096864737420292879717953990073198774585977677974887563743667406941320910576277132072350218452884841014022648967794316567016887837205701017499498636748288004981818643125542585776429419200955219536940661401665401273238350271276070084547091903752551649057233346746822426635975545515195870976674441104284294336189831971933619615980881781820696853193401192672937826151341781675749898224527543492305127").unwrap(),
-            t,
-            predicate: predicate()
-        }
-    }
-
-    pub fn primary_proof() -> PrimaryProof {
-        PrimaryProof {
-            eq_proof: eq_proof(),
-            ge_proofs: vec![ge_proof()]
-        }
-    }
-
-    pub fn sub_proof_request() -> SubProofRequest {
-        let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
-        sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
-        sub_proof_request_builder.finalize().unwrap()
-    }
-
-    pub fn revealed_attrs() -> HashSet<String> {
-        HashSet::from_iter(vec!["name".to_owned()].into_iter())
-    }
-
-    pub fn unrevealed_attrs() -> HashSet<String> {
-        HashSet::from_iter(vec!["height".to_owned(), "age".to_owned(), "sex".to_owned()])
-    }
-
-    pub fn claim_revealed_attributes_values() -> ClaimValues {
-        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
-        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        claim_values_builder.finalize().unwrap()
-    }
-
-    pub fn predicate() -> Predicate {
-        Predicate {
-            attr_name: "age".to_owned(),
-            p_type: PredicateType::GE,
-            value: 18
-        }
-    }
-}
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//    use cl::issuer;
+//
+//    #[test]
+//    fn generate_master_secret_works() {
+//        MockHelper::inject();
+//
+//        let ms = Prover::new_master_secret().unwrap();
+//        assert_eq!(ms.ms.to_dec().unwrap(), mocks::master_secret().ms.to_dec().unwrap());
+//    }
+//
+//    #[test]
+//    fn generate_blinded_primary_master_secret_works() {
+//        MockHelper::inject();
+//
+//        let pk = issuer::mocks::issuer_primary_public_key();
+//        let ms = mocks::master_secret();
+//
+//        let blinded_primary_master_secret = Prover::_generate_blinded_primary_master_secret(&pk, &ms).unwrap();
+//        assert_eq!(blinded_primary_master_secret, mocks::primary_blinded_master_secret_data());
+//    }
+//
+//    #[test]
+//    fn generate_blinded_revocation_master_secret_works() {
+//        MockHelper::inject();
+//
+//        let r_pk = issuer::mocks::revocation_pub_key();
+//        Prover::_generate_blinded_revocation_master_secret(&r_pk).unwrap();
+//    }
+//
+//    #[test]
+//    fn generate_blinded_master_secret_works() {
+//        MockHelper::inject();
+//
+//        let pk = issuer::mocks::issuer_public_key();
+//        let key_correctness_proof = issuer::mocks::issuer_key_correctness_proof();
+//        let ms = super::mocks::master_secret();
+//        let nonce = new_nonce().unwrap();
+//
+//        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+//            Prover::blind_master_secret(&pk, &key_correctness_proof, &ms, &nonce).unwrap();
+//
+//        assert_eq!(blinded_master_secret.u, mocks::primary_blinded_master_secret_data().u);
+//        assert_eq!(master_secret_blinding_data.v_prime, mocks::primary_blinded_master_secret_data().v_prime);
+//        assert!(blinded_master_secret.ur.is_some());
+//        assert!(master_secret_blinding_data.vr_prime.is_some());
+//        assert_eq!(blinded_master_secret_correctness_proof, mocks::blinded_master_secret_correctness_proof())
+//    }
+//
+//    #[test]
+//    fn process_primary_claim_works() {
+//        MockHelper::inject();
+//
+//        let mut claim = issuer::mocks::primary_claim();
+//        let v_prime = mocks::primary_blinded_master_secret_data().v_prime;
+//
+//        Prover::_process_primary_claim(&mut claim, &v_prime).unwrap();
+//
+//        assert_eq!(mocks::primary_claim(), claim);
+//    }
+//
+//    #[ignore]
+//    #[test]
+//    fn process_claim_works() {
+//        MockHelper::inject();
+//
+//        let mut claim_signature = issuer::mocks::claim();
+//        let claim_values = issuer::mocks::claim_values();
+//        let pk = issuer::mocks::issuer_public_key();
+//        let master_secret_blinding_data = mocks::master_secret_blinding_data();
+//        let signature_correctness_proof = issuer::mocks::signature_correctness_proof();
+//        let master_secret = mocks::master_secret();
+//        let nonce = new_nonce().unwrap();
+//
+//        Prover::process_claim_signature(&mut claim_signature, &claim_values, &signature_correctness_proof,
+//                                        &master_secret_blinding_data, &master_secret, &pk, &nonce, None).unwrap();
+//
+//        assert_eq!(mocks::primary_claim(), claim_signature.p_claim);
+//    }
+//
+//    #[test]
+//    fn init_eq_proof_works() {
+//        MockHelper::inject();
+//
+//        let pk = issuer::mocks::issuer_primary_public_key();
+//        let claim_schema = issuer::mocks::claim_schema();
+//        let claim = mocks::primary_claim();
+//        let sub_proof_request = mocks::sub_proof_request();
+//        let m1_t = mocks::m1_t();
+//
+//        let init_eq_proof = ProofBuilder::_init_eq_proof(&pk,
+//                                                         &claim,
+//                                                         &claim_schema,
+//                                                         &sub_proof_request,
+//                                                         &m1_t,
+//                                                         None).unwrap();
+//
+//        assert_eq!(mocks::primary_equal_init_proof(), init_eq_proof);
+//    }
+//
+//    #[test]
+//    fn init_ge_proof_works() {
+//        MockHelper::inject();
+//
+//        let pk = issuer::mocks::issuer_primary_public_key();
+//        let init_eq_proof = mocks::primary_equal_init_proof();
+//        let predicate = mocks::predicate();
+//        let claim_schema = issuer::mocks::claim_values();
+//
+//        let init_ge_proof = ProofBuilder::_init_ge_proof(&pk,
+//                                                         &init_eq_proof.m_tilde,
+//                                                         &claim_schema,
+//                                                         &predicate).unwrap();
+//
+//        assert_eq!(mocks::primary_ge_init_proof(), init_ge_proof);
+//    }
+//
+//    #[test]
+//    fn init_primary_proof_works() {
+//        MockHelper::inject();
+//
+//        let pk = issuer::mocks::issuer_primary_public_key();
+//        let claim_schema = issuer::mocks::claim_schema();
+//        let claim = mocks::claim();
+//        let m1_t = mocks::m1_t();
+//        let claim_values = issuer::mocks::claim_values();
+//        let sub_proof_request = mocks::sub_proof_request();
+//
+//        let init_proof = ProofBuilder::_init_primary_proof(&pk,
+//                                                           &claim.p_claim,
+//                                                           &claim_values,
+//                                                           &claim_schema,
+//                                                           &sub_proof_request,
+//                                                           &m1_t,
+//                                                           None).unwrap();
+//        assert_eq!(mocks::primary_init_proof(), init_proof);
+//    }
+//
+//    #[test]
+//    fn finalize_eq_proof_works() {
+//        MockHelper::inject();
+//
+//        let ms = mocks::master_secret();
+//        let c_h = mocks::aggregated_proof().c_hash;
+//        let init_proof = mocks::primary_equal_init_proof();
+//        let claim_values = issuer::mocks::claim_values();
+//        let claim_schema = issuer::mocks::claim_schema();
+//        let sub_proof_request = mocks::sub_proof_request();
+//
+//        let eq_proof = ProofBuilder::_finalize_eq_proof(&ms.ms,
+//                                                        &init_proof,
+//                                                        &c_h,
+//                                                        &claim_schema,
+//                                                        &claim_values,
+//                                                        &sub_proof_request).unwrap();
+//
+//        assert_eq!(mocks::eq_proof(), eq_proof);
+//    }
+//
+//    #[test]
+//    fn finalize_ge_proof_works() {
+//        MockHelper::inject();
+//
+//        let c_h = mocks::aggregated_proof().c_hash;
+//        let ge_proof = mocks::primary_ge_init_proof();
+//        let eq_proof = mocks::eq_proof();
+//
+//        let ge_proof = ProofBuilder::_finalize_ge_proof(&c_h,
+//                                                        &ge_proof,
+//                                                        &eq_proof).unwrap();
+//        assert_eq!(mocks::ge_proof(), ge_proof);
+//    }
+//
+//    #[test]
+//    fn finalize_primary_proof_works() {
+//        MockHelper::inject();
+//
+//        let proof = mocks::primary_init_proof();
+//        let ms = mocks::master_secret();
+//        let c_h = mocks::aggregated_proof().c_hash;
+//        let claim_schema = issuer::mocks::claim_schema();
+//        let claim_values = issuer::mocks::claim_values();
+//        let sub_proof_request = mocks::sub_proof_request();
+//
+//        let proof = ProofBuilder::_finalize_primary_proof(&ms.ms,
+//                                                          &proof,
+//                                                          &c_h,
+//                                                          &claim_schema,
+//                                                          &claim_values,
+//                                                          &sub_proof_request).unwrap();
+//
+//        assert_eq!(mocks::primary_proof(), proof);
+//    }
+//
+//    #[test]
+//    fn test_witness_credential_works() {
+//        let mut r_claim = issuer::mocks::revocation_claim();
+//        let r_key = issuer::mocks::revocation_pub_key();
+//        let pub_rev_reg = issuer::mocks::revocation_reg_public();
+//        let r_cnxt_m2 = issuer::mocks::r_cnxt_m2();
+//
+//        Prover::_test_witness_credential(&mut r_claim, &r_key, &pub_rev_reg, &r_cnxt_m2).unwrap();
+//    }
+//
+//    #[test]
+//    fn test_c_and_tau_list() {
+//        let r_claim = issuer::mocks::revocation_claim();
+//        let r_key = issuer::mocks::revocation_pub_key();
+//        let pub_rev_reg = issuer::mocks::revocation_reg_public();
+//
+//        let c_list_params = ProofBuilder::_gen_c_list_params(&r_claim).unwrap();
+//
+//        let proof_c_list = ProofBuilder::_create_c_list_values(&r_claim, &c_list_params, &r_key).unwrap();
+//
+//        let proof_tau_list = create_tau_list_values(&r_key, &pub_rev_reg.acc,
+//                                                    &c_list_params, &proof_c_list).unwrap();
+//
+//        let proof_tau_list_calc = create_tau_list_expected_values(&r_key,
+//                                                                  &pub_rev_reg.acc,
+//                                                                  &pub_rev_reg.key,
+//                                                                  &proof_c_list).unwrap();
+//
+//        assert_eq!(proof_tau_list.as_slice().unwrap(), proof_tau_list_calc.as_slice().unwrap());
+//    }
+//
+//    extern crate time;
+//
+//
+//    /*
+//    Results:
+//
+//    N = 100
+//    Create RevocationRegistry Time: Duration { secs: 0, nanos: 153759082 }
+//    Update NonRevocation Claim Time: Duration { secs: 0, nanos: 490382 }
+//    Total Time for 100 claims: Duration { secs: 5, nanos: 45915383 }
+//
+//    N = 1000
+//    Create RevocationRegistry Time: Duration { secs: 1, nanos: 636113212 }
+//    Update NonRevocation Claim Time: Duration { secs: 0, nanos: 5386575 }
+//    Total Time for 1000 claims: Duration { secs: 6, nanos: 685771457 }
+//
+//    N = 10000
+//    Create RevocationRegistry Time: Duration { secs: 16, nanos: 844061103 }
+//    Update NonRevocation Claim Time: Duration { secs: 0, nanos: 52396763 }
+//    Total Time for 10000 claims: Duration { secs: 29, nanos: 628240611 }
+//
+//    N = 100000
+//    Create RevocationRegistry Time: Duration { secs: 175, nanos: 666428558 }
+//    Update NonRevocation Claim Time: Duration { secs: 0, nanos: 667879620 }
+//    Total Time for 100000 claims: Duration { secs: 185, nanos: 810126906 }
+//
+//    N = 1000000
+//    Create RevocationRegistry Time: Duration { secs: 1776, nanos: 485208599 }
+//    Update NonRevocation Claim Time: Duration { secs: 6, nanos: 35027554 }
+//    Total Time for 1000000 claims: Duration { secs: 1798, nanos: 420564334 }
+//    */
+//    #[test]
+//    fn test_update_proof() {
+//        println!("Update Proof test -> start");
+//        let n = 100;
+//
+//        let total_start_time = time::get_time();
+//
+//        let claim_schema = issuer::mocks::claim_schema();
+//        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = issuer::Issuer::new_cred_def(&claim_schema, true).unwrap();
+//
+//        let start_time = time::get_time();
+//
+//        let (mut rev_reg_pub, rev_reg_priv) = issuer::Issuer::new_revocation_registry_def(&issuer_pub_key, n).unwrap();
+//
+//        let end_time = time::get_time();
+//
+//        println!("Create RevocationRegistry Time: {:?}", end_time - start_time);
+//
+//        let claim_values = issuer::mocks::claim_values();
+//
+//        // Issue first correct Claim
+//        let master_secret = Prover::new_master_secret().unwrap();
+//        let master_secret_blinding_nonce = new_nonce().unwrap();
+//
+//        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+//            Prover::blind_master_secret(&issuer_pub_key,
+//                                        &issuer_key_correctness_proof,
+//                                        &master_secret,
+//                                        &master_secret_blinding_nonce).unwrap();
+//
+//        let claim_issuance_nonce = new_nonce().unwrap();
+//
+//        let (mut claim_signature, signature_correctness_proof) = issuer::Issuer::sign_claim("NcYxiDXkpYi6ov5FcYDi1e",
+//                                                                                            &blinded_master_secret,
+//                                                                                            &blinded_master_secret_correctness_proof,
+//                                                                                            &master_secret_blinding_nonce,
+//                                                                                            &claim_issuance_nonce,
+//                                                                                            &claim_values,
+//                                                                                            &issuer_pub_key,
+//                                                                                            &issuer_priv_key,
+//                                                                                            Some(1),
+//                                                                                            Some(&mut rev_reg_pub),
+//                                                                                            Some(&rev_reg_priv)).unwrap();
+//        Prover::process_claim_signature(&mut claim_signature,
+//                                        &claim_values,
+//                                        &signature_correctness_proof,
+//                                        &master_secret_blinding_data,
+//                                        &master_secret,
+//                                        &issuer_pub_key,
+//                                        &claim_issuance_nonce,
+//                                        Some(&rev_reg_pub)).unwrap();
+//
+//        // Populate accumulator
+//        for i in 2..n {
+//            let index = rev_reg_pub.acc.max_claim_num + 1 - i;
+//
+//            rev_reg_pub.acc.acc = rev_reg_pub.acc.acc.add(&rev_reg_pub.tails.tails_dash[&index]).unwrap();
+//
+//            rev_reg_pub.acc.v.insert(i);
+//        }
+//
+//        // Update NonRevoc Claim
+//
+//        let start_time = time::get_time();
+//
+//        ProofBuilder::_update_non_revocation_claim(&mut claim_signature.r_claim.unwrap(), &rev_reg_pub.acc, &rev_reg_pub.tails.tails_dash).unwrap();
+//
+//        let end_time = time::get_time();
+//
+//        println!("Update NonRevocation Claim Time: {:?}", end_time - start_time);
+//
+//        let total_end_time = time::get_time();
+//        println!("Total Time for {} claims: {:?}", n, total_end_time - total_start_time);
+//
+//        println!("Update Proof test -> end");
+//    }
+//}
+//
+//pub mod mocks {
+//    use std::iter::FromIterator;
+//    use super::*;
+//
+//    pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
+//
+//    pub fn master_secret() -> MasterSecret {
+//        MasterSecret {
+//            ms: BigNumber::from_dec("21578029250517794450984707538122537192839006240802068037273983354680998203845").unwrap()
+//        }
+//    }
+//
+//    pub fn blinded_master_secret() -> BlindedMasterSecret {
+//        BlindedMasterSecret {
+//            u: primary_blinded_master_secret_data().u,
+//            ur: Some(PointG1::new().unwrap())
+//        }
+//    }
+//
+//    pub fn master_secret_blinding_data() -> MasterSecretBlindingData {
+//        MasterSecretBlindingData {
+//            v_prime: primary_blinded_master_secret_data().v_prime,
+//            vr_prime: Some(GroupOrderElement::new().unwrap())
+//        }
+//    }
+//
+//    pub fn primary_blinded_master_secret_data() -> PrimaryBlindedMasterSecretData {
+//        PrimaryBlindedMasterSecretData {
+//            u: BigNumber::from_dec("62131613458491212647450749026110557315107248063999634018939493990510661547774785043368606327349972438752553705268389551695956681591088513470965951022916188426635920785711858270846103151952143962999882605158874187727930917543065819603904033232476213318716946483165845049857055843524772096401162219219325766151823342237298870123405045483888204774734861333194064636771376483246576553005091050395021110616183024926509075608486405908792354917392247618138553245001668496721002592137124689913074323672408089937272809493673139956967625985778946668553397964410414804110497637727146455394436693696946473591314513302670305281967").unwrap(),
+//            v_prime: BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap()
+//        }
+//    }
+//
+//    pub fn blinded_master_secret_correctness_proof() -> BlindedMasterSecretProofCorrectness {
+//        BlindedMasterSecretProofCorrectness {
+//            c: BigNumber::from_dec("52137369980632673493737033552515064939059690422305746663811070172506104777402").unwrap(),
+//            v_dash_cap: BigNumber::from_dec("100178004190656296709382768266993008006192123775546308472004838908263655980002661618812200326095517513896314235318396861641844081038339080245834294986311650268277002681501961202201354240585429054570148600990153497019833835914428296961607268346660960169537692713492348151980001678663537641011879357217094065860571602027702957622349600138469663504845636058906380091257296916263981409178122520880134668945366310455288500536044965599841374353463485072366621036299763735166990852126470485334333183557681132032478074913598666038536308397333451267604586296535112398514673382419863470564828872194942245571811574369529292047096277182779649038491125213094465380484398723691085901333739038351893040913174459790508752106395148017").unwrap(),
+//            ms_cap: BigNumber::from_dec("10838856720335086997514321042683948406546868531902400157813178645110522107191934557397777281590228583921844895012204904115940161924029804276568405758117610916478858828990080308705").unwrap()
+//        }
+//    }
+//
+//    pub fn claim() -> ClaimSignature {
+//        ClaimSignature {
+//            p_claim: primary_claim(),
+//            r_claim: Some(issuer::mocks::revocation_claim())
+//        }
+//    }
+//
+//    pub fn m1_t() -> BigNumber {
+//        BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023506339911751676800452438014771736117676826911321621579680668201191205819012441197794443970687648330757835198888257781967404396196813475280544039772512800509").unwrap()
+//    }
+//
+//    pub fn primary_claim() -> PrimaryClaimSignature {
+//        PrimaryClaimSignature {
+//            m_2: BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap(),
+//            a: BigNumber::from_dec("49132363239670159787093110938226673449134304271682974269447432344742116194321299671237726890946751467604148940160960878389315018748968369324920041829812940290495892617484508167397279335797727252561964527234608788562556758908905751101202717778202353145195614091112566435036522962919148975492906117295892318112254557428194748194500923814804029097083178321689709119206691962548916694618289798605008896501236499585406286135857829085917853488040591522806635137841948126557076578432458560145981983607545219636425132731496278118460851115172092828609386003425340146394948070616734134255308348098680856366416432858457119085389").unwrap(),
+//            e: BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881").unwrap(),
+//            v: BigNumber::from_dec("6620937836014079781509458870800001917950459774302786434315639456568768602266735503527631640833663968617512880802104566048179854406925811731340920442625764155409951969854303612644127544973467090784833169581477025096651956458587024481106269073426545688878633368395090950721246745797130514914475184220252785922714892764536041334549342283500382915967329086709002330282037812607548379718641877595592743676836398647524633348205332354808351273389207425490367080293557186321576642355686995967422099839906367044852871358174711678743078106239862383119503287568833606375474359241383490799700740580296717320354647238288294827855343155547056851646090370313395520915221874011198982966904484363631910557996205942678772502957389321620232931357572315089162587705606682143499451357592399858038685832965830759409094928957246320485487746463").unwrap()
+//        }
+//    }
+//
+//    pub fn primary_init_proof() -> PrimaryInitProof {
+//        PrimaryInitProof {
+//            eq_proof: primary_equal_init_proof(),
+//            ge_proofs: vec![primary_ge_init_proof()]
+//        }
+//    }
+//
+//    pub fn primary_equal_init_proof() -> PrimaryEqualInitProof {
+//        let a_prime = BigNumber::from_dec("78898446861620412792842654750764062040328278229512305141968113883981382363496282144663134736579155174079489370417319571673509223278120964571470845241120645551554926623342854372134490258764319573521094387838327414281853828589221808686724921231593704540280532970373640199731641395199082059405080075465486634762457150037380987024458877755472383081895051555492507651039311433558129052743301554647361730000005427464464246044639541830130535925782175383878030954151669817492221872824859563277713273959367410746090482942312443321505241905381190352109064384380161190069276865755285156358570714184139481480304254835854046883548").unwrap();
+//        let t = BigNumber::from_dec("37914978573013682015952967814616518692481372452542105037617069181070971905204966553219043437658169765912031143021675514514577011185656373414958242090351114594533636784052907330077014062209045618845579711804374387517660179011982489730203769871735698274791150764594282050172065273674092586808773775881050644266596441443533550303048063996952056765813548653973258606974460042186445095255377980703230984472995063940293700376667962671153418936388405441149268653617224146388772719618663280132182347760114744963580362159898202404232995554256561519180861258131147514023572009869216379017751386174351316118610777025755748506325").unwrap();
+//        let e_tilde = BigNumber::from_dec("162083298053730499878539835193560156486733663622707027216327685550780519347628838870322946818623352681120371349972731968874009673965057322").unwrap();
+//        let e_prime = BigNumber::from_dec("524456141360955985047633523128638545").unwrap();
+//        let v_tilde = BigNumber::from_dec("241132863422049783305938184561371219250127488499746090592218003869595412171810997360214885239402274273939963489505434726467041932541499422544431299362364797699330176612923593931231233163363211565697860685967381420219969754969010598350387336530924879073366177641099382257720898488467175132844984811431059686249020737675861448309521855120928434488546976081485578773933300425198911646071284164884533755653094354378714645351464093907890440922615599556866061098147921890790915215227463991346847803620736586839786386846961213073783437136210912924729098636427160258710930323242639624389905049896225019051952864864612421360643655700799102439682797806477476049234033513929028472955119936073490401848509891547105031112859155855833089675654686301183778056755431562224990888545742379494795601542482680006851305864539769704029428620446639445284011289708313620219638324467338840766574612783533920114892847440641473989502440960354573501").unwrap();
+//        let v_prime = BigNumber::from_dec("6122626610060688577826028713229499074477199356382901788064599481139201841946675307459429492073681684106974266732473283582251199684473394004038677069391278799297504466809439456560373351261561843732294201399342642485048861806520699838955215375938183164246905713902888830173868746004110336429406019431751890876414837974585857037931936009631605481447289893116786856562441832216311257042439806063785598342878372454731622929805073343996197573787090352073902245810345895873431467898909436762044613966967021911486188119609549831292025135993050932365492572744590585266402690739158346280929929978500499339008113747791946209747828024836255098012541106593813811665807502701513851726770557955311255012143102074491761548144980609065262303926782928259410970230923851333959833714917949253189276799418924788811164548907247060119625232347").unwrap();
+//        let m_tilde = mocks::mtilde();
+//
+//        let m1_tilde = BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023506339911751676800452438014771736117676826911321621579680668201191205819012441197794443970687648330757835198888257781967404396196813475280544039772512800509").unwrap();
+//        let m2_tilde = BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap();
+//        let m2 = BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap();
+//
+//        PrimaryEqualInitProof {
+//            a_prime,
+//            t,
+//            e_tilde,
+//            e_prime,
+//            v_tilde,
+//            v_prime,
+//            m_tilde,
+//            m1_tilde,
+//            m2_tilde,
+//            m2
+//        }
+//    }
+//
+//    pub fn primary_ge_init_proof() -> PrimaryPredicateGEInitProof {
+//        let c_list: Vec<BigNumber> = c_list();
+//        let tau_list: Vec<BigNumber> = tau_list();
+//
+//        let mut u: HashMap<String, BigNumber> = HashMap::new();
+//        u.insert("0".to_string(), BigNumber::from_dec("3").unwrap());
+//        u.insert("1".to_string(), BigNumber::from_dec("1").unwrap());
+//        u.insert("2".to_string(), BigNumber::from_dec("0").unwrap());
+//        u.insert("3".to_string(), BigNumber::from_dec("0").unwrap());
+//
+//        let mut u_tilde = HashMap::new();
+//        u_tilde.insert("3".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        u_tilde.insert("1".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        u_tilde.insert("2".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        u_tilde.insert("0".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//
+//        let mut r = HashMap::new();
+//        r.insert("3".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
+//        r.insert("1".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
+//        r.insert("2".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
+//        r.insert("0".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
+//        r.insert("DELTA".to_string(), BigNumber::from_dec("1921424195886158938744777125021406748763985122590553448255822306242766229793715475428833504725487921105078008192433858897449555181018215580757557939320974389877538474522876366787859030586130885280724299566241892352485632499791646228580480458657305087762181033556428779333220803819945703716249441372790689501824842594015722727389764537806761583087605402039968357991056253519683582539703803574767702877615632257021995763302779502949501243649740921598491994352181379637769188829653918416991301420900374928589100515793950374255826572066003334385555085983157359122061582085202490537551988700484875690854200826784921400257387622318582276996322436").unwrap());
+//
+//        let mut r_tilde = HashMap::new();
+//        r_tilde.insert("3".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
+//        r_tilde.insert("1".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
+//        r_tilde.insert("2".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
+//        r_tilde.insert("0".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
+//        r_tilde.insert("DELTA".to_string(), BigNumber::from_dec("7575191721496255329790454166600075461811327744716122725414003704363002865687003988444075479817517968742651133011723131465916075452356777073568785406106174349810313776328792235352103470770562831584011847").unwrap());
+//
+//        let alpha_tilde = BigNumber::from_dec("15019832071918025992746443764672619814038193111378331515587108416842661492145380306078894142589602719572721868876278167686578705125701790763532708415180504799241968357487349133908918935916667492626745934151420791943681376124817051308074507483664691464171654649868050938558535412658082031636255658721308264295197092495486870266555635348911182100181878388728256154149188718706253259396012667950509304959158288841789791483411208523521415447630365867367726300467842829858413745535144815825801952910447948288047749122728907853947789264574578039991615261320141035427325207080621563365816477359968627596441227854436137047681372373555472236147836722255880181214889123172703767379416198854131024048095499109158532300492176958443747616386425935907770015072924926418668194296922541290395990933578000312885508514814484100785527174742772860178035596639").unwrap();
+//        let predicate = predicate();
+//
+//        let mut t = HashMap::new();
+//        t.insert("3".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        t.insert("1".to_string(), BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
+//        t.insert("2".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        t.insert("0".to_string(), BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
+//        t.insert("DELTA".to_string(), BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
+//
+//        PrimaryPredicateGEInitProof {
+//            c_list,
+//            tau_list,
+//            u,
+//            u_tilde,
+//            r,
+//            r_tilde,
+//            alpha_tilde,
+//            predicate,
+//            t
+//        }
+//    }
+//
+//    pub fn c_list() -> Vec<BigNumber> {
+//        let mut c_list: Vec<BigNumber> = Vec::new();
+//        c_list.push(BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
+//        c_list.push(BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
+//        c_list.push(BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        c_list.push(BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        c_list.push(BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
+//        c_list
+//    }
+//
+//    pub fn tau_list() -> Vec<BigNumber> {
+//        let mut tau_list: Vec<BigNumber> = Vec::new();
+//        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
+//        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
+//        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
+//        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
+//        tau_list.push(BigNumber::from_dec("37691036678500088864090706889277344529085698202855318342609662324455534725777810174779988243614834740383002484042961779535438729512700925723800184769772855117653609397311580937440131814111009890073972276784593662470810723687676167680062717239972656425563430838236749325671702463390044920572001860955651242331741037260836613506653323682056706226370698422365916655999046380426509541586034749242827978969972239524676039139025602263974101808887008331192929679659076910995855665477952930199692854778469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535").unwrap());
+//        tau_list.push(BigNumber::from_dec("47065304866607958075946961264533928435933122536016679690080278659386698316132559908768761685743414728586341914305025339970537873714845915164843100776821561200343390749927996265246866447155790487554483555192805709960222015718787293872197230832464704800887153568636866026153126587657548580608446574507279965440247754859129693686186427399103313737110632413255017522482016458190003045641077338674019608347139399755470654452373975228190041980152120799403855480909173865431397307988238759767251890853580982844825639097363091181044515877489450972963624109587697097258041963985607958610791800500711857115582406526050626576194").unwrap());
+//        tau_list
+//    }
+//
+//    pub fn mtilde() -> HashMap<String, BigNumber> {
+//        let mut mtilde = HashMap::new();
+//        mtilde.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        mtilde.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        mtilde.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        mtilde
+//    }
+//
+//    pub fn eq_proof() -> PrimaryEqualProof {
+//        let mut revealed_attrs: HashMap<String, BigNumber> = HashMap::new();
+//        revealed_attrs.insert("name".to_string(), BigNumber::from_dec("1139481716457488690172217916278103335").unwrap());
+//
+//        let mut m: HashMap<String, BigNumber> = HashMap::new();
+//        m.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap());
+//        m.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326573210330277861354501442113655769882988760097155977792459796092706040876245423440766971450670662675952825317632013652532469629317617583714945063045022245480").unwrap());
+//        m.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126578939747270189080172212182414586274398455192612806812346160325332993411278449288").unwrap());
+//
+//        PrimaryEqualProof {
+//            revealed_attrs,
+//            a_prime: BigNumber::from_dec("78898446861620412792842654750764062040328278229512305141968113883981382363496282144663134736579155174079489370417319571673509223278120964571470845241120645551554926623342854372134490258764319573521094387838327414281853828589221808686724921231593704540280532970373640199731641395199082059405080075465486634762457150037380987024458877755472383081895051555492507651039311433558129052743301554647361730000005427464464246044639541830130535925782175383878030954151669817492221872824859563277713273959367410746090482942312443321505241905381190352109064384380161190069276865755285156358570714184139481480304254835854046883548").unwrap(),
+//            e: BigNumber::from_dec("162083298053730499878539868675621169436369451197643364049023367091432000132455800020257076120708238452276269567894398158050524769029842452").unwrap(),
+//            v: BigNumber::from_dec("241132863422049783305938575438970984968886174719777147285301544874444739988430486983952995820260097840839069440378394346753879604392851933586337358561654582254955422523682312898019724436529062720828313475600193232595180909715451462600156154893650696125774460890921102329846137078074382707757647774945043683720900258432094924802673704740906359826573881239743758685541361718016925837587696092410894740410057107458758557447620998360525272595382152876024857626077651578395225059761356087394593446798198952106185244345409492051630909148188459601119687896316694712657729049955088211383277523909796073178401612271233635772969741130113707687830672377452944696453914387935655490225348165302887058751092766205283395163137925794804058129811328946552494253968865890668669461930678189893633436518087402186509936569439729722305359388858552931085264558311600831146504998575898993873331466073087451895775323562065569650308485086554411659").unwrap(),
+//            m,
+//            m1: BigNumber::from_dec("67940925789970108743024738273926421512152745397724199848594503731042154269417576665420030681245389493783225644817826683796657351721363490290016166310023507717485270084329765530473051446860852464706042958744244302789614711475323377257526784176458583145354771172858130808467331945526902877938301707061812969839").unwrap(),
+//            m2: BigNumber::from_dec("6461691768834933403326578888105718505728223587635918716029631036880873089632406454446365479864836382766718108773927309946281006850562266201583930422493421759789521997998623210730").unwrap(),
+//        }
+//    }
+//
+//    pub fn aggregated_proof() -> AggregatedProof {
+//        AggregatedProof {
+//            c_list: vec![vec![1, 186, 92, 249, 189, 141, 143, 77, 171, 208, 34, 140, 90, 244, 94, 183, 45, 154, 176, 130, 60, 178, 12, 91, 106, 61, 126, 148, 197, 182, 25, 153, 96, 174, 3, 165, 20, 89, 43, 231, 112, 217, 35, 100, 69, 135, 47, 144, 253, 40, 158, 137, 14, 165, 152, 246, 60, 170, 0, 228, 18, 85, 19, 117, 184, 191, 8, 222, 140, 135, 204, 99, 152, 191, 200, 124, 95, 124, 138, 86, 120, 75, 160, 110, 21, 36, 100, 161, 60, 215, 45, 138, 147, 21, 211, 241, 40, 25, 98, 21, 41, 160, 115, 84, 184, 92, 113, 251, 138, 182, 201, 12, 42, 35, 243, 28, 13, 195, 2, 30, 119, 253, 227, 15, 51, 237, 221, 14, 193, 142, 152, 182, 63, 150, 188, 87, 216, 26, 201, 10, 166, 26, 223, 177, 210, 90, 123, 241, 43, 125, 37, 94, 48, 89, 240, 144, 246, 246, 202, 224, 86, 207, 134, 211, 140, 154, 77, 45, 168, 99, 192, 41, 142, 42, 106, 165, 64, 130, 26, 255, 247, 56, 250, 156, 193, 209, 139, 4, 234, 227, 138, 199, 99, 151, 3, 89, 46, 142, 137, 27, 152, 205, 147, 136, 121, 32, 126, 71, 112, 40, 0, 236, 30, 62, 12, 66, 74, 177, 19, 170, 170, 14, 149, 90, 43, 199, 68, 15, 239, 213, 131, 33, 112, 117, 13, 101, 181, 164, 202, 58, 143, 46, 105, 23, 171, 178, 36, 198, 189, 220, 128, 247, 59, 129, 189, 224, 171],
+//                         vec![2, 108, 127, 101, 174, 218, 32, 134, 244, 38, 234, 207, 183, 66, 169, 248, 220, 152, 219, 224, 147, 85, 180, 138, 119, 9, 112, 56, 171, 119, 32, 85, 150, 21, 32, 246, 205, 201, 127, 46, 230, 100, 227, 32, 121, 190, 24, 173, 28, 86, 154, 44, 66, 119, 101, 162, 138, 185, 201, 243, 172, 229, 25, 147, 210, 51, 172, 170, 113, 11, 245, 227, 33, 4, 197, 168, 253, 19, 136, 59, 158, 255, 53, 184, 168, 158, 46, 232, 119, 185, 114, 41, 17, 179, 201, 109, 92, 53, 238, 69, 40, 13, 2, 122, 179, 99, 68, 189, 76, 41, 105, 70, 85, 127, 150, 192, 111, 167, 53, 48, 221, 242, 243, 164, 202, 56, 243, 146, 104, 122, 12, 173, 136, 61, 169, 225, 79, 41, 180, 155, 198, 21, 192, 140, 223, 100, 207, 167, 50, 100, 17, 2, 102, 161, 47, 187, 96, 210, 156, 24, 214, 179, 43, 158, 9, 191, 186, 75, 40, 216, 47, 145, 104, 23, 8, 119, 90, 69, 104, 83, 183, 200, 85, 140, 134, 172, 12, 251, 73, 172, 157, 33, 100, 226, 180, 51, 102, 151, 36, 253, 149, 15, 97, 191, 210, 246, 28, 120, 161, 126, 51, 99, 181, 225, 54, 24, 131, 91, 178, 164, 116, 32, 67, 30, 181, 227, 245, 241, 172, 153, 113, 14, 127, 6, 98, 199, 250, 43, 119, 146, 160, 105, 138, 190, 162, 9, 230, 81, 116, 42, 31, 84, 160, 67, 219, 53, 100],
+//                         vec![1, 81, 185, 134, 123, 21, 18, 221, 49, 172, 39, 239, 236, 207, 16, 143, 240, 173, 88, 153, 7, 162, 166, 60, 151, 232, 163, 185, 151, 27, 178, 120, 14, 12, 201, 119, 144, 135, 130, 203, 231, 119, 46, 249, 128, 137, 136, 243, 91, 240, 120, 169, 203, 72, 35, 17, 151, 39, 246, 124, 44, 135, 141, 132, 178, 89, 195, 178, 253, 153, 216, 48, 226, 115, 1, 36, 137, 191, 159, 106, 192, 193, 254, 50, 97, 50, 204, 141, 202, 207, 8, 168, 100, 200, 247, 209, 198, 213, 58, 213, 202, 226, 82, 214, 206, 99, 143, 121, 91, 80, 19, 251, 59, 64, 79, 221, 234, 219, 244, 174, 44, 100, 141, 29, 163, 221, 175, 180, 131, 141, 42, 209, 0, 36, 199, 9, 10, 134, 93, 103, 96, 7, 11, 197, 228, 166, 132, 242, 31, 233, 228, 117, 242, 242, 64, 5, 21, 252, 184, 181, 124, 66, 168, 126, 165, 69, 30, 218, 112, 124, 134, 57, 143, 200, 9, 0, 71, 72, 251, 216, 5, 68, 126, 168, 209, 162, 147, 106, 245, 106, 240, 86, 56, 96, 124, 242, 119, 141, 132, 145, 104, 68, 224, 33, 61, 1, 16, 242, 210, 43, 56, 209, 209, 128, 200, 208, 54, 249, 111, 136, 246, 154, 105, 73, 64, 139, 81, 85, 177, 174, 214, 250, 59, 161, 159, 174, 38, 94, 195, 191, 120, 33, 69, 179, 235, 20, 106, 133, 209, 118, 61, 159, 242, 0, 101, 98, 104],
+//                         vec![1, 111, 80, 91, 53, 214, 139, 10, 197, 79, 134, 183, 50, 233, 244, 130, 80, 173, 167, 5, 130, 151, 183, 162, 97, 134, 246, 146, 37, 151, 103, 45, 68, 33, 204, 18, 157, 21, 98, 230, 225, 30, 162, 172, 75, 159, 115, 94, 72, 113, 153, 155, 117, 233, 95, 251, 29, 1, 149, 38, 117, 63, 112, 213, 48, 29, 3, 131, 238, 120, 48, 141, 105, 31, 127, 51, 176, 32, 203, 191, 155, 159, 91, 29, 87, 223, 30, 92, 146, 250, 182, 181, 155, 67, 253, 33, 165, 142, 195, 146, 180, 221, 83, 62, 46, 74, 29, 83, 175, 218, 132, 93, 42, 93, 105, 173, 189, 254, 193, 230, 113, 39, 45, 137, 143, 124, 190, 42, 19, 77, 13, 220, 137, 202, 128, 170, 10, 22, 37, 177, 200, 186, 3, 73, 171, 232, 81, 144, 36, 46, 70, 237, 208, 26, 84, 26, 141, 19, 37, 200, 83, 60, 27, 175, 96, 233, 246, 144, 137, 178, 140, 213, 13, 36, 137, 82, 107, 0, 239, 192, 187, 126, 20, 205, 40, 203, 33, 238, 88, 121, 132, 31, 87, 91, 65, 207, 144, 15, 249, 66, 58, 98, 64, 61, 236, 103, 203, 207, 20, 205, 48, 202, 247, 22, 248, 197, 188, 21, 178, 187, 193, 152, 164, 247, 53, 15, 33, 170, 145, 3, 213, 63, 205, 55, 158, 170, 62, 157, 207, 162, 117, 157, 215, 125, 94, 77, 251, 251, 25, 209, 207, 119, 16, 186, 210, 190, 83],
+//                         vec![1, 111, 80, 91, 53, 214, 139, 10, 197, 79, 134, 183, 50, 233, 244, 130, 80, 173, 167, 5, 130, 151, 183, 162, 97, 134, 246, 146, 37, 151, 103, 45, 68, 33, 204, 18, 157, 21, 98, 230, 225, 30, 162, 172, 75, 159, 115, 94, 72, 113, 153, 155, 117, 233, 95, 251, 29, 1, 149, 38, 117, 63, 112, 213, 48, 29, 3, 131, 238, 120, 48, 141, 105, 31, 127, 51, 176, 32, 203, 191, 155, 159, 91, 29, 87, 223, 30, 92, 146, 250, 182, 181, 155, 67, 253, 33, 165, 142, 195, 146, 180, 221, 83, 62, 46, 74, 29, 83, 175, 218, 132, 93, 42, 93, 105, 173, 189, 254, 193, 230, 113, 39, 45, 137, 143, 124, 190, 42, 19, 77, 13, 220, 137, 202, 128, 170, 10, 22, 37, 177, 200, 186, 3, 73, 171, 232, 81, 144, 36, 46, 70, 237, 208, 26, 84, 26, 141, 19, 37, 200, 83, 60, 27, 175, 96, 233, 246, 144, 137, 178, 140, 213, 13, 36, 137, 82, 107, 0, 239, 192, 187, 126, 20, 205, 40, 203, 33, 238, 88, 121, 132, 31, 87, 91, 65, 207, 144, 15, 249, 66, 58, 98, 64, 61, 236, 103, 203, 207, 20, 205, 48, 202, 247, 22, 248, 197, 188, 21, 178, 187, 193, 152, 164, 247, 53, 15, 33, 170, 145, 3, 213, 63, 205, 55, 158, 170, 62, 157, 207, 162, 117, 157, 215, 125, 94, 77, 251, 251, 25, 209, 207, 119, 16, 186, 210, 190, 83],
+//                         vec![1, 185, 37, 77, 23, 245, 214, 239, 127, 18, 101, 63, 229, 201, 171, 193, 32, 182, 124, 45, 15, 127, 58, 172, 226, 30, 246, 70, 33, 19, 117, 183, 29, 157, 209, 237, 41, 58, 208, 4, 105, 26, 73, 26, 69, 72, 21, 78, 106, 28, 72, 117, 102, 144, 199, 148, 3, 98, 81, 251, 246, 106, 50, 235, 129, 14, 186, 108, 216, 29, 41, 207, 233, 7, 179, 86, 224, 230, 187, 138, 125, 62, 68, 31, 66, 147, 205, 93, 100, 9, 134, 225, 210, 57, 36, 71, 134, 26, 179, 85, 37, 194, 32, 137, 91, 4, 91, 214, 220, 134, 173, 148, 14, 95, 209, 232, 79, 87, 12, 180, 217, 148, 240, 242, 190, 36, 229, 189, 16, 208, 75, 176, 153, 239, 212, 255, 45, 42, 250, 234, 139, 40, 104, 74, 21, 30, 184, 221, 126, 185, 23, 69, 114, 104, 249, 242, 248, 210, 97, 100, 141, 61, 176, 93, 200, 148, 152, 138, 31, 66, 99, 61, 237, 210, 42, 205, 60, 241, 92, 247, 1, 146, 203, 116, 237, 0, 171, 235, 250, 128, 74, 56, 223, 65, 189, 176, 91, 243, 174, 2, 111, 216, 233, 227, 28, 22, 41, 102, 225, 1, 21, 156, 212, 16, 243, 9, 94, 61, 246, 153, 193, 243, 188, 187, 154, 109, 168, 36, 89, 48, 236, 113, 74, 179, 158, 103, 51, 38, 15, 148, 18, 89, 218, 144, 71, 198, 8, 144, 104, 135, 160, 224, 98, 243, 106, 228, 198]],
+//            c_hash: BigNumber::from_dec("63841489063440422591549130255324272391231497635167479821265935688468807059914").unwrap()
+//        }
+//    }
+//
+//    pub fn ge_proof() -> PrimaryPredicateGEProof {
+//        let mut m: HashMap<String, BigNumber> = HashMap::new();
+//        m.insert("age".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap());
+//        m.insert("sex".to_string(), BigNumber::from_dec("6461691768834933403326573210330277861354501442113655769882988760097155977792459796092706040876245423440766971450670662675952825317632013652532469629317617583714945063045022245480").unwrap());
+//        m.insert("height".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126578939747270189080172212182414586274398455192612806812346160325332993411278449288").unwrap());
+//
+//        let mut u: HashMap<String, BigNumber> = HashMap::new();
+//        u.insert("2".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//        u.insert("1".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567831328173150446641282633750159851002380912024287670857260052523199838850024252").unwrap());
+//        u.insert("0".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567959011151277327486465732010670499547163375019558005816902584394576776464144080").unwrap());
+//        u.insert("3".to_string(), BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567767486684087006218691084619904526729989680526652503377438786587511370042964338").unwrap());
+//
+//        let mut r: HashMap<String, BigNumber> = HashMap::new();
+//        r.insert("2".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
+//        r.insert("1".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
+//        r.insert("0".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
+//        r.insert("3".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
+//        r.insert("DELTA".to_string(), BigNumber::from_dec("122666581787896024104771761595539708848783314985870238259074669824520091098683817237172519182829174751114708491011709191270412318634809532273931666000301987869809614370778701672920770190235911538453236520585124998634470107126877826855765108565024357739461476219090897270520451817930736172663543943052827769367981507788289923500996293391654370634807890778790076616041326007628068206880269267272777192271905638118708385050200412890391080370252730064261452554932992620443959769478748678597670501698531981378757093642774169056547668193201752061644097178572361915153806621540894628974958162220867331621188215651633938457631228059207968660364669634554543579944958864314375144914088839439106378569969245085620007043098442351").unwrap());
+//
+//        let mut t: HashMap<String, BigNumber> = HashMap::new();
+//        t.insert("2".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        t.insert("1".to_string(), BigNumber::from_dec("42633794716405561166353758783443542082448925291459053109072523255543918476162700915813468558725428930654732720550388668689693688311928225615248227542838894861904877843723074396340940707779041622733024047596548590206852224857490474241304499513238502020545990648514598111266718428654653729661393150510227786297395151012680735494729670444556589448695350091598078767475426612902588875098609575406745197186551303270002056095805065181028711913238674710248448811408868490444106100385953490031500705851784934426334273103423243390196341490285527664863980694992161784435576660236953710046735477189662522764706620430688287285864").unwrap());
+//        t.insert("0".to_string(), BigNumber::from_dec("78330570979325941798365644373115445702503890126796448033540676436952642712474355493362616083006349657268453144498828167557958002187631433688600374998507190955348534609331062289505584464470965930026066960445862271919137219085035331183489708020179104768806542397317724245476749638435898286962686099614654775075210180478240806960936772266501650713946075532415486293498432032415822169972407762416677793858709680700551196367079406811614109643837625095590323201355832120222436221544300974405069957610226245036804939616341080518318062198049430554737724174625842765640174768911551668897074696860939233144184997614684980589924").unwrap());
+//        t.insert("3".to_string(), BigNumber::from_dec("46369083086117629643055653975857627769028160828983987182078946658047913327657659075673217449651724551898727205835194812073207899212452294564444639346668484070129687160427147938076018605551830861026465851076491021338935906152700477977234743314769181602525430955162020248817746661022702546242365043781931307417744503802184994273068810023321000162105949048577491174537385619391992689890177380388187493777623608221690561227863928538947292434940859766215223694325554781311625439704847971277102325299579636232682943235572924328291095040633959587110788517670425708774447736335155403676598370782714048226320498065574125026899").unwrap());
+//        t.insert("DELTA".to_string(), BigNumber::from_dec("55689486371095551191153293221620120399985911078762073609790094310886646953389020785947364735709221760939349576244277298015773664794725470336037959586509430339581241350326035321187900311380031369930812685369312069872023094452466688619635133201050270873513970497547720395196520621008569032923514500216567833262585947550373732948093781160931218148684610639834393439060745307992621402105096757255088629786888737281709324281552413987274960223110927132818654699339106642690418211294536451370321243108928564278387404368783012923356880461335644797776340191719071088431730682007888636922131293039620517120570619351490238276806").unwrap());
+//
+//        PrimaryPredicateGEProof {
+//            u,
+//            r,
+//            mj: BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126569555048377863338051254460267053606356944162460437192812434232786788496640641930").unwrap(),
+//            alpha: BigNumber::from_dec("15019832071918025992746443764672619814038193111378331515587108416842661492145380306078894142589602719572721868876278167686210705380338102691218393130393885672695618412529738419131694926443107219330694482439903234395193851871472925835039379909853454508267226053046255940557629449048653188523919553702545953724489357880127160704800260353007771778801244908160960828454115645487868830738739976138947949505366080323799159654252725215417470924265496096864737420292879717953990073198774585977677974887563743667406941320910576277132072350218452884841014022648967794316567016887837205701017499498636748288004981818643125542585776429419200955219536940661401665401273238350271276070084547091903752551649057233346746822426635975545515195870976674441104284294336189831971933619615980881781820696853193401192672937826151341781675749898224527543492305127").unwrap(),
+//            t,
+//            predicate: predicate()
+//        }
+//    }
+//
+//    pub fn primary_proof() -> PrimaryProof {
+//        PrimaryProof {
+//            eq_proof: eq_proof(),
+//            ge_proofs: vec![ge_proof()]
+//        }
+//    }
+//
+//    pub fn sub_proof_request() -> SubProofRequest {
+//        let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
+//        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+//        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
+//        sub_proof_request_builder.finalize().unwrap()
+//    }
+//
+//    pub fn revealed_attrs() -> HashSet<String> {
+//        HashSet::from_iter(vec!["name".to_owned()].into_iter())
+//    }
+//
+//    pub fn unrevealed_attrs() -> HashSet<String> {
+//        HashSet::from_iter(vec!["height".to_owned(), "age".to_owned(), "sex".to_owned()])
+//    }
+//
+//    pub fn claim_revealed_attributes_values() -> ClaimValues {
+//        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
+//        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+//        claim_values_builder.finalize().unwrap()
+//    }
+//
+//    pub fn predicate() -> Predicate {
+//        Predicate {
+//            attr_name: "age".to_owned(),
+//            p_type: PredicateType::GE,
+//            value: 18
+//        }
+//    }
+//}
