@@ -323,8 +323,8 @@ pub extern fn indy_crypto_cl_issuer_issuer_key_correctness_proof_free(issuer_key
 /// Creates and returns revocation registries (public and private) entities.
 ///
 /// Note that keys registries deallocation must be performed by
-/// calling indy_crypto_cl_revocation_registry_definition_public_free and
-/// indy_crypto_cl_revocation_registry_definition_private_free.
+/// calling indy_crypto_cl_revocation_key_public_free and
+/// indy_crypto_cl_revocation_key_private_free.
 ///
 /// # Arguments
 /// * `issuer_pub_key` - Reference that contains issuer pub key instance pointer.
@@ -332,41 +332,41 @@ pub extern fn indy_crypto_cl_issuer_issuer_key_correctness_proof_free(issuer_key
 /// * `issuance_by_default` - Type of issuance. 
 /// If true all indices are assumed to be issued and initial accumulator is calculated over all indices
 /// If false nothing is issued initially accumulator is 1
-/// * `rev_reg_def_pub_p_p` - Reference that will contain revocation registry definition public instance pointer.
-/// * `rev_reg_def_priv_p` - Reference that will contain revocation registry definition private instance pointer.
+/// * `rev_key_pub_p` - Reference that will contain revocation key public instance pointer.
+/// * `rev_key_priv_p` - Reference that will contain revocation key private instance pointer.
 /// * `rev_reg_entry_p` - Reference that will contain revocation registry entry instance pointer.
 /// * `rev_tails_generator_p` - Reference that will contain revocation tails generator instance pointer.
 #[no_mangle]
 pub extern fn indy_crypto_cl_issuer_new_revocation_registry(issuer_pub_key: *const c_void,
                                                             max_claim_num: u32,
                                                             issuance_by_default: bool,
-                                                            rev_reg_def_pub_p: *mut *const c_void,
-                                                            rev_reg_def_priv_p: *mut *const c_void,
+                                                            rev_key_pub_p: *mut *const c_void,
+                                                            rev_key_priv_p: *mut *const c_void,
                                                             rev_reg_entry_p: *mut *const c_void,
                                                             rev_tails_generator_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_new_revocation_registry: >>> issuer_pub_key: {:?}, max_claim_num: {:?}, rev_reg_def_pub_p: {:?}, rev_reg_def_priv_p: {:?}, \
+    trace!("indy_crypto_cl_issuer_new_revocation_registry: >>> issuer_pub_key: {:?}, max_claim_num: {:?}, rev_key_pub_p: {:?}, rev_key_priv_p: {:?}, \
     rev_reg_entry_p: {:?}, rev_tails_generator_p: {:?}",
-           issuer_pub_key, max_claim_num, rev_reg_def_pub_p, rev_reg_def_priv_p, rev_reg_entry_p, rev_tails_generator_p);
+           issuer_pub_key, max_claim_num, rev_key_pub_p, rev_key_priv_p, rev_reg_entry_p, rev_tails_generator_p);
 
     check_useful_c_reference!(issuer_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(rev_reg_def_pub_p, ErrorCode::CommonInvalidParam4);
-    check_useful_c_ptr!(rev_reg_def_priv_p, ErrorCode::CommonInvalidParam5);
+    check_useful_c_ptr!(rev_key_pub_p, ErrorCode::CommonInvalidParam4);
+    check_useful_c_ptr!(rev_key_priv_p, ErrorCode::CommonInvalidParam5);
     check_useful_c_ptr!(rev_reg_entry_p, ErrorCode::CommonInvalidParam6);
     check_useful_c_ptr!(rev_tails_generator_p, ErrorCode::CommonInvalidParam7);
 
     trace!("indy_crypto_cl_issuer_new_revocation_registry: entities: issuer_pub_key: {:?}, max_claim_num: {:?}", issuer_pub_key, max_claim_num);
 
     let res = match Issuer::new_revocation_registry_def(issuer_pub_key, max_claim_num, issuance_by_default) {
-        Ok((rev_reg_def_pub, rev_reg_priv, rev_reg_entry, rev_tails_generator)) => {
-            trace!("indy_crypto_cl_issuer_new_revocation_registry: rev_reg_def_pub_p: {:?}, rev_reg_priv: {:?}, rev_reg_entry: {:?}, rev_tails_generator: {:?}",
-                   rev_reg_def_pub_p, rev_reg_priv, rev_reg_entry, rev_tails_generator);
+        Ok((rev_key_pub, rev_key_priv, rev_reg_entry, rev_tails_generator)) => {
+            trace!("indy_crypto_cl_issuer_new_revocation_registry: rev_key_pub_p: {:?}, rev_key_priv: {:?}, rev_reg_entry: {:?}, rev_tails_generator: {:?}",
+                   rev_key_pub_p, rev_key_priv, rev_reg_entry, rev_tails_generator);
             unsafe {
-                *rev_reg_def_pub_p = Box::into_raw(Box::new(rev_reg_def_pub)) as *const c_void;
-                *rev_reg_def_priv_p = Box::into_raw(Box::new(rev_reg_priv)) as *const c_void;
+                *rev_key_pub_p = Box::into_raw(Box::new(rev_key_pub)) as *const c_void;
+                *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
                 *rev_reg_entry_p = Box::into_raw(Box::new(rev_reg_entry)) as *const c_void;
                 *rev_tails_generator_p = Box::into_raw(Box::new(rev_tails_generator)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_new_revocation_registry: *rev_reg_def_pub_p: {:?}, *rev_reg_def_priv_p: {:?}, *rev_reg_entry_p: {:?}, *rev_tails_generator_p: {:?}",
-                       *rev_reg_def_pub_p, *rev_reg_def_priv_p, *rev_reg_entry_p, *rev_tails_generator_p);
+                trace!("indy_crypto_cl_issuer_new_revocation_registry: *rev_key_pub_p: {:?}, *rev_key_priv_p: {:?}, *rev_reg_entry_p: {:?}, *rev_tails_generator_p: {:?}",
+                       *rev_key_pub_p, *rev_key_priv_p, *rev_reg_entry_p, *rev_tails_generator_p);
             }
             ErrorCode::Success
         }
@@ -377,175 +377,175 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry(issuer_pub_key: *con
     res
 }
 
-/// Returns json representation of public part of revocation registry definition.
+/// Returns json representation of revocation key public.
 ///
 /// # Arguments
-/// * `rev_reg_def_pub` - Reference that contains issuer revocation registry definition public pointer.
-/// * `rev_reg_def_pub_json_p` - Reference that will contain revocation registry definition public json.
+/// * `rev_key_pub` - Reference that contains issuer revocation key public pointer.
+/// * `rev_key_pub_json_p` - Reference that will contain revocation key public json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_public_to_json(rev_reg_def_pub: *const c_void,
-                                                                           rev_reg_def_pub_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_public_to_json: >>> rev_reg_def_pub: {:?}, rev_reg_def_pub_json_p: {:?}",
-           rev_reg_def_pub, rev_reg_def_pub_json_p);
+pub extern fn indy_crypto_cl_revocation_key_public_to_json(rev_key_pub: *const c_void,
+                                                           rev_key_pub_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_public_to_json: >>> rev_key_pub: {:?}, rev_key_pub_json_p: {:?}",
+           rev_key_pub, rev_key_pub_json_p);
 
-    check_useful_c_reference!(rev_reg_def_pub, RevocationRegistryDefPublic, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(rev_reg_def_pub_json_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(rev_key_pub, RevocationKeyPublic, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(rev_key_pub_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_definition_public_to_json: entity >>> rev_reg_def_pub: {:?}", rev_reg_def_pub);
+    trace!("indy_crypto_cl_revocation_key_public_to_json: entity >>> rev_key_pub: {:?}", rev_key_pub);
 
-    let res = match rev_reg_def_pub.to_json() {
-        Ok(rev_reg_def_pub_json) => {
-            trace!("indy_crypto_cl_revocation_registry_definition_public_to_json: rev_reg_def_pub_json: {:?}", rev_reg_def_pub_json);
+    let res = match rev_key_pub.to_json() {
+        Ok(rev_key_pub_json) => {
+            trace!("indy_crypto_cl_revocation_key_public_to_json: rev_key_pub_json: {:?}", rev_key_pub_json);
             unsafe {
-                let rev_reg_def_pub_json = CTypesUtils::string_to_cstring(rev_reg_def_pub_json);
-                *rev_reg_def_pub_json_p = rev_reg_def_pub_json.into_raw();
-                trace!("indy_crypto_cl_revocation_registry_definition_public_to_json: rev_reg_def_pub_json_p: {:?}", *rev_reg_def_pub_json_p);
+                let rev_reg_def_pub_json = CTypesUtils::string_to_cstring(rev_key_pub_json);
+                *rev_key_pub_json_p = rev_reg_def_pub_json.into_raw();
+                trace!("indy_crypto_cl_revocation_key_public_to_json: rev_key_pub_json_p: {:?}", *rev_key_pub_json_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_revocation_registry_definition_public_to_json: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_public_to_json: <<< res: {:?}", res);
     res
 }
 
-/// Creates and returns revocation registry definition public from json.
+/// Creates and returns revocation key public from json.
 ///
 /// Note: Revocation registry public instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_registry_definition_public_free
+/// by calling indy_crypto_cl_revocation_key_public_free
 ///
 /// # Arguments
-/// * `rev_reg_def_pub_json` - Reference that contains revocation registry definition public json.
-/// * `rev_reg_def_pub_p` - Reference that will contain revocation registry definition public instance pointer.
+/// * `rev_key_pub_json` - Reference that contains revocation key public json.
+/// * `rev_key_pub_p` - Reference that will contain revocation key public instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_public_from_json(rev_reg_def_pub_json: *const c_char,
-                                                                             rev_reg_def_pub_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_public_from_json: >>> rev_reg_def_pub_json: {:?}, rev_reg_def_pub_p: {:?}", rev_reg_def_pub_json, rev_reg_def_pub_p);
+pub extern fn indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *const c_char,
+                                                             rev_key_pub_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_public_from_json: >>> rev_key_pub_json: {:?}, rev_key_pub_p: {:?}", rev_key_pub_json, rev_key_pub_p);
 
-    check_useful_c_str!(rev_reg_def_pub_json, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(rev_reg_def_pub_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_str!(rev_key_pub_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(rev_key_pub_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_definition_public_from_json: entity: rev_reg_def_pub_json: {:?}", rev_reg_def_pub_json);
+    trace!("indy_crypto_cl_revocation_key_public_from_json: entity: rev_key_pub_json: {:?}", rev_key_pub_json);
 
-    let res = match RevocationRegistryDefPublic::from_json(&rev_reg_def_pub_json) {
-        Ok(rev_reg_def_pub) => {
-            trace!("indy_crypto_cl_revocation_registry_definition_public_from_json: rev_reg_def_pub: {:?}", rev_reg_def_pub);
+    let res = match RevocationKeyPublic::from_json(&rev_key_pub_json) {
+        Ok(rev_key_pub) => {
+            trace!("indy_crypto_cl_revocation_key_public_from_json: rev_key_pub: {:?}", rev_key_pub);
             unsafe {
-                *rev_reg_def_pub_p = Box::into_raw(Box::new(rev_reg_def_pub)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_registry_definition_public_from_json: *rev_reg_def_pub_p: {:?}", *rev_reg_def_pub_p);
+                *rev_key_pub_p = Box::into_raw(Box::new(rev_key_pub)) as *const c_void;
+                trace!("indy_crypto_cl_revocation_key_public_from_json: *rev_key_pub_p: {:?}", *rev_key_pub_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_revocation_registry_definition_public_from_json: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_public_from_json: <<< res: {:?}", res);
     res
 }
 
 /// Deallocates revocation registry public instance.
 ///
 /// # Arguments
-/// * `rev_reg_def_pub_p` - Reference that contains revocation registry public instance pointer.
+/// * `rev_key_pub` - Reference that contains revocation key public instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_public_free(rev_reg_def_pub: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_public_free: >>> rev_reg_def_pub: {:?}", rev_reg_def_pub);
+pub extern fn indy_crypto_cl_revocation_key_public_free(rev_key_pub: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_public_free: >>> rev_key_pub: {:?}", rev_key_pub);
 
-    check_useful_c_ptr!(rev_reg_def_pub, ErrorCode::CommonInvalidParam1);
-    let rev_reg_def_pub = unsafe { Box::from_raw(rev_reg_def_pub as *mut RevocationRegistryDefPublic); };
-    trace!("indy_crypto_cl_revocation_registry_definition_public_free: entity: rev_reg_def_pub: {:?}", rev_reg_def_pub);
+    check_useful_c_ptr!(rev_key_pub, ErrorCode::CommonInvalidParam1);
+    let rev_key_pub = unsafe { Box::from_raw(rev_key_pub as *mut RevocationKeyPublic); };
+    trace!("indy_crypto_cl_revocation_key_public_free: entity: rev_key_pub: {:?}", rev_key_pub);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_registry_definition_public_free: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_public_free: <<< res: {:?}", res);
     res
 }
 
-/// Returns json representation of revocation registry definition private.
+/// Returns json representation of revocation key private.
 ///
 /// # Arguments
-/// * `rev_reg_def_priv` - Reference that contains issuer revocation registry definition private pointer.
-/// * `rev_reg_def_priv_json_p` - Reference that will contain revocation registry definition private json
+/// * `rev_key_priv` - Reference that contains issuer revocation key private pointer.
+/// * `rev_key_priv_json_p` - Reference that will contain revocation key private json
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_private_to_json(rev_reg_def_priv: *const c_void,
-                                                                            rev_reg_def_priv_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_private_to_json: >>> rev_reg_def_priv: {:?}, rev_reg_def_priv_json_p: {:?}",
-           rev_reg_def_priv, rev_reg_def_priv_json_p);
+pub extern fn indy_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const c_void,
+                                                            rev_key_priv_json_p: *mut *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_private_to_json: >>> rev_key_priv: {:?}, rev_key_priv_json_p: {:?}",
+           rev_key_priv, rev_key_priv_json_p);
 
-    check_useful_c_reference!(rev_reg_def_priv, RevocationRegistryDefPrivate, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(rev_reg_def_priv_json_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(rev_key_priv, RevocationKeyPrivate, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(rev_key_priv_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_definition_private_to_json: entity >>> rev_reg_def_priv: {:?}", rev_reg_def_priv);
+    trace!("indy_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", rev_key_priv);
 
-    let res = match rev_reg_def_priv.to_json() {
-        Ok(rev_reg_def_priv_json) => {
-            trace!("indy_crypto_cl_revocation_registry_definition_private_to_json: rev_reg_def_priv_json: {:?}", rev_reg_def_priv_json);
+    let res = match rev_key_priv.to_json() {
+        Ok(rev_key_priv_json) => {
+            trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", rev_key_priv_json);
             unsafe {
-                let rev_reg_def_priv_json = CTypesUtils::string_to_cstring(rev_reg_def_priv_json);
-                *rev_reg_def_priv_json_p = rev_reg_def_priv_json.into_raw();
-                trace!("indy_crypto_cl_revocation_registry_definition_private_to_json: rev_reg_def_priv_json_p: {:?}", *rev_reg_def_priv_json_p);
+                let rev_reg_def_priv_json = CTypesUtils::string_to_cstring(rev_key_priv_json);
+                *rev_key_priv_json_p = rev_reg_def_priv_json.into_raw();
+                trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json_p: {:?}", *rev_key_priv_json_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_revocation_registry_definition_private_to_json: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_private_to_json: <<< res: {:?}", res);
     res
 }
 
-/// Creates and returns revocation registry definition private from json.
+/// Creates and returns revocation key private from json.
 ///
 /// Note: Revocation registry private instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_registry_definition_private_free
+/// by calling indy_crypto_cl_revocation_key_private_free
 ///
 /// # Arguments
-/// * `rev_reg_def_priv_json` - Reference that contains revocation registry definition private json.
-/// * `rev_reg_def_priv_p` - Reference that will contain revocation registry definition private instance pointer
+/// * `rev_key_priv_json` - Reference that contains revocation key private json.
+/// * `rev_key_priv_p` - Reference that will contain revocation key private instance pointer
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_private_from_json(rev_reg_def_priv_json: *const c_char,
-                                                                              rev_reg_def_priv_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_private_from_json: >>> rev_reg_def_priv_json: {:?}, rev_reg_def_priv_p: {:?}",
-           rev_reg_def_priv_json, rev_reg_def_priv_p);
+pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json: *const c_char,
+                                                              rev_key_priv_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_private_from_json: >>> rev_key_priv_json: {:?}, rev_key_priv_p: {:?}",
+           rev_key_priv_json, rev_key_priv_p);
 
-    check_useful_c_str!(rev_reg_def_priv_json, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(rev_reg_def_priv_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_str!(rev_key_priv_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(rev_key_priv_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_definition_private_from_json: entity: rev_reg_def_priv_json: {:?}", rev_reg_def_priv_json);
+    trace!("indy_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", rev_key_priv_json);
 
-    let res = match RevocationRegistryDefPrivate::from_json(&rev_reg_def_priv_json) {
-        Ok(rev_reg_def_priv) => {
-            trace!("indy_crypto_cl_revocation_registry_definition_private_from_json: rev_reg_def_priv: {:?}", rev_reg_def_priv);
+    let res = match RevocationKeyPrivate::from_json(&rev_key_priv_json) {
+        Ok(rev_key_priv) => {
+            trace!("indy_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", rev_key_priv);
             unsafe {
-                *rev_reg_def_priv_p = Box::into_raw(Box::new(rev_reg_def_priv)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_registry_definition_private_from_json: *rev_reg_def_priv_p: {:?}", *rev_reg_def_priv_p);
+                *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
+                trace!("indy_crypto_cl_revocation_key_private_from_json: *rev_key_priv_p: {:?}", *rev_key_priv_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_revocation_registry_definition_private_from_json: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_private_from_json: <<< res: {:?}", res);
     res
 }
 
-/// Deallocates revocation registry definition private instance.
+/// Deallocates revocation key private instance.
 ///
 /// # Arguments
-/// * `rev_reg_def_priv` - Reference that contains revocation registry definition private instance pointer.
+/// * `rev_key_priv` - Reference that contains revocation key private instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_definition_private_free(rev_reg_def_priv: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_definition_private_free: >>> rev_reg_def_priv: {:?}", rev_reg_def_priv);
+pub extern fn indy_crypto_cl_revocation_key_private_free(rev_key_priv: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_revocation_key_private_free: >>> rev_key_priv: {:?}", rev_key_priv);
 
-    check_useful_c_ptr!(rev_reg_def_priv, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(rev_key_priv, ErrorCode::CommonInvalidParam1);
 
-    let rev_reg_def_priv = unsafe { Box::from_raw(rev_reg_def_priv as *mut RevocationRegistryDefPrivate); };
-    trace!("indy_crypto_cl_revocation_registry_definition_private_free: entity: rev_reg_def_priv: {:?}", rev_reg_def_priv);
+    let rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate); };
+    trace!("indy_crypto_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", rev_key_priv);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_registry_definition_private_free: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_revocation_key_private_free: <<< res: {:?}", res);
     res
 }
 
@@ -561,7 +561,7 @@ pub extern fn indy_crypto_cl_revocation_registry_entry_to_json(rev_reg_entry: *c
     trace!("indy_crypto_cl_revocation_registry_entry_to_json: >>> rev_reg_entry: {:?}, rev_reg_entry_json_p: {:?}",
            rev_reg_entry, rev_reg_entry_json_p);
 
-    check_useful_c_reference!(rev_reg_entry, RevocationRegistryDefPrivate, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(rev_reg_entry, RevocationKeyPrivate, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_reg_entry_json_p, ErrorCode::CommonInvalidParam2);
 
     trace!("indy_crypto_cl_revocation_registry_entry_to_json: entity >>> rev_reg_entry: {:?}", rev_reg_entry);
@@ -1111,12 +1111,12 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //    }
 //
 //    #[test]
-//    fn indy_crypto_cl_revocation_registry_definition_public_to_json_works() {
+//    fn indy_crypto_cl_revocation_key_public_to_json_works() {
 //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
 //        let (rev_reg_def_pub_p, rev_reg_priv) = _revocation_registry(issuer_pub_key);
 //
 //        let mut rev_reg_def_pub_p_json_p: *const c_char = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_public_to_json(rev_reg_def_pub_p, &mut rev_reg_def_pub_p_json_p);
+//        let err_code = indy_crypto_cl_revocation_key_public_to_json(rev_reg_def_pub_p, &mut rev_reg_def_pub_p_json_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -1124,16 +1124,16 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //    }
 //
 //    #[test]
-//    fn indy_crypto_cl_revocation_registry_definition_public_from_json_works() {
+//    fn indy_crypto_cl_revocation_key_public_from_json_works() {
 //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
 //        let (rev_reg_def_pub_p, rev_reg_priv) = _revocation_registry(issuer_pub_key);
 //
 //        let mut rev_reg_def_pub_p_json_p: *const c_char = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_public_to_json(rev_reg_def_pub_p, &mut rev_reg_def_pub_p_json_p);
+//        let err_code = indy_crypto_cl_revocation_key_public_to_json(rev_reg_def_pub_p, &mut rev_reg_def_pub_p_json_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        let mut rev_reg_def_pub_p_p: *const c_void = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_public_from_json(rev_reg_def_pub_p_json_p, &mut rev_reg_def_pub_p_p);
+//        let err_code = indy_crypto_cl_revocation_key_public_from_json(rev_reg_def_pub_p_json_p, &mut rev_reg_def_pub_p_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -1141,12 +1141,12 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //    }
 //
 //    #[test]
-//    fn indy_crypto_cl_revocation_registry_definition_private_to_json_works() {
+//    fn indy_crypto_cl_revocation_key_private_to_json_works() {
 //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
 //        let (rev_reg_def_pub_p, rev_reg_priv) = _revocation_registry(issuer_pub_key);
 //
 //        let mut rev_reg_priv_json_p: *const c_char = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_private_to_json(rev_reg_priv, &mut rev_reg_priv_json_p);
+//        let err_code = indy_crypto_cl_revocation_key_private_to_json(rev_reg_priv, &mut rev_reg_priv_json_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -1154,16 +1154,16 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //    }
 //
 //    #[test]
-//    fn indy_crypto_cl_revocation_registry_definition_private_from_json_works() {
+//    fn indy_crypto_cl_revocation_key_private_from_json_works() {
 //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
 //        let (rev_reg_def_pub_p, rev_reg_priv) = _revocation_registry(issuer_pub_key);
 //
 //        let mut rev_reg_priv_json_p: *const c_char = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_private_to_json(rev_reg_priv, &mut rev_reg_priv_json_p);
+//        let err_code = indy_crypto_cl_revocation_key_private_to_json(rev_reg_priv, &mut rev_reg_priv_json_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        let mut rev_reg_def_priv_p: *const c_void = ptr::null();
-//        let err_code = indy_crypto_cl_revocation_registry_definition_private_from_json(rev_reg_priv_json_p, &mut rev_reg_def_priv_p);
+//        let err_code = indy_crypto_cl_revocation_key_private_from_json(rev_reg_priv_json_p, &mut rev_reg_def_priv_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -1175,10 +1175,10 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = _issuer_keys();
 //        let (rev_reg_def_pub_p, rev_reg_priv) = _revocation_registry(issuer_pub_key);
 //
-//        let err_code = indy_crypto_cl_revocation_registry_definition_public_free(rev_reg_def_pub_p);
+//        let err_code = indy_crypto_cl_revocation_key_public_free(rev_reg_def_pub_p);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
-//        let err_code = indy_crypto_cl_revocation_registry_definition_private_free(rev_reg_priv);
+//        let err_code = indy_crypto_cl_revocation_key_private_free(rev_reg_priv);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        _free_issuer_keys(issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -1516,10 +1516,10 @@ pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
 //
 //    pub fn _free_revocation_registry(rev_reg_def_pub: *const c_void, rev_reg_priv: *const c_void,
 //                                     rev_reg_entry: *const c_void, rev_tails_generator: *const c_void) {
-//        let err_code = indy_crypto_cl_revocation_registry_definition_public_free(rev_reg_def_pub);
+//        let err_code = indy_crypto_cl_revocation_key_public_free(rev_reg_def_pub);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
-//        let err_code = indy_crypto_cl_revocation_registry_definition_private_free(rev_reg_priv);
+//        let err_code = indy_crypto_cl_revocation_key_private_free(rev_reg_priv);
 //        assert_eq!(err_code, ErrorCode::Success);
 //
 //        let err_code = indy_crypto_cl_revocation_registry_entry_free(rev_reg_entry);

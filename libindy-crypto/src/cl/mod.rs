@@ -25,6 +25,79 @@ pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
     Ok(helpers::bn_rand(constants::LARGE_NONCE)?)
 }
 
+pub fn new_witness<RTA>(rev_idx: u32,
+                        max_cred_num: u32,
+                        rev_reg_delta: &RevocationRegistryDelta,
+                        rev_tails_accessor: &RTA) -> Result<Witness, IndyCryptoError> where RTA: RevocationTailsAccessor {
+    trace!("ProofBuilder::new_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
+           rev_idx, max_cred_num, rev_reg_delta);
+
+    let issued = rev_reg_delta.issued.clone().unwrap_or(HashSet::new());
+    let mut omega = PointG2::new_inf()?;
+
+    for j in issued.iter() {
+        let index = max_cred_num + 1 - j + rev_idx;
+
+        rev_tails_accessor.access_tail(index, &mut |tail| {
+            omega = omega.add(tail).unwrap();
+        })?;
+    }
+
+    let witness = Witness {
+        omega,
+        v: issued
+    };
+
+    trace!("ProofBuilder::new_witness: <<< witness: {:?}", witness);
+
+    Ok(witness)
+}
+
+pub fn update_witness<RTA>(rev_idx: u32,
+                           max_cred_num: u32,
+                           rev_reg_delta: &RevocationRegistryDelta,
+                           witness: &mut Witness,
+                           rev_tails_accessor: &RTA) -> Result<(), IndyCryptoError> where RTA: RevocationTailsAccessor {
+    trace!("ProofBuilder::update_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}, witness: {:?}",
+           rev_idx, max_cred_num, rev_reg_delta, witness);
+
+    if rev_reg_delta.issued.is_none() {
+        return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+    }
+    let issued = rev_reg_delta.issued.clone().unwrap();
+
+    if witness.v != issued {
+        let v_old_minus_new: HashSet<u32> = witness.v.difference(&issued).cloned().collect();
+        let v_new_minus_old: HashSet<u32> = issued.difference(&witness.v).cloned().collect();
+
+        let mut omega_denom = PointG2::new_inf()?;
+        for j in v_old_minus_new.iter() {
+            let index = max_cred_num + 1 - j + rev_idx;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega_denom = omega_denom.add(tail).unwrap();
+            })?;
+        }
+
+        let mut omega_num = PointG2::new_inf()?;
+        for j in v_new_minus_old.iter() {
+            let index = max_cred_num + 1 - j + rev_idx;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega_num = omega_num.add(tail).unwrap();
+            })?;
+        }
+
+        let new_omega: PointG2 = witness.omega.add(
+            &omega_num.sub(&omega_denom)?)?;
+
+        witness.v = issued;
+        witness.omega = new_omega;
+    }
+
+    trace!("ProofBuilder::update_witness: <<<");
+
+    Ok(())
+}
+
 /// A list of attributes a Claim is based on.
 #[derive(Debug, Clone)]
 pub struct ClaimSchema {
@@ -138,7 +211,7 @@ impl<'a> JsonDecodable<'a> for CredentialPublicKey {}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CredentialPrivateKey {
     p_key: CredentialPrimaryPrivateKey,
-    r_key: Option<IssuerRevocationPrivateKey>,
+    r_key: Option<CredentialRevocationPrivateKey>,
 }
 
 impl JsonEncodable for CredentialPrivateKey {}
@@ -213,7 +286,7 @@ pub struct CredentialRevocationPublicKey {
 
 /// `Revocation Private Key` is used for signing Claim.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct IssuerRevocationPrivateKey {
+pub struct CredentialRevocationPrivateKey {
     x: GroupOrderElement,
     sk: GroupOrderElement
 }
@@ -223,30 +296,6 @@ pub enum IssuanceType {
     IssuanceByDefault,
     IssuanceOnDemand
 }
-
-/// `Revocation Registry Public` contains revocation keys, accumulator and accumulator tails.
-/// Must be published by Issuer on a tamper-evident and highly available storage
-/// Used by prover to prove that a claim hasn't revoked by the issuer
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct RevocationRegistryDefPublic {
-    issuance_type: IssuanceType,
-    max_cred_num: u32,
-    key: RevocationKeyPublic
-}
-
-impl JsonEncodable for RevocationRegistryDefPublic {}
-
-impl<'a> JsonDecodable<'a> for RevocationRegistryDefPublic {}
-
-/// `Revocation Registry Private` used for adding claims in the accumulator.
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RevocationRegistryDefPrivate {
-    key: RevocationKeyPrivate,
-}
-
-impl JsonEncodable for RevocationRegistryDefPrivate {}
-
-impl<'a> JsonDecodable<'a> for RevocationRegistryDefPrivate {}
 
 pub type Accumulator = PointG2;
 
@@ -272,10 +321,18 @@ pub struct RevocationKeyPublic {
     z: Pair
 }
 
+impl JsonEncodable for RevocationKeyPublic {}
+
+impl<'a> JsonDecodable<'a> for RevocationKeyPublic {}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RevocationKeyPrivate {
     gamma: GroupOrderElement
 }
+
+impl JsonEncodable for RevocationKeyPrivate {}
+
+impl<'a> JsonDecodable<'a> for RevocationKeyPrivate {}
 
 pub type Tail = PointG2;
 
@@ -297,8 +354,8 @@ pub struct RevocationTailsGenerator {
 }
 
 impl RevocationTailsGenerator {
-    pub fn count(&self) -> Result<u32, IndyCryptoError> {
-        Ok(self.size - self.current_index)
+    pub fn count(&self) -> u32 {
+        self.size - self.current_index
     }
 
     pub fn next(&mut self) -> Result<Tail, IndyCryptoError> {
@@ -322,13 +379,26 @@ pub trait RevocationTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError>;
 }
 
-pub struct SimpleTailsAccessor {
+#[derive(Debug, Clone)]
+struct SimpleTailsAccessor {
     tails: HashMap<u32, Tail>
 }
 
 impl RevocationTailsAccessor for SimpleTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError> {
         Ok(accessor(&self.tails[&tail_id]))
+    }
+}
+
+impl SimpleTailsAccessor {
+    fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, IndyCryptoError> {
+        let mut tails: HashMap<u32, PointG2> = HashMap::new();
+        for i in 0..rev_tails_generator.count() {
+            tails.insert(i, rev_tails_generator.next()?);
+        }
+        Ok(SimpleTailsAccessor {
+            tails
+        })
     }
 }
 
@@ -851,73 +921,181 @@ mod test {
     use self::prover::Prover;
     use self::verifier::Verifier;
 
-    //    #[test]
-    //    fn demo() {
-    //        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    //        claim_schema_builder.add_attr("name").unwrap();
-    //        claim_schema_builder.add_attr("sex").unwrap();
-    //        claim_schema_builder.add_attr("age").unwrap();
-    //        claim_schema_builder.add_attr("height").unwrap();
-    //        let claim_schema = claim_schema_builder.finalize().unwrap();
-    //
-    //        let (issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, false).unwrap();
-    //
-    //        let master_secret = Prover::new_master_secret().unwrap();
-    //
-    //        let master_secret_blinding_nonce = new_nonce().unwrap();
-    //
-    //        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-    //            Prover::blind_master_secret(&issuer_pub_key,
-    //                                        &issuer_key_correctness_proof,
-    //                                        &master_secret,
-    //                                        &master_secret_blinding_nonce).unwrap();
-    //
-    //        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-    //        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-    //        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    //        claim_values_builder.add_value("age", "28").unwrap();
-    //        claim_values_builder.add_value("height", "175").unwrap();
-    //        let claim_values = claim_values_builder.finalize().unwrap();
-    //
-    //        let claim_issuance_nonce = new_nonce().unwrap();
-    //
-    //        let (mut claim_signature, signature_correctness_proof) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-    //                                                                                    &blinded_master_secret,
-    //                                                                                    &blinded_master_secret_correctness_proof,
-    //                                                                                    &master_secret_blinding_nonce,
-    //                                                                                    &claim_issuance_nonce,
-    //                                                                                    &claim_values,
-    //                                                                                    &issuer_pub_key,
-    //                                                                                    &issuer_priv_key,
-    //                                                                                    Some(1),
-    //                                                                                    None,
-    //                                                                                    None).unwrap();
-    //        Prover::process_claim_signature(&mut claim_signature,
-    //                                        &claim_values,
-    //                                        &signature_correctness_proof,
-    //                                        &master_secret_blinding_data,
-    //                                        &master_secret,
-    //                                        &issuer_pub_key,
-    //                                        &claim_issuance_nonce,
-    //                                        None).unwrap();
-    //
-    //        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
-    //        sub_proof_request_builder.add_revealed_attr("name").unwrap();
-    //        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
-    //        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
-    //        let mut proof_builder = Prover::new_proof_builder().unwrap();
-    //        proof_builder.add_sub_proof_request("issuer_key_id_1",
-    //                                            &sub_proof_request,
-    //                                            &claim_schema,
-    //                                            &claim_signature,
-    //                                            &claim_values,
-    //                                            &issuer_pub_key,
-    //                                            None).unwrap();
-    //        let proov_request_nonce = new_nonce().unwrap();
-    //        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
-    //
-    //        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-    //        proof_verifier.add_sub_proof_request("issuer_key_id_1", &sub_proof_request, &claim_schema, &issuer_pub_key, None).unwrap();
-    //        assert_eq!(true, proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
-    //    }
+    #[test]
+    fn demo() {
+        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+        claim_schema_builder.add_attr("name").unwrap();
+        claim_schema_builder.add_attr("sex").unwrap();
+        claim_schema_builder.add_attr("age").unwrap();
+        claim_schema_builder.add_attr("height").unwrap();
+        let claim_schema = claim_schema_builder.finalize().unwrap();
+
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        let master_secret_blinding_nonce = new_nonce().unwrap();
+
+        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+            Prover::blind_master_secret(&cred_pub_key,
+                                        &cred_key_correctness_proof,
+                                        &master_secret,
+                                        &master_secret_blinding_nonce).unwrap();
+
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        claim_values_builder.add_value("age", "28").unwrap();
+        claim_values_builder.add_value("height", "175").unwrap();
+        let claim_values = claim_values_builder.finalize().unwrap();
+
+        let claim_issuance_nonce = new_nonce().unwrap();
+
+        let (mut claim_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                                   &blinded_master_secret,
+                                                                                                   &blinded_master_secret_correctness_proof,
+                                                                                                   &master_secret_blinding_nonce,
+                                                                                                   &claim_issuance_nonce,
+                                                                                                   &claim_values,
+                                                                                                   &cred_pub_key,
+                                                                                                   &cred_priv_key,
+                                                                                                   None,
+                                                                                                   None,
+                                                                                                   None,
+                                                                                                   None,
+                                                                                                   None).unwrap();
+
+        Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
+                                        &signature_correctness_proof,
+                                        &master_secret_blinding_data,
+                                        &master_secret,
+                                        &cred_pub_key,
+                                        &claim_issuance_nonce,
+                                        None,
+                                        None,
+                                        None).unwrap();
+
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
+        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request("issuer_key_id_1",
+                                            &sub_proof_request,
+                                            &claim_schema,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &cred_pub_key,
+                                            None,
+                                            None).unwrap();
+
+        let proov_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request("issuer_key_id_1",
+                                             &sub_proof_request,
+                                             &claim_schema,
+                                             &cred_pub_key,
+                                             None,
+                                             None).unwrap();
+        assert!(proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
+    }
+
+    #[test]
+    fn demo_revocation() {
+        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
+        claim_schema_builder.add_attr("name").unwrap();
+        claim_schema_builder.add_attr("sex").unwrap();
+        claim_schema_builder.add_attr("age").unwrap();
+        claim_schema_builder.add_attr("height").unwrap();
+        let claim_schema = claim_schema_builder.finalize().unwrap();
+
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+
+        let max_cred_num = 5;
+        let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+
+        let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
+
+        let master_secret = Prover::new_master_secret().unwrap();
+
+        let master_secret_blinding_nonce = new_nonce().unwrap();
+
+        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+            Prover::blind_master_secret(&cred_pub_key,
+                                        &cred_key_correctness_proof,
+                                        &master_secret,
+                                        &master_secret_blinding_nonce).unwrap();
+
+        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
+        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        claim_values_builder.add_value("age", "28").unwrap();
+        claim_values_builder.add_value("height", "175").unwrap();
+        let claim_values = claim_values_builder.finalize().unwrap();
+
+        let claim_issuance_nonce = new_nonce().unwrap();
+
+        let rev_idx = 1;
+
+        let rev_reg_delta = RevocationRegistryDelta {
+            prev_accum: None,
+            accum: rev_reg.accum.clone(),
+            issued: None,
+            revoked: None
+        };
+
+        let witness = new_witness(rev_idx, max_cred_num, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        let (mut claim_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                                   &blinded_master_secret,
+                                                                                                   &blinded_master_secret_correctness_proof,
+                                                                                                   &master_secret_blinding_nonce,
+                                                                                                   &claim_issuance_nonce,
+                                                                                                   &claim_values,
+                                                                                                   &cred_pub_key,
+                                                                                                   &cred_priv_key,
+                                                                                                   Some(rev_idx),
+                                                                                                   Some(max_cred_num),
+                                                                                                   Some(&mut rev_reg),
+                                                                                                   Some(&rev_key_priv),
+                                                                                                   Some(Box::new(simple_tail_accessor))).unwrap();
+
+        Prover::process_claim_signature(&mut claim_signature,
+                                        &claim_values,
+                                        &signature_correctness_proof,
+                                        &master_secret_blinding_data,
+                                        &master_secret,
+                                        &cred_pub_key,
+                                        &claim_issuance_nonce,
+                                        Some(&rev_key_pub),
+                                        Some(&rev_reg),
+                                        Some(&witness)).unwrap();
+
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
+        sub_proof_request_builder.add_revealed_attr("name").unwrap();
+        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request("issuer_key_id_1",
+                                            &sub_proof_request,
+                                            &claim_schema,
+                                            &claim_signature,
+                                            &claim_values,
+                                            &cred_pub_key,
+                                            Some(&rev_reg),
+                                            Some(&witness)).unwrap();
+        let proov_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request("issuer_key_id_1",
+                                             &sub_proof_request,
+                                             &claim_schema,
+                                             &cred_pub_key,
+                                             Some(&rev_key_pub),
+                                             Some(&rev_reg)).unwrap();
+        assert_eq!(true, proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
+    }
 }
