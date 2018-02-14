@@ -369,7 +369,7 @@ pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_to_json(bli
     trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: >>> blinded_master_secret_correctness_proof: {:?},\
      blinded_master_secret_correctness_proof_json_p: {:?}", blinded_master_secret_correctness_proof, blinded_master_secret_correctness_proof_json_p);
 
-    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretProofCorrectness, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretCorrectnessProof, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(blinded_master_secret_correctness_proof_json_p, ErrorCode::CommonInvalidParam2);
 
     trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_to_json: entity >>> blinded_master_secret_correctness_proof: {:?}",
@@ -414,7 +414,7 @@ pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_from_json(b
     trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: entity: blinded_master_secret_correctness_proof_json: {:?}",
            blinded_master_secret_correctness_proof_json);
 
-    let res = match BlindedMasterSecretProofCorrectness::from_json(&blinded_master_secret_correctness_proof_json) {
+    let res = match BlindedMasterSecretCorrectnessProof::from_json(&blinded_master_secret_correctness_proof_json) {
         Ok(blinded_master_secret_correctness_proof) => {
             trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_from_json: blinded_master_secret_correctness_proof: {:?}",
                    blinded_master_secret_correctness_proof);
@@ -443,7 +443,7 @@ pub extern fn indy_crypto_cl_blinded_master_secret_correctness_proof_free(blinde
 
     check_useful_c_ptr!(blinded_master_secret_correctness_proof, ErrorCode::CommonInvalidParam1);
 
-    let blinded_master_secret_correctness_proof = unsafe { Box::from_raw(blinded_master_secret_correctness_proof as *mut BlindedMasterSecretProofCorrectness); };
+    let blinded_master_secret_correctness_proof = unsafe { Box::from_raw(blinded_master_secret_correctness_proof as *mut BlindedMasterSecretCorrectnessProof); };
     trace!("indy_crypto_cl_blinded_master_secret_correctness_proof_free: entity: blinded_master_secret_correctness_proof: {:?}", blinded_master_secret_correctness_proof);
 
     let res = ErrorCode::Success;

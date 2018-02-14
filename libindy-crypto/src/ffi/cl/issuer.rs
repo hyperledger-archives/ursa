@@ -36,14 +36,14 @@ pub extern fn indy_crypto_cl_issuer_new_keys(claim_schema: *const c_void,
     trace!("indy_crypto_cl_issuer_new_keys: >>> claim_schema: {:?}, support_revocation: {:?}, issuer_pub_key_p: {:?}, issuer_priv_key_p: {:?},\
      issuer_key_correctness_proof_p: {:?}", claim_schema, support_revocation, issuer_pub_key_p, issuer_priv_key_p, issuer_key_correctness_proof_p);
 
-    check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(claim_schema, CredentialSchema, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(issuer_pub_key_p, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(issuer_priv_key_p, ErrorCode::CommonInvalidParam4);
     check_useful_c_ptr!(issuer_key_correctness_proof_p, ErrorCode::CommonInvalidParam5);
 
     trace!("indy_crypto_cl_issuer_new_keys: entities: claim_schema: {:?}, support_revocation: {:?}", support_revocation, claim_schema);
 
-    let res = match Issuer::new_cred_def(claim_schema, support_revocation) {
+    let res = match Issuer::new_credential_def(claim_schema, support_revocation) {
         Ok((issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof)) => {
             trace!("indy_crypto_cl_issuer_new_keys: issuer_pub_key: {:?}, issuer_priv_key: {:?}, issuer_key_correctness_proof: {:?}",
                    issuer_pub_key, issuer_priv_key, issuer_key_correctness_proof);
@@ -761,7 +761,7 @@ pub extern fn indy_crypto_cl_claim_signature_to_json(claim_signature: *const c_v
                                                      claim_signature_json_p: *mut *const c_char) -> ErrorCode {
     trace!("indy_crypto_cl_claim_signature_to_json: >>> claim_signature: {:?}, claim_signature_json_p: {:?}", claim_signature, claim_signature_json_p);
 
-    check_useful_c_reference!(claim_signature, ClaimSignature, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(claim_signature, CredentialSignature, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(claim_signature_json_p, ErrorCode::CommonInvalidParam2);
 
     trace!("indy_crypto_cl_claim_signature_to_json: entity >>> claim_signature: {:?}", claim_signature);
@@ -801,7 +801,7 @@ pub extern fn indy_crypto_cl_claim_signature_from_json(claim_signature_json: *co
 
     trace!("indy_crypto_cl_claim_signature_from_json: entity: claim_signature_json: {:?}", claim_signature_json);
 
-    let res = match ClaimSignature::from_json(&claim_signature_json) {
+    let res = match CredentialSignature::from_json(&claim_signature_json) {
         Ok(claim_signature) => {
             trace!("indy_crypto_cl_claim_signature_from_json: claim_signature: {:?}", claim_signature);
             unsafe {
@@ -827,7 +827,7 @@ pub extern fn indy_crypto_cl_claim_signature_free(claim_signature: *const c_void
 
     check_useful_c_ptr!(claim_signature, ErrorCode::CommonInvalidParam1);
 
-    let claim_signature = unsafe { Box::from_raw(claim_signature as *mut ClaimSignature); };
+    let claim_signature = unsafe { Box::from_raw(claim_signature as *mut CredentialSignature); };
     trace!("indy_crypto_cl_claim_signature_free: entity: claim_signature: {:?}", claim_signature);
     let res = ErrorCode::Success;
 

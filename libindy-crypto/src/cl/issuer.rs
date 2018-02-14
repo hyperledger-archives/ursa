@@ -11,45 +11,47 @@ use std::collections::{BTreeMap, HashSet};
 pub struct Issuer {}
 
 impl Issuer {
-    /// Creates and returns claim schema entity builder.
+    /// Creates and returns credential schema entity builder.
     ///
-    /// The purpose of claim schema builder is building of claim schema entity that
-    /// represents claim schema attributes set.
+    /// The purpose of credential schema builder is building of credential schema entity that
+    /// represents credential schema attributes set.
     ///
     /// # Example
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
-    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    /// claim_schema_builder.add_attr("sex").unwrap();
-    /// claim_schema_builder.add_attr("name").unwrap();
-    /// let _claim_schema = claim_schema_builder.finalize().unwrap();
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
+    /// let _credential_schema = credential_schema_builder.finalize().unwrap();
     /// ```
-    pub fn new_claim_schema_builder() -> Result<ClaimSchemaBuilder, IndyCryptoError> {
-        let res = ClaimSchemaBuilder::new()?;
+    pub fn new_credential_schema_builder() -> Result<CredentialSchemaBuilder, IndyCryptoError> {
+        let res = CredentialSchemaBuilder::new()?;
         Ok(res)
     }
 
-    /// Creates and returns issuer keys (public and private) entities.
+    /// Creates and returns credential definition (public and private keys, correctness proof) entities.
     ///
     /// # Arguments
-    /// * `claim_schema` - claim schema entity.
+    /// * `credential_schema` - credential schema entity.
     /// * `support_revocation` - If true non revocation part of keys will be generated.
     ///
     /// # Example
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
-    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    /// claim_schema_builder.add_attr("sex").unwrap();
-    /// claim_schema_builder.add_attr("name").unwrap();
-    /// let claim_schema = claim_schema_builder.finalize().unwrap();
-    /// let (_cred_pub_key, _cred_priv_key, _cred_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    /// let (_cred_pub_key, _cred_priv_key, _cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
     /// ```
-    pub fn new_cred_def(claim_schema: &ClaimSchema, support_revocation: bool) -> Result<(CredentialPublicKey,
-                                                                                         CredentialPrivateKey,
-                                                                                         CredentialKeyCorrectnessProof), IndyCryptoError> {
-        trace!("Issuer::new_cred_def: >>> claim_schema: {:?}, support_revocation: {:?}", claim_schema, support_revocation);
+    pub fn new_credential_def(credential_schema: &CredentialSchema,
+                              support_revocation: bool) -> Result<(CredentialPublicKey,
+                                                                   CredentialPrivateKey,
+                                                                   CredentialKeyCorrectnessProof), IndyCryptoError> {
+        trace!("Issuer::new_credential_def: >>> credential_schema: {:?}, support_revocation: {:?}", credential_schema, support_revocation);
 
-        let (p_pub_key, p_priv_key, p_key_meta) = Issuer::_new_credential_primary_keys(claim_schema)?;
+        let (p_pub_key, p_priv_key, p_key_meta) =
+            Issuer::_new_credential_primary_keys(credential_schema)?;
 
         let (r_pub_key, r_priv_key) = if support_revocation {
             Issuer::_new_credential_revocation_keys()
@@ -65,17 +67,17 @@ impl Issuer {
                                                           &cred_priv_key.p_key,
                                                           &p_key_meta)?;
 
-        trace!("Issuer::new_cred_def: <<< cred_pub_key: {:?}, cred_priv_key: {:?}, cred_key_correctness_proof: {:?}",
+        trace!("Issuer::new_credential_def: <<< cred_pub_key: {:?}, cred_priv_key: {:?}, cred_key_correctness_proof: {:?}",
                cred_pub_key, cred_priv_key, cred_key_correctness_proof);
 
         Ok((cred_pub_key, cred_priv_key, cred_key_correctness_proof))
     }
 
-    /// Creates and returns revocation registries (public and private) entities.
+    /// Creates and returns revocation registry definition (public and private keys, accumulator and tails generator) entities.
     ///
     /// # Arguments
-    /// * `cred_pub_key` - Issuer pub key instance pointer.
-    /// * `max_cred_num` - Max claim number in generated registry.
+    /// * `credential_pub_key` - Credential public key instance pointer.
+    /// * `max_cred_num` - Max credential number in generated registry.
     /// * `issuance_by_default` - Type of issuance.
     ///  If true all indices are assumed to be issued and initial accumulator is calculated over all indices
     ///  If false nothing is issued initially accumulator is 1
@@ -83,23 +85,23 @@ impl Issuer {
     /// # Example
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
-    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    /// claim_schema_builder.add_attr("sex").unwrap();
-    /// claim_schema_builder.add_attr("name").unwrap();
-    /// let claim_schema = claim_schema_builder.finalize().unwrap();
-    /// let (pub_key, _, _) = Issuer::new_cred_def(&claim_schema, true).unwrap();
-    /// let (_rev_key_pub, _rev_key_priv, _rev_reg, _rev_tails_generator) = Issuer::new_revocation_registry_def(&pub_key, 100, false).unwrap();
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    /// let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+    /// let (_rev_key_pub, _rev_key_priv, _rev_reg, _rev_tails_generator) = Issuer::new_revocation_registry_def(&credential_pub_key, 100, false).unwrap();
     /// ```
-    pub fn new_revocation_registry_def(cred_pub_key: &CredentialPublicKey,
+    pub fn new_revocation_registry_def(credential_pub_key: &CredentialPublicKey,
                                        max_cred_num: u32,
                                        issuance_by_default: bool) -> Result<(RevocationKeyPublic,
                                                                              RevocationKeyPrivate,
                                                                              RevocationRegistry,
                                                                              RevocationTailsGenerator), IndyCryptoError> {
-        trace!("Issuer::new_revocation_registry_def: >>> cred_pub_key: {:?}, max_cred_num: {:?}, issuance_by_default: {:?}",
-               cred_pub_key, max_cred_num, issuance_by_default);
+        trace!("Issuer::new_revocation_registry_def: >>> credential_pub_key: {:?}, max_cred_num: {:?}, issuance_by_default: {:?}",
+               credential_pub_key, max_cred_num, issuance_by_default);
 
-        let cred_rev_pub_key: &CredentialRevocationPublicKey = cred_pub_key.r_key
+        let cred_rev_pub_key: &CredentialRevocationPublicKey = credential_pub_key.r_key
             .as_ref()
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in credential public key.")))?;
 
@@ -123,189 +125,201 @@ impl Issuer {
         Ok((rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator))
     }
 
-    /// Creates and returns claims values entity builder.
+    /// Creates and returns credential values entity builder.
     ///
-    /// The purpose of claim values builder is building of claim values entity that
-    /// represents claim attributes values map.
+    /// The purpose of credential values builder is building of credential values entity that
+    /// represents credential attributes values map.
     ///
     /// # Example
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
-    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    /// claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-    /// let _claim_values = claim_values_builder.finalize().unwrap();
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+    /// let _credential_values = credential_values_builder.finalize().unwrap();
     /// ```
-    pub fn new_claim_values_builder() -> Result<ClaimValuesBuilder, IndyCryptoError> {
-        let res = ClaimValuesBuilder::new()?;
+    pub fn new_credential_values_builder() -> Result<CredentialValuesBuilder, IndyCryptoError> {
+        let res = CredentialValuesBuilder::new()?;
         Ok(res)
     }
 
-    /// Sign given claim values instance.
+    /// Sign given credential values instance.
     ///
     /// # Arguments
     /// * `prover_id` - Prover identifier.
-    /// * `blinded_ms` - Blinded master secret.
+    /// * `blinded_master_secret` - Blinded master secret.
     /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
     /// * `master_secret_blinding_nonce` - Nonce used for blinded_master_secret_correctness_proof verification.
-    /// * `claim_issuance_nonce` - Nonce used for creating of signature correctness proof.
-    /// * `claim_values` - Claim values to be signed.
-    /// * `issuer_pub_key` - Issuer public key.
-    /// * `issuer_priv_key` - Issuer private key.
-    /// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation claim_signature part generation.
-    /// * `rev_reg_def_pub` - (Optional) Revocation registry public.
-    /// * `rev_reg_def_priv` - (Optional) Revocation registry private.
+    /// * `credential_issuance_nonce` - Nonce used for creating of signature correctness proof.
+    /// * `credential_values` - Claim values to be signed.
+    /// * `credential_pub_key` - credential public key.
+    /// * `credential_priv_key` - credential private key.
+    /// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation credential_signature part generation.
+    /// * `max_cred_num` - (Optional) Max credential number in generated registry.
+    /// * `rev_reg` - (Optional) Revocation registry.
+    /// * `rev_key_priv` - (Optional) Revocation registry private key.
+    /// * `rev_tails_accessor` - (Optional) Revocation registry tails accessor.
     ///
     /// # Example
     /// ```
     /// use indy_crypto::cl::new_nonce;
     /// use indy_crypto::cl::issuer::Issuer;
     /// use indy_crypto::cl::prover::Prover;
-    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    /// claim_schema_builder.add_attr("sex").unwrap();
-    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
-    /// let (pub_key, priv_key, key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
     /// let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-    ///      Prover::blind_master_secret(&pub_key, &key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+    ///      Prover::blind_master_secret(&credential_pub_key, &cred_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
     ///
-    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    /// let claim_values = claim_values_builder.finalize().unwrap();
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let credential_values = credential_values_builder.finalize().unwrap();
     ///
-    /// let claim_issuance_nonce = new_nonce().unwrap();
+    /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
-    /// let (_claim_signature, _signature_correctness_proof) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-    ///                                                                           &blinded_master_secret,
-    ///                                                                           &blinded_master_secret_correctness_proof,
-    ///                                                                           &master_secret_blinding_nonce,
-    ///                                                                           &claim_issuance_nonce,
-    ///                                                                           &claim_values,
-    ///                                                                           &pub_key,
-    ///                                                                           &priv_key,
-    ///                                                                            None, None, None).unwrap();
+    /// let (_credential_signature, _signature_correctness_proof, _rev_reg_delta) =
+    ///     Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                             &blinded_master_secret,
+    ///                             &blinded_master_secret_correctness_proof,
+    ///                             &master_secret_blinding_nonce,
+    ///                             &credential_issuance_nonce,
+    ///                             &credential_values,
+    ///                             &credential_pub_key,
+    ///                             &credential_priv_key,
+    ///                             None, None, None, None, None).unwrap();
     /// ```
-    pub fn sign_claim(prover_id: &str,
-                      blinded_ms: &BlindedMasterSecret,
-                      blinded_master_secret_correctness_proof: &BlindedMasterSecretProofCorrectness,
-                      master_secret_blinding_nonce: &Nonce,
-                      claim_issuance_nonce: &Nonce,
-                      claim_values: &ClaimValues,
-                      issuer_pub_key: &CredentialPublicKey,
-                      issuer_priv_key: &CredentialPrivateKey,
-                      rev_idx: Option<u32>,
-                      max_cred_num: Option<u32>,
-                      rev_reg: Option<&mut RevocationRegistry>,
-                      rev_key_priv: Option<&RevocationKeyPrivate>,
-                      rev_tails_accessor: Option<Box<RevocationTailsAccessor>>)
-                      -> Result<(ClaimSignature, SignatureCorrectnessProof, Option<RevocationRegistryDelta>), IndyCryptoError> {
-        trace!("Issuer::sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?},\
-        master_secret_blinding_nonce: {:?}, claim_issuance_nonce: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, \
+    pub fn sign_credential(prover_id: &str,
+                           blinded_master_secret: &BlindedMasterSecret,
+                           blinded_master_secret_correctness_proof: &BlindedMasterSecretCorrectnessProof,
+                           master_secret_blinding_nonce: &Nonce,
+                           credential_issuance_nonce: &Nonce,
+                           credential_values: &CredentialValues,
+                           credential_pub_key: &CredentialPublicKey,
+                           credential_priv_key: &CredentialPrivateKey,
+                           rev_idx: Option<u32>,
+                           max_cred_num: Option<u32>,
+                           rev_reg: Option<&mut RevocationRegistry>,
+                           rev_key_priv: Option<&RevocationKeyPrivate>,
+                           rev_tails_accessor: Option<Box<RevocationTailsAccessor>>)
+                           -> Result<(CredentialSignature, SignatureCorrectnessProof, Option<RevocationRegistryDelta>), IndyCryptoError> {
+        trace!("Issuer::sign_credential: >>> prover_id: {:?}, blinded_master_secret: {:?}, blinded_master_secret_correctness_proof: {:?},\
+        master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
         rev_idx: {:?}, max_cred_num: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
-               prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, claim_values, claim_issuance_nonce,
-               issuer_pub_key, issuer_priv_key, rev_idx, max_cred_num, rev_reg, rev_key_priv);
+               prover_id, blinded_master_secret, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, credential_values, credential_issuance_nonce,
+               credential_pub_key, credential_priv_key, rev_idx, max_cred_num, rev_reg, rev_key_priv);
 
-        Issuer::_check_blinded_master_secret_proof_correctness(blinded_ms,
+        Issuer::_check_blinded_master_secret_correctness_proof(blinded_master_secret,
                                                                blinded_master_secret_correctness_proof,
                                                                master_secret_blinding_nonce,
-                                                               &issuer_pub_key.p_key)?;
+                                                               &credential_pub_key.p_key)?;
 
-        // In the anoncreds whitepaper, `claim context` is denoted by `m2`
-        let claim_context = Issuer::_gen_claim_context(prover_id, rev_idx)?;
+        // In the anoncreds whitepaper, `credential context` is denoted by `m2`
+        let cred_context = Issuer::_gen_credential_context(prover_id, rev_idx)?;
 
-        let (p_claim, q) = Issuer::_new_primary_claim(&claim_context,
-                                                      issuer_pub_key,
-                                                      issuer_priv_key,
-                                                      blinded_ms,
-                                                      claim_values)?;
+        let (p_cred, q) = Issuer::_new_primary_credential(&cred_context,
+                                                          credential_pub_key,
+                                                          credential_priv_key,
+                                                          blinded_master_secret,
+                                                          credential_values)?;
 
-        let (r_claim, new_r_reg_delta) =
+        let (r_cred, rev_reg_delta) =
             if let (Some(rev_idx_2), Some(max_cred_n), Some(r_reg), Some(r_key_priv), Some(r_tails_accessor)) = (rev_idx,
                                                                                                                  max_cred_num,
                                                                                                                  rev_reg,
                                                                                                                  rev_key_priv,
                                                                                                                  rev_tails_accessor) {
-                Issuer::_new_non_revocation_claim(rev_idx_2,
-                                                  &claim_context,
-                                                  blinded_ms,
-                                                  issuer_pub_key,
-                                                  issuer_priv_key,
-                                                  max_cred_n,
-                                                  r_reg,
-                                                  r_key_priv,
-                                                  r_tails_accessor.as_ref())
-                    .map(|(r_claim_sig, new_r_reg_delta)|
-                        (Some(r_claim_sig), Some(new_r_reg_delta)))?
+                Issuer::_new_non_revocation_credential(rev_idx_2,
+                                                       &cred_context,
+                                                       blinded_master_secret,
+                                                       credential_pub_key,
+                                                       credential_priv_key,
+                                                       max_cred_n,
+                                                       r_reg,
+                                                       r_key_priv,
+                                                       r_tails_accessor.as_ref())
+                    .map(|(r_cred_sig, rev_reg_delta)|
+                        (Some(r_cred_sig), Some(rev_reg_delta)))?
             } else {
                 (None, None)
             };
 
-        let claim_signature = ClaimSignature { p_claim, r_claim };
+        let cred_signature = CredentialSignature { p_credential: p_cred, r_credential: r_cred };
 
-        let signature_correctness_proof = Issuer::_new_signature_correctness_proof(&issuer_pub_key.p_key,
-                                                                                   &issuer_priv_key.p_key,
-                                                                                   &claim_signature.p_claim,
+        let signature_correctness_proof = Issuer::_new_signature_correctness_proof(&credential_pub_key.p_key,
+                                                                                   &credential_priv_key.p_key,
+                                                                                   &cred_signature.p_credential,
                                                                                    &q,
-                                                                                   claim_issuance_nonce)?;
+                                                                                   credential_issuance_nonce)?;
 
 
-        trace!("Issuer::sign_claim: <<< claim_signature: {:?}, signature_correctness_proof: {:?}, new_r_reg_delta: {:?}",
-               claim_signature, signature_correctness_proof, new_r_reg_delta);
+        trace!("Issuer::sign_credential: <<< cred_signature: {:?}, signature_correctness_proof: {:?}, rev_reg_delta: {:?}",
+               cred_signature, signature_correctness_proof, rev_reg_delta);
 
-        Ok((claim_signature, signature_correctness_proof, new_r_reg_delta))
+        Ok((cred_signature, signature_correctness_proof, rev_reg_delta))
     }
 
-    /// Revokes a claim by a revoc_id in a given revoc-registry
+    /// Revokes a credential by a rev_idx in a given revocation registry
     ///
     /// # Arguments
-    /// * `rev_reg_pub` - Reference that contain revocation registry instance pointer.
+    /// * `rev_reg` - Revocation registry.
+    /// * `max_cred_num` - (Optional) Max credential number in generated registry.
     ///  * rev_idx` - index of the user in the accumulator
+    /// * `rev_tails_accessor` - (Optional) Revocation registry tails accessor.
     ///
     /// # Example
     /// ```
     /// use indy_crypto::cl::new_nonce;
     /// use indy_crypto::cl::issuer::Issuer;
     /// use indy_crypto::cl::prover::Prover;
-    /// let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-    /// claim_schema_builder.add_attr("sex").unwrap();
-    /// let claim_schema = claim_schema_builder.finalize().unwrap();
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
-    /// let (pub_key, priv_key, key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+    /// let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
     ///
-    /// let (mut rev_reg_pub, rev_reg_priv) = Issuer::new_revocation_registry_def(&pub_key, 5).unwrap();
+    /// let max_cred_num = 5;
+    /// let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    ///
+    /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
     /// let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
     /// Prover::blind_master_secret(&pub_key, &key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
     ///
-    /// let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-    /// claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    /// let claim_values = claim_values_builder.finalize().unwrap();
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let credential_values = credential_values_builder.finalize().unwrap();
     ///
-    /// let claim_issuance_nonce = new_nonce().unwrap();
+    /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
-    /// let (_claim_signature, _signature_correctness_proof) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-    ///                                                                           &blinded_master_secret,
-    ///                                                                           &blinded_master_secret_correctness_proof,
-    ///                                                                           &master_secret_blinding_nonce,
-    ///                                                                           &claim_issuance_nonce,
-    ///                                                                           &claim_values,
-    ///                                                                           &pub_key,
-    ///                                                                           &priv_key,
-    ///                                                                           Some(1),
-    ///                                                                           Some(&mut rev_reg_pub),
-    ///                                                                           Some(&rev_reg_priv)).unwrap();
-    /// Issuer::revoke_claim(&mut rev_reg_pub, 1).unwrap();
+    /// let rev_idx = 1;
+    /// let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
+    ///     Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///     blinded_master_secret,
+    ///     &blinded_master_secret_correctness_proof,
+    ///     &master_secret_blinding_nonce,
+    ///     &credential_issuance_nonce,
+    ///     &credential_values,
+    ///     &cred_pub_key,
+    ///     &cred_priv_key,
+    ///     Some(rev_idx),
+    ///     Some(max_cred_num),
+    ///     Some(&mut rev_reg),
+    ///     Some(&rev_key_priv),
+    ///     Some(Box::new(simple_tail_accessor.clone()))).unwrap();
+    /// Issuer::revoke_credential(&mut rev_reg_pub, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
     /// ```
-    pub fn revoke_claim<RTA>(rev_reg: &mut RevocationRegistry,
-                             max_cred_num: u32,
-                             rev_idx: u32,
-                             rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, IndyCryptoError> where RTA: RevocationTailsAccessor {
-        trace!("Issuer::revoke_claim: >>> rev_reg: {:?}, rev_idx: {:?}", rev_reg, rev_idx);
+    pub fn revoke_credential<RTA>(rev_reg: &mut RevocationRegistry,
+                                  max_cred_num: u32,
+                                  rev_idx: u32,
+                                  rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("Issuer::revoke_credential: >>> rev_reg: {:?}, rev_idx: {:?}", rev_reg, rev_idx);
 
         let prev_accum = rev_reg.accum.clone();
 
@@ -325,19 +339,19 @@ impl Issuer {
             revoked: Some(revoked)
         };
 
-        trace!("Issuer::revoke_claim: <<< rev_reg_delta: {:?}", rev_reg_delta);
+        trace!("Issuer::revoke_credential: <<< rev_reg_delta: {:?}", rev_reg_delta);
 
         Ok(rev_reg_delta)
     }
 
-    fn _new_credential_primary_keys(claim_schema: &ClaimSchema) -> Result<(CredentialPrimaryPublicKey,
-                                                                           CredentialPrimaryPrivateKey,
-                                                                           CredentialPrimaryPublicKeyMetadata), IndyCryptoError> {
-        trace!("Issuer::_new_primary_keys: >>> claim_schema: {:?}", claim_schema);
+    fn _new_credential_primary_keys(credential_schema: &CredentialSchema) -> Result<(CredentialPrimaryPublicKey,
+                                                                                     CredentialPrimaryPrivateKey,
+                                                                                     CredentialPrimaryPublicKeyMetadata), IndyCryptoError> {
+        trace!("Issuer::_new_credential_primary_keys: >>> credential_schema: {:?}", credential_schema);
 
         let mut ctx = BigNumber::new_context()?;
 
-        if claim_schema.attrs.len() == 0 {
+        if credential_schema.attrs.len() == 0 {
             return Err(IndyCryptoError::InvalidStructure(format!("List of attributes is empty")));
         }
 
@@ -355,7 +369,7 @@ impl Issuer {
         let xz = gen_x(&p, &q)?;
 
         let mut xr = BTreeMap::new();
-        for attribute in &claim_schema.attrs {
+        for attribute in &credential_schema.attrs {
             xr.insert(attribute.to_string(), gen_x(&p, &q)?);
         }
 
@@ -369,14 +383,14 @@ impl Issuer {
         let rms = s.mod_exp(&gen_x(&p, &q)?, &n, Some(&mut ctx))?;
         let rctxt = s.mod_exp(&gen_x(&p, &q)?, &n, Some(&mut ctx))?;
 
-        let issuer_pr_pub_key = CredentialPrimaryPublicKey { n, s, rms, rctxt, r, z };
-        let issuer_pr_priv_key = CredentialPrimaryPrivateKey { p, q };
-        let issuer_pr_pub_key_metadata = CredentialPrimaryPublicKeyMetadata { xz, xr };
+        let cred_pr_pub_key = CredentialPrimaryPublicKey { n, s, rms, rctxt, r, z };
+        let cred_pr_priv_key = CredentialPrimaryPrivateKey { p, q };
+        let cred_pr_pub_key_metadata = CredentialPrimaryPublicKeyMetadata { xz, xr };
 
-        trace!("Issuer::_new_primary_keys: <<< issuer_pr_pub_key: {:?}, issuer_pr_priv_key: {:?}, issuer_pr_pub_key_metadata: {:?}",
-               issuer_pr_pub_key, issuer_pr_priv_key, issuer_pr_pub_key_metadata);
+        trace!("Issuer::_new_credential_primary_keys: <<< cred_pr_pub_key: {:?}, cred_pr_priv_key: {:?}, cred_pr_pub_key_metadata: {:?}",
+               cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_metadata);
 
-        Ok((issuer_pr_pub_key, issuer_pr_priv_key, issuer_pr_pub_key_metadata))
+        Ok((cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_metadata))
     }
 
     fn _new_credential_revocation_keys() -> Result<(CredentialRevocationPublicKey,
@@ -400,40 +414,41 @@ impl Issuer {
         let pk = g.mul(&sk)?;
         let y = h_cap.mul(&x)?;
 
-        let issuer_rev_pub_key = CredentialRevocationPublicKey { g, g_dash, h, h0, h1, h2, htilde, h_cap, u, pk, y };
-        let issuer_rev_priv_key = CredentialRevocationPrivateKey { x, sk };
+        let cred_rev_pub_key = CredentialRevocationPublicKey { g, g_dash, h, h0, h1, h2, htilde, h_cap, u, pk, y };
+        let cred_rev_priv_key = CredentialRevocationPrivateKey { x, sk };
 
-        trace!("Issuer::_new_credential_revocation_keys: <<< issuer_rev_pub_key: {:?}, issuer_rev_priv_key: {:?}", issuer_rev_pub_key, issuer_rev_priv_key);
+        trace!("Issuer::_new_credential_revocation_keys: <<< cred_rev_pub_key: {:?}, cred_rev_priv_key: {:?}", cred_rev_pub_key, cred_rev_priv_key);
 
-        Ok((issuer_rev_pub_key, issuer_rev_priv_key))
+        Ok((cred_rev_pub_key, cred_rev_priv_key))
     }
 
-    fn _new_credential_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey,
-                                             pr_priv_key: &CredentialPrimaryPrivateKey,
-                                             pr_key_meta: &CredentialPrimaryPublicKeyMetadata) -> Result<CredentialKeyCorrectnessProof, IndyCryptoError> {
-        trace!("Issuer::_new_credential_key_correctness_proof: >>> pr_pub_key: {:?}, pr_priv_key: {:?}, pr_key_meta: {:?}", pr_pub_key, pr_priv_key, pr_key_meta);
+    fn _new_credential_key_correctness_proof(cred_pr_pub_key: &CredentialPrimaryPublicKey,
+                                             cred_pr_priv_key: &CredentialPrimaryPrivateKey,
+                                             cred_pr_pub_key_meta: &CredentialPrimaryPublicKeyMetadata)
+                                             -> Result<CredentialKeyCorrectnessProof, IndyCryptoError> {
+        trace!("Issuer::_new_credential_key_correctness_proof: >>> cred_pr_pub_key: {:?}, cred_pr_priv_key: {:?}, cred_pr_pub_key_meta: {:?}", cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_meta);
 
         let mut ctx = BigNumber::new_context()?;
 
         let func = gen_x;
 
-        let xz_tilda = func(&pr_priv_key.p, &pr_priv_key.q)?;
+        let xz_tilda = func(&cred_pr_priv_key.p, &cred_pr_priv_key.q)?;
 
         let mut xr_tilda = BTreeMap::new();
-        for key in pr_pub_key.r.keys() {
-            xr_tilda.insert(key.to_string(), func(&pr_priv_key.p, &pr_priv_key.q)?);
+        for key in cred_pr_pub_key.r.keys() {
+            xr_tilda.insert(key.to_string(), func(&cred_pr_priv_key.p, &cred_pr_priv_key.q)?);
         }
 
-        let z_tilda = pr_pub_key.s.mod_exp(&xz_tilda, &pr_pub_key.n, Some(&mut ctx))?;
+        let z_tilda = cred_pr_pub_key.s.mod_exp(&xz_tilda, &cred_pr_pub_key.n, Some(&mut ctx))?;
 
         let mut r_tilda = BTreeMap::new();
         for (key, xr_tilda_value) in xr_tilda.iter() {
-            r_tilda.insert(key.to_string(), pr_pub_key.s.mod_exp(&xr_tilda_value, &pr_pub_key.n, Some(&mut ctx))?);
+            r_tilda.insert(key.to_string(), cred_pr_pub_key.s.mod_exp(&xr_tilda_value, &cred_pr_pub_key.n, Some(&mut ctx))?);
         }
 
         let mut values: Vec<u8> = Vec::new();
-        values.extend_from_slice(&pr_pub_key.z.to_bytes()?);
-        for val in pr_pub_key.r.values() {
+        values.extend_from_slice(&cred_pr_pub_key.z.to_bytes()?);
+        for val in cred_pr_pub_key.r.values() {
             values.extend_from_slice(&val.to_bytes()?);
         }
         values.extend_from_slice(&z_tilda.to_bytes()?);
@@ -444,13 +459,13 @@ impl Issuer {
         let c = get_hash_as_int(&mut vec![values])?;
 
         let xz_cap =
-            c.mul(&pr_key_meta.xz, Some(&mut ctx))?
+            c.mul(&cred_pr_pub_key_meta.xz, Some(&mut ctx))?
                 .add(&xz_tilda)?;
 
         let mut xr_cap: BTreeMap<String, BigNumber> = BTreeMap::new();
         for (key, xr_tilda_value) in xr_tilda {
             let val =
-                c.mul(&pr_key_meta.xr[&key], Some(&mut ctx))?
+                c.mul(&cred_pr_pub_key_meta.xr[&key], Some(&mut ctx))?
                     .add(&xr_tilda_value)?;
             xr_cap.insert(key.to_string(), val);
         }
@@ -508,27 +523,27 @@ impl Issuer {
         Ok((rev_key_pub, rev_key_priv))
     }
 
-    fn _check_blinded_master_secret_proof_correctness(blinded_ms: &BlindedMasterSecret,
-                                                      blinded_master_secret_correctness_proof: &BlindedMasterSecretProofCorrectness,
+    fn _check_blinded_master_secret_correctness_proof(blinded_ms: &BlindedMasterSecret,
+                                                      blinded_ms_correctness_proof: &BlindedMasterSecretCorrectnessProof,
                                                       nonce: &Nonce,
-                                                      pr_pub_key: &CredentialPrimaryPublicKey) -> Result<(), IndyCryptoError> {
-        trace!("Issuer::_check_blinded_master_secret_proof_correctness: >>> blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, nonce: {:?}, \
-        pr_pub_key: {:?}", blinded_ms, blinded_master_secret_correctness_proof, nonce, pr_pub_key);
+                                                      cred_pr_pub_key: &CredentialPrimaryPublicKey) -> Result<(), IndyCryptoError> {
+        trace!("Issuer::_check_blinded_master_secret_correctness_proof: >>> blinded_ms: {:?}, blinded_ms_correctness_proof: {:?},\
+         nonce: {:?}, cred_pr_pub_key: {:?}", blinded_ms, blinded_ms_correctness_proof, nonce, cred_pr_pub_key);
 
         let mut ctx = BigNumber::new_context()?;
 
         let u_cap =
             blinded_ms.u
-                .inverse(&pr_pub_key.n, Some(&mut ctx))?
-                .mod_exp(&blinded_master_secret_correctness_proof.c, &pr_pub_key.n, Some(&mut ctx))?
+                .inverse(&cred_pr_pub_key.n, Some(&mut ctx))?
+                .mod_exp(&blinded_ms_correctness_proof.c, &cred_pr_pub_key.n, Some(&mut ctx))?
                 .mod_mul(
-                    &pr_pub_key.s.mod_exp(&blinded_master_secret_correctness_proof.v_dash_cap, &pr_pub_key.n, Some(&mut ctx))?,
-                    &pr_pub_key.n,
+                    &cred_pr_pub_key.s.mod_exp(&blinded_ms_correctness_proof.v_dash_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
+                    &cred_pr_pub_key.n,
                     Some(&mut ctx)
                 )?
                 .mod_mul(
-                    &pr_pub_key.rms.mod_exp(&blinded_master_secret_correctness_proof.ms_cap, &pr_pub_key.n, Some(&mut ctx))?,
-                    &pr_pub_key.n,
+                    &cred_pr_pub_key.rms.mod_exp(&blinded_ms_correctness_proof.ms_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
+                    &cred_pr_pub_key.n,
                     Some(&mut ctx)
                 )?;
 
@@ -539,20 +554,19 @@ impl Issuer {
 
         let c = get_hash_as_int(&mut vec![values])?;
 
-        let valid = blinded_master_secret_correctness_proof.c.eq(&c);
+        let valid = blinded_ms_correctness_proof.c.eq(&c);
 
         if !valid {
             return Err(IndyCryptoError::InvalidStructure(format!("Invalid BlindedMasterSecret correctness proof")));
         }
 
-        trace!("Issuer::_check_blinded_master_secret_proof_correctness: <<<");
+        trace!("Issuer::_check_blinded_master_secret_correctness_proof: <<<");
 
         Ok(())
     }
 
-
-    // In the anoncreds whitepaper, `claim context` is denoted by `m2`
-    fn _gen_claim_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
+    // In the anoncreds whitepaper, `credential context` is denoted by `m2`
+    fn _gen_credential_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
         trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, rev_idx);
 
         let rev_idx = rev_idx.map(|i| i as i32).unwrap_or(-1);
@@ -566,20 +580,20 @@ impl Issuer {
 
         /* TODO: FIXME: use const!!! */
         let pow_2 = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_MASTER_SECRET)?, None)?;
-        let claim_context = get_hash_as_int(&mut s)?.modulus(&pow_2, None)?;
+        let credential_context = get_hash_as_int(&mut s)?.modulus(&pow_2, None)?;
 
-        trace!("Issuer::_gen_claim_context: <<< claim_context: {:?}", claim_context);
+        trace!("Issuer::_gen_credential_context: <<< credential_context: {:?}", credential_context);
 
-        Ok(claim_context)
+        Ok(credential_context)
     }
 
-    fn _new_primary_claim(claim_context: &BigNumber,
-                          issuer_pub_key: &CredentialPublicKey,
-                          issuer_priv_key: &CredentialPrivateKey,
-                          blinded_ms: &BlindedMasterSecret,
-                          claim_values: &ClaimValues) -> Result<(PrimaryClaimSignature, BigNumber), IndyCryptoError> {
-        trace!("Issuer::_new_primary_claim: >>> claim_context: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, blinded_ms: {:?}, claim_values: {:?}",
-               claim_context, issuer_pub_key, issuer_priv_key, blinded_ms, claim_values);
+    fn _new_primary_credential(credential_context: &BigNumber,
+                               cred_pub_key: &CredentialPublicKey,
+                               cred_priv_key: &CredentialPrivateKey,
+                               blinded_ms: &BlindedMasterSecret,
+                               cred_values: &CredentialValues) -> Result<(PrimaryCredentialSignature, BigNumber), IndyCryptoError> {
+        trace!("Issuer::_new_primary_credential: >>> credential_context: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, blinded_ms: {:?},\
+         cred_values: {:?}", credential_context, cred_pub_key, cred_priv_key, blinded_ms, cred_values);
 
         let v = generate_v_prime_prime()?;
 
@@ -589,27 +603,27 @@ impl Issuer {
             .add(&e_start)?;
 
         let e = generate_prime_in_range(&e_start, &e_end)?;
-        let (a, q) = Issuer::_sign_primary_claim(issuer_pub_key, issuer_priv_key, &claim_context, &claim_values, &v, blinded_ms, &e)?;
+        let (a, q) = Issuer::_sign_primary_credential(cred_pub_key, cred_priv_key, &credential_context, &cred_values, &v, blinded_ms, &e)?;
 
-        let pr_claim_signature = PrimaryClaimSignature { m_2: claim_context.clone()?, a, e, v };
+        let pr_cred_sig = PrimaryCredentialSignature { m_2: credential_context.clone()?, a, e, v };
 
-        trace!("Issuer::_new_primary_claim: <<< pr_claim_signature: {:?}, q: {:?}", pr_claim_signature, q);
+        trace!("Issuer::_new_primary_credential: <<< pr_cred_sig: {:?}, q: {:?}", pr_cred_sig, q);
 
-        Ok((pr_claim_signature, q))
+        Ok((pr_cred_sig, q))
     }
 
-    fn _sign_primary_claim(p_pub_key: &CredentialPublicKey,
-                           p_priv_key: &CredentialPrivateKey,
-                           claim_context: &BigNumber,
-                           claim_values: &ClaimValues,
-                           v: &BigNumber,
-                           blnd_ms: &BlindedMasterSecret,
-                           e: &BigNumber) -> Result<(BigNumber, BigNumber), IndyCryptoError> {
-        trace!("Issuer::_sign_primary_claim: >>> p_pub_key: {:?}, p_priv_key: {:?}, claim_context: {:?}, claim_values: {:?}, v: {:?}, blnd_ms: {:?}, e: {:?}",
-               p_pub_key, p_priv_key, claim_context, claim_values, v, blnd_ms, e);
+    fn _sign_primary_credential(cred_pub_key: &CredentialPublicKey,
+                                cred_priv_key: &CredentialPrivateKey,
+                                cred_context: &BigNumber,
+                                cred_values: &CredentialValues,
+                                v: &BigNumber,
+                                blnd_ms: &BlindedMasterSecret,
+                                e: &BigNumber) -> Result<(BigNumber, BigNumber), IndyCryptoError> {
+        trace!("Issuer::_sign_primary_credential: >>> cred_pub_key: {:?}, cred_priv_key: {:?}, cred_context: {:?}, cred_values: {:?}, v: {:?},\
+         blnd_ms: {:?}, e: {:?}", cred_pub_key, cred_priv_key, cred_context, cred_values, v, blnd_ms, e);
 
-        let p_pub_key = &p_pub_key.p_key;
-        let p_priv_key = &p_priv_key.p_key;
+        let p_pub_key = &cred_pub_key.p_key;
+        let p_priv_key = &cred_priv_key.p_key;
 
         let mut context = BigNumber::new_context()?;
 
@@ -621,10 +635,10 @@ impl Issuer {
                 .mul(&rx, Some(&mut context))?;
         }
 
-        rx = p_pub_key.rctxt.mod_exp(&claim_context, &p_pub_key.n, Some(&mut context))?
+        rx = p_pub_key.rctxt.mod_exp(&cred_context, &p_pub_key.n, Some(&mut context))?
             .mul(&rx, Some(&mut context))?;
 
-        for (key, value) in &claim_values.attrs_values {
+        for (key, value) in &cred_values.attrs_values {
             let pk_r = p_pub_key.r
                 .get(key)
                 .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
@@ -640,18 +654,18 @@ impl Issuer {
 
         let a = q.mod_exp(&e_inverse, &p_pub_key.n, Some(&mut context))?;
 
-        trace!("Issuer::_sign_primary_claim: <<< a: {:?}, q: {:?}", a, q);
+        trace!("Issuer::_sign_primary_credential: <<< a: {:?}, q: {:?}", a, q);
 
         Ok((a, q))
     }
 
-    pub fn _new_signature_correctness_proof(p_pub_key: &CredentialPrimaryPublicKey,
-                                            p_priv_key: &CredentialPrimaryPrivateKey,
-                                            p_claim_signature: &PrimaryClaimSignature,
-                                            q: &BigNumber,
-                                            nonce: &BigNumber) -> Result<SignatureCorrectnessProof, IndyCryptoError> {
-        trace!("Issuer::_new_signature_correctness_proof: >>> p_pub_key: {:?}, p_priv_key: {:?}, p_claim_signature: {:?}, q: {:?}, nonce: {:?}",
-               p_pub_key, p_priv_key, p_claim_signature, q, nonce);
+    fn _new_signature_correctness_proof(p_pub_key: &CredentialPrimaryPublicKey,
+                                        p_priv_key: &CredentialPrimaryPrivateKey,
+                                        p_cred_signature: &PrimaryCredentialSignature,
+                                        q: &BigNumber,
+                                        nonce: &BigNumber) -> Result<SignatureCorrectnessProof, IndyCryptoError> {
+        trace!("Issuer::_new_signature_correctness_proof: >>> p_pub_key: {:?}, p_priv_key: {:?}, p_cred_signature: {:?}, q: {:?}, nonce: {:?}",
+               p_pub_key, p_priv_key, p_cred_signature, q, nonce);
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -662,14 +676,14 @@ impl Issuer {
 
         let mut values: Vec<u8> = Vec::new();
         values.extend_from_slice(&q.to_bytes()?);
-        values.extend_from_slice(&p_claim_signature.a.to_bytes()?);
+        values.extend_from_slice(&p_cred_signature.a.to_bytes()?);
         values.extend_from_slice(&a_cap.to_bytes()?);
         values.extend_from_slice(&nonce.to_bytes()?);
 
         let c = get_hash_as_int(&mut vec![values])?;
 
         let se = r.mod_sub(
-            &c.mod_mul(&p_claim_signature.e.inverse(&n, Some(&mut ctx))?, &n, Some(&mut ctx))?,
+            &c.mod_mul(&p_cred_signature.e.inverse(&n, Some(&mut ctx))?, &n, Some(&mut ctx))?,
             &n,
             Some(&mut ctx)
         )?;
@@ -681,19 +695,19 @@ impl Issuer {
         Ok(signature_correctness_proof)
     }
 
-    fn _new_non_revocation_claim(rev_idx: u32,
-                                 claim_context: &BigNumber,
-                                 blinded_ms: &BlindedMasterSecret,
-                                 cred_pub_key: &CredentialPublicKey,
-                                 cred_priv_key: &CredentialPrivateKey,
-                                 max_cred_num: u32,
-                                 rev_reg: &mut RevocationRegistry,
-                                 rev_key_private: &RevocationKeyPrivate,
-                                 rev_tails_accessor: &RevocationTailsAccessor)
-                                 -> Result<(NonRevocationClaimSignature, RevocationRegistryDelta), IndyCryptoError> {
-        trace!("Issuer::_new_non_revocation_claim: >>> rev_idx: {:?}, claim_context: {:?}, blinded_ms: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, \
-        max_cred_num: {:?}, rev_reg: {:?}, rev_key_private: {:?}",
-               rev_idx, claim_context, blinded_ms, cred_pub_key, cred_priv_key, max_cred_num, rev_reg, rev_key_private);
+    fn _new_non_revocation_credential(rev_idx: u32,
+                                      cred_context: &BigNumber,
+                                      blinded_ms: &BlindedMasterSecret,
+                                      cred_pub_key: &CredentialPublicKey,
+                                      cred_priv_key: &CredentialPrivateKey,
+                                      max_cred_num: u32,
+                                      rev_reg: &mut RevocationRegistry,
+                                      rev_key_priv: &RevocationKeyPrivate,
+                                      rev_tails_accessor: &RevocationTailsAccessor)
+                                      -> Result<(NonRevocationCredentialSignature, RevocationRegistryDelta), IndyCryptoError> {
+        trace!("Issuer::_new_non_revocation_credential: >>> rev_idx: {:?}, cred_context: {:?}, blinded_ms: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, \
+        max_cred_num: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
+               rev_idx, cred_context, blinded_ms, cred_pub_key, cred_priv_key, max_cred_num, rev_reg, rev_key_priv);
 
         let ur = blinded_ms.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secret.")))?;
@@ -708,12 +722,12 @@ impl Issuer {
 
         let vr_prime_prime = GroupOrderElement::new()?;
         let c = GroupOrderElement::new()?;
-        let m2 = GroupOrderElement::from_bytes(&claim_context.to_bytes()?)?;
+        let m2 = GroupOrderElement::from_bytes(&cred_context.to_bytes()?)?;
 
         let g_i = {
             let i_bytes = transform_u32_to_array_of_u8(rev_idx);
             let mut pow = GroupOrderElement::from_bytes(&i_bytes)?;
-            pow = rev_key_private.gamma.pow_mod(&pow)?;
+            pow = rev_key_priv.gamma.pow_mod(&pow)?;
             r_pub_key.g.mul(&pow)?
         };
 
@@ -727,11 +741,11 @@ impl Issuer {
 
         let sigma_i = r_pub_key.g_dash
             .mul(&r_priv_key.sk
-                .add_mod(&rev_key_private.gamma
+                .add_mod(&rev_key_priv.gamma
                     .pow_mod(&GroupOrderElement::from_bytes(&transform_u32_to_array_of_u8(rev_idx))?)?)?
                 .inverse()?)?;
         let u_i = r_pub_key.u
-            .mul(&rev_key_private.gamma
+            .mul(&rev_key_priv.gamma
                 .pow_mod(&GroupOrderElement::from_bytes(&transform_u32_to_array_of_u8(rev_idx))?)?)?;
 
         let index = max_cred_num + 1 - rev_idx;
@@ -758,7 +772,7 @@ impl Issuer {
             g_i: g_i.clone(),
         };
 
-        let non_revocation_claim_sig = NonRevocationClaimSignature {
+        let non_revocation_cred_sig = NonRevocationCredentialSignature {
             sigma,
             c,
             vr_prime_prime,
@@ -768,10 +782,10 @@ impl Issuer {
             m2
         };
 
-        trace!("Issuer::_new_non_revocation_claim: <<< non_revocation_claim_sig: {:?}, rev_reg_delta: {:?}",
-               non_revocation_claim_sig, rev_reg_delta);
+        trace!("Issuer::_new_non_revocation_credential: <<< non_revocation_cred_sig: {:?}, rev_reg_delta: {:?}",
+               non_revocation_cred_sig, rev_reg_delta);
 
-        Ok((non_revocation_claim_sig, rev_reg_delta))
+        Ok((non_revocation_cred_sig, rev_reg_delta))
     }
 }
 
@@ -786,83 +800,83 @@ mod tests {
         let rev_idx = 110;
         let user_id = "111";
         let answer = BigNumber::from_dec("59059690488564137142247698318091397258460906844819605876079330034815387295451").unwrap();
-        let result = Issuer::_gen_claim_context(user_id, Some(rev_idx)).unwrap();
+        let result = Issuer::_gen_credential_context(user_id, Some(rev_idx)).unwrap();
         assert_eq!(result, answer);
     }
 
     #[test]
-    fn claim_schema_builder_works() {
-        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-        claim_schema_builder.add_attr("sex").unwrap();
-        claim_schema_builder.add_attr("name").unwrap();
-        claim_schema_builder.add_attr("age").unwrap();
-        let claim_schema = claim_schema_builder.finalize().unwrap();
+    fn credential_schema_builder_works() {
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("sex").unwrap();
+        credential_schema_builder.add_attr("name").unwrap();
+        credential_schema_builder.add_attr("age").unwrap();
+        let credential_schema = credential_schema_builder.finalize().unwrap();
 
-        assert!(claim_schema.attrs.contains("sex"));
-        assert!(claim_schema.attrs.contains("name"));
-        assert!(claim_schema.attrs.contains("age"));
-        assert!(!claim_schema.attrs.contains("height"));
+        assert!(credential_schema.attrs.contains("sex"));
+        assert!(credential_schema.attrs.contains("name"));
+        assert!(credential_schema.attrs.contains("age"));
+        assert!(!credential_schema.attrs.contains("height"));
     }
 
     #[test]
-    fn claim_values_builder_works() {
-        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-        claim_values_builder.add_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
-        claim_values_builder.add_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
-        let claim_values = claim_values_builder.finalize().unwrap();
+    fn credential_values_builder_works() {
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_value("sex", "89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
+        credential_values_builder.add_value("name", "58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
+        let credential_values = credential_values_builder.finalize().unwrap();
 
-        assert!(claim_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()));
-        assert!(claim_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()));
-        assert!(claim_values.attrs_values.get("age").is_none());
+        assert!(credential_values.attrs_values.get("sex").unwrap().eq(&BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap()));
+        assert!(credential_values.attrs_values.get("name").unwrap().eq(&BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap()));
+        assert!(credential_values.attrs_values.get("age").is_none());
     }
 
     #[test]
-    fn issuer_new_cred_def_works() {
+    fn issuer_new_credential_def_works() {
         MockHelper::inject();
 
-        let (pub_key, priv_key, key_correctness_proof) = Issuer::new_cred_def(&mocks::claim_schema(), true).unwrap();
-        assert_eq!(pub_key.p_key, mocks::issuer_primary_public_key());
-        assert_eq!(priv_key.p_key, mocks::issuer_primary_private_key());
-        assert_eq!(key_correctness_proof, mocks::issuer_key_correctness_proof());
+        let (pub_key, priv_key, key_correctness_proof) = Issuer::new_credential_def(&mocks::credential_schema(), true).unwrap();
+        assert_eq!(pub_key.p_key, mocks::credential_primary_public_key());
+        assert_eq!(priv_key.p_key, mocks::credential_primary_private_key());
+        assert_eq!(key_correctness_proof, mocks::credential_key_correctness_proof());
         assert!(pub_key.r_key.is_some());
         assert!(priv_key.r_key.is_some());
     }
 
     #[test]
-    fn issuer_new_keys_works_without_revocation_part() {
+    fn issuer_new_credential_def_works_without_revocation_part() {
         MockHelper::inject();
 
-        let (pub_key, priv_key, key_correctness_proof) = Issuer::new_cred_def(&mocks::claim_schema(), false).unwrap();
-        assert_eq!(pub_key.p_key, mocks::issuer_primary_public_key());
-        assert_eq!(priv_key.p_key, mocks::issuer_primary_private_key());
-        assert_eq!(key_correctness_proof, mocks::issuer_key_correctness_proof());
+        let (pub_key, priv_key, key_correctness_proof) = Issuer::new_credential_def(&mocks::credential_schema(), false).unwrap();
+        assert_eq!(pub_key.p_key, mocks::credential_primary_public_key());
+        assert_eq!(priv_key.p_key, mocks::credential_primary_private_key());
+        assert_eq!(key_correctness_proof, mocks::credential_key_correctness_proof());
         assert!(pub_key.r_key.is_none());
         assert!(priv_key.r_key.is_none());
     }
 
     #[test]
-    fn issuer_new_keys_works_for_empty_attributes() {
-        let claim_attrs = ClaimSchema { attrs: HashSet::new() };
-        let res = Issuer::new_cred_def(&claim_attrs, false);
+    fn issuer_new_credential_works_for_empty_attributes() {
+        let cred_attrs = CredentialSchema { attrs: HashSet::new() };
+        let res = Issuer::new_credential_def(&cred_attrs, false);
         assert!(res.is_err())
     }
 
     #[test]
-    fn issuer_new_revocation_registry_works() {
+    fn issuer_new_revocation_registry_def_works() {
         MockHelper::inject();
 
-        let (pub_key, _, _) = Issuer::new_cred_def(&mocks::claim_schema(), true).unwrap();
+        let (pub_key, _, _) = Issuer::new_credential_def(&mocks::credential_schema(), true).unwrap();
         Issuer::new_revocation_registry_def(&pub_key, 100, false).unwrap();
     }
 
     #[test]
-    fn sign_primary_claim_works() {
+    fn sign_primary_credential_works() {
         MockHelper::inject();
 
-        let (pub_key, secret_key) = (mocks::issuer_public_key(), mocks::issuer_private_key());
+        let (pub_key, secret_key) = (mocks::credential_public_key(), mocks::credential_private_key());
         let context_attribute = BigNumber::from_dec("59059690488564137142247698318091397258460906844819605876079330034815387295451").unwrap();
 
-        let claim_values = mocks::claim_values();
+        let credential_values = mocks::credential_values();
 
         let v = BigNumber::from_dec("5237513942984418438429595379849430501110274945835879531523435677101657022026899212054747703201026332785243221088006425007944260107143086435227014329174143861116260506019310628220538205630726081406862023584806749693647480787838708606386447727482772997839699379017499630402117304253212246286800412454159444495341428975660445641214047184934669036997173182682771745932646179140449435510447104436243207291913322964918630514148730337977117021619857409406144166574010735577540583316493841348453073326447018376163876048624924380855323953529434806898415857681702157369526801730845990252958130662749564283838280707026676243727830151176995470125042111348846500489265328810592848939081739036589553697928683006514398844827534478669492201064874941684905413964973517155382540340695991536826170371552446768460042588981089470261358687308").unwrap();
 
@@ -872,37 +886,36 @@ mod tests {
         let expected_signature = BigNumber::from_dec("28748151213526235356806559302394713234708919908503693283861771311017778909029307989059154007823711057388221409308121224597301914007508580498985253922086489241065285193059997346332076248684330624957067344016446755572964815456056930278425883796750731908534333384959509746585564275501093362841366335955561237226624645170675067095743367895186059835073250297480315430811087601896371266213408739927940580173817412189118678276094925364341985978659550229327835510932814819830163166484857629278032552734675432915303389204079219287453130354714417551011163735621955266079226631695289893390164242695387374962452897413162593627569").unwrap();
         let expected_q = BigNumber::from_dec("62363291072105309734429421111781667277622338652614541474016228570557906784227711277508032382480694834439351345015578229222850418542973745058822742491558379363835885374702190788016205722518754261589148352959080144887818045985349619774317322203773276528345285327751288976595236600315518298828390132112243875494849058906743589411550479599132880095939710337582014885376559000168175623243474494316451725482257681430068204444716308910642965319732117037454207020297910067729648337741704358082947378729621100937295340132926246628185800807161500324382279607244112382284981206740340575810018294756514449073650757734843766249759").unwrap();
 
-        let (claim_signature, q) = Issuer::_sign_primary_claim(&pub_key, &secret_key, &context_attribute, &claim_values, &v, &BlindedMasterSecret { u: u, ur: None }, &e).unwrap();
-        assert_eq!(expected_signature, claim_signature);
+        let (credential_signature, q) = Issuer::_sign_primary_credential(&pub_key, &secret_key, &context_attribute, &credential_values, &v, &BlindedMasterSecret { u: u, ur: None }, &e).unwrap();
+        assert_eq!(expected_signature, credential_signature);
         assert_eq!(expected_q, q);
     }
 
     #[test]
-    fn sign_claim_works() {
+    fn sign_credential_signature_works() {
         MockHelper::inject();
 
-        let (pub_key, priv_key) =
-            (mocks::issuer_public_key(), mocks::issuer_private_key());
+        let (pub_key, priv_key) = (mocks::credential_public_key(), mocks::credential_private_key());
         let blinded_master_secret_nonce = new_nonce().unwrap();
         let (blinded_master_secret, blinded_master_secret_correctness_proof) =
             (prover::mocks::blinded_master_secret(), prover::mocks::blinded_master_secret_correctness_proof());
 
-        let claim_issuance_nonce = new_nonce().unwrap();
-        let (claim_signature, signature_correctness_proof, _) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                   &blinded_master_secret,
-                                                                                   &blinded_master_secret_correctness_proof,
-                                                                                   &blinded_master_secret_nonce,
-                                                                                   &claim_issuance_nonce,
-                                                                                   &mocks::claim_values(),
-                                                                                   &pub_key,
-                                                                                   &priv_key,
-                                                                                   Some(1),
-                                                                                   Some(mocks::max_cred_num()),
-                                                                                   None,
-                                                                                   None,
-                                                                                   None).unwrap();
+        let credential_issuance_nonce = new_nonce().unwrap();
+        let (credential_signature_signature, signature_correctness_proof, _) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                                       &blinded_master_secret,
+                                                                                                       &blinded_master_secret_correctness_proof,
+                                                                                                       &blinded_master_secret_nonce,
+                                                                                                       &credential_issuance_nonce,
+                                                                                                       &mocks::credential_values(),
+                                                                                                       &pub_key,
+                                                                                                       &priv_key,
+                                                                                                       Some(1),
+                                                                                                       None,
+                                                                                                       None,
+                                                                                                       None,
+                                                                                                       None).unwrap();
 
-        assert_eq!(mocks::primary_claim(), claim_signature.p_claim);
+        assert_eq!(mocks::primary_credential(), credential_signature_signature.p_credential);
         assert_eq!(mocks::signature_correctness_proof(), signature_correctness_proof);
     }
 }
@@ -910,21 +923,21 @@ mod tests {
 pub mod mocks {
     use super::*;
 
-    pub fn issuer_public_key() -> CredentialPublicKey {
+    pub fn credential_public_key() -> CredentialPublicKey {
         CredentialPublicKey {
-            p_key: issuer_primary_public_key(),
-            r_key: Some(revocation_pub_key())
+            p_key: credential_primary_public_key(),
+            r_key: Some(credential_revocation_public_key())
         }
     }
 
-    pub fn issuer_private_key() -> CredentialPrivateKey {
+    pub fn credential_private_key() -> CredentialPrivateKey {
         CredentialPrivateKey {
-            p_key: issuer_primary_private_key(),
-            r_key: Some(revocation_private_key())
+            p_key: credential_primary_private_key(),
+            r_key: Some(credential_revocation_private_key())
         }
     }
 
-    pub fn issuer_key_correctness_proof() -> CredentialKeyCorrectnessProof {
+    pub fn credential_key_correctness_proof() -> CredentialKeyCorrectnessProof {
         let mut xr_cap = BTreeMap::new();
         xr_cap.insert("age".to_string(), BigNumber::from_dec("1892231043724130909171141289812960615426192763023418622932834943058282432968198987153126474388668979622947264509624644685841143428132616237743193881655603543892398769262916442024063101723277760823416453262665595605413303749293649394575427429231094228050006371082139202645115071447248921364818624346023096421568826743647498028863458488776307399553475370443302355461781568944402350106239705726036665437182231254430750846071779577750530648388732768012623381961314442543645998258153643016348344220528405876072425692989455706003666388719067824778596213331852938073597370702167042039617821822401076715832575652516496480221563316441949008136915415492164815053192131153384072074830072935640451598321664").unwrap());
         xr_cap.insert("height".to_string(), BigNumber::from_dec("1892231043724130909171141289812960615426192763023418622932834943058282432968198987153126474388668979622947264509624644685841143428132616237743193881655603543892398769262916442024063101723277760823416453262665595605413303749293649394575427429231094228050006371082139202645115071447248921364818624346023096421568826743647498028863458488776307399553475370443302355461781568944402350106239705726036665437182231254430750846071779577750530648388732768012623381961314442543645998258153643016348344220528405876072425692989455706003666388719067824778596213331852938073597370702167042039617821822401076715832575652516496480221563316441949008136915415492164815053192131153384072074830072935640451598321664").unwrap());
@@ -937,7 +950,7 @@ pub mod mocks {
         }
     }
 
-    pub fn issuer_primary_public_key() -> CredentialPrimaryPublicKey {
+    pub fn credential_primary_public_key() -> CredentialPrimaryPublicKey {
         let n = BigNumber::from_dec("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
         let s = BigNumber::from_dec("64684820421150545443421261645532741305438158267230326415141505826951816460650437611148133267480407958360035501128469885271549378871140475869904030424615175830170939416512594291641188403335834762737251794282186335118831803135149622404791467775422384378569231649224208728902565541796896860352464500717052768431523703881746487372385032277847026560711719065512366600220045978358915680277126661923892187090579302197390903902744925313826817940566429968987709582805451008234648959429651259809188953915675063700676546393568304468609062443048457324721450190021552656280473128156273976008799243162970386898307404395608179975243").unwrap();
         let rms = BigNumber::from_dec("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
@@ -954,40 +967,40 @@ pub mod mocks {
         CredentialPrimaryPublicKey { n, s, rms, r, rctxt, z }
     }
 
-    pub fn issuer_primary_private_key() -> CredentialPrimaryPrivateKey {
+    pub fn credential_primary_private_key() -> CredentialPrimaryPrivateKey {
         let p = BigNumber::from_dec("149212738775716179659508649034140914067267873385650452563221860367878267143635191771233591587868730221903476199105022913859057555905442876114559838735355652672950963033972314646471235775711934244481758977047119803475879470383993713606231800156950590334088086141997103196482505556481059579729337361392854778311").unwrap();
         let q = BigNumber::from_dec("149212738775716179659508649034140914067267873385650452563221860367878267143635191771233591587868730221903476199105022913859057555905442876114559838735355652672950963033972314646471235775711934244481758977047119803475879470383993713606231800156950590334088086141997103196482505556481059579729337361392854778311").unwrap();
 
         CredentialPrimaryPrivateKey { p, q }
     }
 
-    pub fn claim_schema() -> ClaimSchema {
-        let mut claim_schema_builder = ClaimSchemaBuilder::new().unwrap();
-        claim_schema_builder.add_attr("name").unwrap();
-        claim_schema_builder.add_attr("age").unwrap();
-        claim_schema_builder.add_attr("height").unwrap();
-        claim_schema_builder.add_attr("sex").unwrap();
-        claim_schema_builder.finalize().unwrap()
+    pub fn credential_schema() -> CredentialSchema {
+        let mut credential_schema_builder = CredentialSchemaBuilder::new().unwrap();
+        credential_schema_builder.add_attr("name").unwrap();
+        credential_schema_builder.add_attr("age").unwrap();
+        credential_schema_builder.add_attr("height").unwrap();
+        credential_schema_builder.add_attr("sex").unwrap();
+        credential_schema_builder.finalize().unwrap()
     }
 
-    pub fn claim_values() -> ClaimValues {
-        let mut claim_values_builder = ClaimValuesBuilder::new().unwrap();
-        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        claim_values_builder.add_value("age", "28").unwrap();
-        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        claim_values_builder.add_value("height", "175").unwrap();
-        claim_values_builder.finalize().unwrap()
+    pub fn credential_values() -> CredentialValues {
+        let mut credential_values_builder = CredentialValuesBuilder::new().unwrap();
+        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_value("age", "28").unwrap();
+        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_value("height", "175").unwrap();
+        credential_values_builder.finalize().unwrap()
     }
 
-    pub fn claim() -> ClaimSignature {
-        ClaimSignature {
-            p_claim: primary_claim(),
-            r_claim: Some(revocation_claim())
+    pub fn credential() -> CredentialSignature {
+        CredentialSignature {
+            p_credential: primary_credential(),
+            r_credential: Some(revocation_credential())
         }
     }
 
-    pub fn primary_claim() -> PrimaryClaimSignature {
-        PrimaryClaimSignature {
+    pub fn primary_credential() -> PrimaryCredentialSignature {
+        PrimaryCredentialSignature {
             m_2: BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap(),
             a: BigNumber::from_dec("49132363239670159787093110938226673449134304271682974269447432344742116194321299671237726890946751467604148940160960878389315018748968369324920041829812940290495892617484508167397279335797727252561964527234608788562556758908905751101202717778202353145195614091112566435036522962919148975492906117295892318112254557428194748194500923814804029097083178321689709119206691962548916694618289798605008896501236499585406286135857829085917853488040591522806635137841948126557076578432458560145981983607545219636425132731496278118460851115172092828609386003425340146394948070616734134255308348098680856366416432858457119085389").unwrap(),
             e: BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881").unwrap(),
@@ -1002,8 +1015,8 @@ pub mod mocks {
         }
     }
 
-    pub fn revocation_claim() -> NonRevocationClaimSignature {
-        NonRevocationClaimSignature {
+    pub fn revocation_credential() -> NonRevocationCredentialSignature {
+        NonRevocationCredentialSignature {
             sigma: PointG1::from_string("false C8C7213101C60F F625A22E65736C 695A1F398B4787 D087ABB966C5BC 1EA63E37 7895832C96B02C 60C7E086DFA7AF 1518CD71A957F3 C1BED176429FB9 11DD23B3 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD").unwrap(),
             c: GroupOrderElement::from_string("4CF57E7A173E6 27720818863F49 D72801BCE5CBE9 7C8C588E2A8B3B 3642B08").unwrap(),
             vr_prime_prime: GroupOrderElement::from_string("2BC52B6D8B5F4B 26E57208D0DB35 D0411E4BE49639 18A8BC10BF946E 1F8689A5").unwrap(),
@@ -1032,7 +1045,7 @@ pub mod mocks {
         }
     }
 
-    pub fn revocation_pub_key() -> CredentialRevocationPublicKey {
+    pub fn credential_revocation_public_key() -> CredentialRevocationPublicKey {
         CredentialRevocationPublicKey {
             g: PointG1::from_string("false F7061FFC5D86BD FEA559D709EBB4 184F0E83E83C7F 77518EACC28D21 1B2D4E76 86D88DDE8770D0 5034DD68624C0 CA409B38BD8B6A EC15B842470D5B 2188CB11 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD").unwrap(),
             g_dash: PointG2::from_string("false B689CDF1EEE6B9 7879E722A8927E 7A5F92EB847EF4 CB7D2B559A4B7A 94DFCE9 F353AFC74815B1 DF1DB4459153A0 FEBB4F1B0DC6CB 375723BC12026E 3A02BC0 CA432D2B712EBE 28310825C67A82 FCD05276543D75 4A06A4C1A05435 1DA19E B02395BAE668B8 10BD3BCD5F1CC9 92FC516611102D CC2E8568C3C687 1A06AE72 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap(),
@@ -1049,7 +1062,7 @@ pub mod mocks {
         }
     }
 
-    pub fn revocation_private_key() -> CredentialRevocationPrivateKey {
+    pub fn credential_revocation_private_key() -> CredentialRevocationPrivateKey {
         CredentialRevocationPrivateKey {
             x: GroupOrderElement::new().unwrap(),
             sk: GroupOrderElement::new().unwrap()
@@ -1085,24 +1098,6 @@ pub mod mocks {
             accum: accumulator(),
             issued: Some(issued),
             revoked: None
-        }
-    }
-
-
-    fn simple_tail_accessor() -> SimpleTailsAccessor {
-        let mut tails: HashMap<u32, PointG2> = HashMap::new();
-        tails.insert(8, PointG2::from_string("false 390D1709376721 98245AABF4362B AC1FACB6BBD05E E4C3386AE5503A 128CD835 A982F82EC38AA9 C4D509C50A5739 147B931F0BAAB 9D2E2891090067 1E093A4 77F9E4C8101F59 BB5F319909D7D4 564B8C47AA666C CC8C97E732D170 220116B8 3A10DE9707FCB6 52542617716EA EB57185B59742D D01BF217533C5C 193BC78B FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(1, PointG2::from_string("false CD975AFB9C5067 8FA21CC4E37FC3 CCAFBC2CB2CED2 AF24B72B23046E 1085AD0B 29B067BCCC5E0D D1A5FFD58150B E4DBB40838690C 84910B94ED77BE 135D66D F45FCF475FBB9C 63A1CF9D8DBDD2 F55CB07F8233A2 279087BA842772 B93978E 18C43310CDAA0 421A062395787F 96D1D9787FC4FD E2ABEB6A00F0A1 1140BA54 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(4, PointG2::from_string("false 78E66848A7F5F9 132AB1C7553E01 4F277AB53DEFD0 EAAFD109BA7934 2E796AA A9CF83C15175AD 53D69FF43FC5D2 54883C1D7E9981 9C4D4BD276C31E D8DB152 F9457FB683C672 73873FEB68A789 DD761945B7C230 55BB9B119F2376 1D5BD4A1 419BCA31048242 607694D34D4010 203516C8CBF5E5 A1D5CC2ABBA257 6937824 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(0, PointG2::from_string("false B689CDF1EEE6B9 7879E722A8927E 7A5F92EB847EF4 CB7D2B559A4B7A 94DFCE9 F353AFC74815B1 DF1DB4459153A0 FEBB4F1B0DC6CB 375723BC12026E 3A02BC0 CA432D2B712EBE 28310825C67A82 FCD05276543D75 4A06A4C1A05435 1DA19E B02395BAE668B8 10BD3BCD5F1CC9 92FC516611102D CC2E8568C3C687 1A06AE72 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(7, PointG2::from_string("false 16AF65D69D2077 43BFBF1F03B4DB 1F875B833E17A2 70C749CF644BE2 9776105 D8F3E86EDF958C 213C8D6A15CB6 8032FB837CC91D 3D1F0AEAD45AB2 1D9225F9 824C05CC2BC42B E3CC4DF213DF1A 847C5444BB681 F9023211E70E70 1283B8EA E34FE320EFB7E1 9578E301C12C66 F498C7A87F0B99 E77B86E8244F00 10FDA472 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(9, PointG2::from_string("false 77BA09D7BA300E 40B8FD86701B8E 2F74A578990E71 B28868F9A10567 1D23EFFC 6192F7E92893E2 8ECD622E98521 4E911BCF1ED8FB B77137674C6EFB 9CB358A 636339738BC01D 6AB860F1085F6D B53E0479005A69 7D3D559B98792E 239C96A E4468AC977895F 946CC6D42E40A7 EFACABFF178BF E74E1D503F3454 486C83C FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(5, PointG2::from_string("false 1348A2A978E0DB 34007FF6AF40CE 6D0587A6FB0664 5C7BE100A9A5F0 195FD169 A8C3298C4E3638 F93A75199C097D F3659F1FB6AE4A A03EC27AEB629 2435D86 4DA6C9C1917365 866CCF7C293373 216DF40B2F9E81 19F44DEEC2C748 170C3B8A DDEA4569FCEEC7 1685AB7B80F94F 5BB29412B2822D 3FE85A96139673 109B08B8 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(2, PointG2::from_string("false A833A7FEE1899C DDB240BB9D5C70 B12225E6BC6BC8 7214770046E216 11C7AF4B C673E87B0E3CA7 D402059952151C C78BAC6AE271F4 B767948A4CC721 16EDBCA9 9A898AF8DDF47C 2AA64013B834B4 643EFBCBFA5FCA F7FA0B6D3ADC92 1BA2FD5D 7C664B888E3A8F FC90E07B7CF85 A57C697325853C A7383E71F41985 227D1F8B FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-        tails.insert(3, PointG2::from_string("false 5E2B71E59F20F1 CDDC6CB91B3D78 9B3130684357E5 A9160132CEDE21 59E3FD8 CBE453D80A803A A96D59D7F885ED 1FAF1E7D84D77D 6703AB31EDF74E 1197DD1B EEEC3499BFBBDC 6B17FABA999A2D 9BE155AB7EFC66 BC4CBFC73D258E 15027EDA 31FDA448757FB7 E4B6213FD3BD56 BCC89B065F8BFF 3775B8DA93E846 107B0CE9 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap());
-
-        SimpleTailsAccessor {
-            tails
         }
     }
 

@@ -30,7 +30,7 @@ pub extern fn indy_crypto_cl_claim_schema_builder_new(claim_schema_builder_p: *m
 
     check_useful_c_ptr!(claim_schema_builder_p, ErrorCode::CommonInvalidParam1);
 
-    let res = match Issuer::new_claim_schema_builder() {
+    let res = match Issuer::new_credential_schema_builder() {
         Ok(claim_schema_builder) => {
             trace!("indy_crypto_cl_claim_schema_builder_new: claim_schema_builder: {:?}", claim_schema_builder);
             unsafe {
@@ -56,7 +56,7 @@ pub extern fn indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder:
                                                            attr: *const c_char) -> ErrorCode {
     trace!("indy_crypto_cl_claim_schema_builder_add_attr: >>> claim_schema_builder: {:?}, attr: {:?}", claim_schema_builder, attr);
 
-    check_useful_mut_c_reference!(claim_schema_builder, ClaimSchemaBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_mut_c_reference!(claim_schema_builder, CredentialSchemaBuilder, ErrorCode::CommonInvalidParam1);
     check_useful_c_str!(attr, ErrorCode::CommonInvalidParam2);
 
     trace!("indy_crypto_cl_claim_schema_builder_add_attr: entities: claim_schema_builder: {:?}, attr: {:?}", claim_schema_builder, attr);
@@ -86,7 +86,7 @@ pub extern fn indy_crypto_cl_claim_schema_builder_finalize(claim_schema_builder:
     check_useful_c_ptr!(claim_schema_builder, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(claim_schema_p, ErrorCode::CommonInvalidParam2);
 
-    let claim_schema_builder = unsafe { Box::from_raw(claim_schema_builder as *mut ClaimSchemaBuilder) };
+    let claim_schema_builder = unsafe { Box::from_raw(claim_schema_builder as *mut CredentialSchemaBuilder) };
 
     trace!("indy_crypto_cl_claim_schema_builder_finalize: entities: claim_schema_builder: {:?}", claim_schema_builder);
 
@@ -116,7 +116,7 @@ pub extern fn indy_crypto_cl_claim_schema_free(claim_schema: *const c_void) -> E
 
     check_useful_c_ptr!(claim_schema, ErrorCode::CommonInvalidParam1);
 
-    let claim_schema = unsafe { Box::from_raw(claim_schema as *mut ClaimSchema); };
+    let claim_schema = unsafe { Box::from_raw(claim_schema as *mut CredentialSchema); };
     trace!("indy_crypto_cl_claim_schema_free: entity: claim_schema: {:?}", claim_schema);
 
     let res = ErrorCode::Success;
@@ -141,7 +141,7 @@ pub extern fn indy_crypto_cl_claim_values_builder_new(claim_values_builder_p: *m
 
     check_useful_c_ptr!(claim_values_builder_p, ErrorCode::CommonInvalidParam1);
 
-    let res = match Issuer::new_claim_values_builder() {
+    let res = match Issuer::new_credential_values_builder() {
         Ok(claim_values_builder) => {
             trace!("indy_crypto_cl_claim_values_builder_new: claim_values_builder: {:?}", claim_values_builder);
             unsafe {
@@ -170,7 +170,7 @@ pub extern fn indy_crypto_cl_claim_values_builder_add_value(claim_values_builder
     trace!("indy_crypto_cl_claim_values_builder_add_value: >>> claim_values_builder: {:?}, attr: {:?}, dec_value: {:?}",
            claim_values_builder, attr, dec_value);
 
-    check_useful_mut_c_reference!(claim_values_builder, ClaimValuesBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_mut_c_reference!(claim_values_builder, CredentialValuesBuilder, ErrorCode::CommonInvalidParam1);
     check_useful_c_str!(attr, ErrorCode::CommonInvalidParam2);
     check_useful_c_str!(dec_value, ErrorCode::CommonInvalidParam3);
 
@@ -201,7 +201,7 @@ pub extern fn indy_crypto_cl_claim_values_builder_finalize(claim_values_builder:
     check_useful_c_ptr!(claim_values_builder, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(claim_values_p, ErrorCode::CommonInvalidParam2);
 
-    let claim_values_builder = unsafe { Box::from_raw(claim_values_builder as *mut ClaimValuesBuilder) };
+    let claim_values_builder = unsafe { Box::from_raw(claim_values_builder as *mut CredentialValuesBuilder) };
 
     trace!("indy_crypto_cl_claim_values_builder_finalize: entities: claim_values_builder: {:?}", claim_values_builder);
 
@@ -231,7 +231,7 @@ pub extern fn indy_crypto_cl_claim_values_free(claim_values: *const c_void) -> E
 
     check_useful_c_ptr!(claim_values, ErrorCode::CommonInvalidParam1);
 
-    let claim_values = unsafe { Box::from_raw(claim_values as *mut ClaimValues); };
+    let claim_values = unsafe { Box::from_raw(claim_values as *mut CredentialValues); };
     trace!("indy_crypto_cl_claim_values_free: entity: claim_values: {:?}", claim_values);
 
     let res = ErrorCode::Success;

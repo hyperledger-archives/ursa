@@ -41,7 +41,7 @@ impl Verifier {
     /// ```
     pub fn new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError> {
         Ok(ProofVerifier {
-            claims: HashMap::new(),
+            credentials: HashMap::new(),
         })
     }
 }
@@ -49,7 +49,7 @@ impl Verifier {
 
 #[derive(Debug)]
 pub struct ProofVerifier {
-    claims: HashMap<String, VerifyClaim>,
+    credentials: HashMap<String, VerifiableCredential>,
 }
 
 impl ProofVerifier {
@@ -57,48 +57,27 @@ impl ProofVerifier {
     ///
     /// # Arguments
     /// * `proof_verifier` - Proof verifier.
-    /// * `key_id` - unique claim identifier.
-    /// * `claim_schema` - Claim schema.
-    /// * `issuer_pub_key` - Issuer public key.
-    /// * `rev_reg_pub` - Public revocation registry.
+    /// * `key_id` - unique credential identifier.
+    /// * `credential_schema` - Credential schema.
+    /// * `credential_pub_key` - Credential public key.
+    /// * `rev_reg_pub` - Revocation registry public key.
     /// * `sub_proof_request` - Requested attributes and predicates instance pointer.
     pub fn add_sub_proof_request(&mut self,
                                  key_id: &str,
                                  sub_proof_request: &SubProofRequest,
-                                 claim_schema: &ClaimSchema,
-                                 issuer_pub_key: &CredentialPublicKey,
+                                 credential_schema: &CredentialSchema,
+                                 credential_pub_key: &CredentialPublicKey,
                                  rev_key_pub: Option<&RevocationKeyPublic>,
                                  rev_reg: Option<&RevocationRegistry>) -> Result<(), IndyCryptoError> {
-        ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, claim_schema)?;
+        ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, credential_schema)?;
 
-        self.claims.insert(key_id.to_string(), VerifyClaim {
-            pub_key: issuer_pub_key.clone()?,
+        self.credentials.insert(key_id.to_string(), VerifiableCredential {
+            pub_key: credential_pub_key.clone()?,
             sub_proof_request: sub_proof_request.clone(),
-            claim_schema: claim_schema.clone(),
+            credential_schema: credential_schema.clone(),
             rev_key_pub: rev_key_pub.map(Clone::clone),
             rev_reg: rev_reg.map(Clone::clone)
         });
-        Ok(())
-    }
-
-    fn _check_add_sub_proof_request_params_consistency(sub_proof_request: &SubProofRequest, claim_schema: &ClaimSchema) -> Result<(), IndyCryptoError> {
-        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, claim_schema: {:?}", sub_proof_request, claim_schema);
-
-        if sub_proof_request.revealed_attrs.difference(&claim_schema.attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
-        }
-
-        let predicates_attrs =
-            sub_proof_request.predicates.iter()
-                .map(|predicate| predicate.attr_name.clone())
-                .collect::<HashSet<String>>();
-
-        if predicates_attrs.difference(&claim_schema.attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
-        }
-
-        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
-
         Ok(())
     }
 
@@ -113,17 +92,17 @@ impl ProofVerifier {
                   nonce: &Nonce) -> Result<bool, IndyCryptoError> {
         trace!("ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}", proof, nonce);
 
-        ProofVerifier::_check_verify_params_consistency(&self.claims, proof)?;
+        ProofVerifier::_check_verify_params_consistency(&self.credentials, proof)?;
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
 
         for (issuer_key_id, proof_item) in &proof.proofs {
-            let claim: &VerifyClaim = &self.claims[issuer_key_id];
+            let credential: &VerifiableCredential = &self.credentials[issuer_key_id];
 
             if let (Some(non_revocation_proof), Some(cred_rev_pub_key), Some(rev_reg), Some(rev_key_pub)) = (proof_item.non_revoc_proof.as_ref(),
-                                                                                                             claim.pub_key.r_key.as_ref(),
-                                                                                                             claim.rev_reg.as_ref(),
-                                                                                                             claim.rev_key_pub.as_ref()) {
+                                                                                                             credential.pub_key.r_key.as_ref(),
+                                                                                                             credential.rev_reg.as_ref(),
+                                                                                                             credential.rev_key_pub.as_ref()) {
                 tau_list.extend_from_slice(
                     &ProofVerifier::_verify_non_revocation_proof(&cred_rev_pub_key,
                                                                  &rev_reg,
@@ -134,11 +113,11 @@ impl ProofVerifier {
             };
 
             tau_list.append_vec(
-                &ProofVerifier::_verify_primary_proof(&claim.pub_key.p_key,
+                &ProofVerifier::_verify_primary_proof(&credential.pub_key.p_key,
                                                       &proof.aggregated_proof.c_hash,
                                                       &proof_item.primary_proof,
-                                                      &claim.claim_schema,
-                                                      &claim.sub_proof_request)?
+                                                      &credential.credential_schema,
+                                                      &credential.sub_proof_request)?
             )?;
         }
 
@@ -159,25 +138,48 @@ impl ProofVerifier {
         Ok(valid)
     }
 
-    fn _check_verify_params_consistency(claims: &HashMap<String, VerifyClaim>, proof: &Proof) -> Result<(), IndyCryptoError> {
-        trace!("ProofVerifier::_check_verify_params_consistency: >>> claims: {:?}, proof: {:?}", claims, proof);
+    fn _check_add_sub_proof_request_params_consistency(sub_proof_request: &SubProofRequest,
+                                                       cred_schema: &CredentialSchema) -> Result<(), IndyCryptoError> {
+        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, cred_schema: {:?}", sub_proof_request, cred_schema);
 
-        for (key_id, claim) in claims {
-            let proof_for_claim = proof.proofs.get(key_id.as_str()).
+        if sub_proof_request.revealed_attrs.difference(&cred_schema.attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
+        }
+
+        let predicates_attrs =
+            sub_proof_request.predicates.iter()
+                .map(|predicate| predicate.attr_name.clone())
+                .collect::<HashSet<String>>();
+
+        if predicates_attrs.difference(&cred_schema.attrs).count() != 0 {
+            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
+        }
+
+        trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
+
+        Ok(())
+    }
+
+    fn _check_verify_params_consistency(credentials: &HashMap<String, VerifiableCredential>,
+                                        proof: &Proof) -> Result<(), IndyCryptoError> {
+        trace!("ProofVerifier::_check_verify_params_consistency: >>> credentials: {:?}, proof: {:?}", credentials, proof);
+
+        for (key_id, credential) in credentials {
+            let proof_for_credential = proof.proofs.get(key_id.as_str()).
                 ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Proof not found")))?;
 
-            let proof_revealed_attrs = HashSet::from_iter(proof_for_claim.primary_proof.eq_proof.revealed_attrs.keys().cloned());
+            let proof_revealed_attrs = HashSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
 
-            if proof_revealed_attrs != claim.sub_proof_request.revealed_attrs {
+            if proof_revealed_attrs != credential.sub_proof_request.revealed_attrs {
                 return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof revealed attributes not correspond to requested attributes")));
             }
 
             let proof_predicates =
-                proof_for_claim.primary_proof.ge_proofs.iter()
+                proof_for_credential.primary_proof.ge_proofs.iter()
                     .map(|ge_proof| ge_proof.predicate.clone())
                     .collect::<HashSet<Predicate>>();
 
-            if proof_predicates != claim.sub_proof_request.predicates {
+            if proof_predicates != credential.sub_proof_request.predicates {
                 return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof predicates not correspond to requested predicates")));
             }
         }
@@ -187,15 +189,22 @@ impl ProofVerifier {
         Ok(())
     }
 
-    fn _verify_primary_proof(issuer_pub_key: &CredentialPrimaryPublicKey, c_hash: &BigNumber,
-                             primary_proof: &PrimaryProof, claim_schema: &ClaimSchema, sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
-        trace!("ProofVerifier::_verify_primary_proof: >>> issuer_pub_key: {:?}, c_hash: {:?}, primary_proof: {:?}, sub_proof_request: {:?}",
-               issuer_pub_key, c_hash, primary_proof, sub_proof_request);
+    fn _verify_primary_proof(p_pub_key: &CredentialPrimaryPublicKey,
+                             c_hash: &BigNumber,
+                             primary_proof: &PrimaryProof,
+                             cred_schema: &CredentialSchema,
+                             sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
+        trace!("ProofVerifier::_verify_primary_proof: >>> p_pub_key: {:?}, c_hash: {:?}, primary_proof: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
+               p_pub_key, c_hash, primary_proof, cred_schema, sub_proof_request);
 
-        let mut t_hat: Vec<BigNumber> = ProofVerifier::_verify_equality(issuer_pub_key, &primary_proof.eq_proof, c_hash, claim_schema, sub_proof_request)?;
+        let mut t_hat: Vec<BigNumber> = ProofVerifier::_verify_equality(p_pub_key,
+                                                                        &primary_proof.eq_proof,
+                                                                        c_hash,
+                                                                        cred_schema,
+                                                                        sub_proof_request)?;
 
         for ge_proof in primary_proof.ge_proofs.iter() {
-            t_hat.append(&mut ProofVerifier::_verify_ge_predicate(issuer_pub_key, ge_proof, c_hash)?)
+            t_hat.append(&mut ProofVerifier::_verify_ge_predicate(p_pub_key, ge_proof, c_hash)?)
         }
 
         trace!("ProofVerifier::_verify_primary_proof: <<< t_hat: {:?}", t_hat);
@@ -203,18 +212,21 @@ impl ProofVerifier {
         Ok(t_hat)
     }
 
-    fn _verify_equality(issuer_pub_key: &CredentialPrimaryPublicKey, proof: &PrimaryEqualProof, c_hash: &BigNumber,
-                        claim_schema: &ClaimSchema, sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
-        trace!("ProofVerifier::_verify_equality: >>> issuer_pub_key: {:?}, proof: {:?}, c_hash: {:?}, claim_schema: {:?}, sub_proof_request: {:?}",
-               issuer_pub_key, proof, c_hash, claim_schema, sub_proof_request);
+    fn _verify_equality(p_pub_key: &CredentialPrimaryPublicKey,
+                        proof: &PrimaryEqualProof,
+                        c_hash: &BigNumber,
+                        cred_schema: &CredentialSchema,
+                        sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
+        trace!("ProofVerifier::_verify_equality: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
+               p_pub_key, proof, c_hash, cred_schema, sub_proof_request);
 
         let unrevealed_attrs: HashSet<String> =
-            claim_schema.attrs
+            cred_schema.attrs
                 .difference(&sub_proof_request.revealed_attrs)
-                .map(|attr| attr.clone())
+                .cloned()
                 .collect::<HashSet<String>>();
 
-        let t1: BigNumber = calc_teq(&issuer_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs)?;
+        let t1: BigNumber = calc_teq(&p_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs)?;
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -225,34 +237,36 @@ impl ProofVerifier {
                     Some(&mut ctx)
                 )?;
 
-        let mut rar = proof.a_prime.mod_exp(&degree, &issuer_pub_key.n, Some(&mut ctx))?;
+        let mut rar = proof.a_prime.mod_exp(&degree, &p_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
-            let cur_r = issuer_pub_key.r.get(attr)
+            let cur_r = p_pub_key.r.get(attr)
                 .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in pk.r", attr)))?;
 
             rar = cur_r
-                .mod_exp(encoded_value, &issuer_pub_key.n, Some(&mut ctx))?
-                .mod_mul(&rar, &issuer_pub_key.n, Some(&mut ctx))?;
+                .mod_exp(encoded_value, &p_pub_key.n, Some(&mut ctx))?
+                .mod_mul(&rar, &p_pub_key.n, Some(&mut ctx))?;
         }
 
-        let t2: BigNumber = issuer_pub_key.z
-            .mod_div(&rar, &issuer_pub_key.n)?
-            .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-            .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?;
+        let t2: BigNumber = p_pub_key.z
+            .mod_div(&rar, &p_pub_key.n)?
+            .inverse(&p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?;
 
-        let t: BigNumber = t1.mod_mul(&t2, &issuer_pub_key.n, Some(&mut ctx))?;
+        let t: BigNumber = t1.mod_mul(&t2, &p_pub_key.n, Some(&mut ctx))?;
 
         trace!("ProofVerifier::_verify_equality: <<< t: {:?}", t);
 
         Ok(vec![t])
     }
 
-    fn _verify_ge_predicate(issuer_pub_key: &CredentialPrimaryPublicKey, proof: &PrimaryPredicateGEProof, c_hash: &BigNumber) -> Result<Vec<BigNumber>, IndyCryptoError> {
-        trace!("ProofVerifier::_verify_ge_predicate: >>> issuer_pub_key: {:?}, proof: {:?}, c_hash: {:?}", issuer_pub_key, proof, c_hash);
+    fn _verify_ge_predicate(p_pub_key: &CredentialPrimaryPublicKey,
+                            proof: &PrimaryPredicateGEProof,
+                            c_hash: &BigNumber) -> Result<Vec<BigNumber>, IndyCryptoError> {
+        trace!("ProofVerifier::_verify_ge_predicate: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}", p_pub_key, proof, c_hash);
 
         let mut ctx = BigNumber::new_context()?;
-        let mut tau_list = calc_tge(&issuer_pub_key, &proof.u, &proof.r, &proof.mj,
+        let mut tau_list = calc_tge(&p_pub_key, &proof.u, &proof.r, &proof.mj,
                                     &proof.alpha, &proof.t)?;
 
         for i in 0..ITERATION {
@@ -260,45 +274,44 @@ impl ProofVerifier {
                 .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", i)))?;
 
             tau_list[i] = cur_t
-                .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
-                .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-                .mod_mul(&tau_list[i], &issuer_pub_key.n, Some(&mut ctx))?;
+                .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+                .inverse(&p_pub_key.n, Some(&mut ctx))?
+                .mod_mul(&tau_list[i], &p_pub_key.n, Some(&mut ctx))?;
         }
 
         let delta = proof.t.get("DELTA")
             .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
-        tau_list[ITERATION] = issuer_pub_key.z
+        tau_list[ITERATION] = p_pub_key.z
             .mod_exp(
                 &BigNumber::from_dec(&proof.predicate.value.to_string())?,
-                &issuer_pub_key.n, Some(&mut ctx))?
+                &p_pub_key.n, Some(&mut ctx))?
             .mul(&delta, Some(&mut ctx))?
-            .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
-            .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-            .mod_mul(&tau_list[ITERATION], &issuer_pub_key.n, Some(&mut ctx))?;
+            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+            .inverse(&p_pub_key.n, Some(&mut ctx))?
+            .mod_mul(&tau_list[ITERATION], &p_pub_key.n, Some(&mut ctx))?;
 
         tau_list[ITERATION + 1] = delta
-            .mod_exp(&c_hash, &issuer_pub_key.n, Some(&mut ctx))?
-            .inverse(&issuer_pub_key.n, Some(&mut ctx))?
-            .mod_mul(&tau_list[ITERATION + 1], &issuer_pub_key.n, Some(&mut ctx))?;
+            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+            .inverse(&p_pub_key.n, Some(&mut ctx))?
+            .mod_mul(&tau_list[ITERATION + 1], &p_pub_key.n, Some(&mut ctx))?;
 
         trace!("ProofVerifier::_verify_ge_predicate: <<< tau_list: {:?},", tau_list);
 
         Ok(tau_list)
     }
 
-    pub fn _verify_non_revocation_proof(cred_rev_pub_key: &CredentialRevocationPublicKey,
-                                        rev_reg: &RevocationRegistry,
-                                        rev_key_pub: &RevocationKeyPublic,
-                                        c_hash: &BigNumber, proof: &NonRevocProof)
-                                        -> Result<NonRevocProofTauList, IndyCryptoError> {
-        trace!("ProofVerifier::_verify_non_revocation_proof: >>> cred_rev_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}, c_hash: {:?}",
-               cred_rev_pub_key, rev_reg, rev_key_pub, c_hash);
+    fn _verify_non_revocation_proof(r_pub_key: &CredentialRevocationPublicKey,
+                                    rev_reg: &RevocationRegistry,
+                                    rev_key_pub: &RevocationKeyPublic,
+                                    c_hash: &BigNumber, proof: &NonRevocProof) -> Result<NonRevocProofTauList, IndyCryptoError> {
+        trace!("ProofVerifier::_verify_non_revocation_proof: >>> r_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}, c_hash: {:?}",
+               r_pub_key, rev_reg, rev_key_pub, c_hash);
 
         let ch_num_z = bignum_to_group_element(&c_hash)?;
 
-        let t_hat_expected_values = create_tau_list_expected_values(cred_rev_pub_key, rev_reg, rev_key_pub, &proof.c_list)?;
-        let t_hat_calc_values = create_tau_list_values(&cred_rev_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
+        let t_hat_expected_values = create_tau_list_expected_values(r_pub_key, rev_reg, rev_key_pub, &proof.c_list)?;
+        let t_hat_calc_values = create_tau_list_values(&r_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
 
 
         let non_revoc_proof_tau_list = Ok(NonRevocProofTauList {
@@ -342,9 +355,9 @@ mod tests {
         MockHelper::inject();
 
         let proof = prover::mocks::eq_proof();
-        let pk = issuer::mocks::issuer_primary_public_key();
+        let pk = issuer::mocks::credential_primary_public_key();
         let c_h = prover::mocks::aggregated_proof().c_hash;
-        let claim_schema = issuer::mocks::claim_schema();
+        let credential_schema = issuer::mocks::credential_schema();
 
         let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -353,7 +366,7 @@ mod tests {
         let res: Vec<BigNumber> = ProofVerifier::_verify_equality(&pk,
                                                                   &proof,
                                                                   &c_h,
-                                                                  &claim_schema,
+                                                                  &credential_schema,
                                                                   &sub_proof_request).unwrap();
 
         assert_eq!("7482119769466399985453964851245160858083213139582181384392546015391266465526851030277921408409258064077698298124641650660813004229404233357\
@@ -369,7 +382,7 @@ mod tests {
 
         let proof = prover::mocks::ge_proof();
         let c_h = prover::mocks::aggregated_proof().c_hash;
-        let pk = issuer::mocks::issuer_primary_public_key();
+        let pk = issuer::mocks::credential_primary_public_key();
 
         let res = ProofVerifier::_verify_ge_predicate(&pk, &proof, &c_h);
 

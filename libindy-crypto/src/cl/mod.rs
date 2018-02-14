@@ -32,7 +32,13 @@ pub fn new_witness<RTA>(rev_idx: u32,
     trace!("ProofBuilder::new_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
            rev_idx, max_cred_num, rev_reg_delta);
 
-    let issued = rev_reg_delta.issued.clone().unwrap_or(HashSet::new());
+    if rev_reg_delta.issued.is_none() {
+        return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+    }
+
+    let mut issued = rev_reg_delta.issued.clone().unwrap();
+    issued.remove(&rev_idx);
+
     let mut omega = PointG2::new_inf()?;
 
     for j in issued.iter() {
@@ -100,19 +106,19 @@ pub fn update_witness<RTA>(rev_idx: u32,
 
 /// A list of attributes a Claim is based on.
 #[derive(Debug, Clone)]
-pub struct ClaimSchema {
+pub struct CredentialSchema {
     attrs: HashSet<String> /* attr names */
 }
 
 /// A Builder of `Claim Schema`.
 #[derive(Debug)]
-pub struct ClaimSchemaBuilder {
+pub struct CredentialSchemaBuilder {
     attrs: HashSet<String> /* attr names */
 }
 
-impl ClaimSchemaBuilder {
-    pub fn new() -> Result<ClaimSchemaBuilder, IndyCryptoError> {
-        Ok(ClaimSchemaBuilder {
+impl CredentialSchemaBuilder {
+    pub fn new() -> Result<CredentialSchemaBuilder, IndyCryptoError> {
+        Ok(CredentialSchemaBuilder {
             attrs: HashSet::new()
         })
     }
@@ -122,8 +128,8 @@ impl ClaimSchemaBuilder {
         Ok(())
     }
 
-    pub fn finalize(self) -> Result<ClaimSchema, IndyCryptoError> {
-        Ok(ClaimSchema {
+    pub fn finalize(self) -> Result<CredentialSchema, IndyCryptoError> {
+        Ok(CredentialSchema {
             attrs: self.attrs
         })
     }
@@ -131,13 +137,13 @@ impl ClaimSchemaBuilder {
 
 /// Values of attributes from `Claim Schema` (must be integers).
 #[derive(Debug)]
-pub struct ClaimValues {
+pub struct CredentialValues {
     attrs_values: HashMap<String, BigNumber>
 }
 
-impl ClaimValues {
-    pub fn clone(&self) -> Result<ClaimValues, IndyCryptoError> {
-        Ok(ClaimValues {
+impl CredentialValues {
+    pub fn clone(&self) -> Result<CredentialValues, IndyCryptoError> {
+        Ok(CredentialValues {
             attrs_values: clone_bignum_map(&self.attrs_values)?
         })
     }
@@ -145,13 +151,13 @@ impl ClaimValues {
 
 /// A Builder of `Claim Values`.
 #[derive(Debug)]
-pub struct ClaimValuesBuilder {
+pub struct CredentialValuesBuilder {
     attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
 }
 
-impl ClaimValuesBuilder {
-    pub fn new() -> Result<ClaimValuesBuilder, IndyCryptoError> {
-        Ok(ClaimValuesBuilder {
+impl CredentialValuesBuilder {
+    pub fn new() -> Result<CredentialValuesBuilder, IndyCryptoError> {
+        Ok(CredentialValuesBuilder {
             attrs_values: HashMap::new()
         })
     }
@@ -161,16 +167,16 @@ impl ClaimValuesBuilder {
         Ok(())
     }
 
-    pub fn finalize(self) -> Result<ClaimValues, IndyCryptoError> {
-        Ok(ClaimValues {
+    pub fn finalize(self) -> Result<CredentialValues, IndyCryptoError> {
+        Ok(CredentialValues {
             attrs_values: self.attrs_values
         })
     }
 }
 
 /// `Issuer Public Key` contains 2 internal parts.
-/// One for signing primary claims and second for signing non-revocation claims.
-/// These keys are used to proof that claim was issued and doesn’t revoked by this issuer.
+/// One for signing primary credentials and second for signing non-revocation credentials.
+/// These keys are used to proof that credential was issued and doesn’t revoked by this issuer.
 /// Issuer keys have global identifier that must be known to all parties.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct CredentialPublicKey {
@@ -207,7 +213,7 @@ impl JsonEncodable for CredentialPublicKey {}
 impl<'a> JsonDecodable<'a> for CredentialPublicKey {}
 
 /// `Issuer Private Key`: contains 2 internal parts.
-/// One for signing primary claims and second for signing non-revocation claims.
+/// One for signing primary credentials and second for signing non-revocation credentials.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CredentialPrivateKey {
     p_key: CredentialPrimaryPrivateKey,
@@ -218,7 +224,7 @@ impl JsonEncodable for CredentialPrivateKey {}
 
 impl<'a> JsonDecodable<'a> for CredentialPrivateKey {}
 
-/// Issuer's "Public Key" is used to verify the Issuer's signature over the Claim's attributes' values (primary claim).
+/// Issuer's "Public Key" is used to verify the Issuer's signature over the Claim's attributes' values (primary credential).
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialPrimaryPublicKey {
     n: BigNumber,
@@ -242,7 +248,7 @@ impl CredentialPrimaryPublicKey {
     }
 }
 
-/// Issuer's "Private Key" used for signing Claim's attributes' values (primary claim)
+/// Issuer's "Private Key" used for signing Claim's attributes' values (primary credential)
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialPrimaryPrivateKey {
     p: BigNumber,
@@ -268,7 +274,7 @@ impl JsonEncodable for CredentialKeyCorrectnessProof {}
 
 impl<'a> JsonDecodable<'a> for CredentialKeyCorrectnessProof {}
 
-/// `Revocation Public Key` is used to verify that claim was'nt revoked by Issuer.
+/// `Revocation Public Key` is used to verify that credential was'nt revoked by Issuer.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct CredentialRevocationPublicKey {
     g: PointG1,
@@ -405,25 +411,25 @@ impl SimpleTailsAccessor {
 
 /// Issuer's signature over Claim attribute values.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ClaimSignature {
-    p_claim: PrimaryClaimSignature,
-    pub r_claim: Option<NonRevocationClaimSignature> /* will be used to proof is claim revoked preparation */,
+pub struct CredentialSignature {
+    p_credential: PrimaryCredentialSignature,
+    r_credential: Option<NonRevocationCredentialSignature> /* will be used to proof is credential revoked preparation */,
 }
 
-impl ClaimSignature {
+impl CredentialSignature {
     pub fn extract_index(&self) -> Option<u32> {
-        self.r_claim
+        self.r_credential
             .as_ref()
-            .map(|r_claim| r_claim.i)
+            .map(|r_credential| r_credential.i)
     }
 }
 
-impl JsonEncodable for ClaimSignature {}
+impl JsonEncodable for CredentialSignature {}
 
-impl<'a> JsonDecodable<'a> for ClaimSignature {}
+impl<'a> JsonDecodable<'a> for CredentialSignature {}
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct PrimaryClaimSignature {
+pub struct PrimaryCredentialSignature {
     m_2: BigNumber,
     a: BigNumber,
     e: BigNumber,
@@ -431,7 +437,7 @@ pub struct PrimaryClaimSignature {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct NonRevocationClaimSignature {
+pub struct NonRevocationCredentialSignature {
     sigma: PointG1,
     c: GroupOrderElement,
     vr_prime_prime: GroupOrderElement,
@@ -468,11 +474,11 @@ pub struct WitnessSignature {
     g_i: PointG1
 }
 
-/// Secret key encoded in a claim that is used to prove that prover owns the claim; can be used to
-/// prove linkage across claims.
+/// Secret key encoded in a credential that is used to prove that prover owns the credential; can be used to
+/// prove linkage across credentials.
 /// Prover blinds master secret, generating `BlindedMasterSecret` and `MasterSecretBlindingData` (blinding factors)
-/// and sends the `BlindedMasterSecret` to Issuer who then encodes it claim creation.
-/// The blinding factors are used by Prover for post processing of issued claims.
+/// and sends the `BlindedMasterSecret` to Issuer who then encodes it credential creation.
+/// The blinding factors are used by Prover for post processing of issued credentials.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecret {
     ms: BigNumber,
@@ -488,7 +494,7 @@ impl JsonEncodable for MasterSecret {}
 
 impl<'a> JsonDecodable<'a> for MasterSecret {}
 
-/// Blinded Master Secret uses by Issuer in claim creation.
+/// Blinded Master Secret uses by Issuer in credential creation.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlindedMasterSecret {
     u: BigNumber,
@@ -499,7 +505,7 @@ impl JsonEncodable for BlindedMasterSecret {}
 
 impl<'a> JsonDecodable<'a> for BlindedMasterSecret {}
 
-/// `Master Secret Blinding Data` used by Prover for post processing of claims received from Issuer.
+/// `Master Secret Blinding Data` used by Prover for post processing of credentials received from Issuer.
 /// TODO: Should be renamed `MasterSecretBlindingFactors`
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MasterSecretBlindingData {
@@ -524,17 +530,17 @@ pub struct RevocationBlindedMasterSecretData {
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct BlindedMasterSecretProofCorrectness {
+pub struct BlindedMasterSecretCorrectnessProof {
     c: BigNumber,
     v_dash_cap: BigNumber,
     ms_cap: BigNumber
 }
 
-impl JsonEncodable for BlindedMasterSecretProofCorrectness {}
+impl JsonEncodable for BlindedMasterSecretCorrectnessProof {}
 
-impl<'a> JsonDecodable<'a> for BlindedMasterSecretProofCorrectness {}
+impl<'a> JsonDecodable<'a> for BlindedMasterSecretCorrectnessProof {}
 
-/// “Sub Proof Request” - input to create a Proof for a claim;
+/// “Sub Proof Request” - input to create a Proof for a credential;
 /// Contains attributes to be revealed and predicates.
 #[derive(Debug, Clone)]
 pub struct SubProofRequest {
@@ -598,8 +604,8 @@ pub enum PredicateType {
     GE
 }
 
-/// Proof is complex crypto structure created by prover over multiple claims that allows to prove that prover:
-/// 1) Knows signature over claims issued with specific issuer keys (identified by key id)
+/// Proof is complex crypto structure created by prover over multiple credentials that allows to prove that prover:
+/// 1) Knows signature over credentials issued with specific issuer keys (identified by key id)
 /// 2) Claim contains attributes with specific values that prover wants to disclose
 /// 3) Claim contains attributes with valid predicates that verifier wants the prover to satisfy.
 #[derive(Debug, Deserialize, Serialize)]
@@ -661,9 +667,9 @@ pub struct NonRevocProof {
 pub struct InitProof {
     primary_init_proof: PrimaryInitProof,
     non_revoc_init_proof: Option<NonRevocInitProof>,
-    claim_values: ClaimValues,
+    credential_values: CredentialValues,
     sub_proof_request: SubProofRequest,
-    claim_schema: ClaimSchema
+    credential_schema: CredentialSchema
 }
 
 
@@ -847,10 +853,10 @@ impl JsonEncodable for Nonce {}
 impl<'a> JsonDecodable<'a> for Nonce {}
 
 #[derive(Debug)]
-pub struct VerifyClaim {
+pub struct VerifiableCredential {
     pub_key: CredentialPublicKey,
     sub_proof_request: SubProofRequest,
-    claim_schema: ClaimSchema,
+    credential_schema: CredentialSchema,
     rev_key_pub: Option<RevocationKeyPublic>,
     rev_reg: Option<RevocationRegistry>
 }
@@ -923,14 +929,14 @@ mod test {
 
     #[test]
     fn demo() {
-        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-        claim_schema_builder.add_attr("name").unwrap();
-        claim_schema_builder.add_attr("sex").unwrap();
-        claim_schema_builder.add_attr("age").unwrap();
-        claim_schema_builder.add_attr("height").unwrap();
-        let claim_schema = claim_schema_builder.finalize().unwrap();
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("name").unwrap();
+        credential_schema_builder.add_attr("sex").unwrap();
+        credential_schema_builder.add_attr("age").unwrap();
+        credential_schema_builder.add_attr("height").unwrap();
+        let credential_schema = credential_schema_builder.finalize().unwrap();
 
-        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
 
         let master_secret = Prover::new_master_secret().unwrap();
 
@@ -942,39 +948,39 @@ mod test {
                                         &master_secret,
                                         &master_secret_blinding_nonce).unwrap();
 
-        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        claim_values_builder.add_value("age", "28").unwrap();
-        claim_values_builder.add_value("height", "175").unwrap();
-        let claim_values = claim_values_builder.finalize().unwrap();
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_value("age", "28").unwrap();
+        credential_values_builder.add_value("height", "175").unwrap();
+        let cred_values = credential_values_builder.finalize().unwrap();
 
-        let claim_issuance_nonce = new_nonce().unwrap();
+        let cred_issuance_nonce = new_nonce().unwrap();
 
-        let (mut claim_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                                   &blinded_master_secret,
-                                                                                                   &blinded_master_secret_correctness_proof,
-                                                                                                   &master_secret_blinding_nonce,
-                                                                                                   &claim_issuance_nonce,
-                                                                                                   &claim_values,
-                                                                                                   &cred_pub_key,
-                                                                                                   &cred_priv_key,
-                                                                                                   None,
-                                                                                                   None,
-                                                                                                   None,
-                                                                                                   None,
-                                                                                                   None).unwrap();
+        let (mut cred_signature, signature_correctness_proof, _) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                           &blinded_master_secret,
+                                                                                           &blinded_master_secret_correctness_proof,
+                                                                                           &master_secret_blinding_nonce,
+                                                                                           &cred_issuance_nonce,
+                                                                                           &cred_values,
+                                                                                           &cred_pub_key,
+                                                                                           &cred_priv_key,
+                                                                                           None,
+                                                                                           None,
+                                                                                           None,
+                                                                                           None,
+                                                                                           None).unwrap();
 
-        Prover::process_claim_signature(&mut claim_signature,
-                                        &claim_values,
-                                        &signature_correctness_proof,
-                                        &master_secret_blinding_data,
-                                        &master_secret,
-                                        &cred_pub_key,
-                                        &claim_issuance_nonce,
-                                        None,
-                                        None,
-                                        None).unwrap();
+        Prover::process_credential_signature(&mut cred_signature,
+                                             &cred_values,
+                                             &signature_correctness_proof,
+                                             &master_secret_blinding_data,
+                                             &master_secret,
+                                             &cred_pub_key,
+                                             &cred_issuance_nonce,
+                                             None,
+                                             None,
+                                             None).unwrap();
 
         let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -983,9 +989,9 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request("issuer_key_id_1",
                                             &sub_proof_request,
-                                            &claim_schema,
-                                            &claim_signature,
-                                            &claim_values,
+                                            &credential_schema,
+                                            &cred_signature,
+                                            &cred_values,
                                             &cred_pub_key,
                                             None,
                                             None).unwrap();
@@ -996,7 +1002,7 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request("issuer_key_id_1",
                                              &sub_proof_request,
-                                             &claim_schema,
+                                             &credential_schema,
                                              &cred_pub_key,
                                              None,
                                              None).unwrap();
@@ -1005,14 +1011,14 @@ mod test {
 
     #[test]
     fn demo_revocation() {
-        let mut claim_schema_builder = Issuer::new_claim_schema_builder().unwrap();
-        claim_schema_builder.add_attr("name").unwrap();
-        claim_schema_builder.add_attr("sex").unwrap();
-        claim_schema_builder.add_attr("age").unwrap();
-        claim_schema_builder.add_attr("height").unwrap();
-        let claim_schema = claim_schema_builder.finalize().unwrap();
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("name").unwrap();
+        credential_schema_builder.add_attr("sex").unwrap();
+        credential_schema_builder.add_attr("age").unwrap();
+        credential_schema_builder.add_attr("height").unwrap();
+        let credential_schema = credential_schema_builder.finalize().unwrap();
 
-        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_cred_def(&claim_schema, true).unwrap();
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
 
         let max_cred_num = 5;
         let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
@@ -1029,49 +1035,42 @@ mod test {
                                         &master_secret,
                                         &master_secret_blinding_nonce).unwrap();
 
-        let mut claim_values_builder = Issuer::new_claim_values_builder().unwrap();
-        claim_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        claim_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        claim_values_builder.add_value("age", "28").unwrap();
-        claim_values_builder.add_value("height", "175").unwrap();
-        let claim_values = claim_values_builder.finalize().unwrap();
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_value("age", "28").unwrap();
+        credential_values_builder.add_value("height", "175").unwrap();
+        let cred_values = credential_values_builder.finalize().unwrap();
 
-        let claim_issuance_nonce = new_nonce().unwrap();
+        let credential_issuance_nonce = new_nonce().unwrap();
 
         let rev_idx = 1;
+        let (mut cred_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                                       &blinded_master_secret,
+                                                                                                       &blinded_master_secret_correctness_proof,
+                                                                                                       &master_secret_blinding_nonce,
+                                                                                                       &credential_issuance_nonce,
+                                                                                                       &cred_values,
+                                                                                                       &cred_pub_key,
+                                                                                                       &cred_priv_key,
+                                                                                                       Some(rev_idx),
+                                                                                                       Some(max_cred_num),
+                                                                                                       Some(&mut rev_reg),
+                                                                                                       Some(&rev_key_priv),
+                                                                                                       Some(Box::new(simple_tail_accessor.clone()))).unwrap();
 
-        let rev_reg_delta = RevocationRegistryDelta {
-            prev_accum: None,
-            accum: rev_reg.accum.clone(),
-            issued: None,
-            revoked: None
-        };
+        let witness = new_witness(rev_idx, max_cred_num, &rev_reg_delta.unwrap(), &simple_tail_accessor).unwrap();
 
-        let witness = new_witness(rev_idx, max_cred_num, &rev_reg_delta, &simple_tail_accessor).unwrap();
-        let (mut claim_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_claim("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                                   &blinded_master_secret,
-                                                                                                   &blinded_master_secret_correctness_proof,
-                                                                                                   &master_secret_blinding_nonce,
-                                                                                                   &claim_issuance_nonce,
-                                                                                                   &claim_values,
-                                                                                                   &cred_pub_key,
-                                                                                                   &cred_priv_key,
-                                                                                                   Some(rev_idx),
-                                                                                                   Some(max_cred_num),
-                                                                                                   Some(&mut rev_reg),
-                                                                                                   Some(&rev_key_priv),
-                                                                                                   Some(Box::new(simple_tail_accessor))).unwrap();
-
-        Prover::process_claim_signature(&mut claim_signature,
-                                        &claim_values,
-                                        &signature_correctness_proof,
-                                        &master_secret_blinding_data,
-                                        &master_secret,
-                                        &cred_pub_key,
-                                        &claim_issuance_nonce,
-                                        Some(&rev_key_pub),
-                                        Some(&rev_reg),
-                                        Some(&witness)).unwrap();
+        Prover::process_credential_signature(&mut cred_signature,
+                                             &cred_values,
+                                             &signature_correctness_proof,
+                                             &master_secret_blinding_data,
+                                             &master_secret,
+                                             &cred_pub_key,
+                                             &credential_issuance_nonce,
+                                             Some(&rev_key_pub),
+                                             Some(&rev_reg),
+                                             Some(&witness)).unwrap();
 
         let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -1080,9 +1079,9 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_sub_proof_request("issuer_key_id_1",
                                             &sub_proof_request,
-                                            &claim_schema,
-                                            &claim_signature,
-                                            &claim_values,
+                                            &credential_schema,
+                                            &cred_signature,
+                                            &cred_values,
                                             &cred_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
@@ -1092,7 +1091,7 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request("issuer_key_id_1",
                                              &sub_proof_request,
-                                             &claim_schema,
+                                             &credential_schema,
                                              &cred_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
