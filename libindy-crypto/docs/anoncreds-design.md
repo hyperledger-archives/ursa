@@ -101,6 +101,9 @@ struct RevocationRegistry {
     acc: PointG2,
 }
 
+RevocationRegistry::apply_delta(&mut self, delta: &RevocationRegistryDelta) -> ()
+RevocationRegistry::revert_delta(&mut self, delta: &RevocationRegistryDelta) -> ()
+
 RevocationRegistry::from_json(&str)
 ```
 
@@ -113,8 +116,8 @@ struct RevocationRegistryDelta {
     acc: PointG2,
 }
 
-RevocationRegistryDelta::join(&mut self, other: RevocationRegistryDelta) -> ()
-RevocationRegistryDelta::revert(&mut self, other: RevocationRegistryDelta) -> ()
+RevocationRegistryDelta::join(&mut self, other: &RevocationRegistryDelta) -> ()
+RevocationRegistryDelta::revert(&mut self, other: &RevocationRegistryDelta) -> ()
 ```
 
 ### Issuer
