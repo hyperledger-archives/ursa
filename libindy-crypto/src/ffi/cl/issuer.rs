@@ -2,6 +2,7 @@ use cl::issuer::*;
 use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
+use ffi::cl::{FFITailTake, FFITailPut, FFITailsAccessor};
 use utils::ctypes::CTypesUtils;
 use utils::json::{JsonEncodable, JsonDecodable};
 
@@ -921,31 +922,40 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_free(signature_correctn
     res
 }
 
-/// Revokes a claim by a revoc_id in a given revoc-registry.
+/// Revokes a credential by a revoc_id in a given revoc-registry.
 ///
 /// # Arguments
-/// * `rev_reg_def_pub` - Reference that contain revocation registry instance pointer.
+/// * `rev_reg` - Reference that contain revocation registry instance pointer.
 ///  * rev_idx` - index of the user in the accumulator
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn indy_crypto_cl_issuer_revoke_claim(rev_reg_def_pub: *const c_void,
-                                                 rev_reg_entry: *const c_void,
-                                                 rev_idx: u32) -> ErrorCode {
-    //    trace!("indy_crypto_cl_issuer_revoke_claim: >>> rev_reg_def_pub: {:?}, rev_reg_entry: {:?}, rev_idx: {:?}",
-    //           rev_reg_def_pub, rev_reg_entry, rev_idx);
-    //
-    //    check_useful_c_reference!(rev_reg_def_pub, RevocationRegistryDefPublic, ErrorCode::CommonInvalidParam1);
-    //    check_useful_mut_c_reference!(rev_reg_entry, RevocationRegistryDelta, ErrorCode::CommonInvalidParam1);
-    //
-    //    trace!("indy_crypto_cl_issuer_revoke_claim: entities: rev_reg_def_pub: {:?},rev_reg_entry: {:?}, rev_idx: {:?}",
-    //           rev_reg_def_pub, rev_reg_entry, rev_idx);
-    //
-    //    let res = match Issuer::revoke_claim(rev_reg_def_pub, rev_reg_entry, rev_idx) {
-    //        Ok(()) => ErrorCode::Success,
-    //        Err(err) => err.to_error_code()
-    //    };
-    //
-    //    trace!("indy_crypto_cl_issuer_revoke_claim: <<< res: {:?}", res);
+pub extern fn indy_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
+                                                      max_cred_num: u32,
+                                                      rev_idx: u32,
+                                                      ctx_tails: *const c_void,
+                                                      take_tail: FFITailTake,
+                                                      put_tail: FFITailPut,
+                                                      rev_reg_delta_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_issuer_revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, put_tail {:?}, rev_reg_delta_p {:?}",
+           rev_reg, max_cred_num, rev_idx, ctx_tails, take_tail, put_tail, rev_reg_delta_p);
+
+    check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
+
+    trace!("indy_crypto_cl_issuer_revoke_credential: entities: rev_reg: {:?}", rev_reg);
+
+    let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
+    let res = match Issuer::revoke_credential(rev_reg, max_cred_num, rev_idx, &rta) {
+        Ok(rev_reg_delta) => {
+            unsafe {
+                *rev_reg_delta_p = Box::into_raw(Box::new(rev_reg_delta)) as *const c_void;
+                trace!("indy_crypto_cl_issuer_revoke_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_issuer_revoke_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 //
