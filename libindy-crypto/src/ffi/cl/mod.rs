@@ -32,7 +32,7 @@ pub extern fn indy_crypto_cl_witness_new(rev_idx: u32,
     check_useful_c_reference!(rev_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam3);
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
-    let res = match new_witness(rev_idx, max_cred_num, rev_reg_delta, &rta) {
+    let res = match Witness::new(rev_idx, max_cred_num, rev_reg_delta, &rta) {
         Ok(witness) => {
             unsafe {
                 *witness_p = Box::into_raw(Box::new(witness)) as *const c_void;
@@ -62,7 +62,7 @@ pub extern fn indy_crypto_cl_witness_update(rev_idx: u32,
     check_useful_mut_c_reference!(witness, Witness, ErrorCode::CommonInvalidParam4);
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
-    let res = match update_witness(rev_idx, max_cred_num, rev_reg_delta, witness, &rta) {
+    let res = match witness.update(rev_idx, max_cred_num, rev_reg_delta, &rta) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
