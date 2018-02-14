@@ -18,6 +18,74 @@ pub mod verifier;
 type FFITailTake = extern fn(ctx: *const c_void, idx: u32, tail_p: *mut *const c_void) -> ErrorCode;
 type FFITailPut = extern fn(ctx: *const c_void, tail: *mut c_void) -> ErrorCode;
 
+#[no_mangle]
+pub extern fn indy_crypto_cl_witness_new(rev_idx: u32,
+                                         max_cred_num: u32,
+                                         rev_reg_delta: *const c_void,
+                                         ctx_tails: *const c_void,
+                                         take_tail: FFITailTake,
+                                         put_tail: FFITailPut,
+                                         witness_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_witness_new: >>> rev_idx: {:?}, max_cred_num {}, rev_reg_delta {:?}, ctx_tails {:?}, take_tail {:?}, put_tail {:?}, witness_p {:?}",
+           rev_idx, max_cred_num, rev_reg_delta, ctx_tails, take_tail, put_tail, witness_p);
+
+    check_useful_c_reference!(rev_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam3);
+
+    let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
+    let res = match new_witness(rev_idx, max_cred_num, rev_reg_delta, &rta) {
+        Ok(witness) => {
+            unsafe {
+                *witness_p = Box::into_raw(Box::new(witness)) as *const c_void;
+                trace!("indy_crypto_cl_witness_new: *witness_p: {:?}", *witness_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_witness_new: <<< res: {:?}", res);
+    res
+}
+
+#[no_mangle]
+pub extern fn indy_crypto_cl_witness_update(rev_idx: u32,
+                                            max_cred_num: u32,
+                                            rev_reg_delta: *const c_void,
+                                            witness: *mut c_void,
+                                            ctx_tails: *const c_void,
+                                            take_tail: FFITailTake,
+                                            put_tail: FFITailPut) -> ErrorCode {
+    trace!("indy_crypto_cl_witness_update: >>> rev_idx: {:?}, max_cred_num {}, rev_reg_delta {:?}, ctx_tails {:?}, take_tail {:?}, put_tail {:?}, witness {:?}",
+           rev_idx, max_cred_num, rev_reg_delta, ctx_tails, take_tail, put_tail, witness);
+
+    check_useful_c_reference!(rev_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam3);
+    check_useful_mut_c_reference!(witness, Witness, ErrorCode::CommonInvalidParam4);
+
+    let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
+    let res = match update_witness(rev_idx, max_cred_num, rev_reg_delta, witness, &rta) {
+        Ok(()) => ErrorCode::Success,
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_witness_update: <<< res: {:?}", res);
+    res
+}
+
+#[no_mangle]
+pub extern fn indy_crypto_cl_witness_free(witness: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_witness_free: >>> witness: {:?}", witness);
+
+    check_useful_c_ptr!(witness, ErrorCode::CommonInvalidParam1);
+
+    let witness = unsafe { Box::from_raw(witness as *mut Witness); };
+    trace!("indy_crypto_cl_witness_free: entity: witness: {:?}", witness);
+
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_cl_witness_free: <<< res: {:?}", res);
+    res
+}
+
 /// Creates and returns claim schema entity builder.
 ///
 /// The purpose of claim schema builder is building of claim schema entity that
