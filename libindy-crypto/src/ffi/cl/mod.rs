@@ -1,18 +1,22 @@
 use cl::*;
 use cl::issuer::Issuer;
 use cl::verifier::Verifier;
-use errors::ToErrorCode;
+use errors::{IndyCryptoError, ToErrorCode};
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
 use utils::json::{JsonEncodable, JsonDecodable};
 
 use libc::c_char;
 
+use std::ptr::null;
 use std::os::raw::c_void;
 
 pub mod issuer;
 pub mod prover;
 pub mod verifier;
+
+type FFITailTake = extern fn(ctx: *const c_void, idx: u32, tail_p: *mut *const c_void) -> ErrorCode;
+type FFITailPut = extern fn(ctx: *const c_void, tail: *mut c_void) -> ErrorCode;
 
 /// Creates and returns claim schema entity builder.
 ///
@@ -496,6 +500,46 @@ pub extern fn indy_crypto_cl_nonce_free(nonce: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_nonce_free: <<< res: {:?}", res);
     res
 }
+
+
+struct FFITailsAccessor {
+    ctx: *const c_void,
+    take: FFITailTake,
+    put: FFITailPut,
+}
+
+impl FFITailsAccessor {
+    pub fn new(ctx: *const c_void, take: FFITailTake, put: FFITailPut) -> Self {
+        FFITailsAccessor { ctx, take, put }
+    }
+}
+
+impl RevocationTailsAccessor for FFITailsAccessor {
+    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError> {
+        let mut tail_p = null();
+
+        let res = (self.take)(self.ctx, tail_id, &mut tail_p);
+        if res != ErrorCode::Success || tail_p.is_null() {
+            return Err(IndyCryptoError::InvalidState(
+                format!("FFI call take_tail {:?} (ctx {:?}, id {}) failed: tail_p {:?}, returned error code {:?}",
+                        self.take, self.ctx, tail_id, tail_p, res)));
+        }
+        let tail: Box<Tail> = unsafe { Box::from_raw(tail_p as *mut Tail) };
+
+        accessor(&tail);
+
+        let tail_p = Box::into_raw(tail) as *mut c_void;
+        let res = (self.put)(self.ctx, tail_p);
+        if res != ErrorCode::Success {
+            return Err(IndyCryptoError::InvalidState(
+                format!("FFI call put_tail {:?} (ctx {:?}, tail_p {:?}) failed: returned error code {:?}",
+                        self.take, self.ctx, tail_p, res)));
+        }
+
+        Ok(())
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
