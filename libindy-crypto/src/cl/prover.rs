@@ -477,7 +477,7 @@ impl ProofBuilder {
     /// * `credential_schema` - Credential schema.
     /// * `credential_signature` - Credential signature.
     /// * `credential_values` - Credential values.
-    /// * `credential_public_key` - Credential public key.
+    /// * `credential_pub_key` - Credential public key.
     /// * `rev_reg_pub` - (Optional) Revocation registry public.
     pub fn add_sub_proof_request(&mut self,
                                  key_id: &str,
@@ -485,12 +485,12 @@ impl ProofBuilder {
                                  credential_schema: &CredentialSchema,
                                  credential_signature: &CredentialSignature,
                                  credential_values: &CredentialValues,
-                                 credential_public_key: &CredentialPublicKey,
-                                 revocation_registry: Option<&RevocationRegistry>,
+                                 credential_pub_key: &CredentialPublicKey,
+                                 rev_reg: Option<&RevocationRegistry>,
                                  witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
-        trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, credential_signature: {:?}, credential_values: {:?}, credential_public_key: {:?}, \
-        revocation_registry: {:?}, sub_proof_request: {:?}, credential_schema: {:?}",
-               key_id, credential_signature, credential_values, credential_public_key, revocation_registry, sub_proof_request, credential_schema);
+        trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, \
+        rev_reg: {:?}, sub_proof_request: {:?}, credential_schema: {:?}",
+               key_id, credential_signature, credential_values, credential_pub_key, rev_reg, sub_proof_request, credential_schema);
 
         ProofBuilder::_check_add_sub_proof_request_params_consistency(credential_values, sub_proof_request, credential_schema)?;
 
@@ -498,8 +498,8 @@ impl ProofBuilder {
         let mut m2_tilde: Option<BigNumber> = None;
 
         if let (&Some(ref r_cred), &Some(ref r_reg), &Some(ref r_pub_key), &Some(ref witness)) = (&credential_signature.r_credential,
-                                                                                                  &revocation_registry,
-                                                                                                  &credential_public_key.r_key,
+                                                                                                  &rev_reg,
+                                                                                                  &credential_pub_key.r_key,
                                                                                                   &witness) {
             let proof = ProofBuilder::_init_non_revocation_proof(&r_cred,
                                                                  &r_reg,
@@ -512,7 +512,7 @@ impl ProofBuilder {
             non_revoc_init_proof = Some(proof);
         }
 
-        let primary_init_proof = ProofBuilder::_init_primary_proof(&credential_public_key.p_key,
+        let primary_init_proof = ProofBuilder::_init_primary_proof(&credential_pub_key.p_key,
                                                                    &credential_signature.p_credential,
                                                                    &credential_values,
                                                                    &credential_schema,
@@ -1404,23 +1404,22 @@ mod tests {
         let cred_issuance_nonce = new_nonce().unwrap();
 
         let rev_idx = 1;
-        let (mut cred_signature, signature_correctness_proof, rev_reg_delta) = issuer::Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                                               &blinded_master_secret,
-                                                                                                               &blinded_master_secret_correctness_proof,
-                                                                                                               &master_secret_blinding_nonce,
-                                                                                                               &cred_issuance_nonce,
-                                                                                                               &cred_values,
-                                                                                                               &cred_pub_key,
-                                                                                                               &cred_priv_key,
-                                                                                                               Some(rev_idx),
-                                                                                                               Some(n),
-                                                                                                               Some(&mut rev_reg),
-                                                                                                               Some(&rev_key_priv),
-                                                                                                               Some(Box::new(simple_tail_accessor.clone()))).unwrap();
+        let (mut cred_signature, signature_correctness_proof, mut rev_reg_delta) =
+            issuer::Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                       &blinded_master_secret,
+                                                       &blinded_master_secret_correctness_proof,
+                                                       &master_secret_blinding_nonce,
+                                                       &cred_issuance_nonce,
+                                                       &cred_values,
+                                                       &cred_pub_key,
+                                                       &cred_priv_key,
+                                                       rev_idx,
+                                                       n,
+                                                       &mut rev_reg,
+                                                       &rev_key_priv,
+                                                       &simple_tail_accessor).unwrap();
 
-        let mut rev_reg_delta: RevocationRegistryDelta = rev_reg_delta.unwrap();
-
-        let mut witness = new_witness(rev_idx, n, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        let mut witness = Witness::new(rev_idx, n, &rev_reg_delta, &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut cred_signature,
                                              &cred_values,
@@ -1450,7 +1449,7 @@ mod tests {
 
         let start_time = time::get_time();
 
-        update_witness(rev_idx, n, &rev_reg_delta, &mut witness, &simple_tail_accessor).unwrap();
+        witness.update(rev_idx, n, &rev_reg_delta, &simple_tail_accessor).unwrap();
 
         let end_time = time::get_time();
 

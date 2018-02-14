@@ -143,7 +143,7 @@ impl Issuer {
         Ok(res)
     }
 
-    /// Sign given credential values instance.
+    /// Sign given credential values with primary only part.
     ///
     /// # Arguments
     /// * `prover_id` - Prover identifier.
@@ -154,11 +154,6 @@ impl Issuer {
     /// * `credential_values` - Claim values to be signed.
     /// * `credential_pub_key` - credential public key.
     /// * `credential_priv_key` - credential private key.
-    /// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation credential_signature part generation.
-    /// * `max_cred_num` - (Optional) Max credential number in generated registry.
-    /// * `rev_reg` - (Optional) Revocation registry.
-    /// * `rev_key_priv` - (Optional) Revocation registry private key.
-    /// * `rev_tails_accessor` - (Optional) Revocation registry tails accessor.
     ///
     /// # Example
     /// ```
@@ -182,7 +177,7 @@ impl Issuer {
     ///
     /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
-    /// let (_credential_signature, _signature_correctness_proof, _rev_reg_delta) =
+    /// let (_credential_signature, _signature_correctness_proof) =
     ///     Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
     ///                             &blinded_master_secret,
     ///                             &blinded_master_secret_correctness_proof,
@@ -190,8 +185,7 @@ impl Issuer {
     ///                             &credential_issuance_nonce,
     ///                             &credential_values,
     ///                             &credential_pub_key,
-    ///                             &credential_priv_key,
-    ///                             None, None, None, None, None).unwrap();
+    ///                             &credential_priv_key).unwrap();
     /// ```
     pub fn sign_credential(prover_id: &str,
                            blinded_master_secret: &BlindedMasterSecret,
@@ -200,13 +194,115 @@ impl Issuer {
                            credential_issuance_nonce: &Nonce,
                            credential_values: &CredentialValues,
                            credential_pub_key: &CredentialPublicKey,
-                           credential_priv_key: &CredentialPrivateKey,
-                           rev_idx: Option<u32>,
-                           max_cred_num: Option<u32>,
-                           rev_reg: Option<&mut RevocationRegistry>,
-                           rev_key_priv: Option<&RevocationKeyPrivate>,
-                           rev_tails_accessor: Option<Box<RevocationTailsAccessor>>)
-                           -> Result<(CredentialSignature, SignatureCorrectnessProof, Option<RevocationRegistryDelta>), IndyCryptoError> {
+                           credential_priv_key: &CredentialPrivateKey) -> Result<(CredentialSignature, SignatureCorrectnessProof), IndyCryptoError> {
+        trace!("Issuer::sign_credential: >>> prover_id: {:?}, blinded_master_secret: {:?}, blinded_master_secret_correctness_proof: {:?},\
+        master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}",
+               prover_id, blinded_master_secret, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, credential_values, credential_issuance_nonce,
+               credential_pub_key, credential_priv_key);
+
+        Issuer::_check_blinded_master_secret_correctness_proof(blinded_master_secret,
+                                                               blinded_master_secret_correctness_proof,
+                                                               master_secret_blinding_nonce,
+                                                               &credential_pub_key.p_key)?;
+
+        // In the anoncreds whitepaper, `credential context` is denoted by `m2`
+        let cred_context = Issuer::_gen_credential_context(prover_id, None)?;
+
+        let (p_cred, q) = Issuer::_new_primary_credential(&cred_context,
+                                                          credential_pub_key,
+                                                          credential_priv_key,
+                                                          blinded_master_secret,
+                                                          credential_values)?;
+
+        let cred_signature = CredentialSignature { p_credential: p_cred, r_credential: None };
+
+        let signature_correctness_proof = Issuer::_new_signature_correctness_proof(&credential_pub_key.p_key,
+                                                                                   &credential_priv_key.p_key,
+                                                                                   &cred_signature.p_credential,
+                                                                                   &q,
+                                                                                   credential_issuance_nonce)?;
+
+
+        trace!("Issuer::sign_credential: <<< cred_signature: {:?}, signature_correctness_proof: {:?}",
+               cred_signature, signature_correctness_proof);
+
+        Ok((cred_signature, signature_correctness_proof))
+    }
+
+    /// Sign given credential values with both primary and revocation parts.
+    ///
+    /// # Arguments
+    /// * `prover_id` - Prover identifier.
+    /// * `blinded_master_secret` - Blinded master secret.
+    /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
+    /// * `master_secret_blinding_nonce` - Nonce used for blinded_master_secret_correctness_proof verification.
+    /// * `credential_issuance_nonce` - Nonce used for creating of signature correctness proof.
+    /// * `credential_values` - Claim values to be signed.
+    /// * `credential_pub_key` - credential public key.
+    /// * `credential_priv_key` - credential private key.
+    /// * `rev_idx` - User index in revocation accumulator. Required for non-revocation credential_signature part generation.
+    /// * `max_cred_num` - Max credential number in generated registry.
+    /// * `rev_reg` - Revocation registry.
+    /// * `rev_key_priv` - Revocation registry private key.
+    /// * `rev_tails_accessor` - Revocation registry tails accessor.
+    ///
+    /// # Example
+    /// ```
+    /// use indy_crypto::cl::new_nonce;
+    /// use indy_crypto::cl::issuer::Issuer;
+    /// use indy_crypto::cl::prover::Prover;
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    ///
+    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+    ///
+    /// let max_cred_num = 5;
+    /// let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
+    ///
+    /// let master_secret = Prover::new_master_secret().unwrap();
+    /// let master_secret_blinding_nonce = new_nonce().unwrap();
+    /// let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
+    ///      Prover::blind_master_secret(&credential_pub_key, &cred_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+    ///
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let credential_values = credential_values_builder.finalize().unwrap();
+    ///
+    /// let credential_issuance_nonce = new_nonce().unwrap();
+    ///
+    /// let rev_idx = 1;
+    /// let (mut cred_signature, signature_correctness_proof, rev_reg_delta) =
+    ///     Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                        &blinded_master_secret,
+    ///                                        &blinded_master_secret_correctness_proof,
+    ///                                        &master_secret_blinding_nonce,
+    ///                                        &credential_issuance_nonce,
+    ///                                        &cred_values,
+    ///                                        &cred_pub_key,
+    ///                                        &cred_priv_key,
+    ///                                        Some(rev_idx),
+    ///                                        Some(max_cred_num),
+    ///                                        Some(&mut rev_reg),
+    ///                                        Some(&rev_key_priv),
+    ///                                        Some(&simple_tail_accessor)).unwrap();
+    /// ```
+    pub fn sign_credential_with_revoc<RTA>(prover_id: &str,
+                                           blinded_master_secret: &BlindedMasterSecret,
+                                           blinded_master_secret_correctness_proof: &BlindedMasterSecretCorrectnessProof,
+                                           master_secret_blinding_nonce: &Nonce,
+                                           credential_issuance_nonce: &Nonce,
+                                           credential_values: &CredentialValues,
+                                           credential_pub_key: &CredentialPublicKey,
+                                           credential_priv_key: &CredentialPrivateKey,
+                                           rev_idx: u32,
+                                           max_cred_num: u32,
+                                           rev_reg: &mut RevocationRegistry,
+                                           rev_key_priv: &RevocationKeyPrivate,
+                                           rev_tails_accessor: &RTA)
+                                           -> Result<(CredentialSignature, SignatureCorrectnessProof, RevocationRegistryDelta),
+                                               IndyCryptoError> where RTA: RevocationTailsAccessor {
         trace!("Issuer::sign_credential: >>> prover_id: {:?}, blinded_master_secret: {:?}, blinded_master_secret_correctness_proof: {:?},\
         master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
         rev_idx: {:?}, max_cred_num: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
@@ -219,7 +315,7 @@ impl Issuer {
                                                                &credential_pub_key.p_key)?;
 
         // In the anoncreds whitepaper, `credential context` is denoted by `m2`
-        let cred_context = Issuer::_gen_credential_context(prover_id, rev_idx)?;
+        let cred_context = Issuer::_gen_credential_context(prover_id, Some(rev_idx))?;
 
         let (p_cred, q) = Issuer::_new_primary_credential(&cred_context,
                                                           credential_pub_key,
@@ -227,28 +323,17 @@ impl Issuer {
                                                           blinded_master_secret,
                                                           credential_values)?;
 
-        let (r_cred, rev_reg_delta) =
-            if let (Some(rev_idx_2), Some(max_cred_n), Some(r_reg), Some(r_key_priv), Some(r_tails_accessor)) = (rev_idx,
-                                                                                                                 max_cred_num,
-                                                                                                                 rev_reg,
-                                                                                                                 rev_key_priv,
-                                                                                                                 rev_tails_accessor) {
-                Issuer::_new_non_revocation_credential(rev_idx_2,
-                                                       &cred_context,
-                                                       blinded_master_secret,
-                                                       credential_pub_key,
-                                                       credential_priv_key,
-                                                       max_cred_n,
-                                                       r_reg,
-                                                       r_key_priv,
-                                                       r_tails_accessor.as_ref())
-                    .map(|(r_cred_sig, rev_reg_delta)|
-                        (Some(r_cred_sig), Some(rev_reg_delta)))?
-            } else {
-                (None, None)
-            };
+        let (r_cred, rev_reg_delta) = Issuer::_new_non_revocation_credential(rev_idx,
+                                                                             &cred_context,
+                                                                             blinded_master_secret,
+                                                                             credential_pub_key,
+                                                                             credential_priv_key,
+                                                                             max_cred_num,
+                                                                             rev_reg,
+                                                                             rev_key_priv,
+                                                                             rev_tails_accessor)?;
 
-        let cred_signature = CredentialSignature { p_credential: p_cred, r_credential: r_cred };
+        let cred_signature = CredentialSignature { p_credential: p_cred, r_credential: Some(r_cred) };
 
         let signature_correctness_proof = Issuer::_new_signature_correctness_proof(&credential_pub_key.p_key,
                                                                                    &credential_priv_key.p_key,
@@ -901,19 +986,14 @@ mod tests {
             (prover::mocks::blinded_master_secret(), prover::mocks::blinded_master_secret_correctness_proof());
 
         let credential_issuance_nonce = new_nonce().unwrap();
-        let (credential_signature_signature, signature_correctness_proof, _) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+        let (credential_signature_signature, signature_correctness_proof) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
                                                                                                        &blinded_master_secret,
                                                                                                        &blinded_master_secret_correctness_proof,
                                                                                                        &blinded_master_secret_nonce,
                                                                                                        &credential_issuance_nonce,
                                                                                                        &mocks::credential_values(),
                                                                                                        &pub_key,
-                                                                                                       &priv_key,
-                                                                                                       Some(1),
-                                                                                                       None,
-                                                                                                       None,
-                                                                                                       None,
-                                                                                                       None).unwrap();
+                                                                                                       &priv_key).unwrap();
 
         assert_eq!(mocks::primary_credential(), credential_signature_signature.p_credential);
         assert_eq!(mocks::signature_correctness_proof(), signature_correctness_proof);

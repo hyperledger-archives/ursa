@@ -25,85 +25,6 @@ pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
     Ok(helpers::bn_rand(constants::LARGE_NONCE)?)
 }
 
-pub fn new_witness<RTA>(rev_idx: u32,
-                        max_cred_num: u32,
-                        rev_reg_delta: &RevocationRegistryDelta,
-                        rev_tails_accessor: &RTA) -> Result<Witness, IndyCryptoError> where RTA: RevocationTailsAccessor {
-    trace!("ProofBuilder::new_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
-           rev_idx, max_cred_num, rev_reg_delta);
-
-    if rev_reg_delta.issued.is_none() {
-        return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
-    }
-
-    let mut issued = rev_reg_delta.issued.clone().unwrap();
-    issued.remove(&rev_idx);
-
-    let mut omega = PointG2::new_inf()?;
-
-    for j in issued.iter() {
-        let index = max_cred_num + 1 - j + rev_idx;
-
-        rev_tails_accessor.access_tail(index, &mut |tail| {
-            omega = omega.add(tail).unwrap();
-        })?;
-    }
-
-    let witness = Witness {
-        omega,
-        v: issued
-    };
-
-    trace!("ProofBuilder::new_witness: <<< witness: {:?}", witness);
-
-    Ok(witness)
-}
-
-pub fn update_witness<RTA>(rev_idx: u32,
-                           max_cred_num: u32,
-                           rev_reg_delta: &RevocationRegistryDelta,
-                           witness: &mut Witness,
-                           rev_tails_accessor: &RTA) -> Result<(), IndyCryptoError> where RTA: RevocationTailsAccessor {
-    trace!("ProofBuilder::update_witness: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}, witness: {:?}",
-           rev_idx, max_cred_num, rev_reg_delta, witness);
-
-    if rev_reg_delta.issued.is_none() {
-        return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
-    }
-    let issued = rev_reg_delta.issued.clone().unwrap();
-
-    if witness.v != issued {
-        let v_old_minus_new: HashSet<u32> = witness.v.difference(&issued).cloned().collect();
-        let v_new_minus_old: HashSet<u32> = issued.difference(&witness.v).cloned().collect();
-
-        let mut omega_denom = PointG2::new_inf()?;
-        for j in v_old_minus_new.iter() {
-            let index = max_cred_num + 1 - j + rev_idx;
-            rev_tails_accessor.access_tail(index, &mut |tail| {
-                omega_denom = omega_denom.add(tail).unwrap();
-            })?;
-        }
-
-        let mut omega_num = PointG2::new_inf()?;
-        for j in v_new_minus_old.iter() {
-            let index = max_cred_num + 1 - j + rev_idx;
-            rev_tails_accessor.access_tail(index, &mut |tail| {
-                omega_num = omega_num.add(tail).unwrap();
-            })?;
-        }
-
-        let new_omega: PointG2 = witness.omega.add(
-            &omega_num.sub(&omega_denom)?)?;
-
-        witness.v = issued;
-        witness.omega = new_omega;
-    }
-
-    trace!("ProofBuilder::update_witness: <<<");
-
-    Ok(())
-}
-
 /// A list of attributes a Claim is based on.
 #[derive(Debug, Clone)]
 pub struct CredentialSchema {
@@ -386,7 +307,7 @@ pub trait RevocationTailsAccessor {
 }
 
 #[derive(Debug, Clone)]
-struct SimpleTailsAccessor {
+pub struct SimpleTailsAccessor {
     tails: HashMap<u32, Tail>
 }
 
@@ -397,7 +318,7 @@ impl RevocationTailsAccessor for SimpleTailsAccessor {
 }
 
 impl SimpleTailsAccessor {
-    fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, IndyCryptoError> {
+    pub fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, IndyCryptoError> {
         let mut tails: HashMap<u32, PointG2> = HashMap::new();
         for i in 0..rev_tails_generator.count() {
             tails.insert(i, rev_tails_generator.next()?);
@@ -466,6 +387,86 @@ pub struct Witness {
 impl JsonEncodable for Witness {}
 
 impl<'a> JsonDecodable<'a> for Witness {}
+
+impl Witness {
+    pub fn new<RTA>(rev_idx: u32,
+                    max_cred_num: u32,
+                    rev_reg_delta: &RevocationRegistryDelta,
+                    rev_tails_accessor: &RTA) -> Result<Witness, IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("ProofBuilder::new: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
+               rev_idx, max_cred_num, rev_reg_delta);
+
+        if rev_reg_delta.issued.is_none() {
+            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+        }
+
+        let mut omega = PointG2::new_inf()?;
+
+        let mut issued = rev_reg_delta.issued.clone().unwrap();
+        issued.remove(&rev_idx);
+
+        for j in issued.iter() {
+            let index = max_cred_num + 1 - j + rev_idx;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega = omega.add(tail).unwrap();
+            })?;
+        }
+
+        let witness = Witness {
+            omega,
+            v: rev_reg_delta.issued.clone().unwrap()
+        };
+
+        trace!("ProofBuilder::new: <<< witness: {:?}", witness);
+
+        Ok(witness)
+    }
+
+    pub fn update<RTA>(&mut self,
+                       rev_idx: u32,
+                       max_cred_num: u32,
+                       rev_reg_delta: &RevocationRegistryDelta,
+                       rev_tails_accessor: &RTA) -> Result<(), IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("ProofBuilder::update: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
+               rev_idx, max_cred_num, rev_reg_delta);
+
+        if rev_reg_delta.issued.is_none() {
+            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+        }
+        let issued = rev_reg_delta.issued.clone().unwrap();
+
+        if self.v != issued {
+            let v_old_minus_new: HashSet<u32> = self.v.difference(&issued).cloned().collect();
+            let v_new_minus_old: HashSet<u32> = issued.difference(&self.v).cloned().collect();
+
+            let mut omega_denom = PointG2::new_inf()?;
+            for j in v_old_minus_new.iter() {
+                let index = max_cred_num + 1 - j + rev_idx;
+                rev_tails_accessor.access_tail(index, &mut |tail| {
+                    omega_denom = omega_denom.add(tail).unwrap();
+                })?;
+            }
+
+            let mut omega_num = PointG2::new_inf()?;
+            for j in v_new_minus_old.iter() {
+                let index = max_cred_num + 1 - j + rev_idx;
+                rev_tails_accessor.access_tail(index, &mut |tail| {
+                    omega_num = omega_num.add(tail).unwrap();
+                })?;
+            }
+
+            let new_omega: PointG2 = self.omega.add(
+                &omega_num.sub(&omega_denom)?)?;
+
+            self.v = issued;
+            self.omega = new_omega;
+        }
+
+        trace!("ProofBuilder::update: <<<");
+
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct WitnessSignature {
@@ -957,19 +958,14 @@ mod test {
 
         let cred_issuance_nonce = new_nonce().unwrap();
 
-        let (mut cred_signature, signature_correctness_proof, _) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                           &blinded_master_secret,
-                                                                                           &blinded_master_secret_correctness_proof,
-                                                                                           &master_secret_blinding_nonce,
-                                                                                           &cred_issuance_nonce,
-                                                                                           &cred_values,
-                                                                                           &cred_pub_key,
-                                                                                           &cred_priv_key,
-                                                                                           None,
-                                                                                           None,
-                                                                                           None,
-                                                                                           None,
-                                                                                           None).unwrap();
+        let (mut cred_signature, signature_correctness_proof) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                        &blinded_master_secret,
+                                                                                        &blinded_master_secret_correctness_proof,
+                                                                                        &master_secret_blinding_nonce,
+                                                                                        &cred_issuance_nonce,
+                                                                                        &cred_values,
+                                                                                        &cred_pub_key,
+                                                                                        &cred_priv_key).unwrap();
 
         Prover::process_credential_signature(&mut cred_signature,
                                              &cred_values,
@@ -1045,21 +1041,22 @@ mod test {
         let credential_issuance_nonce = new_nonce().unwrap();
 
         let rev_idx = 1;
-        let (mut cred_signature, signature_correctness_proof, rev_reg_delta) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                                       &blinded_master_secret,
-                                                                                                       &blinded_master_secret_correctness_proof,
-                                                                                                       &master_secret_blinding_nonce,
-                                                                                                       &credential_issuance_nonce,
-                                                                                                       &cred_values,
-                                                                                                       &cred_pub_key,
-                                                                                                       &cred_priv_key,
-                                                                                                       Some(rev_idx),
-                                                                                                       Some(max_cred_num),
-                                                                                                       Some(&mut rev_reg),
-                                                                                                       Some(&rev_key_priv),
-                                                                                                       Some(Box::new(simple_tail_accessor.clone()))).unwrap();
+        let (mut cred_signature, signature_correctness_proof, rev_reg_delta) =
+            Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                               &blinded_master_secret,
+                                               &blinded_master_secret_correctness_proof,
+                                               &master_secret_blinding_nonce,
+                                               &credential_issuance_nonce,
+                                               &cred_values,
+                                               &cred_pub_key,
+                                               &cred_priv_key,
+                                               rev_idx,
+                                               max_cred_num,
+                                               &mut rev_reg,
+                                               &rev_key_priv,
+                                               &simple_tail_accessor).unwrap();
 
-        let witness = new_witness(rev_idx, max_cred_num, &rev_reg_delta.unwrap(), &simple_tail_accessor).unwrap();
+        let witness = Witness::new(rev_idx, max_cred_num, &rev_reg_delta, &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut cred_signature,
                                              &cred_values,
