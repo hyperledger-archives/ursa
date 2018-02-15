@@ -28,6 +28,17 @@ Initial version of anoncreds protocol was implemented as part of Indy SDK (https
 1. FFI C API will use OpenSSL style entities handling. Entities referenced will be represent as untyped pointers. Library will provide functions for entities allocation, manipulation and deallocation. 
 
 ## API 
+### API V2
+#### Goals
+* Indy Crypto should have ability to work with large volume of Tails (can be larger rather RAM)
+  *  should allow to calculate revocation witness on cloud agent with minimal disclosing sensitive data
+* API entities should be consistent with Indy Ledger transactions
+
+#### Changes
+* `RevocationRegistry` now will be created without full `Tails` in RAM as part of returned value.
+Instead of it, TailsGenerator will be returned to generate all tails one by one and store in application manner.
+* `Witness` now became in separate entity and should be updated out of call `ProofBuilder::add_sub_proof_request`
+* IndyCrypto defines `RevocationTailAccessor` trait. Application should implement this and handle calls from IndyCrypto such as `access_tail(id, indy_crypto_cb(tail))`
 
 ### Claim and Proof attributes builders
 ```Rust
@@ -58,27 +69,83 @@ SubProofRequestBuilder::add_predicate(mut self, predicate: &Predicate) ->
 SubProofRequestBuilder::finalize(self) -> Result<SubProofRequest, IndyCryptoError>
 ```
 
+### Tails
+```Rust
+impl Iterator<Tail> for RevocationTailsGenerator
+
+RevocationTailsGenerator::next() -> Option<Tail>
+
+Tail::from_bytes(bytes: &[u8]) -> Result<Tail, IndyCryptoError>
+Tail::to_bytes(&self) -> Vec<u8>
+
+trait RevocationTailsAccessor {
+    fn access_tail(tail_id: u32, accessor: Box<Fn(&Tail)>) -> Result<(), IndyCryptoError)>
+}
+```
+
+### Witness
+```Rust
+Witness::new<RTA>(rev_idx: u32,
+                  delta: &RevocationRegisterDelta /* from initial moment to current */,
+                  r_tails_accessor: RTA) -> Result<Witness, IndyCryptoError>
+                    where RTA: RevocationTailsAccessor
+
+Witness::update<RTA>(&mut self, delta: &RevocationRegisterDelta, rev_idx: u32, r_tails_accessor: RTA) ->
+                     Result<(), IndyCryptoError>
+                        where RTA: RevocationTailsAccessor
+```
+
+### RevocationRegistry
+```Rust
+struct RevocationRegistry {
+    acc: PointG2,
+    max_claim_num: u32,
+}
+
+```
+
+### RevocationRegistryDelta
+```Rust
+struct RevocationRegistryDelta {
+    start_acc: PointG2,
+    issued: HashSet<u32>,
+    revoked: HashSet<u32>,
+    acc: PointG2,
+}
+
+RevocationRegistryDelta::join(&mut self, other: RevocationRegistryDelta) -> ()
+RevocationRegistryDelta::revert(&mut self, other: RevocationRegistryDelta) -> ()
+```
+
 ### Issuer
 ```Rust
-Issuer::new_cred_def(attrs: &ClaimSchema, support_revocation: bool) ->    
-                          Result<(CredentialPublicKey, CredentialPrivateKey), IndyCryptoError>
+Issuer::new_cred_def(attrs: &ClaimSchema, support_non_revocation: bool) ->
+                          Result<(IssuerPublicKey, IssuerPrivateKey), IndyCryptoError>
 
-Issuer::new_revocation_registry_def(issuer_pub_key: &CredentialPublicKey,
-                              max_claim_num: u32) -> Result<(RevocationRegistryDefPublic,                                                              
-                                                           RevocationRegistryDefPrivate), 
-                                                                      IndyCryptoError>
+Issuer::new_revocation_registry(issuer_pub_key: &IssuerPublicKey,
+                                issuence_by_default: bool,
+                                max_claim_num: u32) -> Result<(RevocationKeyPublic,
+                                                               RevocationKeyPrivate,
+                                                               RevocationRegistry,
+                                                               RevocationTailsGenerator),
+                                                              IndyCryptoError>
+
 Issuer::sign_claim(prover_id: &str,
-                 blnd_ms: &BlindedMasterSecret,
-                 claim_values: &ClaimValues,
-                 issuer_pub_key: &CredentialPublicKey,
-                 issuer_priv_key: &CredentialPrivateKey,
-                 rev_idx: Option<u32>,
-                 r_reg_pub: Option<&mut RevocationRegistryDefPublic>,
-                 r_reg_priv: Option<&RevocationRegistryDefPrivate>) ->         
-                                        Result<ClaimSignature, IndyCryptoError>
+                   blnd_ms: &BlindedMasterSecret,
+                   claim_values: &ClaimValues,
+                   issuer_pub_key: &IssuerPublicKey,
+                   issuer_priv_key: &IssuerPrivateKey,
+                   rev_idx: Option<u32>,
+                   r_reg: Option<&mut RevocationRegistry>,
+                   r_key_pub: Option<&RevocationKeyPublic>,
+                   r_key_priv: Option<&RevocationKeyPrivate>) ->
+                                        Result<(ClaimSignature, RevocationRegistryDelta), IndyCryptoError>
 
-Issuer::revoke_claim(r_reg_pub: &mutRevocationRegistryPublic,
-               rev_idx: u32) -> Result<(), IndyCryptoError>
+Issuer::revoke_claim<RTA>(r_key_pub: &RevocationKeyPublic,
+                          r_reg: &mut RevocationRegistry,
+                          rev_idx: u32,
+                          r_tails_accessor: RTA) -> Result<RevocationRegistryDelta, IndyCryptoError>
+                            where RTA: RevocationTailsAccessor
 ```
 
 ### Prover
@@ -91,20 +158,20 @@ Prover::blind_master_secret(pub_key: &CredentialPublicKey,
                                                                      IndyCryptoError>
 Prover::process_claim_signature(claim_signature: &mut ClaimSignature,
                       blinded_master_secret_data: &BlindedMasterSecretData,
-                      pub_key: &CredentialPublicKey,
-                      r_reg: Option<&RevocationRegistryDefPublic>) -> Result<(), 
-                                                                      IndyCryptoError>
+                      p_pub_key: &IssuerPublicKey,
+                      r_pub_key: Option<&RevocationKeyPublic>) -> Result<(), IndyCryptoError>
 Prover::new_proof_builder() -> Result<ProofBuilder, IndyCryptoError>
 
 ProofBuilder::add_sub_proof_request(&mut self,
-                        key_id: &str,
-                        schema: &ClaimSchema,
-                        claim_signature: &ClaimSignature,
-                        claim_values: &ClaimValues,
-                        pub_key: &CredentialPublicKey,
-                        r_reg: Option<&RevocationRegistryDefPublic>,
-                        sub_proof_req: &SubProofRequest) 
-                                    -> Result<(),  IndyCryptoError>
+                                    key_id: &str,
+                                    schema: &ClaimSchema,
+                                    claim_signature: &ClaimSignature,
+                                    claim_values: &ClaimValues,
+                                    pub_key: &IssuerPublicKey,
+                                    r_reg: Option<&RevocationRegistry>
+                                    witness: Option<&Witness>,
+                                    sub_proof_req: &SubProofRequest)
+                                        -> Result<(),  IndyCryptoError>
 
 ProofBuilder::finalize(&mut self,
                        nonce: &Nonce,
@@ -118,13 +185,12 @@ Verifier::new_nonce() -> Result<Nonce, IndyCryptoError>
 Verifier::new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError>
 
 ProofVerifier::add_sub_proof_request(&mut self,
-                              key_id: &str,
-                              schema: &ClaimSchema,
-                              p_pub_key: &CredentialPublicKey,
-                              r_pub_key: Option<&CredentialRevocationPublicKey>,
-                              r_reg: Option<&RevocationRegistryDefPublic>,
-                              sub_proof_req: &SubProofRequest) 
-                                           -> Result<(), IndyCryptoError>
+                                     key_id: &str,
+                                     schema: &ClaimSchema,
+                                     p_pub_key: &IssuerPublicKey,
+                                     r_pub_key: Option<&RevocationKeyPublic>,
+                                     sub_proof_req: &SubProofRequest)
+                                            -> Result<(), IndyCryptoError>
 
 
 ProofVerifier::verify(self,

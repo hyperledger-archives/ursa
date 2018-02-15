@@ -218,19 +218,22 @@ pub struct CredentialRevocationPrivateKey {
     sk: GroupOrderElement
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum IssuanceType {
-    IssuanceByDefault,
-    IssuanceOnDemand
-}
-
 pub type Accumulator = PointG2;
 
+/// `Revocation Registry` contains accumulator.
+/// Must be published by Issuer on a tamper-evident and highly available storage
+/// Used by prover to prove that a claim hasn't revoked by the issuer
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationRegistry {
     accum: Accumulator
 }
 
+impl JsonEncodable for RevocationRegistry {}
+
+impl<'a> JsonDecodable<'a> for RevocationRegistry {}
+
+/// `Revocation Registry Delta` contains Accumulator changes.
+/// Must be applied to `Revocation Registry`
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationRegistryDelta {
     prev_accum: Option<Accumulator>,
@@ -243,6 +246,8 @@ impl JsonEncodable for RevocationRegistryDelta {}
 
 impl<'a> JsonDecodable<'a> for RevocationRegistryDelta {}
 
+/// `Revocation Key Public` Accumulator public key.
+/// Must be published together with Accumulator
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationKeyPublic {
     z: Pair
@@ -252,6 +257,7 @@ impl JsonEncodable for RevocationKeyPublic {}
 
 impl<'a> JsonDecodable<'a> for RevocationKeyPublic {}
 
+/// `Revocation Key Private` Accumulator primate key.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RevocationKeyPrivate {
     gamma: GroupOrderElement
@@ -261,6 +267,7 @@ impl JsonEncodable for RevocationKeyPrivate {}
 
 impl<'a> JsonDecodable<'a> for RevocationKeyPrivate {}
 
+/// `Tail` point of curve used to update accumulator.
 pub type Tail = PointG2;
 
 impl Tail {
@@ -272,6 +279,7 @@ impl Tail {
     }
 }
 
+/// Generator of `Tail's`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationTailsGenerator {
     size: u32,
@@ -306,6 +314,7 @@ pub trait RevocationTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError>;
 }
 
+/// Simple implementation of `RevocationTailsAccessor` that stores all tails as HashMap.
 #[derive(Debug, Clone)]
 pub struct SimpleTailsAccessor {
     tails: HashMap<u32, Tail>
@@ -1017,7 +1026,9 @@ mod test {
         let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
 
         let max_cred_num = 5;
-        let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+        let issuance_by_default =false;
+        let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
+            Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, issuance_by_default).unwrap();
 
         let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
@@ -1052,11 +1063,12 @@ mod test {
                                                &cred_priv_key,
                                                rev_idx,
                                                max_cred_num,
+                                               issuance_by_default,
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        let witness = Witness::new(rev_idx, max_cred_num, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        let witness = Witness::new(rev_idx, max_cred_num, &rev_reg_delta.unwrap(), &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut cred_signature,
                                              &cred_values,

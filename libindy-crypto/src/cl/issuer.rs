@@ -39,9 +39,10 @@ impl Issuer {
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
-    /// credential_schema_builder.add_attr("sex").unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    ///
     /// let (_cred_pub_key, _cred_priv_key, _cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
     /// ```
     pub fn new_credential_def(credential_schema: &CredentialSchema,
@@ -86,11 +87,15 @@ impl Issuer {
     /// ```
     /// use indy_crypto::cl::issuer::Issuer;
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
-    /// credential_schema_builder.add_attr("sex").unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
-    /// let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, true).unwrap();
-    /// let (_rev_key_pub, _rev_key_priv, _rev_reg, _rev_tails_generator) = Issuer::new_revocation_registry_def(&credential_pub_key, 100, false).unwrap();
+    ///
+    /// let (cred_pub_key, _cred_priv_key, _cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+    ///
+    /// let max_cred_num = 5;
+    /// let (_rev_key_pub, _rev_key_priv, _rev_reg, _rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+
     /// ```
     pub fn new_revocation_registry_def(credential_pub_key: &CredentialPublicKey,
                                        max_cred_num: u32,
@@ -160,6 +165,7 @@ impl Issuer {
     /// use indy_crypto::cl::new_nonce;
     /// use indy_crypto::cl::issuer::Issuer;
     /// use indy_crypto::cl::prover::Prover;
+    ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
@@ -248,32 +254,41 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
+    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
     /// use indy_crypto::cl::issuer::Issuer;
     /// use indy_crypto::cl::prover::Prover;
+    ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
-    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+    /// let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
     ///
     /// let max_cred_num = 5;
-    /// let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    /// let (_rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    ///
     /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
+    ///
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
-    /// let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-    ///      Prover::blind_master_secret(&credential_pub_key, &cred_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+    ///
+    /// let (blinded_master_secret, _master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+    ///     Prover::blind_master_secret(&cred_pub_key,
+    ///                                 &cred_key_correctness_proof,
+    ///                                 &master_secret,
+    ///                                 &master_secret_blinding_nonce).unwrap();
     ///
     /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
     /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    /// let credential_values = credential_values_builder.finalize().unwrap();
+    /// let cred_values = credential_values_builder.finalize().unwrap();
     ///
     /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
     /// let rev_idx = 1;
-    /// let (mut cred_signature, signature_correctness_proof, rev_reg_delta) =
+    /// let (_cred_signature, _signature_correctness_proof, _rev_reg_delta) =
     ///     Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
     ///                                        &blinded_master_secret,
     ///                                        &blinded_master_secret_correctness_proof,
@@ -282,11 +297,12 @@ impl Issuer {
     ///                                        &cred_values,
     ///                                        &cred_pub_key,
     ///                                        &cred_priv_key,
-    ///                                        Some(rev_idx),
-    ///                                        Some(max_cred_num),
-    ///                                        Some(&mut rev_reg),
-    ///                                        Some(&rev_key_priv),
-    ///                                        Some(&simple_tail_accessor)).unwrap();
+    ///                                        rev_idx,
+    ///                                        max_cred_num,
+    ///                                        false,
+    ///                                        &mut rev_reg,
+    ///                                        &rev_key_priv,
+    ///                                         &simple_tail_accessor).unwrap();
     /// ```
     pub fn sign_credential_with_revoc<RTA>(prover_id: &str,
                                            blinded_master_secret: &BlindedMasterSecret,
@@ -298,10 +314,11 @@ impl Issuer {
                                            credential_priv_key: &CredentialPrivateKey,
                                            rev_idx: u32,
                                            max_cred_num: u32,
+                                           issuance_by_default: bool,
                                            rev_reg: &mut RevocationRegistry,
                                            rev_key_priv: &RevocationKeyPrivate,
                                            rev_tails_accessor: &RTA)
-                                           -> Result<(CredentialSignature, SignatureCorrectnessProof, RevocationRegistryDelta),
+                                           -> Result<(CredentialSignature, SignatureCorrectnessProof, Option<RevocationRegistryDelta>),
                                                IndyCryptoError> where RTA: RevocationTailsAccessor {
         trace!("Issuer::sign_credential: >>> prover_id: {:?}, blinded_master_secret: {:?}, blinded_master_secret_correctness_proof: {:?},\
         master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
@@ -329,6 +346,7 @@ impl Issuer {
                                                                              credential_pub_key,
                                                                              credential_priv_key,
                                                                              max_cred_num,
+                                                                             issuance_by_default,
                                                                              rev_reg,
                                                                              rev_key_priv,
                                                                              rev_tails_accessor)?;
@@ -358,47 +376,56 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
+    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
     /// use indy_crypto::cl::issuer::Issuer;
     /// use indy_crypto::cl::prover::Prover;
+    ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
     /// let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
     ///
     /// let max_cred_num = 5;
-    /// let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    /// let (_rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
     ///
     /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
+    ///
     /// let master_secret_blinding_nonce = new_nonce().unwrap();
-    /// let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-    /// Prover::blind_master_secret(&pub_key, &key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+    ///
+    /// let (blinded_master_secret, _master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+    ///     Prover::blind_master_secret(&cred_pub_key,
+    ///                                 &cred_key_correctness_proof,
+    ///                                 &master_secret,
+    ///                                 &master_secret_blinding_nonce).unwrap();
     ///
     /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
     /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-    /// let credential_values = credential_values_builder.finalize().unwrap();
+    /// let cred_values = credential_values_builder.finalize().unwrap();
     ///
     /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
     /// let rev_idx = 1;
-    /// let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
-    ///     Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-    ///     blinded_master_secret,
-    ///     &blinded_master_secret_correctness_proof,
-    ///     &master_secret_blinding_nonce,
-    ///     &credential_issuance_nonce,
-    ///     &credential_values,
-    ///     &cred_pub_key,
-    ///     &cred_priv_key,
-    ///     Some(rev_idx),
-    ///     Some(max_cred_num),
-    ///     Some(&mut rev_reg),
-    ///     Some(&rev_key_priv),
-    ///     Some(Box::new(simple_tail_accessor.clone()))).unwrap();
-    /// Issuer::revoke_credential(&mut rev_reg_pub, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
+    /// let (_cred_signature, _signature_correctness_proof, _rev_reg_delta) =
+    ///     Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                        &blinded_master_secret,
+    ///                                        &blinded_master_secret_correctness_proof,
+    ///                                        &master_secret_blinding_nonce,
+    ///                                        &credential_issuance_nonce,
+    ///                                        &cred_values,
+    ///                                        &cred_pub_key,
+    ///                                        &cred_priv_key,
+    ///                                        rev_idx,
+    ///                                        max_cred_num,
+    ///                                        false,
+    ///                                        &mut rev_reg,
+    ///                                        &rev_key_priv,
+    ///                                         &simple_tail_accessor).unwrap();
+    /// Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
     /// ```
     pub fn revoke_credential<RTA>(rev_reg: &mut RevocationRegistry,
                                   max_cred_num: u32,
@@ -572,7 +599,7 @@ impl Issuer {
         let mut accum = Accumulator::new_inf()?;
 
         if issuance_by_default {
-            for i in 0..max_cred_num {
+            for i in 1..max_cred_num + 1 {
                 let index = max_cred_num + 1 - i;
                 accum = accum.add(&Tail::new_tail(index, &cred_rev_pub_key.g_dash, &rev_key_priv.gamma)?)?;
             }
@@ -786,13 +813,14 @@ impl Issuer {
                                       cred_pub_key: &CredentialPublicKey,
                                       cred_priv_key: &CredentialPrivateKey,
                                       max_cred_num: u32,
+                                      issuance_by_default: bool,
                                       rev_reg: &mut RevocationRegistry,
                                       rev_key_priv: &RevocationKeyPrivate,
                                       rev_tails_accessor: &RevocationTailsAccessor)
-                                      -> Result<(NonRevocationCredentialSignature, RevocationRegistryDelta), IndyCryptoError> {
+                                      -> Result<(NonRevocationCredentialSignature, Option<RevocationRegistryDelta>), IndyCryptoError> {
         trace!("Issuer::_new_non_revocation_credential: >>> rev_idx: {:?}, cred_context: {:?}, blinded_ms: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, \
-        max_cred_num: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
-               rev_idx, cred_context, blinded_ms, cred_pub_key, cred_priv_key, max_cred_num, rev_reg, rev_key_priv);
+        max_cred_num: {:?}, issuance_by_default: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
+               rev_idx, cred_context, blinded_ms, cred_pub_key, cred_priv_key, max_cred_num, issuance_by_default, rev_reg, rev_key_priv);
 
         let ur = blinded_ms.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secret.")))?;
@@ -835,20 +863,24 @@ impl Issuer {
 
         let index = max_cred_num + 1 - rev_idx;
 
-        let prev_acc = rev_reg.accum.clone();
+        let rev_reg_delta = if issuance_by_default {
+            None
+        } else {
+            let prev_acc = rev_reg.accum.clone();
 
-        rev_tails_accessor.access_tail(index, &mut |tail| {
-            rev_reg.accum = rev_reg.accum.add(tail).unwrap();
-        })?;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                rev_reg.accum = rev_reg.accum.add(tail).unwrap();
+            })?;
 
-        let mut issued = HashSet::new();
-        issued.insert(rev_idx);
+            let mut issued = HashSet::new();
+            issued.insert(rev_idx);
 
-        let rev_reg_delta = RevocationRegistryDelta {
-            prev_accum: Some(prev_acc),
-            accum: rev_reg.accum.clone(),
-            issued: Some(issued),
-            revoked: None
+            Some(RevocationRegistryDelta {
+                prev_accum: Some(prev_acc),
+                accum: rev_reg.accum.clone(),
+                issued: Some(issued),
+                revoked: None
+            })
         };
 
         let witness_signature = WitnessSignature {
@@ -987,13 +1019,13 @@ mod tests {
 
         let credential_issuance_nonce = new_nonce().unwrap();
         let (credential_signature_signature, signature_correctness_proof) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                                                                       &blinded_master_secret,
-                                                                                                       &blinded_master_secret_correctness_proof,
-                                                                                                       &blinded_master_secret_nonce,
-                                                                                                       &credential_issuance_nonce,
-                                                                                                       &mocks::credential_values(),
-                                                                                                       &pub_key,
-                                                                                                       &priv_key).unwrap();
+                                                                                                    &blinded_master_secret,
+                                                                                                    &blinded_master_secret_correctness_proof,
+                                                                                                    &blinded_master_secret_nonce,
+                                                                                                    &credential_issuance_nonce,
+                                                                                                    &mocks::credential_values(),
+                                                                                                    &pub_key,
+                                                                                                    &priv_key).unwrap();
 
         assert_eq!(mocks::primary_credential(), credential_signature_signature.p_credential);
         assert_eq!(mocks::signature_correctness_proof(), signature_correctness_proof);
@@ -1081,8 +1113,8 @@ pub mod mocks {
 
     pub fn primary_credential() -> PrimaryCredentialSignature {
         PrimaryCredentialSignature {
-            m_2: BigNumber::from_dec("94880167908247457149699082277807545911629132893821703817366687134445318249228").unwrap(),
-            a: BigNumber::from_dec("49132363239670159787093110938226673449134304271682974269447432344742116194321299671237726890946751467604148940160960878389315018748968369324920041829812940290495892617484508167397279335797727252561964527234608788562556758908905751101202717778202353145195614091112566435036522962919148975492906117295892318112254557428194748194500923814804029097083178321689709119206691962548916694618289798605008896501236499585406286135857829085917853488040591522806635137841948126557076578432458560145981983607545219636425132731496278118460851115172092828609386003425340146394948070616734134255308348098680856366416432858457119085389").unwrap(),
+            m_2: BigNumber::from_dec("79198861930494722247098854124679815411215565468368019592091735771996515839812").unwrap(),
+            a: BigNumber::from_dec("2015509093129106237691981433225679632774255267161330031955213488684080337772589661796272396005429999572765056564502896756584978722526495279899984542746563590582561692675025757898334695221229933231304404189890550211532764993559283672307725561940191641851157625662904809711682211053992968131340525941580045401951996762335579069985811415532641838234302256559149674721325965693307667573037324373216732925398827597304601333904583644212982848121263412244201228166100334275374295995076714802844245430263875269888443704086843131227874627682947957080489690366818166145882129549310321236789991170607896175695451648282033539854").unwrap(),
             e: BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742930201588264091397308910346117473868881").unwrap(),
             v: BigNumber::from_dec("6620937836014079781509458870800001917950459774302786434315639456568768602266735503527631640833663968617512880802104566048179854406925811731340920442625764155409951969854303612644125623549271204625894424804352003689903192473464433927658013251120302922648839652919662117216521257876025436906282750361355336367533874548955283776610021309110505377492806210342214471251451681722267655419075635703240258044336607001296052867746675049720589092355650996711033859489737240617860392914314205277920274997312351322125481593636904917159990500837822414761512231315313922792934655437808723096823124948039695324591344458785345326611693414625458359651738188933757751726392220092781991665483583988703321457480411992304516676385323318285847376271589157730040526123521479652961899368891914982347831632139045838008837541334927738208491424027").unwrap()
         }
@@ -1090,8 +1122,8 @@ pub mod mocks {
 
     pub fn signature_correctness_proof() -> SignatureCorrectnessProof {
         SignatureCorrectnessProof {
-            se: BigNumber::from_dec("5948721638016657342553043832277547138916625995334988143193726383045040080114245111830012515502376217534533823157200430938865198008194336928644100780836988678362523891357113774828493693892623671600480053576174665885945911592861439698183409843005858841481227243488180593132913461369497236291458744136063133555667400952744088848911423416590294057045242646717903201309582468432469730126344768442875599266429868437398013339265026745130532896629251317904245293696544653983833081736590520721970718876717171207383154687889532022476531761510279893174123893914693242406314188531212921769848193615396696942896709356592932313517").unwrap(),
-            c: BigNumber::from_dec("79405085685392987031892708995445862752420654339967480891776118177560815923821").unwrap(),
+            se: BigNumber::from_dec("2867182988873870181255627349227831046791694164118209127116572638244509572025021916261962130207547328863447729702686926496508433257557339124176299613296377411163151406688199246232396418861179359172020811052147235396534737968322518954078287279318544461509931619642909378833468508005205055106687589375873270523669653723490309768542021891720464501437671542685518550495957409788172739863568679796589846789698040159530816920085324699754124124222177973692274292167815374272822640605758257682733226162790101966911029062233704666526794753275670414075670096002626035474717637906458773215726535442042214417461860636241718792853").unwrap(),
+            c: BigNumber::from_dec("38689741549120078408010091653015945512217729474158229796203853185078442030991").unwrap(),
         }
     }
 
