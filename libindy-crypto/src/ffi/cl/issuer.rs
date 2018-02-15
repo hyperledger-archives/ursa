@@ -9,6 +9,7 @@ use utils::json::{JsonEncodable, JsonDecodable};
 use libc::c_char;
 
 use std::os::raw::c_void;
+use std::ptr::null;
 
 /// Creates and returns issuer keys (public and private) entities.
 ///
@@ -657,98 +658,172 @@ pub extern fn indy_crypto_cl_revocation_registry_tails_generator_free(rev_tails_
     res
 }
 
-/// Sign given claim values instance.
-///
-/// Note that claim signature deallocation must be performed by
-/// calling indy_crypto_cl_claim_signature_free.
-/// Note that  signature correctness proof deallocation must be performed by
-/// calling indy_crypto_cl_signature_correctness_proof_free.
+/// Sign given credential values with primary only part.
 ///
 /// # Arguments
-/// * `prover_id` - Reference that contains prover identifier as null terminated string.
-/// * `blinded_ms` - Reference that contains blinded master secret instance pointer.
-/// * `blinded_master_secret_correctness_proof` - Reference that contains blinded master secret correctness proof instance pointer.
-/// * `master_secret_blinding_nonce` - Reference that contains master secret blinding nonce instance pointer.
-/// * `claim_issuance_nonce` - Reference that contains claim issuance nonce instance pointer.
-/// * `claim_values` - Reference that contains claim values instance pointer.
-/// * `issuer_pub_key` - Reference that contains issuer public key instance pointer.
-/// * `issuer_priv_key` - Reference that contains issuer private key instance pointer.
-/// * `rev_idx` - (Optional) User index in revocation accumulator. Required for non-revocation claim_signature part generation.
-/// * `rev_reg_def_pub_p` - (Optional) Reference that contains revocation registry public instance pointer.
-/// * `rev_reg_priv` - (Optional) Reference that contains revocation registry private instance pointer.
-/// * `claim_signature_p` - Reference that will contain claim signature instance pointer.
-/// * `claim_signature_correctness_proof_p` - Reference that will contain claim signature correctness proof instance pointer.
+/// * `prover_id` - Prover identifier.
+/// * `blinded_master_secret` - Blinded master secret.
+/// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
+/// * `master_secret_blinding_nonce` - Nonce used for blinded_master_secret_correctness_proof verification.
+/// * `credential_issuance_nonce` - Nonce used for creating of signature correctness proof.
+/// * `credential_values` - Claim values to be signed.
+/// * `credential_pub_key` - credential public key.
+/// * `credential_priv_key` - credential private key.
+/// * `credential_signature_p` - Reference that will contain credential signature instance pointer.
+/// * `credential_signature_correctness_proof_p` - Reference that will contain credential signature correctness proof instance pointer.
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn indy_crypto_cl_issuer_sign_claim(prover_id: *const c_char,
-                                               blinded_ms: *const c_void,
-                                               blinded_master_secret_correctness_proof: *const c_void,
-                                               master_secret_blinding_nonce: *const c_void,
-                                               claim_issuance_nonce: *const c_void,
-                                               claim_values: *const c_void,
-                                               issuer_pub_key: *const c_void,
-                                               issuer_priv_key: *const c_void,
-                                               rev_idx: i32,
-                                               rev_reg_def_pub: *const c_void,
-                                               rev_reg_priv: *const c_void,
-                                               claim_signature_p: *mut *const c_void,
-                                               claim_signature_correctness_proof_p: *mut *const c_void) -> ErrorCode {
-    //    trace!("indy_crypto_cl_issuer_sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, \
-    //    master_secret_blinding_nonce: {:?}, claim_issuance_nonce: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, \
-    //    rev_idx: {:?}, rev_reg_def_pub: {:?}, rev_reg_priv: {:?}, claim_signature_p: {:?}, claim_signature_correctness_proof_p: {:?}",
-    //           prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, claim_issuance_nonce,
-    //           claim_values, issuer_pub_key, issuer_priv_key, rev_idx, rev_reg_def_pub, rev_reg_priv, claim_signature_p, claim_signature_correctness_proof_p);
-    //
-    //    check_useful_c_str!(prover_id, ErrorCode::CommonInvalidParam1);
-    //    check_useful_c_reference!(blinded_ms, BlindedMasterSecret, ErrorCode::CommonInvalidParam2);
-    //    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretProofCorrectness, ErrorCode::CommonInvalidParam3);
-    //    check_useful_c_reference!(master_secret_blinding_nonce, Nonce, ErrorCode::CommonInvalidParam4);
-    //    check_useful_c_reference!(claim_issuance_nonce, Nonce, ErrorCode::CommonInvalidParam5);
-    //    check_useful_c_reference!(claim_values, ClaimValues, ErrorCode::CommonInvalidParam6);
-    //    check_useful_c_reference!(issuer_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
-    //    check_useful_c_reference!(issuer_priv_key, CredentialPrivateKey, ErrorCode::CommonInvalidParam8);
-    //    check_useful_opt_c_reference!(rev_reg_priv, RevocationRegistryDefPrivate);
-    //    check_useful_c_ptr!(claim_signature_p, ErrorCode::CommonInvalidParam10);
-    //    check_useful_c_ptr!(claim_signature_correctness_proof_p, ErrorCode::CommonInvalidParam11);
-    //
-    //    let rev_idx = if rev_idx != -1 { Some(rev_idx as u32) } else { None };
-    //
-    //    let mut rev_reg_def_pub_p = if rev_reg_def_pub.is_null() { None } else {
-    //        Some(unsafe { Box::from_raw(rev_reg_def_pub as *mut RevocationRegistryDefPublic) })
-    //    };
-    //
-    //    trace!("indy_crypto_cl_issuer_sign_claim: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, master_secret_blinding_nonce: {:?}, \
-    //    claim_issuance_nonce: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, issuer_priv_key: {:?}, rev_idx: {:?}, rev_reg_def_pub_p: {:?}, rev_reg_priv: {:?}",
-    //           prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, claim_issuance_nonce,
-    //           claim_values, issuer_pub_key, issuer_priv_key, rev_idx, rev_reg_def_pub_p, rev_reg_priv);
-    //
-    //    let res = match Issuer::sign_claim(&prover_id,
-    //                                       &blinded_ms,
-    //                                       &blinded_master_secret_correctness_proof,
-    //                                       &master_secret_blinding_nonce,
-    //                                       &claim_issuance_nonce,
-    //                                       &claim_values,
-    //                                       &issuer_pub_key,
-    //                                       &issuer_priv_key,
-    //                                       rev_idx,
-    //                                       rev_reg_def_pub_p.as_mut().map(Box::as_mut),
-    //                                       rev_reg_priv) {
-    //        Ok((claim_signature, claim_signature_correctness_proof)) => {
-    //            trace!("indy_crypto_cl_issuer_sign_claim: claim_signature: {:?}, claim_signature_correctness_proof: {:?}",
-    //                   claim_signature, claim_signature_correctness_proof);
-    //            unsafe {
-    //                rev_reg_def_pub_p.map(Box::into_raw);
-    //                *claim_signature_p = Box::into_raw(Box::new(claim_signature)) as *const c_void;
-    //                *claim_signature_correctness_proof_p = Box::into_raw(Box::new(claim_signature_correctness_proof)) as *const c_void;
-    //                trace!("indy_crypto_cl_issuer_sign_claim: *claim_signature_p: {:?}, *claim_signature_correctness_proof_p: {:?}",
-    //                       *claim_signature_p, *claim_signature_correctness_proof_p);
-    //            }
-    //            ErrorCode::Success
-    //        }
-    //        Err(err) => err.to_error_code()
-    //    };
-    //
-    //    trace!("indy_crypto_cl_issuer_sign_claim: <<< res: {:?}", res);
+pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
+                                                    blinded_ms: *const c_void,
+                                                    blinded_master_secret_correctness_proof: *const c_void,
+                                                    master_secret_blinding_nonce: *const c_void,
+                                                    credential_issuance_nonce: *const c_void,
+                                                    credential_values: *const c_void,
+                                                    credential_pub_key: *const c_void,
+                                                    credential_priv_key: *const c_void,
+                                                    credential_signature_p: *mut *const c_void,
+                                                    credential_signature_correctness_proof_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, \
+        master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
+        credential_signature_p: {:?}, credential_signature_correctness_proof_p: {:?}",
+           prover_id, blinded_ms, blinded_master_secret_correctness_proof,
+           master_secret_blinding_nonce, credential_issuance_nonce, credential_values, credential_pub_key, credential_priv_key,
+           credential_signature_p, credential_signature_correctness_proof_p);
+
+    check_useful_c_str!(prover_id, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(blinded_ms, BlindedMasterSecret, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretCorrectnessProof, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(master_secret_blinding_nonce, Nonce, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(credential_issuance_nonce, Nonce, ErrorCode::CommonInvalidParam5);
+    check_useful_c_reference!(credential_values, CredentialValues, ErrorCode::CommonInvalidParam6);
+    check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
+    check_useful_c_reference!(credential_priv_key, CredentialPrivateKey, ErrorCode::CommonInvalidParam8);
+    check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidParam10);
+    check_useful_c_ptr!(credential_signature_correctness_proof_p, ErrorCode::CommonInvalidParam11);
+
+    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, master_secret_blinding_nonce: {:?}, \
+        credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}",
+           prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, credential_issuance_nonce,
+           credential_values, credential_pub_key, credential_priv_key);
+
+    let res = match Issuer::sign_credential(&prover_id,
+                                            &blinded_ms,
+                                            &blinded_master_secret_correctness_proof,
+                                            &master_secret_blinding_nonce,
+                                            &credential_issuance_nonce,
+                                            &credential_values,
+                                            &credential_pub_key,
+                                            &credential_priv_key) {
+        Ok((credential_signature, credential_signature_correctness_proof)) => {
+            trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
+                   credential_signature, credential_signature_correctness_proof);
+            unsafe {
+                *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
+                *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
+                trace!("indy_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
+                       *credential_signature_p, *credential_signature_correctness_proof_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
+    ErrorCode::Success
+}
+
+/// Sign given credential values with both primary and revocation parts.
+///
+/// # Arguments
+/// * `prover_id` - Prover identifier.
+/// * `blinded_master_secret` - Blinded master secret.
+/// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
+/// * `master_secret_blinding_nonce` - Nonce used for blinded_master_secret_correctness_proof verification.
+/// * `credential_issuance_nonce` - Nonce used for creating of signature correctness proof.
+/// * `credential_values` - Claim values to be signed.
+/// * `credential_pub_key` - credential public key.
+/// * `credential_priv_key` - credential private key.
+/// * `rev_idx` - User index in revocation accumulator. Required for non-revocation credential_signature part generation.
+/// * `max_cred_num` - Max credential number in generated registry.
+/// * `rev_reg` - Revocation registry.
+/// * `rev_key_priv` - Revocation registry private key.
+/// * `rev_tails_accessor` - Revocation registry tails accessor.
+/// * `credential_signature_p` - Reference that will contain credential signature instance pointer.
+/// * `credential_signature_correctness_proof_p` - Reference that will contain credential signature correctness proof instance pointer.
+#[no_mangle]
+pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const c_char,
+                                                               blinded_ms: *const c_void,
+                                                               blinded_master_secret_correctness_proof: *const c_void,
+                                                               master_secret_blinding_nonce: *const c_void,
+                                                               credential_issuance_nonce: *const c_void,
+                                                               credential_values: *const c_void,
+                                                               credential_pub_key: *const c_void,
+                                                               credential_priv_key: *const c_void,
+                                                               rev_idx: u32,
+                                                               max_cred_num: u32,
+                                                               issuance_by_default: bool,
+                                                               rev_reg: *const c_void,
+                                                               rev_key_priv: *const c_void,
+                                                               ctx_tails: *const c_void,
+                                                               take_tail: FFITailTake,
+                                                               put_tail: FFITailPut,
+                                                               credential_signature_p: *mut *const c_void,
+                                                               credential_signature_correctness_proof_p: *mut *const c_void,
+                                                               revocation_registry_delta_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, \
+        master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
+        rev_idx: {:?}, rev_reg_def_pub: {:?}, rev_reg_priv: {:?}, credential_signature_p: {:?}, credential_signature_correctness_proof_p: {:?}",
+           prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, credential_issuance_nonce,
+           credential_values, credential_pub_key, credential_priv_key, rev_idx, rev_reg, rev_key_priv, credential_signature_p, credential_signature_correctness_proof_p);
+
+    check_useful_c_str!(prover_id, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(blinded_ms, BlindedMasterSecret, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(blinded_master_secret_correctness_proof, BlindedMasterSecretCorrectnessProof, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(master_secret_blinding_nonce, Nonce, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(credential_issuance_nonce, Nonce, ErrorCode::CommonInvalidParam5);
+    check_useful_c_reference!(credential_values, CredentialValues, ErrorCode::CommonInvalidParam6);
+    check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
+    check_useful_c_reference!(credential_priv_key, CredentialPrivateKey, ErrorCode::CommonInvalidParam8);
+    check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam12);
+    check_useful_c_reference!(rev_key_priv, RevocationKeyPrivate, ErrorCode::CommonInvalidState); //TODO invalid param
+    check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidState); //TODO invalid param
+    check_useful_c_ptr!(credential_signature_correctness_proof_p, ErrorCode::CommonInvalidState); //TODO invalid param
+
+    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_ms: {:?}, blinded_master_secret_correctness_proof: {:?}, master_secret_blinding_nonce: {:?}, \
+        credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, rev_idx: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
+           prover_id, blinded_ms, blinded_master_secret_correctness_proof, master_secret_blinding_nonce, credential_issuance_nonce,
+           credential_values, credential_pub_key, credential_priv_key, rev_idx, rev_reg, rev_key_priv);
+
+    let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
+    let res = match Issuer::sign_credential_with_revoc(&prover_id,
+                                                       &blinded_ms,
+                                                       &blinded_master_secret_correctness_proof,
+                                                       &master_secret_blinding_nonce,
+                                                       &credential_issuance_nonce,
+                                                       &credential_values,
+                                                       &credential_pub_key,
+                                                       &credential_priv_key,
+                                                       rev_idx,
+                                                       max_cred_num,
+                                                       issuance_by_default,
+                                                       rev_reg,
+                                                       rev_key_priv,
+                                                       &rta) {
+        Ok((credential_signature, credential_signature_correctness_proof, delta)) => {
+            trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
+                   credential_signature, credential_signature_correctness_proof);
+            unsafe {
+                *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
+                *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
+                *revocation_registry_delta_p = if let Some(delta) = delta { Box::into_raw(Box::new(delta)) as *const c_void } else { null() };
+                trace!("indy_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
+                       *credential_signature_p, *credential_signature_correctness_proof_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
