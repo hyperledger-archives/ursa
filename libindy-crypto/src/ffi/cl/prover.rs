@@ -537,57 +537,47 @@ pub extern fn indy_crypto_cl_prover_new_proof_builder(proof_builder_p: *mut *con
     res
 }
 
-/// Add sub proof request to proof builder which will be used fo building of proof.
-/// Part of proof request related to a particular schema-key.
-///
-/// # Arguments
-/// * `proof_builder` - Reference that contain proof builder instance pointer.
-/// * `key_id` - Reference that contains unique claim identifier.
-/// * `sub_proof_request` - Reference that contain requested attributes and predicates instance pointer.
-/// * `claim_schema` - Reference that contain claim schema instance pointer.
-/// * `claim_signature` - Reference that contain claim signature instance pointer.
-/// * `claim_values` - Reference that contain claim values instance pointer.
-/// * `issuer_pub_key` - Reference that contain issuer public key instance pointer.
-/// * `rev_reg_pub` - (Optional) Reference that contain public revocation registry instance pointer.
 #[no_mangle]
-#[allow(unused_variables)]
 pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: *const c_void,
                                                                  key_id: *const c_char,
                                                                  sub_proof_request: *const c_void,
-                                                                 claim_schema: *const c_void,
-                                                                 claim_signature: *const c_void,
-                                                                 claim_values: *const c_void,
-                                                                 issuer_pub_key: *const c_void,
-                                                                 rev_reg_pub: *const c_void) -> ErrorCode {
-    //    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, claim_schema: {:?}, \
-    //            claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
-    //           proof_builder, key_id, sub_proof_request, claim_schema, claim_signature, claim_values, issuer_pub_key, rev_reg_pub);
-    //
-    //    check_useful_mut_c_reference!(proof_builder, ProofBuilder, ErrorCode::CommonInvalidParam1);
-    //    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
-    //    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
-    //    check_useful_c_reference!(claim_schema, ClaimSchema, ErrorCode::CommonInvalidParam4);
-    //    check_useful_c_reference!(claim_signature, ClaimSignature, ErrorCode::CommonInvalidParam5);
-    //    check_useful_c_reference!(claim_values, ClaimValues, ErrorCode::CommonInvalidParam6);
-    //    check_useful_c_reference!(issuer_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
-    //    check_useful_opt_c_reference!(rev_reg_pub, RevocationRegistryDefPublic);
-    //
-    //    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: entities: proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, claim_schema: {:?}, \
-    //            claim_signature: {:?}, claim_values: {:?}, issuer_pub_key: {:?}, rev_reg_pub: {:?}",
-    //           proof_builder, key_id, sub_proof_request, claim_schema, claim_signature, claim_values, issuer_pub_key, rev_reg_pub);
-    //
-    //    let res = match proof_builder.add_sub_proof_request(&key_id,
-    //                                                        sub_proof_request,
-    //                                                        claim_schema,
-    //                                                        claim_signature,
-    //                                                        claim_values,
-    //                                                        issuer_pub_key,
-    //                                                        rev_reg_pub) {
-    //        Ok(()) => ErrorCode::Success,
-    //        Err(err) => err.to_error_code()
-    //    };
-    //
-    //    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: <<< res: {:?}", res);
+                                                                 credential_schema: *const c_void,
+                                                                 credential_signature: *const c_void,
+                                                                 credential_values: *const c_void,
+                                                                 credential_pub_key: *const c_void,
+                                                                 rev_reg: *const c_void,
+                                                                 witness: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
+                credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, rev_reg: {:?}, witness: {:?}",
+           proof_builder, key_id, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
+
+    check_useful_mut_c_reference!(proof_builder, ProofBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(credential_schema, CredentialSchema, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam5);
+    check_useful_c_reference!(credential_values, CredentialValues, ErrorCode::CommonInvalidParam6);
+    check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
+    check_useful_opt_c_reference!(rev_reg, RevocationRegistry);
+    check_useful_opt_c_reference!(witness, Witness);
+
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: entities: proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
+                credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, rev_reg: {:?}, witness: {:?}",
+           proof_builder, key_id, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
+
+    let res = match proof_builder.add_sub_proof_request(&key_id,
+                                                        sub_proof_request,
+                                                        credential_schema,
+                                                        credential_signature,
+                                                        credential_values,
+                                                        credential_pub_key,
+                                                        rev_reg,
+                                                        witness) {
+        Ok(()) => ErrorCode::Success,
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
