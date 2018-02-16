@@ -1094,17 +1094,20 @@ pub mod mocks {
 
 
     pub struct FFISimpleTailStorage {
-        tails: Box<Vec<Box<Tail>>>
+        tails: Box<Vec<*const c_void>>
     }
 
     impl FFISimpleTailStorage {
-        pub fn new(rtg: *const c_void) -> Self {
-            let rev_tails_generator: &mut RevocationTailsGenerator = unsafe { &mut *(rtg as *mut RevocationTailsGenerator) };
-
+        pub fn new(rev_tails_generator: *const c_void) -> Self {
             let mut tails = Vec::new();
-            for _ in 0..rev_tails_generator.count() {
-                let tail = rev_tails_generator.next().unwrap();
-                tails.push(Box::new(tail));
+            let mut cnt = 0u32;
+            let res = indy_crypto_cl_tails_generator_count(rev_tails_generator, &mut cnt);
+            assert_eq!(res, ErrorCode::Success);
+            for _ in 0..cnt {
+                let mut tail = ptr::null();
+                let res = indy_crypto_cl_tails_generator_next(rev_tails_generator, &mut tail);
+                assert_eq!(res, ErrorCode::Success);
+                tails.push(tail);
             }
             Self {
                 tails: Box::new(tails)
@@ -1112,7 +1115,7 @@ pub mod mocks {
         }
 
         pub fn get_ctx(&self) -> *const c_void {
-            let ctx: *const Vec<Box<Tail>> = &*self.tails;
+            let ctx: *const Vec<*const c_void> = &*self.tails;
             ctx as *const c_void
         }
 
@@ -1123,12 +1126,11 @@ pub mod mocks {
         pub extern "C" fn tail_take(ctx: *const c_void,
                                     idx: u32,
                                     tail_p: *mut *const c_void) -> ErrorCode {
-            let tails: &Vec<Box<Tail>> = unsafe { &*(ctx as *const Vec<Box<Tail>>) };
+            let tails: &Vec<*const c_void> = unsafe { &*(ctx as *const Vec<*const c_void>) };
 
-            let tail: &Box<Tail> = tails.get(idx as usize).unwrap();
-            let tail: *const Tail = &**tail;
+            let tail: *const c_void = *tails.get(idx as usize).unwrap();
 
-            unsafe { *tail_p = tail as *const c_void };
+            unsafe { *tail_p = tail };
 
             ErrorCode::Success
         }
