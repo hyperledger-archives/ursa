@@ -456,6 +456,97 @@ impl Issuer {
         Ok(rev_reg_delta)
     }
 
+    /// Recovery a credential by a rev_idx in a given revocation registry
+    ///
+    /// # Arguments
+    /// * `rev_reg` - Revocation registry.
+    /// * `max_cred_num` - (Optional) Max credential number in generated registry.
+    ///  * rev_idx` - index of the user in the accumulator
+    /// * `rev_tails_accessor` - (Optional) Revocation registry tails accessor.
+    ///
+    /// # Example
+    /// ```
+    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
+    /// use indy_crypto::cl::issuer::Issuer;
+    /// use indy_crypto::cl::prover::Prover;
+    ///
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
+    /// credential_schema_builder.add_attr("sex").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    ///
+    /// let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+    ///
+    /// let max_cred_num = 5;
+    /// let (_rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    ///
+    /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
+    ///
+    /// let master_secret = Prover::new_master_secret().unwrap();
+    ///
+    /// let master_secret_blinding_nonce = new_nonce().unwrap();
+    ///
+    /// let (blinded_master_secret, _master_secret_blinding_data, blinded_master_secret_correctness_proof) =
+    ///     Prover::blind_master_secret(&cred_pub_key,
+    ///                                 &cred_key_correctness_proof,
+    ///                                 &master_secret,
+    ///                                 &master_secret_blinding_nonce).unwrap();
+    ///
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
+    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// let cred_values = credential_values_builder.finalize().unwrap();
+    ///
+    /// let credential_issuance_nonce = new_nonce().unwrap();
+    ///
+    /// let rev_idx = 1;
+    /// let (_cred_signature, _signature_correctness_proof, _rev_reg_delta) =
+    ///     Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                        &blinded_master_secret,
+    ///                                        &blinded_master_secret_correctness_proof,
+    ///                                        &master_secret_blinding_nonce,
+    ///                                        &credential_issuance_nonce,
+    ///                                        &cred_values,
+    ///                                        &cred_pub_key,
+    ///                                        &cred_priv_key,
+    ///                                        rev_idx,
+    ///                                        max_cred_num,
+    ///                                        false,
+    ///                                        &mut rev_reg,
+    ///                                        &rev_key_priv,
+    ///                                         &simple_tail_accessor).unwrap();
+    /// Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
+    /// Issuer::recovery_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
+    /// ```
+    pub fn recovery_credential<RTA>(rev_reg: &mut RevocationRegistry,
+                                    max_cred_num: u32,
+                                    rev_idx: u32,
+                                    rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, IndyCryptoError> where RTA: RevocationTailsAccessor {
+        trace!("Issuer::recovery_credential: >>> rev_reg: {:?}, rev_idx: {:?}", rev_reg, rev_idx);
+
+        let prev_accum = rev_reg.accum.clone();
+
+        let index = max_cred_num + 1 - rev_idx;
+
+        rev_tails_accessor.access_tail(index, &mut |tail| {
+            rev_reg.accum = rev_reg.accum.add(tail).unwrap();
+        })?;
+
+        let mut issued = HashSet::new();
+        issued.insert(rev_idx);
+
+        let rev_reg_delta = RevocationRegistryDelta {
+            prev_accum: Some(prev_accum),
+            accum: rev_reg.accum.clone(),
+            issued,
+            revoked: HashSet::new()
+        };
+
+        trace!("Issuer::recovery_credential: <<< rev_reg_delta: {:?}", rev_reg_delta);
+
+        Ok(rev_reg_delta)
+    }
+
     fn _new_credential_primary_keys(credential_schema: &CredentialSchema) -> Result<(CredentialPrimaryPublicKey,
                                                                                      CredentialPrimaryPrivateKey,
                                                                                      CredentialPrimaryPublicKeyMetadata), IndyCryptoError> {

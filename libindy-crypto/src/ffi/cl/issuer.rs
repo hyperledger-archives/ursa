@@ -1193,6 +1193,43 @@ pub extern fn indy_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
     ErrorCode::Success
 }
 
+/// Recovery a credential by a rev_idx in a given revocation registry
+///
+/// # Arguments
+/// * `rev_reg` - Reference that contain revocation registry instance pointer.
+///  * rev_idx` - index of the user in the accumulator
+#[no_mangle]
+#[allow(unused_variables)]
+pub extern fn indy_crypto_cl_issuer_recovery_credential(rev_reg: *const c_void,
+                                                        max_cred_num: u32,
+                                                        rev_idx: u32,
+                                                        ctx_tails: *const c_void,
+                                                        take_tail: FFITailTake,
+                                                        put_tail: FFITailPut,
+                                                        rev_reg_delta_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_issuer_recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, \
+    put_tail {:?}, rev_reg_delta_p {:?}", rev_reg, max_cred_num, rev_idx, ctx_tails, take_tail, put_tail, rev_reg_delta_p);
+
+    check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
+
+    trace!("indy_crypto_cl_issuer_recovery_credential: entities: rev_reg: {:?}", rev_reg);
+
+    let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
+    let res = match Issuer::recovery_credential(rev_reg, max_cred_num, rev_idx, &rta) {
+        Ok(rev_reg_delta) => {
+            unsafe {
+                *rev_reg_delta_p = Box::into_raw(Box::new(rev_reg_delta)) as *const c_void;
+                trace!("indy_crypto_cl_issuer_recovery_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_cl_issuer_recovery_credential: <<< res: {:?}", res);
+    ErrorCode::Success
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
