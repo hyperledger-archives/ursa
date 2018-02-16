@@ -447,8 +447,8 @@ impl Issuer {
         let rev_reg_delta = RevocationRegistryDelta {
             prev_accum: Some(prev_accum),
             accum: rev_reg.accum.clone(),
-            issued: None,
-            revoked: Some(revoked)
+            issued: HashSet::new(),
+            revoked
         };
 
         trace!("Issuer::revoke_credential: <<< rev_reg_delta: {:?}", rev_reg_delta);
@@ -878,8 +878,8 @@ impl Issuer {
             Some(RevocationRegistryDelta {
                 prev_accum: Some(prev_acc),
                 accum: rev_reg.accum.clone(),
-                issued: Some(issued),
-                revoked: None
+                issued,
+                revoked: HashSet::new()
             })
         };
 
@@ -1148,12 +1148,8 @@ pub mod mocks {
     }
 
     pub fn witness() -> Witness {
-        let mut v: HashSet<u32> = HashSet::new();
-        v.insert(1);
-
         Witness {
-            omega: PointG2::from_string("true 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0").unwrap(),
-            v
+            omega: PointG2::from_string("true 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0").unwrap()
         }
     }
 
@@ -1208,8 +1204,8 @@ pub mod mocks {
         RevocationRegistryDelta {
             prev_accum: None,
             accum: accumulator(),
-            issued: Some(issued),
-            revoked: None
+            issued,
+            revoked: HashSet::new()
         }
     }
 

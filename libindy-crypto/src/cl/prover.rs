@@ -1436,7 +1436,6 @@ mod tests {
                                              Some(&witness)).unwrap();
 
         // Populate accumulator
-        let mut v = rev_reg_delta.issued.clone().unwrap();
         for i in 2..n {
             let index = n + 1 - i;
 
@@ -1444,9 +1443,8 @@ mod tests {
                 rev_reg_delta.accum = rev_reg_delta.accum.sub(tail).unwrap();
             }).unwrap();
 
-            v.insert(i);
+            rev_reg_delta.issued.insert(i);
         }
-        rev_reg_delta.issued = Some(v);
 
         // Update NonRevoc Credential
 

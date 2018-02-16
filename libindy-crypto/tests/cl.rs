@@ -683,11 +683,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-        let mut full_delta = RegistryDelta::from_delta(&rev_reg_delta.unwrap());
+        let mut full_delta = rev_reg_delta.unwrap();
 
         let mut witness_1 = Witness::new(rev_idx_1,
                                          max_cred_num,
-                                         &full_delta.to_delta(),
+                                         &full_delta,
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
@@ -728,11 +728,11 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness_2 = Witness::new(rev_idx_2,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_2,
@@ -772,12 +772,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness_3 = Witness::new(rev_idx_3,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_3,
@@ -799,7 +798,7 @@ mod test {
 
         // Proving first credential
         // 9. Prover updates witness_1
-        witness_1.update(rev_idx_1, max_cred_num, &full_delta.to_delta(), &simple_tail_accessor).unwrap();
+        witness_1.update(rev_idx_1, max_cred_num, &full_delta, &simple_tail_accessor).unwrap();
 
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
@@ -867,12 +866,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        let mut full_delta = RegistryDelta::from_delta(&rev_reg_delta.unwrap());
+        let mut full_delta = rev_reg_delta.unwrap();
 
         let witness_1 = Witness::new(rev_idx_1,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
@@ -912,11 +910,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness_2 = Witness::new(rev_idx_2,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_2,
@@ -956,12 +954,12 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
+        let mut delta_for_third = RegistryDelta::from_rev_reg(&rev_reg, 0).to_delta();
 
         let mut witness_3 = Witness::new(rev_idx_3,
                                          max_cred_num,
-                                         &full_delta.to_delta(),
+                                         &full_delta,
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_3,
@@ -977,8 +975,8 @@ mod test {
 
         // 7. Issuer revokes first credential
         let rev_reg_delta = Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx_1, &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta);
+        full_delta.merge(&rev_reg_delta).unwrap();
+        delta_for_third.merge(&rev_reg_delta).unwrap();
 
         // 8. Verifier creates nonce
         let nonce = new_nonce().unwrap();
@@ -988,7 +986,7 @@ mod test {
 
         // Proving third credential
         // 10. Prover updates witness_1
-        witness_3.update(rev_idx_3, max_cred_num, &full_delta.to_delta(), &simple_tail_accessor).unwrap();
+        witness_3.update(rev_idx_3, max_cred_num, &delta_for_third, &simple_tail_accessor).unwrap();
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
@@ -1057,11 +1055,11 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        let mut full_delta = RegistryDelta::from_delta(&rev_reg_delta.unwrap());
+        let mut full_delta = rev_reg_delta.unwrap();
 
         let mut witness_1 = Witness::new(rev_idx_1,
                                          max_cred_num,
-                                         &full_delta.to_delta(),
+                                         &full_delta,
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
@@ -1101,12 +1099,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness_2 = Witness::new(rev_idx_2,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_2,
@@ -1146,12 +1143,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness_3 = Witness::new(rev_idx_3,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_3,
@@ -1167,8 +1163,7 @@ mod test {
 
         // 7. Issuer revokes third credential
         let rev_reg_delta = Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx_3, &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta);
+        full_delta.merge(&rev_reg_delta).unwrap();
 
         // 8. Verifier creates nonce
         let nonce = new_nonce().unwrap();
@@ -1178,7 +1173,7 @@ mod test {
 
         // Proving first credential
         // 10. Prover updates witness_1
-        witness_1.update(rev_idx_1, max_cred_num, &full_delta.to_delta(), &simple_tail_accessor).unwrap();
+        witness_1.update(rev_idx_1, max_cred_num, &full_delta, &simple_tail_accessor).unwrap();
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
@@ -1246,12 +1241,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        let mut full_delta = RegistryDelta::from_delta(&rev_reg_delta.unwrap());
+        let mut full_delta = rev_reg_delta.unwrap();
 
         let witness_1 = Witness::new(rev_idx_1,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
@@ -1291,12 +1285,12 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
+        let mut delta_for_second = RegistryDelta::from_rev_reg(&rev_reg, 0).to_delta();
 
         let mut witness_2 = Witness::new(rev_idx_2,
                                          max_cred_num,
-                                         &full_delta.to_delta(),
+                                         &full_delta,
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_2,
@@ -1336,12 +1330,13 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        let rev_reg_delta = rev_reg_delta.unwrap();
+        full_delta.merge(&rev_reg_delta).unwrap();
+        delta_for_second.merge(&rev_reg_delta).unwrap();
 
         let witness_3 = Witness::new(rev_idx_3,
                                      max_cred_num,
-                                     &full_delta.to_delta(),
+                                     &full_delta,
                                      &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_3,
@@ -1357,13 +1352,13 @@ mod test {
 
         // 7. Issuer revokes first credential
         let rev_reg_delta = Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx_1, &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta);
+        full_delta.merge(&rev_reg_delta).unwrap();
+        delta_for_second.merge(&rev_reg_delta).unwrap();
 
         // 8. Issuer revokes third credential
         let rev_reg_delta = Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx_3, &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta);
+        full_delta.merge(&rev_reg_delta).unwrap();
+        delta_for_second.merge(&rev_reg_delta).unwrap();
 
         // 9. Verifier creates nonce
         let nonce = new_nonce().unwrap();
@@ -1373,7 +1368,7 @@ mod test {
 
         // Proving second credential
         // 11. Prover updates witness_2
-        witness_2.update(rev_idx_2, max_cred_num, &full_delta.to_delta(), &simple_tail_accessor).unwrap();
+        witness_2.update(rev_idx_2, max_cred_num, &delta_for_second, &simple_tail_accessor).unwrap();
 
         // 12. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
@@ -1726,12 +1721,12 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        let mut full_delta = RegistryDelta::from_delta(&rev_reg_delta.unwrap());
+        let mut full_delta = rev_reg_delta.unwrap();
 
         // 9. Prover creates witness
         let witness = Witness::new(rev_idx,
                                    max_cred_num,
-                                   &full_delta.to_delta(),
+                                   &full_delta,
                                    &simple_tail_accessor).unwrap();
 
         // 10. Prover processes credential signature
@@ -1778,7 +1773,7 @@ mod test {
 
         // 15. Issuer revokes credential used for proof building
         let rev_reg_delta = Issuer::revoke_credential(&mut rev_reg, rev_idx, max_cred_num, &simple_tail_accessor).unwrap();
-        full_delta.update(&rev_reg_delta);
+        full_delta.merge(&rev_reg_delta).unwrap();
 
         // 16. Verifier verifies proof after revocation
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
@@ -1828,12 +1823,11 @@ mod test {
                                                &mut rev_reg,
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
-
-        full_delta.update(&rev_reg_delta.unwrap());
+        full_delta.merge(&rev_reg_delta.unwrap()).unwrap();
 
         let witness = Witness::new(rev_idx,
                                    max_cred_num,
-                                   &full_delta.to_delta(),
+                                   &full_delta,
                                    &simple_tail_accessor).unwrap();
 
         // 20. Prover processes new credential signature
@@ -2938,42 +2932,23 @@ mod helpers {
 struct RegistryDelta {
     prev_accum: Option<PointG2>,
     accum: PointG2,
-    issued: Option<HashSet<u32>>,
-    revoked: Option<HashSet<u32>>
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
+    issued: HashSet<u32>,
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
+    revoked: HashSet<u32>
 }
 
 impl RegistryDelta {
-    fn update(&mut self, new_rev_reg_delta: &RevocationRegistryDelta) {
-        let new_rev_reg_delta =
-            serde_json::from_str::<RegistryDelta>(&serde_json::to_string(&new_rev_reg_delta).unwrap()).unwrap();
-
-        self.prev_accum = new_rev_reg_delta.prev_accum.clone();
-        self.accum = new_rev_reg_delta.accum.clone();
-        self.revoked = None;
-
-        if let Some(issued) = new_rev_reg_delta.issued {
-            let current_issued = self.issued.clone().unwrap();
-            self.issued = Some(current_issued.union(&issued).cloned().collect())
-        }
-
-        if let Some(revoked) = new_rev_reg_delta.revoked {
-            let current_issued = self.issued.clone().unwrap();
-            self.issued = Some(current_issued.difference(&revoked).cloned().collect())
-        }
-    }
-
     fn from_rev_reg(rev_reg: &RevocationRegistry, max_cred_num: u32) -> RegistryDelta {
         let mut rev_reg_delta = serde_json::from_str::<RegistryDelta>(&serde_json::to_string(&rev_reg).unwrap()).unwrap();
         let mut issued = HashSet::new();
         for i in 1..max_cred_num + 1 {
             issued.insert(i);
         }
-        rev_reg_delta.issued = Some(issued);
+        rev_reg_delta.issued = issued;
         rev_reg_delta
-    }
-
-    fn from_delta(rev_reg_delta: &RevocationRegistryDelta) -> RegistryDelta {
-        serde_json::from_str::<RegistryDelta>(&serde_json::to_string(&rev_reg_delta).unwrap()).unwrap()
     }
 
     fn to_delta(&self) -> RevocationRegistryDelta {

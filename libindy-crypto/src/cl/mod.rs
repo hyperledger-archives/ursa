@@ -238,13 +238,44 @@ impl<'a> JsonDecodable<'a> for RevocationRegistry {}
 pub struct RevocationRegistryDelta {
     prev_accum: Option<Accumulator>,
     accum: Accumulator,
-    issued: Option<HashSet<u32>>,
-    revoked: Option<HashSet<u32>>
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
+    issued: HashSet<u32>,
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
+    revoked: HashSet<u32>
 }
 
 impl JsonEncodable for RevocationRegistryDelta {}
 
 impl<'a> JsonDecodable<'a> for RevocationRegistryDelta {}
+
+impl RevocationRegistryDelta {
+    pub fn merge(&mut self, other_delta: &RevocationRegistryDelta) -> Result<(), IndyCryptoError> {
+        if other_delta.prev_accum.is_none() || self.accum != other_delta.prev_accum.unwrap() {
+            return Err(IndyCryptoError::InvalidStructure(format!("Deltas can not be merged.")));
+        }
+
+        self.prev_accum = Some(self.accum);
+        self.accum = other_delta.accum;
+
+        self.issued.extend(
+            other_delta.issued.difference(&self.revoked));
+
+        self.revoked.extend(
+            other_delta.revoked.difference(&self.issued));
+
+        for index in other_delta.revoked.iter() {
+            self.issued.remove(index);
+        }
+
+        for index in other_delta.issued.iter() {
+            self.revoked.remove(index);
+        }
+
+        Ok(())
+    }
+}
 
 /// `Revocation Key Public` Accumulator public key.
 /// Must be published together with Accumulator
@@ -393,8 +424,7 @@ impl<'a> JsonDecodable<'a> for SignatureCorrectnessProof {}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Witness {
-    omega: PointG2,
-    v: HashSet<u32>
+    omega: PointG2
 }
 
 impl JsonEncodable for Witness {}
@@ -409,13 +439,9 @@ impl Witness {
         trace!("ProofBuilder::new: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
                rev_idx, max_cred_num, rev_reg_delta);
 
-        if rev_reg_delta.issued.is_none() {
-            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
-        }
-
         let mut omega = PointG2::new_inf()?;
 
-        let mut issued = rev_reg_delta.issued.clone().unwrap();
+        let mut issued = rev_reg_delta.issued.clone();
         issued.remove(&rev_idx);
 
         for j in issued.iter() {
@@ -426,8 +452,7 @@ impl Witness {
         }
 
         let witness = Witness {
-            omega,
-            v: rev_reg_delta.issued.clone().unwrap()
+            omega
         };
 
         trace!("ProofBuilder::new: <<< witness: {:?}", witness);
@@ -443,37 +468,30 @@ impl Witness {
         trace!("ProofBuilder::update: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
                rev_idx, max_cred_num, rev_reg_delta);
 
-        if rev_reg_delta.issued.is_none() {
-            return Err(IndyCryptoError::InvalidStructure(format!("Revocation registry delta is invalid")));
+        let mut omega_denom = PointG2::new_inf()?;
+        for j in rev_reg_delta.revoked.iter() {
+            if rev_idx.eq(j) { continue; }
+
+            let index = max_cred_num + 1 - j + rev_idx;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega_denom = omega_denom.add(tail).unwrap();
+            })?;
         }
-        let issued = rev_reg_delta.issued.clone().unwrap();
 
-        if self.v != issued {
-            let v_old_minus_new: HashSet<u32> = self.v.difference(&issued).cloned().collect();
-            let v_new_minus_old: HashSet<u32> = issued.difference(&self.v).cloned().collect();
+        let mut omega_num = PointG2::new_inf()?;
+        for j in rev_reg_delta.issued.iter() {
+            if rev_idx.eq(j) { continue; }
 
-            let mut omega_denom = PointG2::new_inf()?;
-            for j in v_old_minus_new.iter() {
-                let index = max_cred_num + 1 - j + rev_idx;
-                rev_tails_accessor.access_tail(index, &mut |tail| {
-                    omega_denom = omega_denom.add(tail).unwrap();
-                })?;
-            }
-
-            let mut omega_num = PointG2::new_inf()?;
-            for j in v_new_minus_old.iter() {
-                let index = max_cred_num + 1 - j + rev_idx;
-                rev_tails_accessor.access_tail(index, &mut |tail| {
-                    omega_num = omega_num.add(tail).unwrap();
-                })?;
-            }
-
-            let new_omega: PointG2 = self.omega.add(
-                &omega_num.sub(&omega_denom)?)?;
-
-            self.v = issued;
-            self.omega = new_omega;
+            let index = max_cred_num + 1 - j + rev_idx;
+            rev_tails_accessor.access_tail(index, &mut |tail| {
+                omega_num = omega_num.add(tail).unwrap();
+            })?;
         }
+
+        let new_omega: PointG2 = self.omega.add(
+            &omega_num.sub(&omega_denom)?)?;
+
+        self.omega = new_omega;
 
         trace!("ProofBuilder::update: <<<");
 
