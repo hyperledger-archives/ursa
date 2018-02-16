@@ -64,6 +64,21 @@ pub extern fn indy_crypto_cl_tails_generator_count(rev_tails_generator: *const c
 }
 
 #[no_mangle]
+pub extern fn indy_crypto_cl_tail_free(tail: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_tail_free: >>> tail: {:?}", tail);
+
+    check_useful_c_ptr!(tail, ErrorCode::CommonInvalidParam1);
+
+    let tail = unsafe { Box::from_raw(tail as *mut Tail); };
+    trace!("indy_crypto_cl_tail_free: entity: tail: {:?}", tail);
+
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_cl_tail_free: <<< res: {:?}", res);
+    res
+}
+
+#[no_mangle]
 pub extern fn indy_crypto_cl_witness_new(rev_idx: u32,
                                          max_cred_num: u32,
                                          rev_reg_delta: *const c_void,
