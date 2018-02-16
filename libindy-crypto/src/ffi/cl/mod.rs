@@ -1042,8 +1042,7 @@ pub mod mocks {
             let rev_tails_generator: &mut RevocationTailsGenerator = unsafe { &mut *(rtg as *mut RevocationTailsGenerator) };
 
             let mut tails = Vec::new();
-            let cnt = rev_tails_generator.count();
-            for i in 0..cnt {
+            for _ in 0..rev_tails_generator.count() {
                 let tail = rev_tails_generator.next().unwrap();
                 tails.push(Box::new(tail));
             }

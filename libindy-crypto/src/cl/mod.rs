@@ -325,7 +325,7 @@ impl RevocationTailsGenerator {
     }
 
     pub fn next(&mut self) -> Result<Tail, IndyCryptoError> {
-        if self.current_index > self.size {
+        if self.current_index >= self.size {
             return Err(IndyCryptoError::InvalidState("Generator index is out of range".to_string()));
         }
 
@@ -335,7 +335,7 @@ impl RevocationTailsGenerator {
             PointG2::new()?
         };
 
-        self.current_index = self.current_index + 1;
+        self.current_index += 1;
 
         Ok(tail)
     }
