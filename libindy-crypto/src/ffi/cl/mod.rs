@@ -8,7 +8,7 @@ use utils::json::{JsonEncodable, JsonDecodable};
 
 use libc::c_char;
 
-use std::ptr::null;
+use std::ptr;
 use std::os::raw::c_void;
 
 pub mod issuer;
@@ -16,7 +16,7 @@ pub mod prover;
 pub mod verifier;
 
 type FFITailTake = extern fn(ctx: *const c_void, idx: u32, tail_p: *mut *const c_void) -> ErrorCode;
-type FFITailPut = extern fn(ctx: *const c_void, tail: *mut c_void) -> ErrorCode;
+type FFITailPut = extern fn(ctx: *const c_void, tail: *const c_void) -> ErrorCode;
 
 #[no_mangle]
 pub extern fn indy_crypto_cl_witness_new(rev_idx: u32,
@@ -86,229 +86,229 @@ pub extern fn indy_crypto_cl_witness_free(witness: *const c_void) -> ErrorCode {
     res
 }
 
-/// Creates and returns claim schema entity builder.
+/// Creates and returns credential schema entity builder.
 ///
-/// The purpose of claim schema builder is building of claim schema entity that
-/// represents claim schema attributes set.
+/// The purpose of credential schema builder is building of credential schema entity that
+/// represents credential schema attributes set.
 ///
 /// Note: Claim schema builder instance deallocation must be performed by
-/// calling indy_crypto_cl_claim_schema_builder_finalize.
+/// calling indy_crypto_cl_credential_schema_builder_finalize.
 ///
 /// # Arguments
-/// * `claim_schema_builder_p` - Reference that will contain claims attributes builder instance pointer.
+/// * `credential_schema_builder_p` - Reference that will contain credentials attributes builder instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_schema_builder_new(claim_schema_builder_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_schema_builder_new: >>> claim_schema_builder_p: {:?}", claim_schema_builder_p);
+pub extern fn indy_crypto_cl_credential_schema_builder_new(credential_schema_builder_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_schema_builder_new: >>> credential_schema_builder_p: {:?}", credential_schema_builder_p);
 
-    check_useful_c_ptr!(claim_schema_builder_p, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_schema_builder_p, ErrorCode::CommonInvalidParam1);
 
     let res = match Issuer::new_credential_schema_builder() {
-        Ok(claim_schema_builder) => {
-            trace!("indy_crypto_cl_claim_schema_builder_new: claim_schema_builder: {:?}", claim_schema_builder);
+        Ok(credential_schema_builder) => {
+            trace!("indy_crypto_cl_credential_schema_builder_new: credential_schema_builder: {:?}", credential_schema_builder);
             unsafe {
-                *claim_schema_builder_p = Box::into_raw(Box::new(claim_schema_builder)) as *const c_void;
-                trace!("indy_crypto_cl_claim_schema_builder_new: *claim_schema_builder_p: {:?}", *claim_schema_builder_p);
+                *credential_schema_builder_p = Box::into_raw(Box::new(credential_schema_builder)) as *const c_void;
+                trace!("indy_crypto_cl_credential_schema_builder_new: *credential_schema_builder_p: {:?}", *credential_schema_builder_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_schema_builder_new: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_schema_builder_new: <<< res: {:?}", res);
     res
 }
 
-/// Adds new attribute to claim schema.
+/// Adds new attribute to credential schema.
 ///
 /// # Arguments
-/// * `claim_schema_builder` - Reference that contains claim schema builder instance pointer.
+/// * `credential_schema_builder` - Reference that contains credential schema builder instance pointer.
 /// * `attr` - Attribute to add as null terminated string.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder: *const c_void,
-                                                           attr: *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_schema_builder_add_attr: >>> claim_schema_builder: {:?}, attr: {:?}", claim_schema_builder, attr);
+pub extern fn indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder: *const c_void,
+                                                                attr: *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_schema_builder_add_attr: >>> credential_schema_builder: {:?}, attr: {:?}", credential_schema_builder, attr);
 
-    check_useful_mut_c_reference!(claim_schema_builder, CredentialSchemaBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_mut_c_reference!(credential_schema_builder, CredentialSchemaBuilder, ErrorCode::CommonInvalidParam1);
     check_useful_c_str!(attr, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_claim_schema_builder_add_attr: entities: claim_schema_builder: {:?}, attr: {:?}", claim_schema_builder, attr);
+    trace!("indy_crypto_cl_credential_schema_builder_add_attr: entities: credential_schema_builder: {:?}, attr: {:?}", credential_schema_builder, attr);
 
-    let res = match claim_schema_builder.add_attr(&attr) {
+    let res = match credential_schema_builder.add_attr(&attr) {
         Ok(_) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_schema_builder_add_attr: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_schema_builder_add_attr: <<< res: {:?}", res);
     res
 }
 
-/// Deallocates claim schema builder and returns claim schema entity instead.
+/// Deallocates credential schema builder and returns credential schema entity instead.
 ///
 /// Note: Claims schema instance deallocation must be performed by
-/// calling indy_crypto_cl_claim_schema_free.
+/// calling indy_crypto_cl_credential_schema_free.
 ///
 /// # Arguments
-/// * `claim_schema_builder` - Reference that contains claim schema builder instance pointer
-/// * `claim_schema_p` - Reference that will contain claims schema instance pointer.
+/// * `credential_schema_builder` - Reference that contains credential schema builder instance pointer
+/// * `credential_schema_p` - Reference that will contain credentials schema instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_schema_builder_finalize(claim_schema_builder: *const c_void,
-                                                           claim_schema_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_schema_builder_finalize: >>> claim_schema_builder: {:?}, claim_schema_p: {:?}", claim_schema_builder, claim_schema_p);
+pub extern fn indy_crypto_cl_credential_schema_builder_finalize(credential_schema_builder: *const c_void,
+                                                                credential_schema_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_schema_builder_finalize: >>> credential_schema_builder: {:?}, credential_schema_p: {:?}", credential_schema_builder, credential_schema_p);
 
-    check_useful_c_ptr!(claim_schema_builder, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(claim_schema_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(credential_schema_builder, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_schema_p, ErrorCode::CommonInvalidParam2);
 
-    let claim_schema_builder = unsafe { Box::from_raw(claim_schema_builder as *mut CredentialSchemaBuilder) };
+    let credential_schema_builder = unsafe { Box::from_raw(credential_schema_builder as *mut CredentialSchemaBuilder) };
 
-    trace!("indy_crypto_cl_claim_schema_builder_finalize: entities: claim_schema_builder: {:?}", claim_schema_builder);
+    trace!("indy_crypto_cl_credential_schema_builder_finalize: entities: credential_schema_builder: {:?}", credential_schema_builder);
 
-    let res = match claim_schema_builder.finalize() {
-        Ok(claim_schema) => {
-            trace!("indy_crypto_cl_claim_schema_builder_finalize: claim_schema: {:?}", claim_schema);
+    let res = match credential_schema_builder.finalize() {
+        Ok(credential_schema) => {
+            trace!("indy_crypto_cl_credential_schema_builder_finalize: credential_schema: {:?}", credential_schema);
             unsafe {
-                *claim_schema_p = Box::into_raw(Box::new(claim_schema)) as *const c_void;
-                trace!("indy_crypto_cl_claim_schema_builder_finalize: *claim_schema_p: {:?}", *claim_schema_p);
+                *credential_schema_p = Box::into_raw(Box::new(credential_schema)) as *const c_void;
+                trace!("indy_crypto_cl_credential_schema_builder_finalize: *credential_schema_p: {:?}", *credential_schema_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_schema_builder_finalize: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_schema_builder_finalize: <<< res: {:?}", res);
     res
 }
 
-/// Deallocates claim schema instance.
+/// Deallocates credential schema instance.
 ///
 /// # Arguments
-/// * `claim_schema` - Reference that contains claim schema instance pointer.
+/// * `credential_schema` - Reference that contains credential schema instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_schema_free(claim_schema: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_schema_free: >>> claim_schema: {:?}", claim_schema);
+pub extern fn indy_crypto_cl_credential_schema_free(credential_schema: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_schema_free: >>> credential_schema: {:?}", credential_schema);
 
-    check_useful_c_ptr!(claim_schema, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_schema, ErrorCode::CommonInvalidParam1);
 
-    let claim_schema = unsafe { Box::from_raw(claim_schema as *mut CredentialSchema); };
-    trace!("indy_crypto_cl_claim_schema_free: entity: claim_schema: {:?}", claim_schema);
+    let credential_schema = unsafe { Box::from_raw(credential_schema as *mut CredentialSchema); };
+    trace!("indy_crypto_cl_credential_schema_free: entity: credential_schema: {:?}", credential_schema);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_claim_schema_free: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_schema_free: <<< res: {:?}", res);
     res
 }
 
-/// Creates and returns claims values entity builder.
+/// Creates and returns credentials values entity builder.
 ///
-/// The purpose of claim values builder is building of claim values entity that
-/// represents claim attributes values map.
+/// The purpose of credential values builder is building of credential values entity that
+/// represents credential attributes values map.
 ///
 /// Note: Claims values builder instance deallocation must be performed by
-/// calling indy_crypto_cl_claim_values_builder_finalize.
+/// calling indy_crypto_cl_credential_values_builder_finalize.
 ///
 /// # Arguments
-/// * `claim_values_builder_p` - Reference that will contain claims values builder instance pointer.
+/// * `credential_values_builder_p` - Reference that will contain credentials values builder instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_values_builder_new(claim_values_builder_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_values_builder_new: >>> claim_values_builder_p: {:?}", claim_values_builder_p);
+pub extern fn indy_crypto_cl_credential_values_builder_new(credential_values_builder_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_values_builder_new: >>> credential_values_builder_p: {:?}", credential_values_builder_p);
 
-    check_useful_c_ptr!(claim_values_builder_p, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_values_builder_p, ErrorCode::CommonInvalidParam1);
 
     let res = match Issuer::new_credential_values_builder() {
-        Ok(claim_values_builder) => {
-            trace!("indy_crypto_cl_claim_values_builder_new: claim_values_builder: {:?}", claim_values_builder);
+        Ok(credential_values_builder) => {
+            trace!("indy_crypto_cl_credential_values_builder_new: credential_values_builder: {:?}", credential_values_builder);
             unsafe {
-                *claim_values_builder_p = Box::into_raw(Box::new(claim_values_builder)) as *const c_void;
-                trace!("indy_crypto_cl_claim_values_builder_new: *claim_values_builder_p: {:?}", *claim_values_builder_p);
+                *credential_values_builder_p = Box::into_raw(Box::new(credential_values_builder)) as *const c_void;
+                trace!("indy_crypto_cl_credential_values_builder_new: *credential_values_builder_p: {:?}", *credential_values_builder_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_values_builder_new: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_values_builder_new: <<< res: {:?}", res);
     res
 }
 
-/// Adds new attribute dec_value to claim values map.
+/// Adds new attribute dec_value to credential values map.
 ///
 /// # Arguments
-/// * `claim_values_builder` - Reference that contains claim values builder instance pointer.
+/// * `credential_values_builder` - Reference that contains credential values builder instance pointer.
 /// * `attr` - Claim attr to add as null terminated string.
 /// * `dec_value` - Claim attr dec_value. Decimal BigNum representation as null terminated string.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_values_builder_add_value(claim_values_builder: *const c_void,
-                                                            attr: *const c_char,
-                                                            dec_value: *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_values_builder_add_value: >>> claim_values_builder: {:?}, attr: {:?}, dec_value: {:?}",
-           claim_values_builder, attr, dec_value);
+pub extern fn indy_crypto_cl_credential_values_builder_add_value(credential_values_builder: *const c_void,
+                                                                 attr: *const c_char,
+                                                                 dec_value: *const c_char) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_values_builder_add_value: >>> credential_values_builder: {:?}, attr: {:?}, dec_value: {:?}",
+           credential_values_builder, attr, dec_value);
 
-    check_useful_mut_c_reference!(claim_values_builder, CredentialValuesBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_mut_c_reference!(credential_values_builder, CredentialValuesBuilder, ErrorCode::CommonInvalidParam1);
     check_useful_c_str!(attr, ErrorCode::CommonInvalidParam2);
     check_useful_c_str!(dec_value, ErrorCode::CommonInvalidParam3);
 
-    trace!("indy_crypto_cl_claim_values_builder_add_value: entities: claim_values_builder: {:?}, attr: {:?}, dec_value: {:?}", claim_values_builder, attr, dec_value);
+    trace!("indy_crypto_cl_credential_values_builder_add_value: entities: credential_values_builder: {:?}, attr: {:?}, dec_value: {:?}", credential_values_builder, attr, dec_value);
 
-    let res = match claim_values_builder.add_value(&attr, &dec_value) {
+    let res = match credential_values_builder.add_value(&attr, &dec_value) {
         Ok(_) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_values_builder_add_value: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_values_builder_add_value: <<< res: {:?}", res);
     res
 }
 
-/// Deallocates claim values builder and returns claim values entity instead.
+/// Deallocates credential values builder and returns credential values entity instead.
 ///
 /// Note: Claims values instance deallocation must be performed by
-/// calling indy_crypto_cl_claim_values_free.
+/// calling indy_crypto_cl_credential_values_free.
 ///
 /// # Arguments
-/// * `claim_values_builder` - Reference that contains claim attribute builder instance pointer.
-/// * `claim_values_p` - Reference that will contain claims values instance pointer.
+/// * `credential_values_builder` - Reference that contains credential attribute builder instance pointer.
+/// * `credential_values_p` - Reference that will contain credentials values instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_values_builder_finalize(claim_values_builder: *const c_void,
-                                                           claim_values_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_values_builder_finalize: >>> claim_values_builder: {:?}, claim_values_p: {:?}", claim_values_builder, claim_values_p);
+pub extern fn indy_crypto_cl_credential_values_builder_finalize(credential_values_builder: *const c_void,
+                                                                credential_values_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_values_builder_finalize: >>> credential_values_builder: {:?}, credential_values_p: {:?}", credential_values_builder, credential_values_p);
 
-    check_useful_c_ptr!(claim_values_builder, ErrorCode::CommonInvalidParam1);
-    check_useful_c_ptr!(claim_values_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(credential_values_builder, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_values_p, ErrorCode::CommonInvalidParam2);
 
-    let claim_values_builder = unsafe { Box::from_raw(claim_values_builder as *mut CredentialValuesBuilder) };
+    let credential_values_builder = unsafe { Box::from_raw(credential_values_builder as *mut CredentialValuesBuilder) };
 
-    trace!("indy_crypto_cl_claim_values_builder_finalize: entities: claim_values_builder: {:?}", claim_values_builder);
+    trace!("indy_crypto_cl_credential_values_builder_finalize: entities: credential_values_builder: {:?}", credential_values_builder);
 
-    let res = match claim_values_builder.finalize() {
-        Ok(claim_values) => {
-            trace!("indy_crypto_cl_claim_values_builder_finalize: claim_values: {:?}", claim_values);
+    let res = match credential_values_builder.finalize() {
+        Ok(credential_values) => {
+            trace!("indy_crypto_cl_credential_values_builder_finalize: credential_values: {:?}", credential_values);
             unsafe {
-                *claim_values_p = Box::into_raw(Box::new(claim_values)) as *const c_void;
-                trace!("indy_crypto_cl_claim_values_builder_finalize: *claim_values_p: {:?}", *claim_values_p);
+                *credential_values_p = Box::into_raw(Box::new(credential_values)) as *const c_void;
+                trace!("indy_crypto_cl_credential_values_builder_finalize: *credential_values_p: {:?}", *credential_values_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_claim_values_builder_finalize: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_values_builder_finalize: <<< res: {:?}", res);
     res
 }
 
-/// Deallocates claim values instance.
+/// Deallocates credential values instance.
 ///
 /// # Arguments
-/// * `claim_values` - Claim values instance pointer
+/// * `credential_values` - Claim values instance pointer
 #[no_mangle]
-pub extern fn indy_crypto_cl_claim_values_free(claim_values: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_claim_values_free: >>> claim_values: {:?}", claim_values);
+pub extern fn indy_crypto_cl_credential_values_free(credential_values: *const c_void) -> ErrorCode {
+    trace!("indy_crypto_cl_credential_values_free: >>> credential_values: {:?}", credential_values);
 
-    check_useful_c_ptr!(claim_values, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_values, ErrorCode::CommonInvalidParam1);
 
-    let claim_values = unsafe { Box::from_raw(claim_values as *mut CredentialValues); };
-    trace!("indy_crypto_cl_claim_values_free: entity: claim_values: {:?}", claim_values);
+    let credential_values = unsafe { Box::from_raw(credential_values as *mut CredentialValues); };
+    trace!("indy_crypto_cl_credential_values_free: entity: credential_values: {:?}", credential_values);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_claim_values_free: <<< res: {:?}", res);
+    trace!("indy_crypto_cl_credential_values_free: <<< res: {:?}", res);
     res
 }
 
@@ -584,7 +584,7 @@ impl FFITailsAccessor {
 
 impl RevocationTailsAccessor for FFITailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError> {
-        let mut tail_p = null();
+        let mut tail_p = ptr::null();
 
         let res = (self.take)(self.ctx, tail_id, &mut tail_p);
         if res != ErrorCode::Success || tail_p.is_null() {
@@ -592,11 +592,10 @@ impl RevocationTailsAccessor for FFITailsAccessor {
                 format!("FFI call take_tail {:?} (ctx {:?}, id {}) failed: tail_p {:?}, returned error code {:?}",
                         self.take, self.ctx, tail_id, tail_p, res)));
         }
-        let tail: Box<Tail> = unsafe { Box::from_raw(tail_p as *mut Tail) };
+        let tail: *const Tail = tail_p  as *const Tail;
 
-        accessor(&tail);
+        accessor(&unsafe { *tail });
 
-        let tail_p = Box::into_raw(tail) as *mut c_void;
         let res = (self.put)(self.ctx, tail_p);
         if res != ErrorCode::Success {
             return Err(IndyCryptoError::InvalidState(
@@ -618,96 +617,96 @@ mod tests {
     use ffi::cl::mocks::*;
 
     #[test]
-    fn indy_crypto_cl_claim_schema_builder_new_works() {
-        let mut claim_schema_builder: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_schema_builder_new(&mut claim_schema_builder);
+    fn indy_crypto_cl_credential_schema_builder_new_works() {
+        let mut credential_schema_builder: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_schema_builder_new(&mut credential_schema_builder);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
-        _free_claim_schema_builder(claim_schema_builder);
+        _free_credential_schema_builder(credential_schema_builder);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_schema_builder_add_attr_works() {
-        let claim_schema_builder = _claim_schema_builder();
+    fn indy_crypto_cl_credential_schema_builder_add_attr_works() {
+        let credential_schema_builder = _credential_schema_builder();
 
         let attr = CString::new("sex").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
         let attr = CString::new("name").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
         let attr = CString::new("age").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
-        _free_claim_schema_builder(claim_schema_builder);
+        _free_credential_schema_builder(credential_schema_builder);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_schema_builder_finalize_works() {
-        let claim_schema_builder = _claim_schema_builder();
+    fn indy_crypto_cl_credential_schema_builder_finalize_works() {
+        let credential_schema_builder = _credential_schema_builder();
 
         let attr = CString::new("sex").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
-        let mut claim_schema: *const c_void = ptr::null();
-        indy_crypto_cl_claim_schema_builder_finalize(claim_schema_builder, &mut claim_schema);
+        let mut credential_schema: *const c_void = ptr::null();
+        indy_crypto_cl_credential_schema_builder_finalize(credential_schema_builder, &mut credential_schema);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema.is_null());
+        assert!(!credential_schema.is_null());
 
-        _free_claim_schema(claim_schema);
+        _free_credential_schema(credential_schema);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_schema_free_works() {
-        let claim_schema = _claim_schema();
+    fn indy_crypto_cl_credential_schema_free_works() {
+        let credential_schema = _credential_schema();
 
-        let err_code = indy_crypto_cl_claim_schema_free(claim_schema);
+        let err_code = indy_crypto_cl_credential_schema_free(credential_schema);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_values_builder_new_works() {
-        let mut claim_values_builder: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_values_builder_new(&mut claim_values_builder);
+    fn indy_crypto_cl_credential_values_builder_new_works() {
+        let mut credential_values_builder: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_values_builder_new(&mut credential_values_builder);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
-        _free_claim_values_builder(claim_values_builder);
+        _free_credential_values_builder(credential_values_builder);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_values_builder_add_value_works() {
-        let claim_values_builder = _claim_values_builder();
+    fn indy_crypto_cl_credential_values_builder_add_value_works() {
+        let credential_values_builder = _credential_values_builder();
 
         let attr = CString::new("sex").unwrap();
         let dec_value = CString::new("89057765651800459030103911598694169835931320404459570102253965466045532669865684092518362135930940112502263498496335250135601124519172068317163741086983519494043168252186111551835366571584950296764626458785776311514968350600732183408950813066589742888246925358509482561838243805468775416479523402043160919428168650069477488093758569936116799246881809224343325540306266957664475026390533069487455816053169001876208052109360113102565642529699056163373190930839656498261278601357214695582219007449398650197048218304260447909283768896882743373383452996855450316360259637079070460616248922547314789644935074980711243164129").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder, attr.as_ptr(), dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder, attr.as_ptr(), dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
         let attr = CString::new("name").unwrap();
         let dec_value = CString::new("58606710922154038918005745652863947546479611221487923871520854046018234465128105585608812090213473225037875788462225679336791123783441657062831589984290779844020407065450830035885267846722229953206567087435754612694085258455822926492275621650532276267042885213400704012011608869094703483233081911010530256094461587809601298503874283124334225428746479707531278882536314925285434699376158578239556590141035593717362562548075653598376080466948478266094753818404986494459240364648986755479857098110402626477624280802323635285059064580583239726433768663879431610261724430965980430886959304486699145098822052003020688956471").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder, attr.as_ptr(), dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder, attr.as_ptr(), dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
-        _free_claim_values_builder(claim_values_builder);
+        _free_credential_values_builder(credential_values_builder);
     }
 
     #[test]
-    fn indy_crypto_cl_claim_values_free_works() {
-        let claim_values = _claim_values();
+    fn indy_crypto_cl_credential_values_free_works() {
+        let credential_values = _credential_values();
 
-        let err_code = indy_crypto_cl_claim_values_free(claim_values);
+        let err_code = indy_crypto_cl_credential_values_free(credential_values);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
@@ -829,124 +828,123 @@ pub mod mocks {
     use std::ffi::CString;
     use std::ptr;
 
-
-    pub fn _claim_schema_builder() -> *const c_void {
-        let mut claim_schema_builder: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_schema_builder_new(&mut claim_schema_builder);
+    pub fn _credential_schema_builder() -> *const c_void {
+        let mut credential_schema_builder: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_schema_builder_new(&mut credential_schema_builder);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
-        claim_schema_builder
+        credential_schema_builder
     }
 
-    pub fn _free_claim_schema_builder(claim_schema_builder: *const c_void) {
-        let mut claim_schema: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_schema_builder_finalize(claim_schema_builder, &mut claim_schema);
+    pub fn _free_credential_schema_builder(credential_schema_builder: *const c_void) {
+        let mut credential_schema: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_schema_builder_finalize(credential_schema_builder, &mut credential_schema);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema.is_null());
+        assert!(!credential_schema.is_null());
 
-        _free_claim_schema(claim_schema);
+        _free_credential_schema(credential_schema);
     }
 
-    pub fn _claim_schema() -> *const c_void {
-        let claim_schema_builder = _claim_schema_builder();
+    pub fn _credential_schema() -> *const c_void {
+        let credential_schema_builder = _credential_schema_builder();
 
         let attr = CString::new("name").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
         let attr = CString::new("sex").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
         let attr = CString::new("age").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
         let attr = CString::new("height").unwrap();
-        let err_code = indy_crypto_cl_claim_schema_builder_add_attr(claim_schema_builder, attr.as_ptr());
+        let err_code = indy_crypto_cl_credential_schema_builder_add_attr(credential_schema_builder, attr.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema_builder.is_null());
+        assert!(!credential_schema_builder.is_null());
 
-        let mut claim_schema: *const c_void = ptr::null();
-        indy_crypto_cl_claim_schema_builder_finalize(claim_schema_builder, &mut claim_schema);
+        let mut credential_schema: *const c_void = ptr::null();
+        indy_crypto_cl_credential_schema_builder_finalize(credential_schema_builder, &mut credential_schema);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_schema.is_null());
+        assert!(!credential_schema.is_null());
 
-        claim_schema
+        credential_schema
     }
 
-    pub fn _free_claim_schema(claim_schema: *const c_void) {
-        let err_code = indy_crypto_cl_claim_schema_free(claim_schema);
+    pub fn _free_credential_schema(credential_schema: *const c_void) {
+        let err_code = indy_crypto_cl_credential_schema_free(credential_schema);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
-    pub fn _claim_values_builder() -> *const c_void {
-        let mut claim_values_builder: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_values_builder_new(&mut claim_values_builder);
+    pub fn _credential_values_builder() -> *const c_void {
+        let mut credential_values_builder: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_values_builder_new(&mut credential_values_builder);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
-        claim_values_builder
+        credential_values_builder
     }
 
-    pub fn _free_claim_values_builder(claim_values_builder: *const c_void) {
-        let mut claim_values: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_claim_values_builder_finalize(claim_values_builder, &mut claim_values);
+    pub fn _free_credential_values_builder(credential_values_builder: *const c_void) {
+        let mut credential_values: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_credential_values_builder_finalize(credential_values_builder, &mut credential_values);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values.is_null());
+        assert!(!credential_values.is_null());
 
-        _free_claim_values(claim_values);
+        _free_credential_values(credential_values);
     }
 
-    pub fn _claim_values() -> *const c_void {
-        let claim_values_builder = _claim_values_builder();
+    pub fn _credential_values() -> *const c_void {
+        let credential_values_builder = _credential_values_builder();
 
         let attr = CString::new("name").unwrap();
         let dec_value = CString::new("1139481716457488690172217916278103335").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder,
-                                                                     attr.as_ptr(),
-                                                                     dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder,
+                                                                          attr.as_ptr(),
+                                                                          dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
         let attr = CString::new("sex").unwrap();
         let dec_value = CString::new("5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder,
-                                                                     attr.as_ptr(),
-                                                                     dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder,
+                                                                          attr.as_ptr(),
+                                                                          dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
         let attr = CString::new("age").unwrap();
         let dec_value = CString::new("28").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder,
-                                                                     attr.as_ptr(),
-                                                                     dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder,
+                                                                          attr.as_ptr(),
+                                                                          dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
         let attr = CString::new("height").unwrap();
         let dec_value = CString::new("175").unwrap();
-        let err_code = indy_crypto_cl_claim_values_builder_add_value(claim_values_builder,
-                                                                     attr.as_ptr(),
-                                                                     dec_value.as_ptr());
+        let err_code = indy_crypto_cl_credential_values_builder_add_value(credential_values_builder,
+                                                                          attr.as_ptr(),
+                                                                          dec_value.as_ptr());
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values_builder.is_null());
+        assert!(!credential_values_builder.is_null());
 
-        let mut claim_values: *const c_void = ptr::null();
-        indy_crypto_cl_claim_values_builder_finalize(claim_values_builder, &mut claim_values);
+        let mut credential_values: *const c_void = ptr::null();
+        indy_crypto_cl_credential_values_builder_finalize(credential_values_builder, &mut credential_values);
         assert_eq!(err_code, ErrorCode::Success);
-        assert!(!claim_values.is_null());
+        assert!(!credential_values.is_null());
 
-        claim_values
+        credential_values
     }
 
-    pub fn _free_claim_values(claim_values: *const c_void) {
-        let err_code = indy_crypto_cl_claim_values_free(claim_values);
+    pub fn _free_credential_values(credential_values: *const c_void) {
+        let err_code = indy_crypto_cl_credential_values_free(credential_values);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
@@ -1009,5 +1007,71 @@ pub mod mocks {
     pub fn _free_nonce(nonce: *const c_void) {
         let err_code = indy_crypto_cl_nonce_free(nonce);
         assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    pub fn _witness(rev_reg_delta: *const c_void, get_storage_ctx: *const c_void) -> *const c_void {
+        let rev_idx = 1;
+        let max_cred_num = 5;
+
+        let mut witness_p: *const c_void = ptr::null();
+        let err_code = indy_crypto_cl_witness_new(rev_idx,
+                                                  max_cred_num,
+                                                  rev_reg_delta,
+                                                  get_storage_ctx,
+                                                  FFISimpleTailStorage::tail_take,
+                                                  FFISimpleTailStorage::tail_put,
+                                                  &mut witness_p);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!witness_p.is_null());
+
+        witness_p
+    }
+
+    pub fn _free_witness(witness: *const c_void) {
+        let err_code = indy_crypto_cl_witness_free(witness);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+
+    pub struct FFISimpleTailStorage {
+        tails: Box<Vec<Box<Tail>>>
+    }
+
+    impl FFISimpleTailStorage {
+        pub fn new(rtg: *const c_void) -> Self {
+            let rev_tails_generator: &mut RevocationTailsGenerator = unsafe { &mut *(rtg as *mut RevocationTailsGenerator) };
+
+            let mut tails = Vec::new();
+            let cnt = rev_tails_generator.count();
+            for i in 0..cnt {
+                let tail = rev_tails_generator.next().unwrap();
+                tails.push(Box::new(tail));
+            }
+            Self {
+                tails: Box::new(tails)
+            }
+        }
+
+        pub fn get_ctx(&self) -> *const c_void {
+            let ctx: *const Vec<Box<Tail>> = &*self.tails;
+            ctx as *const c_void
+        }
+
+        pub extern "C" fn tail_put(_ctx: *const c_void, _tail: *const c_void) -> ErrorCode {
+            ErrorCode::Success
+        }
+
+        pub extern "C" fn tail_take(ctx: *const c_void,
+                                    idx: u32,
+                                    tail_p: *mut *const c_void) -> ErrorCode {
+            let tails: &Vec<Box<Tail>> = unsafe { &*(ctx as *const Vec<Box<Tail>>) };
+
+            let tail: &Box<Tail> = tails.get(idx as usize).unwrap();
+            let tail: *const Tail = &**tail;
+
+            unsafe { *tail_p = tail as *const c_void };
+
+            ErrorCode::Success
+        }
     }
 }

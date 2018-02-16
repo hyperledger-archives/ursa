@@ -310,6 +310,10 @@ impl RevocationTailsGenerator {
     }
 }
 
+impl JsonEncodable for RevocationTailsGenerator {}
+
+impl<'a> JsonDecodable<'a> for RevocationTailsGenerator {}
+
 pub trait RevocationTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError>;
 }
@@ -1026,7 +1030,7 @@ mod test {
         let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
 
         let max_cred_num = 5;
-        let issuance_by_default =false;
+        let issuance_by_default = false;
         let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
             Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, issuance_by_default).unwrap();
 
