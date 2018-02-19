@@ -568,6 +568,18 @@ pub fn create_tau_list_values(r_pub_key: &CredentialRevocationPublicKey,
     Ok(non_revoc_proof_tau_list)
 }
 
+macro_rules! hashset {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_set = HashSet::new();
+            $(
+                temp_set.insert($x);
+            )*
+            temp_set
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

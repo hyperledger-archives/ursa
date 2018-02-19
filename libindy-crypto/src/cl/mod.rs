@@ -1,6 +1,7 @@
 extern crate serde_json;
 
 mod constants;
+#[macro_use]
 mod helpers;
 pub mod issuer;
 pub mod prover;
@@ -19,6 +20,7 @@ use std::hash::Hash;
 /// # Example
 /// ```
 /// use indy_crypto::cl::new_nonce;
+///
 /// let _nonce = new_nonce().unwrap();
 /// ```
 pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
@@ -436,7 +438,7 @@ impl Witness {
                     max_cred_num: u32,
                     rev_reg_delta: &RevocationRegistryDelta,
                     rev_tails_accessor: &RTA) -> Result<Witness, IndyCryptoError> where RTA: RevocationTailsAccessor {
-        trace!("ProofBuilder::new: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
+        trace!("Witness::new: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
                rev_idx, max_cred_num, rev_reg_delta);
 
         let mut omega = PointG2::new_inf()?;
@@ -455,7 +457,7 @@ impl Witness {
             omega
         };
 
-        trace!("ProofBuilder::new: <<< witness: {:?}", witness);
+        trace!("Witness::new: <<< witness: {:?}", witness);
 
         Ok(witness)
     }
@@ -465,7 +467,7 @@ impl Witness {
                        max_cred_num: u32,
                        rev_reg_delta: &RevocationRegistryDelta,
                        rev_tails_accessor: &RTA) -> Result<(), IndyCryptoError> where RTA: RevocationTailsAccessor {
-        trace!("ProofBuilder::update: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
+        trace!("Witness::update: >>> rev_idx: {:?}, max_cred_num: {:?}, rev_reg_delta: {:?}",
                rev_idx, max_cred_num, rev_reg_delta);
 
         let mut omega_denom = PointG2::new_inf()?;
@@ -493,7 +495,7 @@ impl Witness {
 
         self.omega = new_omega;
 
-        trace!("ProofBuilder::update: <<<");
+        trace!("Witness::update: <<<");
 
         Ok(())
     }
@@ -1023,8 +1025,8 @@ mod test {
                                             None,
                                             None).unwrap();
 
-        let proov_request_nonce = new_nonce().unwrap();
-        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
+        let proof_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proof_request_nonce, &master_secret).unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request("issuer_key_id_1",
@@ -1033,7 +1035,7 @@ mod test {
                                              &cred_pub_key,
                                              None,
                                              None).unwrap();
-        assert!(proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
+        assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     }
 
     #[test]
@@ -1116,8 +1118,8 @@ mod test {
                                             &cred_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proov_request_nonce = new_nonce().unwrap();
-        let proof = proof_builder.finalize(&proov_request_nonce, &master_secret).unwrap();
+        let proof_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proof_request_nonce, &master_secret).unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request("issuer_key_id_1",
@@ -1126,6 +1128,6 @@ mod test {
                                              &cred_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
-        assert_eq!(true, proof_verifier.verify(&proof, &proov_request_nonce).unwrap());
+        assert_eq!(true, proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     }
 }
