@@ -875,6 +875,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
     check_useful_c_reference!(rev_key_priv, RevocationKeyPrivate, ErrorCode::CommonInvalidState); //TODO invalid param
     check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidState); //TODO invalid param
     check_useful_c_ptr!(credential_signature_correctness_proof_p, ErrorCode::CommonInvalidState); //TODO invalid param
+    check_useful_c_ptr!(revocation_registry_delta_p, ErrorCode::CommonInvalidState); //TODO invalid param
 
     trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_master_secret: {:?}, blinded_master_secret_correctness_proof: {:?}, \
     master_secret_blinding_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
