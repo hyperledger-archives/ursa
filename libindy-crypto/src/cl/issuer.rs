@@ -119,7 +119,7 @@ impl Issuer {
                                                        issuance_by_default)?;
 
         let rev_tails_generator = RevocationTailsGenerator {
-            size: 2 * max_cred_num,
+            size: 2 * max_cred_num + 1, /* Unused 0th + valuable 1..L + unused (L+1)th + valuable (L+2)..(2L) */
             current_index: 0,
             gamma: rev_key_priv.gamma.clone(),
             g_dash: cred_rev_pub_key.g_dash.clone()

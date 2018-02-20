@@ -331,11 +331,7 @@ impl RevocationTailsGenerator {
             return Err(IndyCryptoError::InvalidState("Generator index is out of range".to_string()));
         }
 
-        let tail = if self.current_index != self.size / 2 + 1 {
-            Tail::new_tail(self.current_index, &self.g_dash, &self.gamma)?
-        } else {
-            PointG2::new()?
-        };
+        let tail = Tail::new_tail(self.current_index, &self.g_dash, &self.gamma)?;
 
         self.current_index += 1;
 
