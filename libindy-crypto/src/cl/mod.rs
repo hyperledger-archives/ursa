@@ -322,20 +322,29 @@ pub struct RevocationTailsGenerator {
 }
 
 impl RevocationTailsGenerator {
+    fn new(max_cred_num: u32, gamma: GroupOrderElement, g_dash: PointG2) -> Self {
+        RevocationTailsGenerator {
+            size: 2 * max_cred_num + 1, /* Unused 0th + valuable 1..L + unused (L+1)th + valuable (L+2)..(2L) */
+            current_index: 0,
+            gamma,
+            g_dash,
+        }
+    }
+
     pub fn count(&self) -> u32 {
         self.size - self.current_index
     }
 
-    pub fn next(&mut self) -> Result<Tail, IndyCryptoError> {
+    pub fn next(&mut self) -> Result<Option<Tail>, IndyCryptoError> {
         if self.current_index >= self.size {
-            return Err(IndyCryptoError::InvalidState("Generator index is out of range".to_string()));
+            return Ok(None);
         }
 
         let tail = Tail::new_tail(self.current_index, &self.g_dash, &self.gamma)?;
 
         self.current_index += 1;
 
-        Ok(tail)
+        Ok(Some(tail))
     }
 }
 
@@ -350,20 +359,20 @@ pub trait RevocationTailsAccessor {
 /// Simple implementation of `RevocationTailsAccessor` that stores all tails as HashMap.
 #[derive(Debug, Clone)]
 pub struct SimpleTailsAccessor {
-    tails: HashMap<u32, Tail>
+    tails: Vec<Tail>
 }
 
 impl RevocationTailsAccessor for SimpleTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError> {
-        Ok(accessor(&self.tails[&tail_id]))
+        Ok(accessor(&self.tails[tail_id as usize]))
     }
 }
 
 impl SimpleTailsAccessor {
     pub fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, IndyCryptoError> {
-        let mut tails: HashMap<u32, PointG2> = HashMap::new();
-        for i in 0..rev_tails_generator.count() {
-            tails.insert(i, rev_tails_generator.next()?);
+        let mut tails: Vec<Tail> = Vec::new();
+        while let Some(tail) = rev_tails_generator.next()? {
+            tails.push(tail);
         }
         Ok(SimpleTailsAccessor {
             tails

@@ -30,7 +30,11 @@ pub extern fn indy_crypto_cl_tails_generator_next(rev_tails_generator: *const c_
     let res = match rev_tails_generator.next() {
         Ok(tail) => {
             unsafe {
-                *tail_p = Box::into_raw(Box::new(tail)) as *const c_void;
+                if let Some(tail) = tail {
+                    *tail_p = Box::into_raw(Box::new(tail)) as *const c_void;
+                } else {
+                    *tail_p = ptr::null();
+                }
                 trace!("indy_crypto_cl_tails_generator_next: *tail_p: {:?}", *tail_p);
             }
             ErrorCode::Success

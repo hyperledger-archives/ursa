@@ -118,12 +118,10 @@ impl Issuer {
                                                        max_cred_num,
                                                        issuance_by_default)?;
 
-        let rev_tails_generator = RevocationTailsGenerator {
-            size: 2 * max_cred_num + 1, /* Unused 0th + valuable 1..L + unused (L+1)th + valuable (L+2)..(2L) */
-            current_index: 0,
-            gamma: rev_key_priv.gamma.clone(),
-            g_dash: cred_rev_pub_key.g_dash.clone()
-        };
+        let rev_tails_generator = RevocationTailsGenerator::new(
+            max_cred_num,
+            rev_key_priv.gamma.clone(),
+            cred_rev_pub_key.g_dash.clone());
 
         trace!("Issuer::new_revocation_registry_def: <<< rev_key_pub: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
                rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator);
