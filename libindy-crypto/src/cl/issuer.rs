@@ -756,7 +756,7 @@ impl Issuer {
         values.extend_from_slice(&prover_id_bn.to_bytes()?);
         values.extend_from_slice(&rev_idx_bn.to_bytes()?);
 
-        let credential_context = get_hash_as_int(&mut vec![values])?;
+        let credential_context = get_hash_as_int(&vec![values])?;
 
         trace!("Issuer::_gen_credential_context: <<< credential_context: {:?}", credential_context);
 

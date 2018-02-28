@@ -279,7 +279,7 @@ pub fn transform_u32_to_array_of_u8(x: u32) -> Vec<u8> {
     result
 }
 
-pub fn get_hash_as_int(nums: &mut Vec<Vec<u8>>) -> Result<BigNumber, IndyCryptoError> {
+pub fn get_hash_as_int(nums: &Vec<Vec<u8>>) -> Result<BigNumber, IndyCryptoError> {
     trace!("Helpers::get_hash_as_int: >>> nums: {:?}", nums);
 
     let hashed_array: Vec<u8> = BigNumber::hash_array(&nums)?;
