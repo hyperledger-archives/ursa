@@ -670,11 +670,12 @@ impl ProofBuilder {
 
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
+        values.sort(); // should sort only tau_list
         values.extend_from_slice(&self.c_list);
         values.push(nonce.to_bytes()?);
 
         // In the anoncreds whitepaper, `challenge` is denoted by `c_h`
-        let challenge = get_hash_as_int(&mut values)?;
+        let challenge = get_hash_as_int(&values)?;
 
         let mut proofs: HashMap<String, SubProof> = HashMap::new();
 

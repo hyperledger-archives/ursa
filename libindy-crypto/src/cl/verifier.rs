@@ -222,11 +222,12 @@ impl ProofVerifier {
 
         let mut values: Vec<Vec<u8>> = Vec::new();
 
+        tau_list.sort();
         values.extend_from_slice(&tau_list);
         values.extend_from_slice(&proof.aggregated_proof.c_list);
         values.push(nonce.to_bytes()?);
 
-        let c_hver = get_hash_as_int(&mut values)?;
+        let c_hver = get_hash_as_int(&values)?;
 
         info!(target: "anoncreds_service", "Verifier verify proof -> done");
 
