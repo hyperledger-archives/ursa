@@ -230,6 +230,14 @@ pub struct RevocationRegistry {
     accum: Accumulator
 }
 
+impl From<RevocationRegistryDelta> for RevocationRegistry {
+    fn from(rev_reg_delta: RevocationRegistryDelta) -> RevocationRegistry {
+        RevocationRegistry {
+            accum: rev_reg_delta.accum
+        }
+    }
+}
+
 impl JsonEncodable for RevocationRegistry {}
 
 impl<'a> JsonDecodable<'a> for RevocationRegistry {}
