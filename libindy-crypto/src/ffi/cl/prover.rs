@@ -547,7 +547,6 @@ pub extern fn indy_crypto_cl_prover_new_proof_builder(proof_builder_p: *mut *con
 
 #[no_mangle]
 pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: *const c_void,
-                                                                 key_id: *const c_char,
                                                                  sub_proof_request: *const c_void,
                                                                  credential_schema: *const c_void,
                                                                  credential_signature: *const c_void,
@@ -555,26 +554,24 @@ pub extern fn indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder: 
                                                                  credential_pub_key: *const c_void,
                                                                  rev_reg: *const c_void,
                                                                  witness: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: >>> proof_builder: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
                 credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, rev_reg: {:?}, witness: {:?}",
-           proof_builder, key_id, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
+           proof_builder, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
 
     check_useful_mut_c_reference!(proof_builder, ProofBuilder, ErrorCode::CommonInvalidParam1);
-    check_useful_c_str!(key_id, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam3);
-    check_useful_c_reference!(credential_schema, CredentialSchema, ErrorCode::CommonInvalidParam4);
-    check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam5);
-    check_useful_c_reference!(credential_values, CredentialValues, ErrorCode::CommonInvalidParam6);
-    check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam7);
+    check_useful_c_reference!(sub_proof_request, SubProofRequest, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(credential_schema, CredentialSchema, ErrorCode::CommonInvalidParam3);
+    check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam4);
+    check_useful_c_reference!(credential_values, CredentialValues, ErrorCode::CommonInvalidParam5);
+    check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam6);
     check_useful_opt_c_reference!(rev_reg, RevocationRegistry);
     check_useful_opt_c_reference!(witness, Witness);
 
-    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: entities: proof_builder: {:?}, key_id: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
+    trace!("indy_crypto_cl_proof_builder_add_sub_proof_request: entities: proof_builder: {:?}, sub_proof_request: {:?}, credential_schema: {:?}, \
                 credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, rev_reg: {:?}, witness: {:?}",
-           proof_builder, key_id, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
+           proof_builder, sub_proof_request, credential_schema, credential_signature, credential_values, credential_pub_key, rev_reg, witness);
 
-    let res = match proof_builder.add_sub_proof_request(&key_id,
-                                                        sub_proof_request,
+    let res = match proof_builder.add_sub_proof_request(sub_proof_request,
                                                         credential_schema,
                                                         credential_signature,
                                                         credential_values,
@@ -723,7 +720,6 @@ pub extern fn indy_crypto_cl_proof_free(proof: *const c_void) -> ErrorCode {
 mod tests {
     use super::*;
 
-    use std::ffi::CString;
     use std::ptr;
     use ffi::cl::mocks::*;
     use ffi::cl::issuer::mocks::*;
@@ -1026,7 +1022,6 @@ mod tests {
 
     #[test]
     fn indy_crypto_cl_prover_proof_builder_add_sub_proof_request_works() {
-        let uuid = CString::new("uuid").unwrap();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let master_secret = _master_secret();
         let master_secret_blinding_nonce = _nonce();
@@ -1057,7 +1052,6 @@ mod tests {
         let proof_builder = _proof_builder();
 
         let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
-                                                                          uuid.as_ptr(),
                                                                           sub_proof_request,
                                                                           credential_schema,
                                                                           credential_signature,
@@ -1082,7 +1076,6 @@ mod tests {
 
     #[test]
     fn indy_crypto_cl_prover_proof_builder_finalize_works() {
-        let uuid = CString::new("uuid").unwrap();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let master_secret = _master_secret();
         let master_secret_blinding_nonce = _nonce();
@@ -1113,7 +1106,6 @@ mod tests {
         let proof_builder = _proof_builder();
 
         let err_code = indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
-                                                                          uuid.as_ptr(),
                                                                           sub_proof_request,
                                                                           credential_schema,
                                                                           credential_signature,
@@ -1295,7 +1287,6 @@ pub mod mocks {
     use super::*;
 
     use std::ptr;
-    use std::ffi::CString;
     use ffi::cl::mocks::*;
 
     pub fn _master_secret() -> *const c_void {
@@ -1391,10 +1382,8 @@ pub mod mocks {
         let credential_schema = _credential_schema();
         let credential_values = _credential_values();
         let sub_proof_request = _sub_proof_request();
-        let key_id = CString::new("key_id").unwrap();
 
         indy_crypto_cl_proof_builder_add_sub_proof_request(proof_builder,
-                                                           key_id.as_ptr(),
                                                            sub_proof_request,
                                                            credential_schema,
                                                            credential_signature,

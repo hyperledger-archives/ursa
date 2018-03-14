@@ -206,7 +206,7 @@ impl Prover {
     pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
         Ok(ProofBuilder {
             m1_tilde: bn_rand(LARGE_M1_TILDE)?,
-            init_proofs: HashMap::new(),
+            init_proofs: Vec::new(),
             c_list: Vec::new(),
             tau_list: Vec::new()
         })
@@ -464,7 +464,7 @@ impl Prover {
 #[derive(Debug)]
 pub struct ProofBuilder {
     pub m1_tilde: BigNumber,
-    pub init_proofs: HashMap<String, InitProof>,
+    pub init_proofs: Vec<InitProof>,
     pub c_list: Vec<Vec<u8>>,
     pub tau_list: Vec<Vec<u8>>,
 }
@@ -541,7 +541,6 @@ impl ProofBuilder {
     ///                                     None).unwrap();
     /// ```
     pub fn add_sub_proof_request(&mut self,
-                                 key_id: &str,
                                  sub_proof_request: &SubProofRequest,
                                  credential_schema: &CredentialSchema,
                                  credential_signature: &CredentialSignature,
@@ -549,9 +548,9 @@ impl ProofBuilder {
                                  credential_pub_key: &CredentialPublicKey,
                                  rev_reg: Option<&RevocationRegistry>,
                                  witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
-        trace!("ProofBuilder::add_sub_proof_request: >>> key_id: {:?}, credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, \
+        trace!("ProofBuilder::add_sub_proof_request: >>> credential_signature: {:?}, credential_values: {:?}, credential_pub_key: {:?}, \
         rev_reg: {:?}, sub_proof_request: {:?}, credential_schema: {:?}",
-               key_id, credential_signature, credential_values, credential_pub_key, rev_reg, sub_proof_request, credential_schema);
+               credential_signature, credential_values, credential_pub_key, rev_reg, sub_proof_request, credential_schema);
 
         ProofBuilder::_check_add_sub_proof_request_params_consistency(credential_values, sub_proof_request, credential_schema)?;
 
@@ -591,7 +590,7 @@ impl ProofBuilder {
             sub_proof_request: sub_proof_request.clone(),
             credential_schema: credential_schema.clone()
         };
-        self.init_proofs.insert(key_id.to_owned(), init_proof);
+        self.init_proofs.push(init_proof);
 
         trace!("ProofBuilder::add_sub_proof_request: <<<");
 
@@ -670,16 +669,15 @@ impl ProofBuilder {
 
         let mut values: Vec<Vec<u8>> = Vec::new();
         values.extend_from_slice(&self.tau_list);
-        values.sort(); // should sort only tau_list
         values.extend_from_slice(&self.c_list);
         values.push(nonce.to_bytes()?);
 
         // In the anoncreds whitepaper, `challenge` is denoted by `c_h`
         let challenge = get_hash_as_int(&values)?;
 
-        let mut proofs: HashMap<String, SubProof> = HashMap::new();
+        let mut proofs: Vec<SubProof> = Vec::new();
 
-        for (proof_cred_uuid, init_proof) in self.init_proofs.iter() {
+        for init_proof in self.init_proofs.iter() {
             let mut non_revoc_proof: Option<NonRevocProof> = None;
             if let Some(ref non_revoc_init_proof) = init_proof.non_revoc_init_proof {
                 non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(&non_revoc_init_proof, &challenge)?);
@@ -693,7 +691,7 @@ impl ProofBuilder {
                                                                       &init_proof.sub_proof_request)?;
 
             let proof = SubProof { primary_proof, non_revoc_proof };
-            proofs.insert(proof_cred_uuid.to_owned(), proof);
+            proofs.push(proof);
         }
 
         let aggregated_proof = AggregatedProof { c_hash: challenge, c_list: self.c_list.clone() };

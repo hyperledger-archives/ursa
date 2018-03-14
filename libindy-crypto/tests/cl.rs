@@ -192,12 +192,9 @@ mod test {
         let nonce = new_nonce().unwrap();
 
         // 25. Prover creates proof for two sub proof requests
-        let gvt_key_id = "gvt_key_id";
-        let xyz_key_id = "xyz_key_id";
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
-        proof_builder.add_sub_proof_request(gvt_key_id,
-                                            &gvt_sub_proof_request,
+        proof_builder.add_sub_proof_request(&gvt_sub_proof_request,
                                             &gvt_credential_schema,
                                             &gvt_credential_signature,
                                             &gvt_credential_values,
@@ -205,8 +202,7 @@ mod test {
                                             Some(&gvt_rev_reg),
                                             Some(&gvt_witness)).unwrap();
 
-        proof_builder.add_sub_proof_request(xyz_key_id,
-                                            &xyz_sub_proof_request,
+        proof_builder.add_sub_proof_request(&xyz_sub_proof_request,
                                             &xyz_credential_schema,
                                             &xyz_credential_signature,
                                             &xyz_credential_values,
@@ -218,15 +214,13 @@ mod test {
 
         // 26. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(gvt_key_id,
-                                             &gvt_sub_proof_request,
+        proof_verifier.add_sub_proof_request(&gvt_sub_proof_request,
                                              &gvt_credential_schema,
                                              &gvt_credential_pub_key,
                                              Some(&gvt_rev_key_pub),
                                              Some(&gvt_rev_reg)).unwrap();
 
-        proof_verifier.add_sub_proof_request(xyz_key_id,
-                                             &xyz_sub_proof_request,
+        proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
                                              &xyz_credential_pub_key,
                                              Some(&xyz_rev_key_pub),
@@ -290,10 +284,8 @@ mod test {
         let nonce = new_nonce().unwrap();
 
         // 12. Prover creates proof
-        let key_id = "issuer_key_id_1";
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -304,8 +296,7 @@ mod test {
 
         // 13. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              None,
@@ -392,9 +383,7 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -405,8 +394,7 @@ mod test {
 
         // 14. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -495,9 +483,7 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -508,8 +494,7 @@ mod test {
 
         // 14. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -602,10 +587,8 @@ mod test {
         // 8. Prover creates proof builder
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
-        let gvt_key_id = "gvt_key_id";
         // 9. Prover adds GVT sub proof request
-        proof_builder.add_sub_proof_request(gvt_key_id,
-                                            &gvt_sub_proof_request,
+        proof_builder.add_sub_proof_request(&gvt_sub_proof_request,
                                             &gvt_credential_schema,
                                             &gvt_credential_signature,
                                             &gvt_credential_values,
@@ -613,9 +596,7 @@ mod test {
                                             None, None).unwrap();
 
         // 10. Prover adds XYZ sub proof request
-        let xyz_key_id = "xyz_key_id";
-        proof_builder.add_sub_proof_request(xyz_key_id,
-                                            &xyz_sub_proof_request,
+        proof_builder.add_sub_proof_request(&xyz_sub_proof_request,
                                             &xyz_credential_schema,
                                             &xyz_credential_signature,
                                             &xyz_credential_values,
@@ -627,13 +608,11 @@ mod test {
 
         // 12. Verifier verifies proof for GVT and XYZ sub proof requests
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(gvt_key_id,
-                                             &gvt_sub_proof_request,
+        proof_verifier.add_sub_proof_request(&gvt_sub_proof_request,
                                              &gvt_credential_schema,
                                              &gvt_credential_pub_key,
                                              None, None).unwrap();
-        proof_verifier.add_sub_proof_request(xyz_key_id,
-                                             &xyz_sub_proof_request,
+        proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
                                              &xyz_credential_pub_key,
                                              None, None).unwrap();
@@ -802,9 +781,7 @@ mod test {
 
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature_1,
                                             &credential_values,
@@ -815,8 +792,7 @@ mod test {
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -990,9 +966,7 @@ mod test {
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature_3,
                                             &credential_values,
@@ -1003,8 +977,7 @@ mod test {
 
         // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1177,9 +1150,7 @@ mod test {
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature_1,
                                             &credential_values,
@@ -1190,8 +1161,7 @@ mod test {
 
         // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1372,9 +1342,7 @@ mod test {
 
         // 12. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature_2,
                                             &credential_values,
@@ -1385,8 +1353,7 @@ mod test {
 
         // 13. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1508,9 +1475,7 @@ mod test {
         // Proving first credential
         // 9. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature_1,
                                             &credential_values,
@@ -1521,8 +1486,7 @@ mod test {
 
         // 10. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1608,9 +1572,7 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -1624,8 +1586,7 @@ mod test {
 
         // 15. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1714,9 +1675,7 @@ mod test {
 
         // 14. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -1727,8 +1686,7 @@ mod test {
 
         // 15. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1811,11 +1769,9 @@ mod test {
 
         // 12. Prover builds proof
         let nonce = new_nonce().unwrap();
-        let key_id = "key_id";
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -1827,9 +1783,7 @@ mod test {
         // 13. Verifier verifies proof (Proof is valid)
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
-        let key_id = "key_id";
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1842,9 +1796,7 @@ mod test {
         // 15. Verifier verifies proof (Proof is not valid)
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
-        let key_id = "key_id";
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -1857,9 +1809,7 @@ mod test {
         // 17. Verifier verifies proof (Proof is valid again)
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
-        let key_id = "key_id";
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -2017,9 +1967,7 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -2030,8 +1978,7 @@ mod test {
 
         // 14. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -2044,8 +1991,7 @@ mod test {
 
         // 16. Verifier verifies proof after revocation
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
@@ -2111,8 +2057,7 @@ mod test {
         // 21. Prover creates proof using new credential
         let mut new_proof_builder = Prover::new_proof_builder().unwrap();
 
-        new_proof_builder.add_sub_proof_request(key_id,
-                                                &sub_proof_request,
+        new_proof_builder.add_sub_proof_request(&sub_proof_request,
                                                 &credential_schema,
                                                 &new_credential_signature,
                                                 &credential_values,
@@ -2124,8 +2069,7 @@ mod test {
 
         // 22. Verifier verifies proof created by new credential
         let mut new_proof_verifier = Verifier::new_proof_verifier().unwrap();
-        new_proof_verifier.add_sub_proof_request(key_id,
-                                                 &sub_proof_request,
+        new_proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                  &credential_schema,
                                                  &credential_pub_key,
                                                  Some(&rev_key_pub),
@@ -2134,8 +2078,7 @@ mod test {
 
         // 23. Verifier verifies proof created before the first credential had been revoked
         let mut old_proof_verifier = Verifier::new_proof_verifier().unwrap();
-        old_proof_verifier.add_sub_proof_request(key_id,
-                                                 &sub_proof_request,
+        old_proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                  &credential_schema,
                                                  &credential_pub_key,
                                                  Some(&rev_key_pub),
@@ -2183,11 +2126,8 @@ mod test {
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
         // 9. Prover creates proof by sub proof request not corresponded to verifier proof request
-        let key_id = "key_id";
-
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -2197,8 +2137,7 @@ mod test {
 
         // 10. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              None, None).unwrap();
@@ -2255,11 +2194,8 @@ mod test {
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
         // 10. Prover creates proof by sub proof request not corresponded to verifier proof request
-        let key_id = "key_id";
-
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -2271,8 +2207,7 @@ mod test {
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              None,
@@ -2329,12 +2264,10 @@ mod test {
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
         // 10. Prover creates proof by sub proof request not corresponded to verifier proof request
-        let key_id = "key_id";
         let nonce_for_proof_creation = new_nonce().unwrap();
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -2347,8 +2280,7 @@ mod test {
         let nonce_for_proof_verification = new_nonce().unwrap();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &sub_proof_request,
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
                                              &credential_pub_key,
                                              None,
@@ -2407,9 +2339,7 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         let nonce = new_nonce().unwrap();
 
-        let key_id = "key_id";
-        proof_builder.add_sub_proof_request(key_id,
-                                            &sub_proof_request,
+        proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
                                             &credential_signature,
                                             &credential_values,
@@ -2423,8 +2353,7 @@ mod test {
         let xyz_sub_proof_request = helpers::xyz_sub_proof_request();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-        proof_verifier.add_sub_proof_request(key_id,
-                                             &xyz_sub_proof_request,
+        proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
                                              &xyz_credential_pub_key,
                                              None, None).unwrap();
@@ -2572,9 +2501,7 @@ mod test {
 
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
-        let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &sub_proof_request,
+        let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
@@ -2635,9 +2562,7 @@ mod test {
         // 10. Prover creates proof by credential not correspondent to proof request
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
-        let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &sub_proof_request,
+        let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
@@ -2699,9 +2624,7 @@ mod test {
         // 10. Prover creates proof by credential not contained requested attribute
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
-        let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &sub_proof_request,
+        let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
@@ -2764,9 +2687,7 @@ mod test {
         // 10. Prover creates proof by credential value not satisfied predicate
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
-        let key_id = "key_id";
-        let res = proof_builder.add_sub_proof_request(key_id,
-                                                      &sub_proof_request,
+        let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
@@ -2784,14 +2705,12 @@ mod test {
         let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, false).unwrap();
 
         // 3. Verifier build proof verifier
-        let key_id = "key_id";
         let sub_proof_request = helpers::gvt_sub_proof_request();
         let xyz_credential_schema = helpers::xyz_credential_schema();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
-        let res = proof_verifier.add_sub_proof_request(key_id,
-                                                       &sub_proof_request,
+        let res = proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                        &xyz_credential_schema,
                                                        &credential_pub_key,
                                                        None, None);

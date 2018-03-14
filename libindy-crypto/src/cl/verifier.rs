@@ -4,7 +4,7 @@ use cl::constants::{LARGE_E_START, ITERATION};
 use cl::helpers::*;
 use errors::IndyCryptoError;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::iter::FromIterator;
 
 /// Party that wants to check that prover has some credentials provided by issuer.
@@ -43,7 +43,7 @@ impl Verifier {
     /// ```
     pub fn new_proof_verifier() -> Result<ProofVerifier, IndyCryptoError> {
         Ok(ProofVerifier {
-            credentials: HashMap::new(),
+            credentials: Vec::new(),
         })
     }
 }
@@ -51,7 +51,7 @@ impl Verifier {
 
 #[derive(Debug)]
 pub struct ProofVerifier {
-    credentials: HashMap<String, VerifiableCredential>,
+    credentials: Vec<VerifiableCredential>,
 }
 
 impl ProofVerifier {
@@ -90,7 +90,6 @@ impl ProofVerifier {
     ///                                      None).unwrap();
     /// ```
     pub fn add_sub_proof_request(&mut self,
-                                 key_id: &str,
                                  sub_proof_request: &SubProofRequest,
                                  credential_schema: &CredentialSchema,
                                  credential_pub_key: &CredentialPublicKey,
@@ -98,7 +97,7 @@ impl ProofVerifier {
                                  rev_reg: Option<&RevocationRegistry>) -> Result<(), IndyCryptoError> {
         ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, credential_schema)?;
 
-        self.credentials.insert(key_id.to_string(), VerifiableCredential {
+        self.credentials.push(VerifiableCredential {
             pub_key: credential_pub_key.clone()?,
             sub_proof_request: sub_proof_request.clone(),
             credential_schema: credential_schema.clone(),
@@ -195,9 +194,10 @@ impl ProofVerifier {
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
 
-        for (issuer_key_id, proof_item) in &proof.proofs {
-            let credential: &VerifiableCredential = &self.credentials[issuer_key_id];
-
+        assert_eq!(proof.proofs.len(), self.credentials.len()); //FIXME return error
+        for idx in 0..proof.proofs.len() {
+            let proof_item = &proof.proofs[idx];
+            let credential = &self.credentials[idx];
             if let (Some(non_revocation_proof), Some(cred_rev_pub_key), Some(rev_reg), Some(rev_key_pub)) = (proof_item.non_revoc_proof.as_ref(),
                                                                                                              credential.pub_key.r_key.as_ref(),
                                                                                                              credential.rev_reg.as_ref(),
@@ -221,8 +221,6 @@ impl ProofVerifier {
         }
 
         let mut values: Vec<Vec<u8>> = Vec::new();
-
-        tau_list.sort();
         values.extend_from_slice(&tau_list);
         values.extend_from_slice(&proof.aggregated_proof.c_list);
         values.push(nonce.to_bytes()?);
@@ -260,13 +258,14 @@ impl ProofVerifier {
         Ok(())
     }
 
-    fn _check_verify_params_consistency(credentials: &HashMap<String, VerifiableCredential>,
+    fn _check_verify_params_consistency(credentials: &Vec<VerifiableCredential>,
                                         proof: &Proof) -> Result<(), IndyCryptoError> {
         trace!("ProofVerifier::_check_verify_params_consistency: >>> credentials: {:?}, proof: {:?}", credentials, proof);
 
-        for (key_id, credential) in credentials {
-            let proof_for_credential = proof.proofs.get(key_id.as_str()).
-                ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Proof not found")))?;
+        assert_eq!(proof.proofs.len(), credentials.len()); //FIXME return error
+        for idx in 0..proof.proofs.len() {
+            let proof_for_credential = &proof.proofs[idx];
+            let credential = &credentials[idx];
 
             let proof_revealed_attrs = HashSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
 
