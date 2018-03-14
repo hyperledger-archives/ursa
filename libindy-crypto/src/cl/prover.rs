@@ -475,7 +475,6 @@ impl ProofBuilder {
     ///
     /// # Arguments
     /// * `proof_builder` - Proof builder.
-    /// * `key_id` - Unique credential identifier.
     /// * `sub_proof_request` -Requested attributes and predicates.
     /// * `credential_schema` - Credential schema.
     /// * `credential_signature` - Credential signature.
@@ -531,8 +530,7 @@ impl ProofBuilder {
     /// let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
     ///
     /// let mut proof_builder = Prover::new_proof_builder().unwrap();
-    /// proof_builder.add_sub_proof_request("issuer_key_id_1",
-    ///                                     &sub_proof_request,
+    /// proof_builder.add_sub_proof_request(&sub_proof_request,
     ///                                     &credential_schema,
     ///                                     &credential_signature,
     ///                                     &credential_values,
@@ -652,8 +650,7 @@ impl ProofBuilder {
     /// let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
     ///
     /// let mut proof_builder = Prover::new_proof_builder().unwrap();
-    /// proof_builder.add_sub_proof_request("issuer_key_id_1",
-    ///                                     &sub_proof_request,
+    /// proof_builder.add_sub_proof_request(&sub_proof_request,
     ///                                     &credential_schema,
     ///                                     &credential_signature,
     ///                                     &credential_values,
