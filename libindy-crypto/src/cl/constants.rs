@@ -12,6 +12,11 @@ pub const LARGE_MTILDE: usize = 593;
 pub const LARGE_VPRIME_TILDE: usize = 673;
 pub const LARGE_RTILDE: usize = 672;
 pub const ITERATION: usize = 4;
-pub const LARGE_M2_TILDE: usize = 1024;
+/*
+  LARGE_M1_TILDE: now it differs from the paper v0.3, but author of the paper,
+  Dmitry Khovratovich, suggests to use same size as LARGE_MVECT
+  FIXME sync the paper and remove this comment
+*/
+pub const LARGE_M1_TILDE: usize = LARGE_MVECT;
 pub const LARGE_NONCE: usize = 80;
 pub const LARGE_ALPHATILDE: usize = 2787;

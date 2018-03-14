@@ -205,7 +205,7 @@ impl Prover {
     /// let _proof_builder = Prover::new_proof_builder();
     pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
         Ok(ProofBuilder {
-            m1_tilde: bn_rand(LARGE_M2_TILDE)?,
+            m1_tilde: bn_rand(LARGE_M1_TILDE)?,
             init_proofs: HashMap::new(),
             c_list: Vec::new(),
             tau_list: Vec::new()
