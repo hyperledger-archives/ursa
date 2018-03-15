@@ -56,6 +56,7 @@ pub struct ProofVerifier {
 
 impl ProofVerifier {
     /// Add sub proof request to proof verifier.
+    /// The order of sub-proofs is important: both Prover and Verifier should use the same order.
     ///
     /// # Arguments
     /// * `proof_verifier` - Proof verifier.

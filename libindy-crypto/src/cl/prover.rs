@@ -472,6 +472,7 @@ pub struct ProofBuilder {
 impl ProofBuilder {
     /// Adds sub proof request to proof builder which will be used fo building of proof.
     /// Part of proof request related to a particular schema-key.
+    /// The order of sub-proofs is important: both Prover and Verifier should use the same order.
     ///
     /// # Arguments
     /// * `proof_builder` - Proof builder.
