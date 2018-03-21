@@ -261,6 +261,15 @@ impl JsonEncodable for RevocationRegistryDelta {}
 impl<'a> JsonDecodable<'a> for RevocationRegistryDelta {}
 
 impl RevocationRegistryDelta {
+    pub fn from_parts(rev_reg: &RevocationRegistry, issued: &HashSet<u32>, revoked: &HashSet<u32>) -> Result<RevocationRegistryDelta, IndyCryptoError> {
+        Ok(RevocationRegistryDelta {
+            prev_accum: None,
+            accum: rev_reg.accum.clone(),
+            issued: issued.clone(),
+            revoked: revoked.clone()
+        })
+    }
+    
     pub fn merge(&mut self, other_delta: &RevocationRegistryDelta) -> Result<(), IndyCryptoError> {
         if other_delta.prev_accum.is_none() || self.accum != other_delta.prev_accum.unwrap() {
             return Err(IndyCryptoError::InvalidStructure(format!("Deltas can not be merged.")));
