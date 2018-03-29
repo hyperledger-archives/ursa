@@ -382,6 +382,12 @@ impl From<ErrorStack> for IndyCryptoError {
     }
 }
 
+// Constants that are used throughout the code, so avoiding recomputation.
+lazy_static! {
+    pub static ref BIGNUMBER_1: BigNumber = BigNumber::from_u32(1).unwrap();
+    pub static ref BIGNUMBER_2: BigNumber = BigNumber::from_u32(2).unwrap();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

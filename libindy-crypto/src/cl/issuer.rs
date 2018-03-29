@@ -1,4 +1,4 @@
-use bn::BigNumber;
+use bn::{BigNumber, BIGNUMBER_1};
 use cl::*;
 use errors::IndyCryptoError;
 use pair::*;
@@ -539,10 +539,10 @@ impl Issuer {
         let p_safe = generate_safe_prime(LARGE_PRIME)?;
         let q_safe = generate_safe_prime(LARGE_PRIME)?;
 
-        let mut p = p_safe.sub(&BigNumber::from_u32(1)?)?;
+        let mut p = p_safe.sub(&BIGNUMBER_1)?;
         p.div_word(2)?;
 
-        let mut q = q_safe.sub(&BigNumber::from_u32(1)?)?;
+        let mut q = q_safe.sub(&BIGNUMBER_1)?;
         q.div_word(2)?;
 
         let n = p_safe.mul(&q_safe, Some(&mut ctx))?;
@@ -773,12 +773,13 @@ impl Issuer {
 
         let v = generate_v_prime_prime()?;
 
-        let e_start = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_E_START)?, None)?;
+        /*let e_start = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_E_START)?, None)?;
         let e_end = BigNumber::from_u32(2)?
             .exp(&BigNumber::from_u32(LARGE_E_END_RANGE)?, None)?
-            .add(&e_start)?;
+            .add(&e_start)?;*/
 
-        let e = generate_prime_in_range(&e_start, &e_end)?;
+//        let e = generate_prime_in_range(&e_start, &e_end)?;
+        let e = generate_prime_in_range(&LARGE_E_START_VALUE, &LARGE_E_END_RANGE_VALUE)?;
         let (a, q) = Issuer::_sign_primary_credential(cred_pub_key, cred_priv_key, &credential_context, &cred_values, &v, blinded_ms, &e)?;
 
         let pr_cred_sig = PrimaryCredentialSignature { m_2: credential_context.clone()?, a, e, v };

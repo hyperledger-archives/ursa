@@ -1,4 +1,4 @@
-use bn::{BigNumber, BigNumberContext};
+use bn::{BigNumber, BigNumberContext, BIGNUMBER_1};
 use errors::IndyCryptoError;
 
 
@@ -66,7 +66,7 @@ pub fn get_exponentiated_generators(to_exponentiate: Vec<(&BigNumber, &BigNumber
         )?
     );*/
 
-    let mut accumulated = BigNumber::from_dec("1")?;
+    let mut accumulated = BIGNUMBER_1.clone()?;
     for &(g, m) in to_exponentiate.iter() {
         accumulated = accumulated.mod_mul(
             &g.mod_exp(m, modulus, Some(ctx))?, modulus, Some(ctx)

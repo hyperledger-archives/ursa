@@ -1,3 +1,6 @@
+use bn::{BigNumber, BIGNUMBER_2};
+//use std::sync::{Once, ONCE_INIT};
+
 pub const LARGE_MASTER_SECRET: usize = 256;
 pub const LARGE_E_START: usize = 596;
 pub const LARGE_E_END_RANGE: usize = 119;
@@ -20,3 +23,31 @@ pub const ITERATION: usize = 4;
 pub const LARGE_M1_TILDE: usize = LARGE_MVECT;
 pub const LARGE_NONCE: usize = 80;
 pub const LARGE_ALPHATILDE: usize = 2787;
+
+/*pub static mut LARGE_E_START_VALUE: BigNumber = BigNumber::new().unwrap();
+static INIT: Once = ONCE_INIT;
+
+fn init_constants() {
+    unsafe {
+        INIT.call_once(|| {
+            pub static LARGE_E_START_VALUE: BigNumber =  BigNumber::from_u32(2).unwrap().exp(
+                &BigNumber::from_u32(LARGE_E_START).unwrap(),
+                None).unwrap();
+            pub static LARGE_E_END_RANGE_VALUE: BigNumber =  BigNumber::from_u32(2).unwrap().exp(
+                &BigNumber::from_u32(LARGE_E_END_RANGE).unwrap(),
+                None).unwrap().add(&LARGE_E_START_VALUE).unwrap();
+        });
+    }
+}*/
+
+// Constants that are used throughout the CL signatures code, so avoiding recomputation.
+lazy_static! {
+    pub static ref LARGE_E_START_VALUE: BigNumber = BIGNUMBER_2.exp(
+                &BigNumber::from_u32(LARGE_E_START).unwrap(),
+                None).unwrap();
+    pub static ref LARGE_E_END_RANGE_VALUE: BigNumber = BIGNUMBER_2.exp(
+                &BigNumber::from_u32(LARGE_E_END_RANGE).unwrap(),
+                None).unwrap().add(&LARGE_E_START_VALUE).unwrap();
+    pub static ref LARGE_VPRIME_PRIME_VALUE: BigNumber = BIGNUMBER_2.exp(
+        &BigNumber::from_u32(LARGE_VPRIME_PRIME - 1).unwrap(), None).unwrap();
+}

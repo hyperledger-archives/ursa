@@ -43,3 +43,6 @@ pub mod ffi;
 #[cfg(feature = "pair_amcl")]
 #[path = "pair/amcl.rs"]
 pub mod pair;
+
+#[macro_use]
+extern crate lazy_static;

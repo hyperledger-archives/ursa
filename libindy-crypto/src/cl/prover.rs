@@ -818,7 +818,8 @@ impl ProofBuilder {
         )?;
 
         let e_prime = c1.e.sub(
-            &BigNumber::from_dec("2")?.exp(&BigNumber::from_dec(&LARGE_E_START.to_string())?, Some(&mut ctx))?
+//            &BigNumber::from_dec("2")?.exp(&BigNumber::from_dec(&LARGE_E_START.to_string())?, Some(&mut ctx))?
+            &LARGE_E_START_VALUE
         )?;
 
         let t = calc_teq(&credr_pub_key, &a_prime, &e_tilde, &v_tilde, &m_tilde, m1_tilde, &m2_tilde, &unrevealed_attrs)?;

@@ -1,4 +1,4 @@
-use bn::BigNumber;
+use bn::{BigNumber, BIGNUMBER_1};
 use cl::*;
 use errors::IndyCryptoError;
 use pair::GroupOrderElement;
@@ -132,10 +132,10 @@ pub fn _generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 
     let a = bn_rand(LARGE_VPRIME_PRIME)?;
 
-    let b = BigNumber::from_u32(2)?
-        .exp(&BigNumber::from_u32(LARGE_VPRIME_PRIME - 1)?, None)?;
+    /*let b = BigNumber::from_u32(2)?
+        .exp(&BigNumber::from_u32(LARGE_VPRIME_PRIME - 1)?, None)?;*/
 
-    let v_prime_prime = bitwise_or_big_int(&a, &b)?;
+    let v_prime_prime = bitwise_or_big_int(&a, &LARGE_VPRIME_PRIME_VALUE)?;
 
     trace!("Helpers::generate_v_prime_prime: <<< v_prime_prime: {:?}", v_prime_prime);
 
@@ -387,7 +387,7 @@ pub fn calc_tge(p_pub_key: &CredentialPrimaryPublicKey,
 
     tau_list.push(t_tau);
 
-    let mut q: BigNumber = BigNumber::from_dec("1")?;
+    let mut q: BigNumber = BIGNUMBER_1.clone()?;
 
     for i in 0..ITERATION {
         let cur_t = t.get(&i.to_string())
