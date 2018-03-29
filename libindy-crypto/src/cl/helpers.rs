@@ -132,9 +132,6 @@ pub fn _generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 
     let a = bn_rand(LARGE_VPRIME_PRIME)?;
 
-    /*let b = BigNumber::from_u32(2)?
-        .exp(&BigNumber::from_u32(LARGE_VPRIME_PRIME - 1)?, None)?;*/
-
     let v_prime_prime = bitwise_or_big_int(&a, &LARGE_VPRIME_PRIME_VALUE)?;
 
     trace!("Helpers::generate_v_prime_prime: <<< v_prime_prime: {:?}", v_prime_prime);

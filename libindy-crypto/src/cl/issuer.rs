@@ -773,12 +773,6 @@ impl Issuer {
 
         let v = generate_v_prime_prime()?;
 
-        /*let e_start = BigNumber::from_u32(2)?.exp(&BigNumber::from_u32(LARGE_E_START)?, None)?;
-        let e_end = BigNumber::from_u32(2)?
-            .exp(&BigNumber::from_u32(LARGE_E_END_RANGE)?, None)?
-            .add(&e_start)?;*/
-
-//        let e = generate_prime_in_range(&e_start, &e_end)?;
         let e = generate_prime_in_range(&LARGE_E_START_VALUE, &LARGE_E_END_RANGE_VALUE)?;
         let (a, q) = Issuer::_sign_primary_credential(cred_pub_key, cred_priv_key, &credential_context, &cred_values, &v, blinded_ms, &e)?;
 

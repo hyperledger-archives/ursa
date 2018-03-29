@@ -326,13 +326,6 @@ impl ProofVerifier {
 
         let mut ctx = BigNumber::new_context()?;
 
-        /*let degree: BigNumber =
-            BigNumber::from_dec("2")?
-                .exp(
-                    &BigNumber::from_dec(&LARGE_E_START.to_string())?,
-                    Some(&mut ctx)
-                )?;*/
-
         let mut rar = proof.a_prime.mod_exp(&LARGE_E_START_VALUE, &p_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
