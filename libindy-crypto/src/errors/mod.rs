@@ -121,6 +121,6 @@ impl ToErrorCode for IndyCryptoError {
 
 impl From<serde_json::Error> for IndyCryptoError {
     fn from(err: serde_json::Error) -> IndyCryptoError {
-        IndyCryptoError::InvalidStructure(err.description().to_string())
+        IndyCryptoError::InvalidStructure(err.to_string())
     }
 }
