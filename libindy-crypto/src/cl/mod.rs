@@ -245,7 +245,9 @@ impl<'a> JsonDecodable<'a> for RevocationRegistry {}
 /// `Revocation Registry Delta` contains Accumulator changes.
 /// Must be applied to `Revocation Registry`
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RevocationRegistryDelta {
+    #[serde(skip_serializing_if = "Option::is_none")]
     prev_accum: Option<Accumulator>,
     accum: Accumulator,
     #[serde(skip_serializing_if = "HashSet::is_empty")]
