@@ -1537,7 +1537,7 @@ mod tests {
                                                        &simple_tail_accessor).unwrap();
         let mut rev_reg_delta = rev_reg_delta.unwrap();
 
-        let mut witness = Witness::new(rev_idx, n, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        let mut witness = Witness::new(rev_idx, n, false, &rev_reg_delta, &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut cred_signature,
                                              &cred_values,

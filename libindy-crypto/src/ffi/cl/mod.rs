@@ -85,18 +85,19 @@ pub extern fn indy_crypto_cl_tail_free(tail: *const c_void) -> ErrorCode {
 #[no_mangle]
 pub extern fn indy_crypto_cl_witness_new(rev_idx: u32,
                                          max_cred_num: u32,
+                                         issuance_by_default: bool,
                                          rev_reg_delta: *const c_void,
                                          ctx_tails: *const c_void,
                                          take_tail: FFITailTake,
                                          put_tail: FFITailPut,
                                          witness_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_witness_new: >>> rev_idx: {:?}, max_cred_num {}, rev_reg_delta {:?}, ctx_tails {:?}, take_tail {:?}, put_tail {:?}, witness_p {:?}",
-           rev_idx, max_cred_num, rev_reg_delta, ctx_tails, take_tail, put_tail, witness_p);
+    trace!("indy_crypto_cl_witness_new: >>> rev_idx: {:?}, max_cred_num {}, issuance_by_default {}, rev_reg_delta {:?}, ctx_tails {:?}, take_tail {:?}, \
+    put_tail {:?}, witness_p {:?}", rev_idx, max_cred_num, issuance_by_default, rev_reg_delta, ctx_tails, take_tail, put_tail, witness_p);
 
     check_useful_c_reference!(rev_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam3);
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
-    let res = match Witness::new(rev_idx, max_cred_num, rev_reg_delta, &rta) {
+    let res = match Witness::new(rev_idx, max_cred_num, issuance_by_default, rev_reg_delta, &rta) {
         Ok(witness) => {
             unsafe {
                 *witness_p = Box::into_raw(Box::new(witness)) as *const c_void;
@@ -1080,6 +1081,7 @@ pub mod mocks {
         let mut witness_p: *const c_void = ptr::null();
         let err_code = indy_crypto_cl_witness_new(rev_idx,
                                                   max_cred_num,
+                                                  false,
                                                   rev_reg_delta,
                                                   get_storage_ctx,
                                                   FFISimpleTailStorage::tail_take,
