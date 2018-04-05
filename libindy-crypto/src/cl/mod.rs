@@ -280,7 +280,6 @@ impl RevocationRegistryDelta {
             return Err(IndyCryptoError::InvalidStructure(format!("Deltas can not be merged.")));
         }
 
-        self.prev_accum = Some(self.accum);
         self.accum = other_delta.accum;
 
         self.issued.extend(
