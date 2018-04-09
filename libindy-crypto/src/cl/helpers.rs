@@ -5,7 +5,7 @@ use pair::GroupOrderElement;
 use super::constants::*;
 
 use std::cmp::max;
-use std::collections::{HashMap, HashSet};
+use std::collections::BTreeSet;
 
 #[cfg(test)]
 use std::cell::RefCell;
@@ -234,10 +234,7 @@ pub fn random_qr(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
 pub fn _random_qr(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
     trace!("Helpers::random_qr: >>> n: {:?}", n);
 
-    let qr = n
-        .rand_range()?
-        .sqr(None)?
-        .modulus(&n, None)?;
+    let qr = BigNumber::random_QR(n)?;
 
     trace!("Helpers::random_qr: <<< qr: {:?}", qr);
 
@@ -276,22 +273,10 @@ pub fn transform_u32_to_array_of_u8(x: u32) -> Vec<u8> {
     result
 }
 
-pub fn get_hash_as_int(nums: &Vec<Vec<u8>>) -> Result<BigNumber, IndyCryptoError> {
-    trace!("Helpers::get_hash_as_int: >>> nums: {:?}", nums);
-
-    let hashed_array: Vec<u8> = BigNumber::hash_array(&nums)?;
-
-    let hash = BigNumber::from_bytes(&hashed_array[..]);
-
-    trace!("Helpers::get_hash_as_int: <<< hash: {:?}", hash);
-
-    hash
-}
-
-pub fn get_mtilde(unrevealed_attrs: &HashSet<String>) -> Result<HashMap<String, BigNumber>, IndyCryptoError> {
+pub fn get_mtilde(unrevealed_attrs: &BTreeSet<String>) -> Result<BTreeMap<String, BigNumber>, IndyCryptoError> {
     trace!("Helpers::get_mtilde: >>> unrevealed_attrs: {:?}", unrevealed_attrs);
 
-    let mut mtilde: HashMap<String, BigNumber> = HashMap::new();
+    let mut mtilde = BTreeMap::new();
 
     for attr in unrevealed_attrs.iter() {
         mtilde.insert(attr.clone(), bn_rand(LARGE_MVECT)?);
@@ -306,10 +291,10 @@ pub fn calc_teq(p_pub_key: &CredentialPrimaryPublicKey,
                 a_prime: &BigNumber,
                 e: &BigNumber,
                 v: &BigNumber,
-                m_tilde: &HashMap<String, BigNumber>,
+                m_tilde: &BTreeMap<String, BigNumber>,
                 m1_tilde: &BigNumber,
                 m2tilde: &BigNumber,
-                unrevealed_attrs: &HashSet<String>) -> Result<BigNumber, IndyCryptoError> {
+                unrevealed_attrs: &BTreeSet<String>) -> Result<BigNumber, IndyCryptoError> {
     trace!("Helpers::calc_teq: >>> p_pub_key: {:?}, p_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m1_tilde: {:?}, m2tilde: {:?}, \
     unrevealed_attrs: {:?}", p_pub_key, a_prime, e, v, m_tilde, m1_tilde, m2tilde, unrevealed_attrs);
 
@@ -321,7 +306,7 @@ pub fn calc_teq(p_pub_key: &CredentialPrimaryPublicKey,
         let cur_r = p_pub_key.r.get(k)
             .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", k)))?;
         let cur_m = m_tilde.get(k)
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in mtilde", k)))?;
+            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in m_tilde", k)))?;
 
         result = cur_r
             .mod_exp(&cur_m, &p_pub_key.n, Some(&mut ctx))?
@@ -346,11 +331,11 @@ pub fn calc_teq(p_pub_key: &CredentialPrimaryPublicKey,
 }
 
 pub fn calc_tge(p_pub_key: &CredentialPrimaryPublicKey,
-                u: &HashMap<String, BigNumber>,
-                r: &HashMap<String, BigNumber>,
+                u: &BTreeMap<String, BigNumber>,
+                r: &BTreeMap<String, BigNumber>,
                 mj: &BigNumber,
                 alpha: &BigNumber,
-                t: &HashMap<String, BigNumber>) -> Result<Vec<BigNumber>, IndyCryptoError> {
+                t: &BTreeMap<String, BigNumber>) -> Result<Vec<BigNumber>, IndyCryptoError> {
     trace!("Helpers::calc_tge: >>> p_pub_key: {:?}, u: {:?}, r: {:?}, mj: {:?}, alpha: {:?}, t: {:?}", p_pub_key, u, r, mj, alpha, t);
 
     let mut tau_list: Vec<BigNumber> = Vec::new();
@@ -414,7 +399,7 @@ fn largest_square_less_than(delta: usize) -> usize {
 
 //Express the natural number `delta` as a sum of four integer squares,
 // i.e `delta = a^2 + b^2 + c^2 + d^2` using Lagrange's four-square theorem
-pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, IndyCryptoError> {
+pub fn four_squares(delta: i32) -> Result<BTreeMap<String, BigNumber>, IndyCryptoError> {
     trace!("Helpers::four_squares: >>> delta: {:?}", delta);
 
     if delta < 0 {
@@ -455,7 +440,7 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, IndyCrypto
         }
     }
 
-    let mut res: HashMap<String, BigNumber> = HashMap::new();
+    let mut res: BTreeMap<String, BigNumber> = BTreeMap::new();
     res.insert("0".to_string(), BigNumber::from_dec(&roots[0].to_string()[..])?);
     res.insert("1".to_string(), BigNumber::from_dec(&roots[1].to_string()[..])?);
     res.insert("2".to_string(), BigNumber::from_dec(&roots[2].to_string()[..])?);
@@ -562,18 +547,6 @@ pub fn create_tau_list_values(r_pub_key: &CredentialRevocationPublicKey,
     Ok(non_revoc_proof_tau_list)
 }
 
-macro_rules! hashset {
-    ( $( $x:expr ),* ) => {
-        {
-            let mut temp_set = HashSet::new();
-            $(
-                temp_set.insert($x);
-            )*
-            temp_set
-        }
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -600,18 +573,6 @@ mod tests {
         let b = BigNumber::from_dec("1018517988167243043134222844204689080525734196832968125318070224677190649881668353091698688");
         let result = BigNumber::from_dec("1796896020912204507067225398169591857356921784522704932326104684184868528314051767715438762");
         assert_eq!(result.unwrap(), bitwise_or_big_int(&a.unwrap(), &b.unwrap()).unwrap());
-    }
-
-    #[test]
-    fn get_hash_as_int_works() {
-        let mut nums = vec![
-            BigNumber::from_hex("ff9d2eedfee9cffd9ef6dbffedff3fcbef4caecb9bffe79bfa94d3fdf6abfbff").unwrap().to_bytes().unwrap(),
-            BigNumber::from_hex("ff9d2eedfee9cffd9ef6dbffedff3fcbef4caecb9bffe79bfa9168615ccbc546").unwrap().to_bytes().unwrap()
-        ];
-        let res = get_hash_as_int(&mut nums);
-
-        assert!(res.is_ok());
-        assert_eq!("2C2566C22E04AB3F18B3BA693823175002F10F400811363D26BBB33633AC8BAD", res.unwrap().to_hex().unwrap());
     }
 
     #[test]

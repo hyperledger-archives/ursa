@@ -4,8 +4,9 @@ use cl::constants::{LARGE_E_START_VALUE, ITERATION};
 use cl::helpers::*;
 use errors::IndyCryptoError;
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::iter::FromIterator;
+use utils::get_hash_as_int;
 
 /// Party that wants to check that prover has some credentials provided by issuer.
 pub struct Verifier {}
@@ -100,6 +101,7 @@ impl ProofVerifier {
             pub_key: credential_pub_key.clone()?,
             sub_proof_request: sub_proof_request.clone(),
             credential_schema: credential_schema.clone(),
+            non_credential_schema_elements: NonCredentialSchemaElements { attrs: BTreeSet::new() },
             rev_key_pub: rev_key_pub.map(Clone::clone),
             rev_reg: rev_reg.map(Clone::clone)
         });
@@ -244,7 +246,7 @@ impl ProofVerifier {
         let predicates_attrs =
             sub_proof_request.predicates.iter()
                 .map(|predicate| predicate.attr_name.clone())
-                .collect::<HashSet<String>>();
+                .collect::<BTreeSet<String>>();
 
         if predicates_attrs.difference(&cred_schema.attrs).count() != 0 {
             return Err(IndyCryptoError::InvalidStructure(format!("Credential doesn't contain attribute requested in predicate")));
@@ -264,7 +266,7 @@ impl ProofVerifier {
             let proof_for_credential = &proof.proofs[idx];
             let credential = &credentials[idx];
 
-            let proof_revealed_attrs = HashSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
+            let proof_revealed_attrs = BTreeSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
 
             if proof_revealed_attrs != credential.sub_proof_request.revealed_attrs {
                 return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof revealed attributes not correspond to requested attributes")));
@@ -273,7 +275,7 @@ impl ProofVerifier {
             let proof_predicates =
                 proof_for_credential.primary_proof.ge_proofs.iter()
                     .map(|ge_proof| ge_proof.predicate.clone())
-                    .collect::<HashSet<Predicate>>();
+                    .collect::<BTreeSet<Predicate>>();
 
             if proof_predicates != credential.sub_proof_request.predicates {
                 return Err(IndyCryptoError::AnoncredsProofRejected(format!("Proof predicates not correspond to requested predicates")));
@@ -316,11 +318,11 @@ impl ProofVerifier {
         trace!("ProofVerifier::_verify_equality: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
                p_pub_key, proof, c_hash, cred_schema, sub_proof_request);
 
-        let unrevealed_attrs: HashSet<String> =
+        let unrevealed_attrs: BTreeSet<String> =
             cred_schema.attrs
                 .difference(&sub_proof_request.revealed_attrs)
                 .cloned()
-                .collect::<HashSet<String>>();
+                .collect::<BTreeSet<String>>();
 
         let t1: BigNumber = calc_teq(&p_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs)?;
 
@@ -338,7 +340,7 @@ impl ProofVerifier {
         }
 
         let t2: BigNumber = p_pub_key.z
-            .mod_div(&rar, &p_pub_key.n)?
+            .mod_div(&rar, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?;
 

@@ -12,8 +12,8 @@ use errors::IndyCryptoError;
 use pair::*;
 use utils::json::{JsonEncodable, JsonDecodable};
 
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 /// Creates random nonce
 ///
@@ -30,20 +30,18 @@ pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
 /// A list of attributes a Credential is based on.
 #[derive(Debug, Clone)]
 pub struct CredentialSchema {
-    attrs: HashSet<String> /* attr names */
+    attrs: BTreeSet<String>, /* attr names */
 }
 
 /// A Builder of `Credential Schema`.
 #[derive(Debug)]
 pub struct CredentialSchemaBuilder {
-    attrs: HashSet<String> /* attr names */
+    attrs: BTreeSet<String>, /* attr names */
 }
 
 impl CredentialSchemaBuilder {
     pub fn new() -> Result<CredentialSchemaBuilder, IndyCryptoError> {
-        Ok(CredentialSchemaBuilder {
-            attrs: HashSet::new()
-        })
+        Ok(CredentialSchemaBuilder { attrs: BTreeSet::new() })
     }
 
     pub fn add_attr(&mut self, attr: &str) -> Result<(), IndyCryptoError> {
@@ -52,16 +50,41 @@ impl CredentialSchemaBuilder {
     }
 
     pub fn finalize(self) -> Result<CredentialSchema, IndyCryptoError> {
-        Ok(CredentialSchema {
-            attrs: self.attrs
+        Ok(CredentialSchema { attrs: self.attrs })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NonCredentialSchemaElements {
+    attrs: BTreeSet<String>,
+}
+
+#[derive(Debug)]
+pub struct NonCredentialSchemaElementsBuilder {
+    attrs: BTreeSet<String>,
+}
+
+impl NonCredentialSchemaElementsBuilder {
+    pub fn new() -> Result<NonCredentialSchemaElementsBuilder, IndyCryptoError> {
+        Ok(NonCredentialSchemaElementsBuilder {
+            attrs: BTreeSet::new(),
         })
+    }
+
+    pub fn add_attr(&mut self, attr: &str) -> Result<(), IndyCryptoError> {
+        self.attrs.insert(attr.to_owned());
+        Ok(())
+    }
+
+    pub fn finalize(self) -> Result<NonCredentialSchemaElements, IndyCryptoError> {
+        Ok(NonCredentialSchemaElements { attrs: self.attrs })
     }
 }
 
 /// Values of attributes from `Credential Schema` (must be integers).
 #[derive(Debug)]
 pub struct CredentialValues {
-    attrs_values: HashMap<String, BigNumber>
+    attrs_values: BTreeMap<String, BigNumber>,
 }
 
 impl CredentialValues {
@@ -75,13 +98,13 @@ impl CredentialValues {
 /// A Builder of `Credential Values`.
 #[derive(Debug)]
 pub struct CredentialValuesBuilder {
-    attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
+    attrs_values: BTreeMap<String, BigNumber> /* attr_name -> int representation of value */
 }
 
 impl CredentialValuesBuilder {
     pub fn new() -> Result<CredentialValuesBuilder, IndyCryptoError> {
         Ok(CredentialValuesBuilder {
-            attrs_values: HashMap::new()
+            attrs_values: BTreeMap::new()
         })
     }
 
@@ -611,8 +634,8 @@ impl<'a> JsonDecodable<'a> for BlindedMasterSecretCorrectnessProof {}
 /// Contains attributes to be revealed and predicates.
 #[derive(Debug, Clone)]
 pub struct SubProofRequest {
-    revealed_attrs: HashSet<String>,
-    predicates: HashSet<Predicate>,
+    revealed_attrs: BTreeSet<String>,
+    predicates: BTreeSet<Predicate>,
 }
 
 /// Builder of “Sub Proof Request”.
@@ -625,8 +648,8 @@ impl SubProofRequestBuilder {
     pub fn new() -> Result<SubProofRequestBuilder, IndyCryptoError> {
         Ok(SubProofRequestBuilder {
             value: SubProofRequest {
-                revealed_attrs: HashSet::new(),
-                predicates: HashSet::new()
+                revealed_attrs: BTreeSet::new(),
+                predicates: BTreeSet::new()
             }
         })
     }
@@ -671,6 +694,18 @@ pub enum PredicateType {
     GE
 }
 
+impl Ord for Predicate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.attr_name.cmp(&other.attr_name)
+    }
+}
+
+impl PartialOrd for Predicate {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 /// Proof is complex crypto structure created by prover over multiple credentials that allows to prove that prover:
 /// 1) Knows signature over credentials issued with specific issuer keys (identified by key id)
 /// 2) Credential contains attributes with specific values that prover wants to disclose
@@ -705,22 +740,22 @@ pub struct PrimaryProof {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryEqualProof {
-    revealed_attrs: HashMap<String /* attr_name of revealed */, BigNumber>,
+    revealed_attrs: BTreeMap<String /* attr_name of revealed */, BigNumber>,
     a_prime: BigNumber,
     e: BigNumber,
     v: BigNumber,
-    m: HashMap<String /* attr_name of all except revealed */, BigNumber>,
+    m: BTreeMap<String /* attr_name of all except revealed */, BigNumber>,
     m1: BigNumber,
     m2: BigNumber
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryPredicateGEProof {
-    u: HashMap<String, BigNumber>,
-    r: HashMap<String, BigNumber>,
+    u: BTreeMap<String, BigNumber>,
+    r: BTreeMap<String, BigNumber>,
     mj: BigNumber,
     alpha: BigNumber,
-    t: HashMap<String, BigNumber>,
+    t: BTreeMap<String, BigNumber>,
     predicate: Predicate
 }
 
@@ -792,10 +827,10 @@ pub struct PrimaryEqualInitProof {
     e_prime: BigNumber,
     v_tilde: BigNumber,
     v_prime: BigNumber,
-    m_tilde: HashMap<String, BigNumber>,
     m1_tilde: BigNumber,
+    m_tilde: BTreeMap<String, BigNumber>,
     m2_tilde: BigNumber,
-    m2: BigNumber
+    m2: BigNumber,
 }
 
 impl PrimaryEqualInitProof {
@@ -812,13 +847,13 @@ impl PrimaryEqualInitProof {
 pub struct PrimaryPredicateGEInitProof {
     c_list: Vec<BigNumber>,
     tau_list: Vec<BigNumber>,
-    u: HashMap<String, BigNumber>,
-    u_tilde: HashMap<String, BigNumber>,
-    r: HashMap<String, BigNumber>,
-    r_tilde: HashMap<String, BigNumber>,
+    u: BTreeMap<String, BigNumber>,
+    u_tilde: BTreeMap<String, BigNumber>,
+    r: BTreeMap<String, BigNumber>,
+    r_tilde: BTreeMap<String, BigNumber>,
     alpha_tilde: BigNumber,
     predicate: Predicate,
-    t: HashMap<String, BigNumber>
+    t: BTreeMap<String, BigNumber>,
 }
 
 impl PrimaryPredicateGEInitProof {
@@ -924,6 +959,7 @@ pub struct VerifiableCredential {
     pub_key: CredentialPublicKey,
     sub_proof_request: SubProofRequest,
     credential_schema: CredentialSchema,
+    non_credential_schema_elements: NonCredentialSchemaElements,
     rev_key_pub: Option<RevocationKeyPublic>,
     rev_reg: Option<RevocationRegistry>
 }
@@ -969,9 +1005,10 @@ impl AppendByteArray for Vec<Vec<u8>> {
     }
 }
 
-fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>)
-                                          -> Result<HashMap<K, BigNumber>, IndyCryptoError> {
-    let mut res: HashMap<K, BigNumber> = HashMap::new();
+fn clone_bignum_map<K: Clone + Eq + Ord>(
+    other: &BTreeMap<K, BigNumber>,
+) -> Result<BTreeMap<K, BigNumber>, IndyCryptoError> {
+    let mut res: BTreeMap<K, BigNumber> = BTreeMap::new();
     for (k, v) in other {
         res.insert(k.clone(), v.clone()?);
     }

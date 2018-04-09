@@ -4,6 +4,8 @@ use errors::IndyCryptoError;
 use pair::*;
 use cl::constants::*;
 use cl::helpers::*;
+use utils::commitment::*;
+use utils::get_hash_as_int;
 
 use std::collections::{HashMap, HashSet};
 
@@ -734,7 +736,7 @@ impl Issuer {
         values.extend_from_slice(&u_cap.to_bytes()?);
         values.extend_from_slice(&nonce.to_bytes()?);
 
-        let c = get_hash_as_int(&mut vec![values])?;
+        let c = get_hash_as_int(&vec![values])?;
 
         let valid = blinded_ms_correctness_proof.c.eq(&c);
 
@@ -822,7 +824,7 @@ impl Issuer {
                 .mod_mul(&rx, &p_pub_key.n, Some(&mut context))?;
         }
 
-        let q = p_pub_key.z.mod_div(&rx, &p_pub_key.n)?;
+        let q = p_pub_key.z.mod_div(&rx, &p_pub_key.n, Some(&mut context))?;
 
         let n = p_priv_key.p.mul(&p_priv_key.q, Some(&mut context))?;
         let e_inverse = e.inverse(&n, Some(&mut context))?;
@@ -1039,7 +1041,7 @@ mod tests {
 
     #[test]
     fn issuer_new_credential_works_for_empty_attributes() {
-        let cred_attrs = CredentialSchema { attrs: HashSet::new() };
+        let cred_attrs = CredentialSchema { attrs: BTreeSet::new() };
         let res = Issuer::new_credential_def(&cred_attrs, false);
         assert!(res.is_err())
     }
