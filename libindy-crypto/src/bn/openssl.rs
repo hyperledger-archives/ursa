@@ -393,7 +393,7 @@ impl BigNumber {
         Ok(bn)
     }
 
-    pub fn random_QR(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
+    pub fn random_qr(n: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
         let qr = n
             .rand_range()?
             .sqr(None)?

@@ -22,6 +22,7 @@ use amcl::rand::RAND;
 
 use rand::os::OsRng;
 use rand::Rng;
+use std::fmt::{Debug, Formatter, Error};
 
 #[cfg(feature = "serialization")]
 use serde::ser::{Serialize, Serializer, Error as SError};
@@ -30,7 +31,48 @@ use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
 #[cfg(feature = "serialization")]
 use std::fmt;
 
+#[cfg(test)]
+use std::cell::RefCell;
+
+#[cfg(test)]
+thread_local! {
+  pub static PAIR_USE_MOCKS: RefCell<bool> = RefCell::new(false);
+}
+
+#[cfg(test)]
+pub struct PairMocksHelper {}
+
+#[cfg(test)]
+impl PairMocksHelper {
+    pub fn inject() {
+        PAIR_USE_MOCKS.with(|use_mocks| {
+            *use_mocks.borrow_mut() = true;
+        });
+    }
+
+    pub fn is_injected() -> bool {
+        PAIR_USE_MOCKS.with(|use_mocks| {
+            return *use_mocks.borrow();
+        })
+    }
+}
+
+#[cfg(not(test))]
 fn random_mod_order() -> Result<BIG, IndyCryptoError> {
+    _random_mod_order()
+}
+
+#[cfg(test)]
+fn random_mod_order() -> Result<BIG, IndyCryptoError> {
+    if PairMocksHelper::is_injected() {
+        Ok(BIG::from_hex("B7D7DC1499EA50 6F16C9B5FE2C00 466542B923D8C9 FB01F2122DE924 22EB5716".to_string()))
+    }
+    else {
+        _random_mod_order()
+    }
+}
+
+fn _random_mod_order() -> Result<BIG, IndyCryptoError> {
     let mut seed = vec![0; MODBYTES];
     let mut os_rng = OsRng::new().unwrap();
     os_rng.fill_bytes(&mut seed.as_mut_slice());
@@ -40,7 +82,7 @@ fn random_mod_order() -> Result<BIG, IndyCryptoError> {
     Ok(BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng))
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct PointG1 {
     point: ECP
 }
@@ -159,6 +201,12 @@ impl PointG1 {
     }
 }
 
+impl Debug for PointG1 {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "PointG1 {{ point: {} }}", self.point.to_hex())
+    }
+}
+
 #[cfg(feature = "serialization")]
 impl Serialize for PointG1 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -189,7 +237,7 @@ impl<'a> Deserialize<'a> for PointG1 {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct PointG2 {
     point: ECP2
 }
@@ -287,6 +335,12 @@ impl PointG2 {
     }
 }
 
+impl Debug for PointG2 {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "PointG2 {{ point: {} }}", self.point.to_hex())
+    }
+}
+
 #[cfg(feature = "serialization")]
 impl Serialize for PointG2 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -317,7 +371,7 @@ impl<'a> Deserialize<'a> for PointG2 {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct GroupOrderElement {
     bn: BIG
 }
@@ -455,6 +509,12 @@ impl GroupOrderElement {
     }
 }
 
+impl Debug for GroupOrderElement {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "GroupOrderElement {{ bn: {} }}", self.bn.to_hex())
+    }
+}
+
 #[cfg(feature = "serialization")]
 impl Serialize for GroupOrderElement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -485,7 +545,7 @@ impl<'a> Deserialize<'a> for GroupOrderElement {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Pair {
     pair: FP12
 }
@@ -549,6 +609,12 @@ impl Pair {
         let mut vec = vec![0u8; Self::BYTES_REPR_SIZE];
         r.tobytes(&mut vec);
         Ok(vec)
+    }
+}
+
+impl Debug for Pair {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "Pair {{ pair: {} }}", self.pair.to_hex())
     }
 }
 

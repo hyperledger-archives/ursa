@@ -1,4 +1,4 @@
-use bn::{BigNumber, BigNumberContext, BIGNUMBER_1};
+use bn::{BigNumber, BigNumberContext};
 use errors::IndyCryptoError;
 
 
@@ -29,20 +29,16 @@ pub fn get_pedersen_commitment(gen_1: &BigNumber, m: &BigNumber,
 /// # Arguments
 /// * `to_commit` - a list of 2-tuples where the first element of the tuple is a generator and
 /// the second is the value being committed to, like [(g_1, m_1), (g_2, m_2), (g_3, m_3), ... (g_i, m_i)]
-/// * `gen_2` - second generator
-/// * `r` - exponent of the second generator
 /// * `modulus` - all computations are done this modulo
 /// * `ctx` - big number context
 ///
 /// # Result
 /// Return the pedersen commitment, i.e `(g_1^m_1)*(g_2^m_2)*...(g_i^m_i)*(gen_2^r)`
-pub fn get_generalised_pedersen_commitment(to_commit: Vec<(&BigNumber, &BigNumber)>,
-                               gen_2: &BigNumber, r: &BigNumber,
-                               modulus: &BigNumber, ctx: &mut BigNumberContext) -> Result<BigNumber, IndyCryptoError> {
+pub fn get_generalized_pedersen_commitment(to_commit: Vec<(&BigNumber, &BigNumber)>,
+                                           modulus: &BigNumber, ctx: &mut BigNumberContext) -> Result<BigNumber, IndyCryptoError> {
     let accumulated = get_exponentiated_generators(to_commit, modulus, ctx)?;
-    let commitment = accumulated.mod_mul(&gen_2.mod_exp(r, modulus, Some(ctx))?,
-                 modulus, Some(ctx))?;
-    Ok(commitment)
+
+    Ok(accumulated)
 }
 
 
@@ -58,19 +54,8 @@ pub fn get_generalised_pedersen_commitment(to_commit: Vec<(&BigNumber, &BigNumbe
 /// Return the exponentiation, i.e `(g_1^e_1)*(g_2^e_2)*...(g_i^e_i)`
 pub fn get_exponentiated_generators(to_exponentiate: Vec<(&BigNumber, &BigNumber)>,
                                     modulus: &BigNumber, ctx: &mut BigNumberContext) -> Result<BigNumber, IndyCryptoError> {
-    // TODO: Figure out how to make it work with fold
-    /*let mut accumulated = commit_to.iter().fold(
-        BigNumber::from_dec("1")?,
-        |product, &(g, m)| product.mod_mul(
-            &g.mod_exp(m, modulus, Some(ctx))?, modulus, Some(ctx)
-        )?
-    );*/
-
-    let mut accumulated = BIGNUMBER_1.clone()?;
-    for &(g, m) in to_exponentiate.iter() {
-        accumulated = accumulated.mod_mul(
-            &g.mod_exp(m, modulus, Some(ctx))?, modulus, Some(ctx)
-        )?;
-    }
+    let accumulated = to_exponentiate.iter()
+                                     .fold(BigNumber::from_u32(1),
+                                           |acc, &(g, m)| acc?.mod_mul(&g.mod_exp(m, modulus, Some(ctx))?, modulus, Some(ctx)))?;
     Ok(accumulated)
 }

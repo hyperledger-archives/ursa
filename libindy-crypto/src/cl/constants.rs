@@ -19,7 +19,6 @@ pub const ITERATION: usize = 4;
   Dmitry Khovratovich, suggests to use same size as LARGE_MVECT
   FIXME sync the paper and remove this comment
 */
-pub const LARGE_M1_TILDE: usize = LARGE_MVECT;
 pub const LARGE_NONCE: usize = 80;
 pub const LARGE_ALPHATILDE: usize = 2787;
 

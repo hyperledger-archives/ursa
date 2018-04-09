@@ -75,7 +75,13 @@ impl ProofVerifier {
     /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
-    /// let (credential_pub_key, _credential_priv_key, _credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+    /// let mut non_credential_schema_builder = Issuer::new_non_credential_schema_builder().unwrap();
+    /// non_credential_schema_builder.add_attr("master_secret").unwrap();
+    /// let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+    ///
+    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
+    ///
+    /// let (credential_pub_key, _credential_priv_key, _credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
     ///
     /// let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
     /// sub_proof_request_builder.add_revealed_attr("sex").unwrap();
@@ -85,6 +91,7 @@ impl ProofVerifier {
     ///
     /// proof_verifier.add_sub_proof_request(&sub_proof_request,
     ///                                      &credential_schema,
+    ///                                      &non_credential_schema,
     ///                                      &credential_pub_key,
     ///                                      None,
     ///                                      None).unwrap();
@@ -92,6 +99,7 @@ impl ProofVerifier {
     pub fn add_sub_proof_request(&mut self,
                                  sub_proof_request: &SubProofRequest,
                                  credential_schema: &CredentialSchema,
+                                 non_credential_schema: &NonCredentialSchema,
                                  credential_pub_key: &CredentialPublicKey,
                                  rev_key_pub: Option<&RevocationKeyPublic>,
                                  rev_reg: Option<&RevocationRegistry>) -> Result<(), IndyCryptoError> {
@@ -101,7 +109,7 @@ impl ProofVerifier {
             pub_key: credential_pub_key.clone()?,
             sub_proof_request: sub_proof_request.clone(),
             credential_schema: credential_schema.clone(),
-            non_credential_schema_elements: NonCredentialSchemaElements { attrs: BTreeSet::new() },
+            non_credential_schema: non_credential_schema.clone(),
             rev_key_pub: rev_key_pub.map(Clone::clone),
             rev_reg: rev_reg.map(Clone::clone)
         });
@@ -127,24 +135,30 @@ impl ProofVerifier {
     /// credential_schema_builder.add_attr("sex").unwrap();
     /// let credential_schema = credential_schema_builder.finalize().unwrap();
     ///
-    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+    /// let mut non_credential_schema_builder = Issuer::new_non_credential_schema_builder().unwrap();
+    /// non_credential_schema_builder.add_attr("master_secret").unwrap();
+    /// let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+    ///
+    /// let (credential_pub_key, credential_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
     ///
     /// let master_secret = Prover::new_master_secret().unwrap();
-    /// let master_secret_blinding_nonce = new_nonce().unwrap();
-    /// let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-    ///     Prover::blind_master_secret(&credential_pub_key, &cred_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
     ///
     /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-    /// credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+    /// credential_values_builder.add_value_hidden("master_secret", &master_secret.value().unwrap()).unwrap();
+    /// credential_values_builder.add_dec_known("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
     /// let credential_values = credential_values_builder.finalize().unwrap();
+    ///
+    /// let credential_nonce = new_nonce().unwrap();
+    /// let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+    ///     Prover::blind_credential_secrets(&credential_pub_key, &cred_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
     ///
     /// let credential_issuance_nonce = new_nonce().unwrap();
     ///
     /// let (mut credential_signature, signature_correctness_proof) =
     ///     Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-    ///                             &blinded_master_secret,
-    ///                             &blinded_master_secret_correctness_proof,
-    ///                             &master_secret_blinding_nonce,
+    ///                             &blinded_credential_secrets,
+    ///                             &blinded_credential_secrets_correctness_proof,
+    ///                             &credential_nonce,
     ///                             &credential_issuance_nonce,
     ///                             &credential_values,
     ///                             &credential_pub_key,
@@ -153,8 +167,7 @@ impl ProofVerifier {
     /// Prover::process_credential_signature(&mut credential_signature,
     ///                                      &credential_values,
     ///                                      &signature_correctness_proof,
-    ///                                      &master_secret_blinding_data,
-    ///                                      &master_secret,
+    ///                                      &credential_secrets_blinding_factors,
     ///                                      &credential_pub_key,
     ///                                      &credential_issuance_nonce,
     ///                                      None, None, None).unwrap();
@@ -164,8 +177,10 @@ impl ProofVerifier {
     /// let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
     ///
     /// let mut proof_builder = Prover::new_proof_builder().unwrap();
+    /// proof_builder.add_common_attribute("master_secret").unwrap();
     /// proof_builder.add_sub_proof_request(&sub_proof_request,
     ///                                     &credential_schema,
+    ///                                     &non_credential_schema,
     ///                                     &credential_signature,
     ///                                     &credential_values,
     ///                                     &credential_pub_key,
@@ -173,18 +188,19 @@ impl ProofVerifier {
     ///                                     None).unwrap();
     ///
     /// let proof_request_nonce = new_nonce().unwrap();
-    /// let proof = proof_builder.finalize(&proof_request_nonce, &master_secret).unwrap();
+    /// let proof = proof_builder.finalize(&proof_request_nonce).unwrap();
     ///
     /// let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
     ///
     /// proof_verifier.add_sub_proof_request(&sub_proof_request,
     ///                                      &credential_schema,
+    ///                                      &non_credential_schema,
     ///                                      &credential_pub_key,
     ///                                      None,
     ///                                      None).unwrap();
     /// assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     /// ```
-    pub fn verify(self,
+    pub fn verify(&self,
                   proof: &Proof,
                   nonce: &Nonce) -> Result<bool, IndyCryptoError> {
         trace!("ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}", proof, nonce);
@@ -215,6 +231,7 @@ impl ProofVerifier {
                                                       &proof.aggregated_proof.c_hash,
                                                       &proof_item.primary_proof,
                                                       &credential.credential_schema,
+                                                      &credential.non_credential_schema,
                                                       &credential.sub_proof_request)?
             )?;
         }
@@ -291,6 +308,7 @@ impl ProofVerifier {
                              c_hash: &BigNumber,
                              primary_proof: &PrimaryProof,
                              cred_schema: &CredentialSchema,
+                             non_cred_schema: &NonCredentialSchema,
                              sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
         trace!("ProofVerifier::_verify_primary_proof: >>> p_pub_key: {:?}, c_hash: {:?}, primary_proof: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
                p_pub_key, c_hash, primary_proof, cred_schema, sub_proof_request);
@@ -299,6 +317,7 @@ impl ProofVerifier {
                                                                         &primary_proof.eq_proof,
                                                                         c_hash,
                                                                         cred_schema,
+                                                                        non_cred_schema,
                                                                         sub_proof_request)?;
 
         for ge_proof in primary_proof.ge_proofs.iter() {
@@ -314,17 +333,22 @@ impl ProofVerifier {
                         proof: &PrimaryEqualProof,
                         c_hash: &BigNumber,
                         cred_schema: &CredentialSchema,
+                        non_cred_schema: &NonCredentialSchema,
                         sub_proof_request: &SubProofRequest) -> Result<Vec<BigNumber>, IndyCryptoError> {
         trace!("ProofVerifier::_verify_equality: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
                p_pub_key, proof, c_hash, cred_schema, sub_proof_request);
 
-        let unrevealed_attrs: BTreeSet<String> =
-            cred_schema.attrs
-                .difference(&sub_proof_request.revealed_attrs)
-                .cloned()
-                .collect::<BTreeSet<String>>();
 
-        let t1: BigNumber = calc_teq(&p_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m1, &proof.m2, &unrevealed_attrs)?;
+        let unrevealed_attrs = cred_schema
+            .attrs
+            .union(&non_cred_schema.attrs)
+            .cloned()
+            .collect::<BTreeSet<String>>()
+            .difference(&sub_proof_request.revealed_attrs)
+            .cloned()
+            .collect::<BTreeSet<String>>();
+
+        let t1: BigNumber = calc_teq(&p_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m2, &unrevealed_attrs)?;
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -374,8 +398,7 @@ impl ProofVerifier {
             .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
         tau_list[ITERATION] = p_pub_key.z
-            .mod_exp(
-                &BigNumber::from_dec(&proof.predicate.value.to_string())?,
+            .mod_exp(&BigNumber::from_dec(&proof.predicate.value.to_string())?,
                 &p_pub_key.n, Some(&mut ctx))?
             .mul(&delta, Some(&mut ctx))?
             .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
@@ -442,13 +465,14 @@ mod tests {
     }
 
     #[test]
-    fn verify_equlity_works() {
+    fn verify_equality_works() {
         MockHelper::inject();
 
         let proof = prover::mocks::eq_proof();
         let pk = issuer::mocks::credential_primary_public_key();
         let c_h = prover::mocks::aggregated_proof().c_hash;
         let credential_schema = issuer::mocks::credential_schema();
+        let non_credential_schema = issuer::mocks::non_credential_schema();
 
         let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -458,13 +482,16 @@ mod tests {
                                                                   &proof,
                                                                   &c_h,
                                                                   &credential_schema,
+                                                                  &non_credential_schema,
                                                                   &sub_proof_request).unwrap();
 
-        assert_eq!("470277798936647794194137508650027054807831276239220146191458949121351184311969639631580559702933970552912303095727375950265654923875623180594\
-        558665299892048138982396859640029658129512030388704439167478475160221494455551953673063030258718822817279006735194293497773060067370281511840103396353767\
-        808614044637705536967856221460875980417091400088977261162548054308147891873470252909728127624040095798124308872126348111952360683970039064279610528839497\
-        341870538378087520077094824293591595512332618492288609809662046470201539906503906862206952553561077690711950698394752353796436977670202082695314607303658\
-        48679702777436593", res[0].to_dec().unwrap());
+        assert_eq!("10033055650650536307076535582106563131022201440643374305953651825727599954819318\
+        32776539357457020109333992502903750221996474184246600192046150335243527737793180535397491251\
+        36486792690681259916650903863021550308696974134411562524591774050899062767720649066796739436\
+        27397581927453211752118291877772829029684359327455206466243000746391720320628738675493563637\
+        17662893668647677165235667497714749188075836722966424443613777009272647747723101033371964746\
+        21326803520855024350671435451377509133601181643692585768497035223029241717837378002182177772\
+        013841825604270144085274570353058542150547852185340515159203077602883003894263", res[0].to_dec().unwrap());
     }
 
     #[test]
@@ -480,19 +507,28 @@ mod tests {
         assert!(res.is_ok());
         let res_data = res.unwrap();
 
-        assert_eq!("376910366785000888640907068892773445290856982028553183426096623244555347257778101747799882436148347403830024840429617795354387295127009257238001847697728551\
-        176536093973115809374401318141110098900739722767845936624708107236876761676800627172399726564255634308382367493256717024633900449205720018609556512423317410372608366135\
-        066533236820567062263706984223659166559990463804265095415860347492428279789699722395246760391390256022639741018088870083311929296796590769109958556654779529301996928547\
-        78469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535", res_data[0].to_dec().unwrap());
+        assert_eq!("57751218046505338238183461098782003080847816859886891270686297843457149187073649\
+        65739960046309281573960723093575143691445129397777229699708529613711858683818596049039395895\
+        39797919600616625080942329992481472431273688702788653832923648058758544471562009139715503579\
+        65609577313787385466121242592254993651305714763959156321689291354027457176111007193732131841\
+        56349557204064052101034800892299754720256826852528224133723052224077506099451460290719285594\
+        53434613132035686231462430742314752340558131808055248092500204392980253966449115099031064384\
+        4782277058104451329443287733260065635985062237748146923600356379728377136117", res_data[0].to_dec().unwrap());
 
-        assert_eq!("376910366785000888640907068892773445290856982028553183426096623244555347257778101747799882436148347403830024840429617795354387295127009257238001847697728551\
-        176536093973115809374401318141110098900739722767845936624708107236876761676800627172399726564255634308382367493256717024633900449205720018609556512423317410372608366135\
-        066533236820567062263706984223659166559990463804265095415860347492428279789699722395246760391390256022639741018088870083311929296796590769109958556654779529301996928547\
-        78469439162325030246066895851569630345729938981633504514117558420480144828304421708923356898912192737390539479512879411139535", res_data[4].to_dec().unwrap());
+        assert_eq!("57751218046505338238183461098782003080847816859886891270686297843457149187073649\
+        65739960046309281573960723093575143691445129397777229699708529613711858683818596049039395895\
+        39797919600616625080942329992481472431273688702788653832923648058758544471562009139715503579\
+        65609577313787385466121242592254993651305714763959156321689291354027457176111007193732131841\
+        56349557204064052101034800892299754720256826852528224133723052224077506099451460290719285594\
+        53434613132035686231462430742314752340558131808055248092500204392980253966449115099031064384\
+        4782277058104451329443287733260065635985062237748146923600356379728377136117", res_data[4].to_dec().unwrap());
 
-        assert_eq!("4706530486660795807594696126453392843593312253601667969008027865938669831613255990876876168574341472858634191430502533997053787371484591516484310077682156120\
-        0343390749927996265246866447155790487554483555192805709960222015718787293872197230832464704800887153568636866026153126587657548580608446574507279965440247754859129693686\
-        1864273991033137371106324132550175224820164581900030456410773386740196083471393997554706544523739752281900419801521207994038554809091738654313973079882387597672518908535\
-        80982844825639097363091181044515877489450972963624109587697097258041963985607958610791800500711857115582406526050626576194", res_data[5].to_dec().unwrap());
+        assert_eq!("39043573194062843188289697546611918107532805117598645832449214642534318612913845\
+        32075367968952105925575138233724002452864405925664204730713059864148595067740603328250882518\
+        11954314026835752054692082938808344114109325017520232439627822778481078256743741189055686491\
+        40719993402086278461408304318382071709512982618346808542261941396861110469854677713167733150\
+        19589667632703174158767949929708057309502598155913756881855400228180120266833516847035270313\
+        63797835534388275004037081643711680763785295550040017849212848303155001351017276181699668707\
+        61712270273123073354380462035137352013253457506110569108524475928798373175939", res_data[5].to_dec().unwrap());
     }
 }

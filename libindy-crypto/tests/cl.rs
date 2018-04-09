@@ -31,9 +31,13 @@ mod test {
         credential_schema_builder.add_attr("height").unwrap();
         let gvt_credential_schema = credential_schema_builder.finalize().unwrap();
 
+        let mut non_credential_schema_builder = Issuer::new_non_credential_schema_builder().unwrap();
+        non_credential_schema_builder.add_attr("master_secret").unwrap();
+        let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+
         // 3. Issuer creates GVT credential definition
         let (gvt_credential_pub_key, gvt_credential_priv_key, gvt_credential_key_correctness_proof) =
-            Issuer::new_credential_def(&gvt_credential_schema, true).unwrap();
+            Issuer::new_credential_def(&gvt_credential_schema, &non_credential_schema, true).unwrap();
 
         // 4. Issuer creates GVT revocation registry with IssuanceOnDemand type
         let gvt_max_cred_num = 5;
@@ -44,33 +48,34 @@ mod test {
         let gvt_simple_tail_accessor = SimpleTailsAccessor::new(&mut gvt_rev_tails_generator).unwrap();
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
+        let gvt_credential_nonce = new_nonce().unwrap();
 
-        // 6. Prover blinds master secret
-        let (gvt_blinded_master_secret, gvt_master_secret_blinding_data, gvt_blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&gvt_credential_pub_key,
-                                        &gvt_credential_key_correctness_proof,
-                                        &master_secret,
-                                        &gvt_master_secret_blinding_nonce).unwrap();
-
-        // 7. Prover creates nonce used Issuer to credential issue
-        let gvt_credential_issuance_nonce = new_nonce().unwrap();
-
-        // 8. Issuer creates GVT credential values
+        // 6. Issuer creates GVT credential values
         let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        credential_values_builder.add_value("age", "28").unwrap();
-        credential_values_builder.add_value("height", "175").unwrap();
+        credential_values_builder.add_value_hidden("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_dec_known("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_dec_known("age", "28").unwrap();
+        credential_values_builder.add_dec_known("height", "175").unwrap();
         let gvt_credential_values = credential_values_builder.finalize().unwrap();
+
+        // 7. Prover blinds hidden attributes
+        let (gvt_blinded_credential_secrets, gvt_credential_secrets_blinding_factors, gvt_blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&gvt_credential_pub_key,
+                                        &gvt_credential_key_correctness_proof,
+                                        &gvt_credential_values,
+                                        &gvt_credential_nonce).unwrap();
+
+        // 8. Prover creates nonce used Issuer to credential issue
+        let gvt_credential_issuance_nonce = new_nonce().unwrap();
 
         // 9. Issuer signs GVT credential values
         let gvt_rev_idx = 1;
         let (mut gvt_credential_signature, gvt_signature_correctness_proof, gvt_rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &gvt_blinded_master_secret,
-                                               &gvt_blinded_master_secret_correctness_proof,
-                                               &gvt_master_secret_blinding_nonce,
+                                               &gvt_blinded_credential_secrets,
+                                               &gvt_blinded_credential_secrets_correctness_proof,
+                                               &gvt_credential_nonce,
                                                &gvt_credential_issuance_nonce,
                                                &gvt_credential_values,
                                                &gvt_credential_pub_key,
@@ -93,8 +98,7 @@ mod test {
         Prover::process_credential_signature(&mut gvt_credential_signature,
                                              &gvt_credential_values,
                                              &gvt_signature_correctness_proof,
-                                             &gvt_master_secret_blinding_data,
-                                             &master_secret,
+                                             &gvt_credential_secrets_blinding_factors,
                                              &gvt_credential_pub_key,
                                              &gvt_credential_issuance_nonce,
                                              Some(&gvt_rev_key_pub),
@@ -110,7 +114,7 @@ mod test {
 
         // 13. Issuer creates XYZ credential definition (with revocation keys)
         let (xyz_credential_pub_key, xyz_credential_priv_key, xyz_credential_key_correctness_proof) =
-            Issuer::new_credential_def(&xyz_credential_schema, true).unwrap();
+            Issuer::new_credential_def(&xyz_credential_schema, &non_credential_schema, true).unwrap();
 
         // 14. Issuer creates XYZ revocation registry with IssuanceByDefault type
         let xyz_max_cred_num = 5;
@@ -121,31 +125,32 @@ mod test {
         let xyz_simple_tail_accessor = SimpleTailsAccessor::new(&mut xyz_rev_tails_generator).unwrap();
 
         // 15. Issuer creates nonce used Prover to blind master secret
-        let xyz_master_secret_blinding_nonce = new_nonce().unwrap();
+        let xyz_credential_nonce = new_nonce().unwrap();
 
-        // 16. Prover blinds master secret
-        let (xyz_blinded_master_secret, xyz_master_secret_blinding_data, xyz_blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&xyz_credential_pub_key,
-                                        &xyz_credential_key_correctness_proof,
-                                        &master_secret,
-                                        &xyz_master_secret_blinding_nonce).unwrap();
-
-        // 17. Prover creates nonce used Issuer to credential issue
-        let xyz_credential_issuance_nonce = new_nonce().unwrap();
-
-        // 18. Issuer creates XYZ credential values
+        // 16. Issuer creates XYZ credential values
         let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-        credential_values_builder.add_value("status", "51792877103171595686471452153480627530895").unwrap();
-        credential_values_builder.add_value("period", "8").unwrap();
+        credential_values_builder.add_value_hidden("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("status", "51792877103171595686471452153480627530895").unwrap();
+        credential_values_builder.add_dec_known("period", "8").unwrap();
         let xyz_credential_values = credential_values_builder.finalize().unwrap();
+
+        // 17. Prover blinds hidden attributes
+        let (xyz_blinded_credential_secrets, xyz_credential_secrets_blinding_factors, xyz_blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&xyz_credential_pub_key,
+                                        &xyz_credential_key_correctness_proof,
+                                        &xyz_credential_values,
+                                        &xyz_credential_nonce).unwrap();
+
+        // 18. Prover creates nonce used Issuer to credential issue
+        let xyz_credential_issuance_nonce = new_nonce().unwrap();
 
         // 19. Issuer signs XYZ credential values
         let xyz_rev_idx = 1;
         let (mut xyz_credential_signature, xyz_signature_correctness_proof, xyz_rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &xyz_blinded_master_secret,
-                                               &xyz_blinded_master_secret_correctness_proof,
-                                               &xyz_master_secret_blinding_nonce,
+                                               &xyz_blinded_credential_secrets,
+                                               &xyz_blinded_credential_secrets_correctness_proof,
+                                               &xyz_credential_nonce,
                                                &xyz_credential_issuance_nonce,
                                                &xyz_credential_values,
                                                &xyz_credential_pub_key,
@@ -170,8 +175,7 @@ mod test {
         Prover::process_credential_signature(&mut xyz_credential_signature,
                                              &xyz_credential_values,
                                              &xyz_signature_correctness_proof,
-                                             &xyz_master_secret_blinding_data,
-                                             &master_secret,
+                                             &xyz_credential_secrets_blinding_factors,
                                              &xyz_credential_pub_key,
                                              &xyz_credential_issuance_nonce,
                                              Some(&xyz_rev_key_pub),
@@ -196,8 +200,10 @@ mod test {
         // 25. Prover creates proof for two sub proof requests
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&gvt_sub_proof_request,
                                             &gvt_credential_schema,
+                                            &non_credential_schema,
                                             &gvt_credential_signature,
                                             &gvt_credential_values,
                                             &gvt_credential_pub_key,
@@ -206,24 +212,27 @@ mod test {
 
         proof_builder.add_sub_proof_request(&xyz_sub_proof_request,
                                             &xyz_credential_schema,
+                                            &non_credential_schema,
                                             &xyz_credential_signature,
                                             &xyz_credential_values,
                                             &xyz_credential_pub_key,
                                             Some(&xyz_rev_reg),
                                             Some(&xyz_witness)).unwrap();
 
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 26. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&gvt_sub_proof_request,
                                              &gvt_credential_schema,
+                                             &non_credential_schema,
                                              &gvt_credential_pub_key,
                                              Some(&gvt_rev_key_pub),
                                              Some(&gvt_rev_reg)).unwrap();
 
         proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
+                                             &non_credential_schema,
                                              &xyz_credential_pub_key,
                                              Some(&xyz_rev_key_pub),
                                              Some(&xyz_rev_reg)).unwrap();
@@ -235,71 +244,72 @@ mod test {
     fn anoncreds_works_for_primary_proof_only() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) =
-            Issuer::new_credential_def(&credential_schema, false).unwrap();
+            Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
-        // 3. Prover creates master secret
-        let master_secret = Prover::new_master_secret().unwrap();
+        // 3. Issuer creates credential values
+        let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
-        // 5. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        // 5. Prover blinds hidden attributes
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
-        // 8. Issuer signs credential values
+        // 7. Issuer signs credential values
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_ms,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
                                                                                               &credential_priv_key).unwrap();
 
-        // 9. Prover processes credential signature
+        // 8. Prover processes credential signature
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
 
-        // 10. Verifier create sub proof request
+        // 9. Verifier create sub proof request
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
-        // 11. Verifier creates nonce
+        // 10. Verifier creates nonce
         let nonce = new_nonce().unwrap();
 
-        // 12. Prover creates proof
+        // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             None,
                                             None).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
-        // 13. Verifier verifies proof
+        // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              None,
                                              None).unwrap();
@@ -310,11 +320,12 @@ mod test {
     fn anoncreds_works_for_revocation_proof_issuance_on_demand() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
-        // 4. Issuer creates revocation registry with IssuanceOnDemand type
+        // 3. Issuer creates revocation registry with IssuanceOnDemand type
         let max_cred_num = 5;
         let issuance_by_default = false;
         let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
@@ -322,31 +333,29 @@ mod test {
 
         let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
-        // 4. Prover creates master secret
-        let master_secret = Prover::new_master_secret().unwrap();
+        // 4. Issuer creates and sign credential values
+        let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
-        // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        // 6. Prover blinds hidden attributes
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 8. Issuer creates and sign credential values
-        let credential_values = helpers::gvt_credential_values();
 
         let rev_idx = 1;
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -358,19 +367,18 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        // 9. Prover creates witness
+        // 8. Prover creates witness
         let witness = Witness::new(rev_idx,
                                    max_cred_num,
                                    issuance_by_default,
                                    &rev_reg_delta.unwrap(),
                                    &simple_tail_accessor).unwrap();
 
-        // 10. Prover processes credential signature
+        // 9. Prover processes credential signature
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -378,27 +386,30 @@ mod test {
                                              Some(&witness)).unwrap();
 
 
-        // 11. Verifier creates nonce
+        // 10. Verifier creates nonce
         let nonce = new_nonce().unwrap();
 
-        // 12. Verifier create sub proof request
+        // 11. Verifier create sub proof request
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
-        // 13. Prover creates proof
+        // 12. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
-        // 14. Verifier verifies proof
+        // 13. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -409,9 +420,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_issuance_by_default() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 4. Issuer creates GVT revocation registry with IssuanceByDefault type
         let max_cred_num = 5;
@@ -421,31 +433,29 @@ mod test {
 
         let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
-        // 4. Prover creates master secret
-        let master_secret = Prover::new_master_secret().unwrap();
+        // 4. Prover creates master secret with credential values
+        let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 8. Issuer creates and sign credential values
-        let credential_values = helpers::gvt_credential_values();
-
         let rev_idx = 1;
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -471,8 +481,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -487,19 +496,22 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 14. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -511,27 +523,28 @@ mod test {
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
 
+        let gvt_credential_values = helpers::gvt_credential_values(&master_secret);
+
         // 2. Issuer creates and signs GVT credential for Prover
         let gvt_credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
         let (gvt_credential_pub_key, gvt_credential_priv_key, gvt_credential_key_correctness_proof) =
-            Issuer::new_credential_def(&gvt_credential_schema, false).unwrap();
+            Issuer::new_credential_def(&gvt_credential_schema, &non_credential_schema, false).unwrap();
 
-        let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
+        let gvt_credential_nonce = new_nonce().unwrap();
 
-        let (gvt_blinded_master_secret, gvt_master_secret_blinding_data, gvt_blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&gvt_credential_pub_key,
+        let (gvt_blinded_credential_secrets, gvt_credential_secrets_blinding_factors, gvt_blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&gvt_credential_pub_key,
                                         &gvt_credential_key_correctness_proof,
-                                        &master_secret,
-                                        &gvt_master_secret_blinding_nonce).unwrap();
+                                        &gvt_credential_values,
+                                        &gvt_credential_nonce).unwrap();
 
         let gvt_credential_issuance_nonce = new_nonce().unwrap();
 
-        let gvt_credential_values = helpers::gvt_credential_values();
-
         let (mut gvt_credential_signature, gvt_signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                                      &gvt_blinded_master_secret,
-                                                                                                      &gvt_blinded_master_secret_correctness_proof,
-                                                                                                      &gvt_master_secret_blinding_nonce,
+                                                                                                      &gvt_blinded_credential_secrets,
+                                                                                                      &gvt_blinded_credential_secrets_correctness_proof,
+                                                                                                      &gvt_credential_nonce,
                                                                                                       &gvt_credential_issuance_nonce,
                                                                                                       &gvt_credential_values,
                                                                                                       &gvt_credential_pub_key,
@@ -541,8 +554,7 @@ mod test {
         Prover::process_credential_signature(&mut gvt_credential_signature,
                                              &gvt_credential_values,
                                              &gvt_signature_correctness_proof,
-                                             &gvt_master_secret_blinding_data,
-                                             &master_secret,
+                                             &gvt_credential_secrets_blinding_factors,
                                              &gvt_credential_pub_key,
                                              &gvt_credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -550,23 +562,23 @@ mod test {
         // 4. Issuer creates and signs XYZ credential for Prover
         let xyz_credential_schema = helpers::xyz_credential_schema();
         let (xyz_credential_pub_key, xyz_credential_priv_key, xyz_credential_key_correctness_proof) =
-            Issuer::new_credential_def(&xyz_credential_schema, false).unwrap();
+            Issuer::new_credential_def(&xyz_credential_schema, &non_credential_schema, false).unwrap();
 
-        let xyz_master_secret_blinding_nonce = new_nonce().unwrap();
+        let xyz_credential_nonce = new_nonce().unwrap();
+        let xyz_credential_values = helpers::xyz_credential_values(&master_secret);
 
-        let (xyz_blinded_master_secret, xyz_master_secret_blinding_data, xyz_blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&xyz_credential_pub_key,
+        let (xyz_blinded_credential_secrets, xyz_credential_secrets_blinding_factors, xyz_blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&xyz_credential_pub_key,
                                         &xyz_credential_key_correctness_proof,
-                                        &master_secret,
-                                        &xyz_master_secret_blinding_nonce).unwrap();
+                                        &xyz_credential_values,
+                                        &xyz_credential_nonce).unwrap();
 
         let xyz_credential_issuance_nonce = new_nonce().unwrap();
 
-        let xyz_credential_values = helpers::xyz_credential_values();
         let (mut xyz_credential_signature, xyz_signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                                      &xyz_blinded_master_secret,
-                                                                                                      &xyz_blinded_master_secret_correctness_proof,
-                                                                                                      &xyz_master_secret_blinding_nonce,
+                                                                                                      &xyz_blinded_credential_secrets,
+                                                                                                      &xyz_blinded_credential_secrets_correctness_proof,
+                                                                                                      &xyz_credential_nonce,
                                                                                                       &xyz_credential_issuance_nonce,
                                                                                                       &xyz_credential_values,
                                                                                                       &xyz_credential_pub_key,
@@ -576,8 +588,7 @@ mod test {
         Prover::process_credential_signature(&mut xyz_credential_signature,
                                              &xyz_credential_values,
                                              &xyz_signature_correctness_proof,
-                                             &xyz_master_secret_blinding_data,
-                                             &master_secret,
+                                             &xyz_credential_secrets_blinding_factors,
                                              &xyz_credential_pub_key,
                                              &xyz_credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -590,10 +601,12 @@ mod test {
 
         // 8. Prover creates proof builder
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
 
         // 9. Prover adds GVT sub proof request
         proof_builder.add_sub_proof_request(&gvt_sub_proof_request,
                                             &gvt_credential_schema,
+                                            &non_credential_schema,
                                             &gvt_credential_signature,
                                             &gvt_credential_values,
                                             &gvt_credential_pub_key,
@@ -602,22 +615,25 @@ mod test {
         // 10. Prover adds XYZ sub proof request
         proof_builder.add_sub_proof_request(&xyz_sub_proof_request,
                                             &xyz_credential_schema,
+                                            &non_credential_schema,
                                             &xyz_credential_signature,
                                             &xyz_credential_values,
                                             &xyz_credential_pub_key,
                                             None, None).unwrap();
 
         // 11. Prover gets proof which contains sub proofs for GVT and XYZ sub proof requests
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 12. Verifier verifies proof for GVT and XYZ sub proof requests
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&gvt_sub_proof_request,
                                              &gvt_credential_schema,
+                                             &non_credential_schema,
                                              &gvt_credential_pub_key,
                                              None, None).unwrap();
         proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
+                                             &non_credential_schema,
                                              &xyz_credential_pub_key,
                                              None, None).unwrap();
 
@@ -628,9 +644,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_for_three_credentials_proving_first() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -642,22 +659,23 @@ mod test {
 
         // 4. Issuer issues first credential
         let master_secret_1 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values_1 = helpers::gvt_credential_values(&master_secret_1);
+
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_1,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values_1,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_1 = 1;
         let (mut credential_signature_1, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
-                                               &credential_values,
+                                               &credential_values_1,
                                                &credential_pub_key,
                                                &credential_priv_key,
                                                rev_idx_1,
@@ -675,10 +693,9 @@ mod test {
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
-                                             &credential_values,
+                                             &credential_values_1,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_1,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -687,20 +704,21 @@ mod test {
 
         // 5. Issuer issues second credential
         let master_secret_2 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_2);
+
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_2,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_2 = 2;
         let (mut credential_signature_2, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -723,8 +741,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_2,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_2,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -733,20 +750,21 @@ mod test {
 
         // 6. Issuer issues third credential
         let master_secret_3 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_3);
+
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_3,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_3 = 3;
         let (mut credential_signature_3, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -768,8 +786,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_3,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_3,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -788,19 +805,22 @@ mod test {
 
         // 10. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature_1,
-                                            &credential_values,
+                                            &credential_values_1,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness_1)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret_1).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -811,9 +831,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_first_proving_third() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -825,20 +846,21 @@ mod test {
 
         // 4. Issuer issues first credential
         let master_secret_1 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_1);
+
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_1,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_1 = 1;
         let (mut credential_signature_1, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -860,8 +882,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_1,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_1,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -870,20 +891,21 @@ mod test {
 
         // 5. Issuer issues second credential
         let master_secret_2 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_2);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_2,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
+
         let rev_idx_2 = 2;
         let (mut credential_signature_2, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -905,8 +927,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_2,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_2,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -915,20 +936,20 @@ mod test {
 
         // 6. Issuer issues third credential
         let master_secret_3 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_3);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_3,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_3 = 3;
         let (mut credential_signature_3, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -951,8 +972,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_3,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_3,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -976,19 +996,22 @@ mod test {
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature_3,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness_3)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret_3).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -999,9 +1022,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_third_proving_first() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -1013,22 +1037,22 @@ mod test {
 
         // 4. Issuer issues first credential
         let master_secret_1 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values_1 = helpers::gvt_credential_values(&master_secret_1);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_1,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values_1,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_1 = 1;
         let (mut credential_signature_1, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
-                                               &credential_values,
+                                               &credential_values_1,
                                                &credential_pub_key,
                                                &credential_priv_key,
                                                rev_idx_1,
@@ -1047,10 +1071,9 @@ mod test {
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_1,
-                                             &credential_values,
+                                             &credential_values_1,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_1,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1059,20 +1082,20 @@ mod test {
 
         // 5. Issuer issues second credential
         let master_secret_2 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_2);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_2,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_2 = 2;
         let (mut credential_signature_2, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1094,8 +1117,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_2,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_2,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1104,20 +1126,20 @@ mod test {
 
         // 6. Issuer issues third credential
         let master_secret_3 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_3);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_3,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_3 = 3;
         let (mut credential_signature_3, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1139,8 +1161,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_3,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_3,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1163,19 +1184,22 @@ mod test {
 
         // 11. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature_1,
-                                            &credential_values,
+                                            &credential_values_1,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness_1)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret_1).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 12. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1186,9 +1210,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_first_and_third_proving_second() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -1200,20 +1225,20 @@ mod test {
 
         // 4. Issuer issues first credential
         let master_secret_1 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_1);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_1,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_1 = 1;
         let (mut credential_signature_1, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1235,8 +1260,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_1,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_1,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1245,22 +1269,22 @@ mod test {
 
         // 5. Issuer issues second credential
         let master_secret_2 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values_2 = helpers::gvt_credential_values(&master_secret_2);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_2,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values_2,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_2 = 2;
         let (mut credential_signature_2, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
-                                               &credential_values,
+                                               &credential_values_2,
                                                &credential_pub_key,
                                                &credential_priv_key,
                                                rev_idx_2,
@@ -1279,10 +1303,9 @@ mod test {
                                          &simple_tail_accessor).unwrap();
 
         Prover::process_credential_signature(&mut credential_signature_2,
-                                             &credential_values,
+                                             &credential_values_2,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_2,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1291,20 +1314,20 @@ mod test {
 
         // 6. Issuer issues third credential
         let master_secret_3 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_3);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_3,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_3 = 3;
         let (mut credential_signature_3, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1328,8 +1351,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_3,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_3,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1358,19 +1380,22 @@ mod test {
 
         // 12. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature_2,
-                                            &credential_values,
+                                            &credential_values_2,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness_2)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret_2).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 13. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1381,9 +1406,10 @@ mod test {
     fn anoncreds_works_for_revocation_proof_for_two_credentials_proving_first_with_outdated_witness() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -1395,20 +1421,20 @@ mod test {
 
         // 4. Issuer issues first credential
         let master_secret_1 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_1);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_1,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_1 = 1;
         let (mut credential_signature_1, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1430,8 +1456,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_1,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_1,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1440,20 +1465,20 @@ mod test {
 
         // 5. Issuer issues second credential
         let master_secret_2 = Prover::new_master_secret().unwrap();
-        let master_secret_blinding_nonce = new_nonce().unwrap();
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let credential_values = helpers::gvt_credential_values(&master_secret_2);
+        let credential_nonce = new_nonce().unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret_2,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
         let credential_issuance_nonce = new_nonce().unwrap();
-        let credential_values = helpers::gvt_credential_values();
         let rev_idx_2 = 2;
         let (mut credential_signature_2, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1476,8 +1501,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature_2,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret_2,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1493,19 +1517,22 @@ mod test {
         // Proving first credential
         // 9. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature_1,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness_1)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret_1).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 10. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1516,9 +1543,10 @@ mod test {
     fn anoncreds_works_for_proof_created_before_credential_revoked() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -1530,29 +1558,27 @@ mod test {
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 8. Issuer creates and sign credential values
-        let credential_values = helpers::gvt_credential_values();
-
         let rev_idx = 1;
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1564,41 +1590,42 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        // 9. Prover creates witness
+        // 8. Prover creates witness
         let witness = Witness::new(rev_idx,
                                    max_cred_num,
                                    issuance_by_default,
                                    &rev_reg_delta.unwrap(),
                                    &simple_tail_accessor).unwrap();
 
-        // 10. Prover processes credential signature
+        // 9. Prover processes credential signature
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg),
                                              Some(&witness)).unwrap();
 
-        // 11. Verifier creates nonce
+        // 10. Verifier creates nonce
         let nonce = new_nonce().unwrap();
 
-        // 12. Verifier create sub proof request
+        // 11. Verifier create sub proof request
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
-        // 13. Prover creates proof
+        // 12. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 14. Issuer revokes credential used for proof building
         Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor).unwrap();
@@ -1607,6 +1634,7 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1617,9 +1645,10 @@ mod test {
     fn anoncreds_works_for_proof_created_after_credential_revoked() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -1631,29 +1660,27 @@ mod test {
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 8. Issuer creates and sign credential values
-        let credential_values = helpers::gvt_credential_values();
-
         let rev_idx = 1;
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1676,8 +1703,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1695,19 +1721,22 @@ mod test {
 
         // 14. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 15. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1718,9 +1747,10 @@ mod test {
     fn anoncreds_works_for_recovery_credential() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 4. Issuer creates revocation registry with IssuanceOnDemand type
         let max_cred_num = 5;
@@ -1732,29 +1762,27 @@ mod test {
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 8. Issuer creates and sign credential values
-        let credential_values = helpers::gvt_credential_values();
-
         let rev_idx = 1;
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1766,19 +1794,18 @@ mod test {
                                                &rev_key_priv,
                                                &simple_tail_accessor).unwrap();
 
-        // 9. Prover creates witness
+        // 8. Prover creates witness
         let witness = Witness::new(rev_idx,
                                    max_cred_num,
                                    issuance_by_default,
                                    &rev_reg_delta.unwrap(),
                                    &simple_tail_accessor).unwrap();
 
-        // 10. Prover processes credential signature
+        // 9. Prover processes credential signature
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1792,20 +1819,23 @@ mod test {
         let nonce = new_nonce().unwrap();
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 13. Verifier verifies proof (Proof is valid)
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
 
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1819,6 +1849,7 @@ mod test {
 
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1832,6 +1863,7 @@ mod test {
 
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -1843,9 +1875,10 @@ mod test {
     fn anoncreds_works_for_full_accumulator() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry for only 1 credential
         let max_cred_num = 1;
@@ -1856,27 +1889,25 @@ mod test {
 
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
-        // 8. Issuer creates and sign first credential values
-        let credential_values = helpers::gvt_credential_values();
-
         Issuer::sign_credential_with_revoc(PROVER_ID,
-                                           &blinded_master_secret,
-                                           &blinded_master_secret_correctness_proof,
-                                           &master_secret_blinding_nonce,
+                                           &blinded_credential_secrets,
+                                           &blinded_credential_secrets_correctness_proof,
+                                           &credential_nonce,
                                            &credential_issuance_nonce,
                                            &credential_values,
                                            &credential_pub_key,
@@ -1888,11 +1919,11 @@ mod test {
                                            &rev_key_priv,
                                            &simple_tail_accessor).unwrap();
 
-        // 9. Issuer creates and sign second credential values
+        // 8. Issuer creates and sign second credential values
         let res = Issuer::sign_credential_with_revoc(&format!("{}2", PROVER_ID),
-                                                     &blinded_master_secret,
-                                                     &blinded_master_secret_correctness_proof,
-                                                     &master_secret_blinding_nonce,
+                                                     &blinded_credential_secrets,
+                                                     &blinded_credential_secrets_correctness_proof,
+                                                     &credential_nonce,
                                                      &credential_issuance_nonce,
                                                      &credential_values,
                                                      &credential_pub_key,
@@ -1911,9 +1942,10 @@ mod test {
     fn anoncreds_works_for_reissue_credential_with_same_index() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 1;
@@ -1927,27 +1959,27 @@ mod test {
         // FIRST Issue of credential
         // 4. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 5. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 6. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 8. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &blinded_master_secret,
-                                               &blinded_master_secret_correctness_proof,
-                                               &master_secret_blinding_nonce,
+                                               &blinded_credential_secrets,
+                                               &blinded_credential_secrets_correctness_proof,
+                                               &credential_nonce,
                                                &credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -1972,8 +2004,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -1989,19 +2020,22 @@ mod test {
 
         // 13. Prover creates proof
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             Some(&rev_reg),
                                             Some(&witness)).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 14. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -2015,6 +2049,7 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              Some(&rev_key_pub),
                                              Some(&rev_reg)).unwrap();
@@ -2023,31 +2058,32 @@ mod test {
         // Reissue credential with different values but same rev_index
 
         // 16. Issuer creates nonce used Prover to blind master secret
-        let new_master_secret_blinding_nonce = new_nonce().unwrap();
+        let new_credential_nonce = new_nonce().unwrap();
 
         // 17. Prover blinds master secret
-        let (new_blinded_master_secret, new_master_secret_blinding_data, new_blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (new_blinded_credential_secrets, new_credential_secrets_blinding_factors, new_blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &new_master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &new_credential_nonce).unwrap();
 
         // 18. Prover creates nonce used Issuer to new credential issue
         let new_credential_issuance_nonce = new_nonce().unwrap();
 
         // 19. Issuer creates and signs new credential values
         let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        credential_values_builder.add_value("age", "44").unwrap();
-        credential_values_builder.add_value("height", "165").unwrap();
+        credential_values_builder.add_value_known("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_dec_known("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_dec_known("age", "44").unwrap();
+        credential_values_builder.add_dec_known("height", "165").unwrap();
         let credential_values = credential_values_builder.finalize().unwrap();
 
         let (mut new_credential_signature, new_signature_correctness_proof, rev_reg_delta) =
             Issuer::sign_credential_with_revoc(PROVER_ID,
-                                               &new_blinded_master_secret,
-                                               &new_blinded_master_secret_correctness_proof,
-                                               &new_master_secret_blinding_nonce,
+                                               &new_blinded_credential_secrets,
+                                               &new_blinded_credential_secrets_correctness_proof,
+                                               &new_credential_nonce,
                                                &new_credential_issuance_nonce,
                                                &credential_values,
                                                &credential_pub_key,
@@ -2070,8 +2106,7 @@ mod test {
         Prover::process_credential_signature(&mut new_credential_signature,
                                              &credential_values,
                                              &new_signature_correctness_proof,
-                                             &new_master_secret_blinding_data,
-                                             &master_secret,
+                                             &new_credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &new_credential_issuance_nonce,
                                              Some(&rev_key_pub),
@@ -2079,21 +2114,23 @@ mod test {
                                              Some(&witness)).unwrap();
         // 21. Prover creates proof using new credential
         let mut new_proof_builder = Prover::new_proof_builder().unwrap();
-
+        proof_builder.add_common_attribute("master_secret").unwrap();
         new_proof_builder.add_sub_proof_request(&sub_proof_request,
                                                 &credential_schema,
+                                                &non_credential_schema,
                                                 &new_credential_signature,
                                                 &credential_values,
                                                 &credential_pub_key,
                                                 Some(&rev_reg),
                                                 Some(&witness)).unwrap();
 
-        let new_proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let new_proof = proof_builder.finalize(&nonce).unwrap();
 
         // 22. Verifier verifies proof created by new credential
         let mut new_proof_verifier = Verifier::new_proof_verifier().unwrap();
         new_proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                  &credential_schema,
+                                                 &non_credential_schema,
                                                  &credential_pub_key,
                                                  Some(&rev_key_pub),
                                                  Some(&rev_reg)).unwrap();
@@ -2103,6 +2140,7 @@ mod test {
         let mut old_proof_verifier = Verifier::new_proof_verifier().unwrap();
         old_proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                  &credential_schema,
+                                                 &non_credential_schema,
                                                  &credential_pub_key,
                                                  Some(&rev_key_pub),
                                                  Some(&rev_reg)).unwrap();
@@ -2113,32 +2151,33 @@ mod test {
     fn anoncreds_works_for_missed_process_credential_step() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (credential_signature, _) = Issuer::sign_credential(PROVER_ID,
-                                                                &blinded_master_secret,
-                                                                &blinded_master_secret_correctness_proof,
-                                                                &master_secret_blinding_nonce,
+                                                                &blinded_credential_secrets,
+                                                                &blinded_credential_secrets_correctness_proof,
+                                                                &credential_nonce,
                                                                 &credential_issuance_nonce,
                                                                 &credential_values,
                                                                 &credential_pub_key,
@@ -2150,18 +2189,21 @@ mod test {
 
         // 9. Prover creates proof by sub proof request not corresponded to verifier proof request
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             None, None).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 10. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              None, None).unwrap();
         assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
@@ -2171,32 +2213,33 @@ mod test {
     fn anoncreds_works_for_proof_created_with_wrong_master_secret() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values wrong keys
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2206,8 +2249,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2218,20 +2260,27 @@ mod test {
 
         // 10. Prover creates proof by sub proof request not corresponded to verifier proof request
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
+        let another_master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&another_master_secret);
+
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             None, None).unwrap();
 
-        let another_master_secret = Prover::new_master_secret().unwrap();
-        let proof = proof_builder.finalize(&nonce, &another_master_secret).unwrap();
+
+
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 11. Verifier verifies proof
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              None,
                                              None).unwrap();
@@ -2242,32 +2291,33 @@ mod test {
     fn anoncreds_works_for_used_different_nonce() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values wrong keys
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2277,8 +2327,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2290,14 +2339,16 @@ mod test {
         let nonce_for_proof_creation = new_nonce().unwrap();
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             None, None).unwrap();
 
-        let proof = proof_builder.finalize(&nonce_for_proof_creation, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce_for_proof_creation).unwrap();
 
         // 11. Verifier verifies proof
         let nonce_for_proof_verification = new_nonce().unwrap();
@@ -2305,6 +2356,7 @@ mod test {
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&sub_proof_request,
                                              &credential_schema,
+                                             &non_credential_schema,
                                              &credential_pub_key,
                                              None,
                                              None).unwrap();
@@ -2315,32 +2367,33 @@ mod test {
     fn anoncreds_works_for_proof_not_correspond_to_verifier_proof_request() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2350,8 +2403,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2362,22 +2414,25 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         let nonce = new_nonce().unwrap();
 
+        proof_builder.add_common_attribute("master_secret").unwrap();
         proof_builder.add_sub_proof_request(&sub_proof_request,
                                             &credential_schema,
+                                            &non_credential_schema,
                                             &credential_signature,
                                             &credential_values,
                                             &credential_pub_key,
                                             None, None).unwrap();
-        let proof = proof_builder.finalize(&nonce, &master_secret).unwrap();
+        let proof = proof_builder.finalize(&nonce).unwrap();
 
         // 10. Verifier verifies proof
         let xyz_credential_schema = helpers::xyz_credential_schema();
-        let (xyz_credential_pub_key, _, _) = Issuer::new_credential_def(&xyz_credential_schema, false).unwrap();
+        let (xyz_credential_pub_key, _, _) = Issuer::new_credential_def(&xyz_credential_schema, &non_credential_schema, false).unwrap();
         let xyz_sub_proof_request = helpers::xyz_sub_proof_request();
 
         let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
         proof_verifier.add_sub_proof_request(&xyz_sub_proof_request,
                                              &xyz_credential_schema,
+                                             &non_credential_schema,
                                              &xyz_credential_pub_key,
                                              None, None).unwrap();
         let res = proof_verifier.verify(&proof, &nonce);
@@ -2389,9 +2444,10 @@ mod test {
         // 1. Issuer creates credential schema
         let credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
         let credential_schema = credential_schema_builder.finalize().unwrap();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let res = Issuer::new_credential_def(&credential_schema, false);
+        let res = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
@@ -2399,9 +2455,10 @@ mod test {
     fn issuer_create_revocation_registry_works_for_keys_without_revocation_part() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(without revocation part)
-        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Issuer creates revocation registry
         let res =
@@ -2414,9 +2471,10 @@ mod test {
     fn issuer_revoke_works_for_invalid_revocation_index() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition(with revocation keys)
-        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, true).unwrap();
+        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
 
         // 3. Issuer creates revocation registry
         let max_cred_num = 5;
@@ -2435,34 +2493,35 @@ mod test {
     fn issuer_sign_credential_works_for_credential_values_not_correspond_to_issuer_keys() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::xyz_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values not correspondent to issuer keys
-        let credential_values = helpers::xyz_credential_values();
 
         // 8. Issuer signs wrong credential values
         let res = Issuer::sign_credential(PROVER_ID,
-                                          &blinded_master_secret,
-                                          &blinded_master_secret_correctness_proof,
-                                          &master_secret_blinding_nonce,
+                                          &blinded_credential_secrets,
+                                          &blinded_credential_secrets_correctness_proof,
+                                          &credential_nonce,
                                           &credential_issuance_nonce,
                                           &credential_values,
                                           &credential_pub_key,
@@ -2475,32 +2534,33 @@ mod test {
     fn proof_builder_add_sub_proof_works_for_credential_values_not_correspond_to_credential_schema() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2510,8 +2570,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2520,12 +2579,13 @@ mod test {
         let mut proof_builder = Prover::new_proof_builder().unwrap();
 
         // Wrong credential values
-        let credential_values = helpers::xyz_credential_values();
+        let credential_values = helpers::xyz_credential_values(&master_secret);
 
         let sub_proof_request = helpers::gvt_sub_proof_request();
 
         let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
+                                                      &non_credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
                                                       &credential_pub_key,
@@ -2538,32 +2598,33 @@ mod test {
     fn proof_builder_add_sub_proof_works_for_credential_not_satisfy_to_sub_proof_request() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2573,8 +2634,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2584,9 +2644,11 @@ mod test {
 
         // 10. Prover creates proof by credential not correspondent to proof request
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
 
         let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
+                                                      &non_credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
                                                       &credential_pub_key,
@@ -2598,32 +2660,33 @@ mod test {
     fn proof_builder_add_sub_proof_works_for_credential_not_contained_requested_attribute() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2633,8 +2696,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2646,9 +2708,11 @@ mod test {
 
         // 10. Prover creates proof by credential not contained requested attribute
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
 
         let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
+                                                      &non_credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
                                                       &credential_pub_key,
@@ -2660,32 +2724,33 @@ mod test {
     fn proof_builder_add_sub_proof_works_for_credential_not_satisfied_requested_predicate() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key,
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key,
                                         &credential_key_correctness_proof,
-                                        &master_secret,
-                                        &master_secret_blinding_nonce).unwrap();
+                                        &credential_values,
+                                        &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates and signs credential values
-        let credential_values = helpers::gvt_credential_values();
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_master_secret,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2695,8 +2760,7 @@ mod test {
         Prover::process_credential_signature(&mut credential_signature,
                                              &credential_values,
                                              &signature_correctness_proof,
-                                             &master_secret_blinding_data,
-                                             &master_secret,
+                                             &credential_secrets_blinding_factors,
                                              &credential_pub_key,
                                              &credential_issuance_nonce,
                                              None, None, None).unwrap();
@@ -2709,9 +2773,11 @@ mod test {
 
         // 10. Prover creates proof by credential value not satisfied predicate
         let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
 
         let res = proof_builder.add_sub_proof_request(&sub_proof_request,
                                                       &credential_schema,
+                                                      &non_credential_schema,
                                                       &credential_signature,
                                                       &credential_values,
                                                       &credential_pub_key,
@@ -2723,9 +2789,10 @@ mod test {
     fn proof_verifier_add_sub_proof_request_works_for_credential_schema_not_satisfied_to_sub_proof_request() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, _, _) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Verifier build proof verifier
         let sub_proof_request = helpers::gvt_sub_proof_request();
@@ -2735,69 +2802,73 @@ mod test {
 
         let res = proof_verifier.add_sub_proof_request(&sub_proof_request,
                                                        &xyz_credential_schema,
+                                                       &non_credential_schema,
                                                        &credential_pub_key,
                                                        None, None);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
     #[test]
-    fn prover_blind_master_secret_works_for_key_correctness_proof_not_correspond_to_public_key() {
+    fn prover_blind_credential_secrets_works_for_key_correctness_proof_not_correspond_to_public_key() {
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 2. Issuer creates GVT credential definition
         let gvt_credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
         let (gvt_credential_pub_key, _, _) =
-            Issuer::new_credential_def(&gvt_credential_schema, false).unwrap();
+            Issuer::new_credential_def(&gvt_credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Issuer creates XYZ credential definition
         let xyz_credential_schema = helpers::xyz_credential_schema();
         let (_, _, xyz_credential_key_correctness_proof) =
-            Issuer::new_credential_def(&xyz_credential_schema, false).unwrap();
+            Issuer::new_credential_def(&xyz_credential_schema, &non_credential_schema, false).unwrap();
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let gvt_master_secret_blinding_nonce = new_nonce().unwrap();
+        let gvt_credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blind master secret by gvt_public_key and xyz_key_correctness_proof
         let res =
-            Prover::blind_master_secret(&gvt_credential_pub_key,
+            Prover::blind_credential_secrets(&gvt_credential_pub_key,
                                         &xyz_credential_key_correctness_proof,
-                                        &master_secret,
-                                        &gvt_master_secret_blinding_nonce);
+                                        &credential_values,
+                                        &gvt_credential_nonce);
         assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
     }
 
     #[test]
-    fn issuer_sign_credential_works_for_prover_used_different_nonce_to_blind_master_secret() {
+    fn issuer_sign_credential_works_for_prover_used_different_nonce_to_blind_credential_secrets() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         let other_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_ms, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &other_nonce).unwrap();
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &other_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 8. Issuer signs credential values
         let res = Issuer::sign_credential(PROVER_ID,
-                                          &blinded_ms,
-                                          &blinded_master_secret_correctness_proof,
-                                          &master_secret_blinding_nonce,
+                                          &blinded_credential_secrets,
+                                          &blinded_credential_secrets_correctness_proof,
+                                          &credential_nonce,
                                           &credential_issuance_nonce,
                                           &credential_values,
                                           &credential_pub_key,
@@ -2806,36 +2877,38 @@ mod test {
     }
 
     #[test]
-    fn issuer_sign_credential_works_for_keys_not_correspond_to_blinded_master_secret_correctness_proof() {
+    fn issuer_sign_credential_works_for_keys_not_correspond_to_blinded_credential_secrets_correctness_proof() {
         // 1. Issuer creates GVT credential definition
         let credential_schema = helpers::gvt_credential_schema();
-        let (gvt_credential_pub_key, _, gvt_credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let non_credential_schema = helpers::non_credential_schema();
+        let (gvt_credential_pub_key, _, gvt_credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 2. Issuer creates XYZ credential definition
-        let credential_schema = helpers::gvt_credential_schema();
-        let (xyz_credential_pub_key, xyz_credential_priv_key, _) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let credential_schema = helpers::xyz_credential_schema();
+        let (xyz_credential_pub_key, xyz_credential_priv_key, _) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let gvt_credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret by GVT key
-        let (blinded_ms, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&gvt_credential_pub_key, &gvt_credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&gvt_credential_pub_key, &gvt_credential_key_correctness_proof, &gvt_credential_values, &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let xyz_credential_values = helpers::xyz_credential_values();
+        let xyz_credential_values = helpers::xyz_credential_values(&master_secret);
 
         // 8. Issuer signs XYZ credential values for Prover
         let res = Issuer::sign_credential(PROVER_ID,
-                                          &blinded_ms,
-                                          &blinded_master_secret_correctness_proof,
-                                          &master_secret_blinding_nonce,
+                                          &blinded_credential_secrets,
+                                          &blinded_credential_secrets_correctness_proof,
+                                          &credential_nonce,
                                           &credential_issuance_nonce,
                                           &xyz_credential_values,
                                           &xyz_credential_pub_key,
@@ -2844,36 +2917,37 @@ mod test {
     }
 
     #[test]
-    fn issuer_sign_credential_works_for_blinded_master_secret_not_correspond_to_blinded_master_secret_correctness_proof() {
+    fn issuer_sign_credential_works_for_blinded_credential_secrets_not_correspond_to_blinded_credential_secrets_correctness_proof() {
         // 1. Issuer creates GVT credential definition
         let credential_schema = helpers::gvt_credential_schema();
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let non_credential_schema = helpers::non_credential_schema();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 2. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 3. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 4. Prover blinds master secret
-        let (_, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (_, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 5. Prover blinds master secret second time
-        let (blinded_ms, _, _) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, _, _) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 8. Issuer signs credential values for Prover
         let res = Issuer::sign_credential(PROVER_ID,
-                                          &blinded_ms,
-                                          &blinded_master_secret_correctness_proof,
-                                          &master_secret_blinding_nonce,
+                                          &blinded_credential_secrets,
+                                          &blinded_credential_secrets_correctness_proof,
+                                          &credential_nonce,
                                           &credential_issuance_nonce,
                                           &credential_values,
                                           &credential_pub_key,
@@ -2885,19 +2959,21 @@ mod test {
     fn prover_process_credential_signature_works_for_issuer_used_different_nonce() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
@@ -2905,13 +2981,12 @@ mod test {
         let different_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 8. Issuer signs credential values
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_ms,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &different_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -2921,8 +2996,7 @@ mod test {
         let res = Prover::process_credential_signature(&mut credential_signature,
                                                        &credential_values,
                                                        &signature_correctness_proof,
-                                                       &master_secret_blinding_data,
-                                                       &master_secret,
+                                                       &credential_secrets_blinding_factors,
                                                        &credential_pub_key,
                                                        &credential_issuance_nonce,
                                                        None, None, None);
@@ -2933,19 +3007,21 @@ mod test {
     fn prover_process_credential_signature_works_for_credential_signature_not_correspond_to_signature_correctness_proof() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
@@ -2953,13 +3029,12 @@ mod test {
         let different_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 8. Issuer signs credential values
         let (mut credential_signature, _) = Issuer::sign_credential(PROVER_ID,
-                                                                    &blinded_ms,
-                                                                    &blinded_master_secret_correctness_proof,
-                                                                    &master_secret_blinding_nonce,
+                                                                    &blinded_credential_secrets,
+                                                                    &blinded_credential_secrets_correctness_proof,
+                                                                    &credential_nonce,
                                                                     &different_nonce,
                                                                     &credential_values,
                                                                     &credential_pub_key,
@@ -2967,9 +3042,9 @@ mod test {
 
         // 9. Issuer signs credential values second time
         let (_, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                       &blinded_ms,
-                                                                       &blinded_master_secret_correctness_proof,
-                                                                       &master_secret_blinding_nonce,
+                                                                       &blinded_credential_secrets,
+                                                                       &blinded_credential_secrets_correctness_proof,
+                                                                       &credential_nonce,
                                                                        &different_nonce,
                                                                        &credential_values,
                                                                        &credential_pub_key,
@@ -2979,8 +3054,7 @@ mod test {
         let res = Prover::process_credential_signature(&mut credential_signature,
                                                        &credential_values,
                                                        &signature_correctness_proof,
-                                                       &master_secret_blinding_data,
-                                                       &master_secret,
+                                                       &credential_secrets_blinding_factors,
                                                        &credential_pub_key,
                                                        &credential_issuance_nonce,
                                                        None, None, None);
@@ -2988,38 +3062,39 @@ mod test {
     }
 
     #[test]
-    fn prover_process_credential_signature_works_for_master_secret_blinding_data_not_correspond_to_signature() {
+    fn prover_process_credential_signature_works_for_credential_secrets_blinding_factors_not_correspond_to_signature() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_ms, _, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 6. Prover blinds master secret second time
-        let (_, master_secret_blinding_data, _) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (_, credential_secrets_blinding_factors, _) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 7. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 8. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 9. Issuer signs credential values
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_ms,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -3029,8 +3104,7 @@ mod test {
         let res = Prover::process_credential_signature(&mut credential_signature,
                                                        &credential_values,
                                                        &signature_correctness_proof,
-                                                       &master_secret_blinding_data,
-                                                       &master_secret,
+                                                       &credential_secrets_blinding_factors,
                                                        &credential_pub_key,
                                                        &credential_issuance_nonce,
                                                        None, None, None);
@@ -3041,31 +3115,32 @@ mod test {
     fn prover_process_credential_signature_works_for_use_different_nonce() {
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
+        let non_credential_schema = helpers::non_credential_schema();
 
         // 2. Issuer creates credential definition
-        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, false).unwrap();
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false).unwrap();
 
         // 3. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
+        let credential_values = helpers::gvt_credential_values(&master_secret);
 
         // 4. Issuer creates nonce used Prover to blind master secret
-        let master_secret_blinding_nonce = new_nonce().unwrap();
+        let credential_nonce = new_nonce().unwrap();
 
         // 5. Prover blinds master secret
-        let (blinded_ms, master_secret_blinding_data, blinded_master_secret_correctness_proof) =
-            Prover::blind_master_secret(&credential_pub_key, &credential_key_correctness_proof, &master_secret, &master_secret_blinding_nonce).unwrap();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
         // 6. Prover creates nonce used Issuer to credential issue
         let credential_issuance_nonce = new_nonce().unwrap();
 
         // 7. Issuer creates credential values
-        let credential_values = helpers::gvt_credential_values();
 
         // 8. Issuer signs credential values
         let (mut credential_signature, signature_correctness_proof) = Issuer::sign_credential(PROVER_ID,
-                                                                                              &blinded_ms,
-                                                                                              &blinded_master_secret_correctness_proof,
-                                                                                              &master_secret_blinding_nonce,
+                                                                                              &blinded_credential_secrets,
+                                                                                              &blinded_credential_secrets_correctness_proof,
+                                                                                              &credential_nonce,
                                                                                               &credential_issuance_nonce,
                                                                                               &credential_values,
                                                                                               &credential_pub_key,
@@ -3077,8 +3152,7 @@ mod test {
         let res = Prover::process_credential_signature(&mut credential_signature,
                                                        &credential_values,
                                                        &signature_correctness_proof,
-                                                       &master_secret_blinding_data,
-                                                       &master_secret,
+                                                       &credential_secrets_blinding_factors,
                                                        &credential_pub_key,
                                                        &other_nonce,
                                                        None, None, None);
@@ -3106,19 +3180,27 @@ mod helpers {
         credential_schema_builder.finalize().unwrap()
     }
 
-    pub fn gvt_credential_values() -> CredentialValues {
+    pub fn non_credential_schema() -> NonCredentialSchema {
+        let mut non_credential_schema_builder = Issuer::new_non_credential_schema_builder().unwrap();
+        non_credential_schema_builder.add_attr("master_secret").unwrap();
+        non_credential_schema_builder.finalize().unwrap()
+    }
+
+    pub fn gvt_credential_values(master_secret: &MasterSecret) -> CredentialValues {
         let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-        credential_values_builder.add_value("name", "1139481716457488690172217916278103335").unwrap();
-        credential_values_builder.add_value("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
-        credential_values_builder.add_value("age", "28").unwrap();
-        credential_values_builder.add_value("height", "175").unwrap();
+        credential_values_builder.add_value_known("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder.add_dec_known("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
+        credential_values_builder.add_dec_known("age", "28").unwrap();
+        credential_values_builder.add_dec_known("height", "175").unwrap();
         credential_values_builder.finalize().unwrap()
     }
 
-    pub fn xyz_credential_values() -> CredentialValues {
+    pub fn xyz_credential_values(master_secret: &MasterSecret) -> CredentialValues {
         let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
-        credential_values_builder.add_value("status", "51792877103171595686471452153480627530895").unwrap();
-        credential_values_builder.add_value("period", "8").unwrap();
+        credential_values_builder.add_value_known("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("status", "51792877103171595686471452153480627530895").unwrap();
+        credential_values_builder.add_dec_known("period", "8").unwrap();
         credential_values_builder.finalize().unwrap()
     }
 
