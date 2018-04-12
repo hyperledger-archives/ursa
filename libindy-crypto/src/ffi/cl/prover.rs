@@ -514,6 +514,33 @@ pub extern fn indy_crypto_cl_prover_process_credential_signature(credential_sign
     ErrorCode::Success
 }
 
+#[no_mangle]
+#[allow(unused_variables)]
+pub extern fn indy_crypto_cl_prover_get_credential_revocation_index(credential_signature: *const c_void,
+                                                                    cred_rev_indx: *mut u32) -> ErrorCode {
+    trace!("indy_crypto_cl_prover_get_credential_revocation_index: >>> credential_signature: {:?}, cred_rev_indx: {:?}",
+           credential_signature, cred_rev_indx);
+
+    check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam1);
+
+    trace!("indy_crypto_cl_prover_get_credential_revocation_index: >>> credential_signature: {:?}", credential_signature);
+
+    let res = match credential_signature.extract_index() {
+        Some(index) => {
+            trace!("indy_crypto_cl_prover_get_credential_revocation_index: index: {:?}", index);
+            unsafe {
+                *cred_rev_indx = index;
+            }
+            trace!("indy_crypto_cl_prover_get_credential_revocation_index: *cred_rev_indx: {:?}", cred_rev_indx);
+            ErrorCode::Success
+        }
+        None => ErrorCode::CommonInvalidState
+    };
+
+    trace!("indy_crypto_cl_prover_get_credential_revocation_index: <<< res: {:?}", res);
+    ErrorCode::Success
+}
+
 /// Creates and returns proof builder.
 ///
 /// The purpose of proof builder is building of proof entity according to the given request .
@@ -1280,6 +1307,44 @@ mod tests {
 
         let err_code = indy_crypto_cl_proof_free(proof);
         assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_cl_prover_get_credential_revocation_index_works() {
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
+        let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
+        let master_secret = _master_secret();
+        let master_secret_blinding_nonce = _nonce();
+        let (blinded_master_secret, master_secret_blinding_data,
+            blinded_master_secret_correctness_proof) = _blinded_master_secret(credential_pub_key,
+                                                                              credential_key_correctness_proof,
+                                                                              master_secret,
+                                                                              master_secret_blinding_nonce);
+        let credential_issuance_nonce = _nonce();
+        let tail_storage = FFISimpleTailStorage::new(rev_tails_generator);
+
+        let (credential_signature, signature_correctness_proof, _) =
+            _credential_signature_with_revoc(blinded_master_secret,
+                                             blinded_master_secret_correctness_proof,
+                                             master_secret_blinding_nonce,
+                                             credential_issuance_nonce,
+                                             credential_pub_key,
+                                             credential_priv_key,
+                                             rev_key_priv,
+                                             rev_reg,
+                                             tail_storage.get_ctx());
+
+        let mut cred_rev_idx_p: u32 = 0;
+        let err_code = indy_crypto_cl_prover_get_credential_revocation_index(credential_signature, &mut cred_rev_idx_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
+        _free_revocation_registry_def(rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator);
+        _free_master_secret(master_secret);
+        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
+        _free_nonce(master_secret_blinding_nonce);
+        _free_nonce(credential_issuance_nonce);
+        _free_credential_signature(credential_signature, signature_correctness_proof);
     }
 }
 

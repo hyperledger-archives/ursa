@@ -27,13 +27,13 @@ pub fn new_nonce() -> Result<Nonce, IndyCryptoError> {
     Ok(helpers::bn_rand(constants::LARGE_NONCE)?)
 }
 
-/// A list of attributes a Claim is based on.
+/// A list of attributes a Credential is based on.
 #[derive(Debug, Clone)]
 pub struct CredentialSchema {
     attrs: HashSet<String> /* attr names */
 }
 
-/// A Builder of `Claim Schema`.
+/// A Builder of `Credential Schema`.
 #[derive(Debug)]
 pub struct CredentialSchemaBuilder {
     attrs: HashSet<String> /* attr names */
@@ -58,7 +58,7 @@ impl CredentialSchemaBuilder {
     }
 }
 
-/// Values of attributes from `Claim Schema` (must be integers).
+/// Values of attributes from `Credential Schema` (must be integers).
 #[derive(Debug)]
 pub struct CredentialValues {
     attrs_values: HashMap<String, BigNumber>
@@ -72,7 +72,7 @@ impl CredentialValues {
     }
 }
 
-/// A Builder of `Claim Values`.
+/// A Builder of `Credential Values`.
 #[derive(Debug)]
 pub struct CredentialValuesBuilder {
     attrs_values: HashMap<String, BigNumber> /* attr_name -> int representation of value */
@@ -147,7 +147,7 @@ impl JsonEncodable for CredentialPrivateKey {}
 
 impl<'a> JsonDecodable<'a> for CredentialPrivateKey {}
 
-/// Issuer's "Public Key" is used to verify the Issuer's signature over the Claim's attributes' values (primary credential).
+/// Issuer's "Public Key" is used to verify the Issuer's signature over the Credential's attributes' values (primary credential).
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialPrimaryPublicKey {
     n: BigNumber,
@@ -171,7 +171,7 @@ impl CredentialPrimaryPublicKey {
     }
 }
 
-/// Issuer's "Private Key" used for signing Claim's attributes' values (primary credential)
+/// Issuer's "Private Key" used for signing Credential's attributes' values (primary credential)
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialPrimaryPrivateKey {
     p: BigNumber,
@@ -213,7 +213,7 @@ pub struct CredentialRevocationPublicKey {
     y: PointG2,
 }
 
-/// `Revocation Private Key` is used for signing Claim.
+/// `Revocation Private Key` is used for signing Credential.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CredentialRevocationPrivateKey {
     x: GroupOrderElement,
@@ -224,7 +224,7 @@ pub type Accumulator = PointG2;
 
 /// `Revocation Registry` contains accumulator.
 /// Must be published by Issuer on a tamper-evident and highly available storage
-/// Used by prover to prove that a claim hasn't revoked by the issuer
+/// Used by prover to prove that a credential hasn't revoked by the issuer
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevocationRegistry {
     accum: Accumulator
@@ -402,7 +402,7 @@ impl SimpleTailsAccessor {
 }
 
 
-/// Issuer's signature over Claim attribute values.
+/// Issuer's signature over Credential attribute values.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CredentialSignature {
     p_credential: PrimaryCredentialSignature,
@@ -673,8 +673,8 @@ pub enum PredicateType {
 
 /// Proof is complex crypto structure created by prover over multiple credentials that allows to prove that prover:
 /// 1) Knows signature over credentials issued with specific issuer keys (identified by key id)
-/// 2) Claim contains attributes with specific values that prover wants to disclose
-/// 3) Claim contains attributes with valid predicates that verifier wants the prover to satisfy.
+/// 2) Credential contains attributes with specific values that prover wants to disclose
+/// 3) Credential contains attributes with valid predicates that verifier wants the prover to satisfy.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Proof {
     proofs: Vec<SubProof>,
