@@ -156,7 +156,7 @@ impl Issuer {
     /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
     /// * `master_secret_blinding_nonce` - Nonce used for verification of blinded_master_secret_correctness_proof.
     /// * `credential_issuance_nonce` - Nonce used for creation of signature_correctness_proof.
-    /// * `credential_values` - Claim values to be signed.
+    /// * `credential_values` - Credential values to be signed.
     /// * `credential_pub_key` - Credential public key.
     /// * `credential_priv_key` - Credential private key.
     ///
@@ -243,7 +243,7 @@ impl Issuer {
     /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof.
     /// * `master_secret_blinding_nonce` - Nonce used for verification of blinded_master_secret_correctness_proof.
     /// * `credential_issuance_nonce` - Nonce used for creation of signature_correctness_proof.
-    /// * `credential_values` - Claim values to be signed.
+    /// * `credential_values` - Credential values to be signed.
     /// * `credential_pub_key` - Credential public key.
     /// * `credential_priv_key` - Credential private key.
     /// * `rev_idx` - User index in revocation accumulator. Required for non-revocation credential_signature part generation.

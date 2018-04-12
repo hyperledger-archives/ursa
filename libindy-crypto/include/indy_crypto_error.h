@@ -46,7 +46,7 @@ typedef enum
     // Invalid library state was detected in runtime. It signals library bug
     CommonInvalidState = 112,
 
-    // Object (json, config, key, claim and etc...) passed by library caller has invalid structure
+    // Object (json, config, key, credential and etc...) passed by library caller has invalid structure
     CommonInvalidStructure = 113,
 
     // IO Error

@@ -156,7 +156,7 @@ pub extern fn indy_crypto_cl_witness_free(witness: *const c_void) -> ErrorCode {
 /// The purpose of credential schema builder is building of credential schema entity that
 /// represents credential schema attributes set.
 ///
-/// Note: Claim schema builder instance deallocation must be performed by
+/// Note: Credential schema builder instance deallocation must be performed by
 /// calling indy_crypto_cl_credential_schema_builder_finalize.
 ///
 /// # Arguments
@@ -209,7 +209,7 @@ pub extern fn indy_crypto_cl_credential_schema_builder_add_attr(credential_schem
 
 /// Deallocates credential schema builder and returns credential schema entity instead.
 ///
-/// Note: Claims schema instance deallocation must be performed by
+/// Note: Credentials schema instance deallocation must be performed by
 /// calling indy_crypto_cl_credential_schema_free.
 ///
 /// # Arguments
@@ -267,7 +267,7 @@ pub extern fn indy_crypto_cl_credential_schema_free(credential_schema: *const c_
 /// The purpose of credential values builder is building of credential values entity that
 /// represents credential attributes values map.
 ///
-/// Note: Claims values builder instance deallocation must be performed by
+/// Note: Credentials values builder instance deallocation must be performed by
 /// calling indy_crypto_cl_credential_values_builder_finalize.
 ///
 /// # Arguments
@@ -298,8 +298,8 @@ pub extern fn indy_crypto_cl_credential_values_builder_new(credential_values_bui
 ///
 /// # Arguments
 /// * `credential_values_builder` - Reference that contains credential values builder instance pointer.
-/// * `attr` - Claim attr to add as null terminated string.
-/// * `dec_value` - Claim attr dec_value. Decimal BigNum representation as null terminated string.
+/// * `attr` - Credential attr to add as null terminated string.
+/// * `dec_value` - Credential attr dec_value. Decimal BigNum representation as null terminated string.
 #[no_mangle]
 pub extern fn indy_crypto_cl_credential_values_builder_add_value(credential_values_builder: *const c_void,
                                                                  attr: *const c_char,
@@ -324,7 +324,7 @@ pub extern fn indy_crypto_cl_credential_values_builder_add_value(credential_valu
 
 /// Deallocates credential values builder and returns credential values entity instead.
 ///
-/// Note: Claims values instance deallocation must be performed by
+/// Note: Credentials values instance deallocation must be performed by
 /// calling indy_crypto_cl_credential_values_free.
 ///
 /// # Arguments
@@ -361,7 +361,7 @@ pub extern fn indy_crypto_cl_credential_values_builder_finalize(credential_value
 /// Deallocates credential values instance.
 ///
 /// # Arguments
-/// * `credential_values` - Claim values instance pointer
+/// * `credential_values` - Credential values instance pointer
 #[no_mangle]
 pub extern fn indy_crypto_cl_credential_values_free(credential_values: *const c_void) -> ErrorCode {
     trace!("indy_crypto_cl_credential_values_free: >>> credential_values: {:?}", credential_values);
@@ -413,7 +413,7 @@ pub extern fn indy_crypto_cl_sub_proof_request_builder_new(sub_proof_request_bui
 ///
 /// # Arguments
 /// * `sub_proof_request_builder` - Reference that contains sub proof request builder instance pointer.
-/// * `attr` - Claim attr to add as null terminated string.
+/// * `attr` - Credential attr to add as null terminated string.
 #[no_mangle]
 pub extern fn indy_crypto_cl_sub_proof_request_builder_add_revealed_attr(sub_proof_request_builder: *const c_void,
                                                                          attr: *const c_char) -> ErrorCode {

@@ -748,7 +748,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_free(rev_tails_generator
 /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof instance pointer.
 /// * `master_secret_blinding_nonce` - Nonce instance pointer used for verification of blinded_master_secret_correctness_proof.
 /// * `credential_issuance_nonce` - Nonce instance pointer used for creation of signature_correctness_proof.
-/// * `credential_values` - Claim values to be signed instance pointer.
+/// * `credential_values` - Credential values to be signed instance pointer.
 /// * `credential_pub_key` - Credential public key instance pointer.
 /// * `credential_priv_key` - Credential private key instance pointer.
 /// * `credential_signature_p` - Reference that will contain credential signature instance pointer.
@@ -832,7 +832,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
 /// * `blinded_master_secret_correctness_proof` - Blinded master secret correctness proof instance pointer.
 /// * `master_secret_blinding_nonce` - Nonce instance pointer used for verification of blinded_master_secret_correctness_proof.
 /// * `credential_issuance_nonce` - Nonce instance pointer used for creation of signature_correctness_proof.
-/// * `credential_values` - Claim values to be signed instance pointer.
+/// * `credential_values` - Credential values to be signed instance pointer.
 /// * `credential_pub_key` - Credential public key instance pointer.
 /// * `credential_priv_key` - Credential private key instance pointer.
 /// * `rev_idx` - User index in revocation accumulator. Required for non-revocation credential_signature part generation.

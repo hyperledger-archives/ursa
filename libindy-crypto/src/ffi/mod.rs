@@ -50,20 +50,20 @@ pub enum ErrorCode
     // Invalid library state was detected in runtime. It signals library bug
     CommonInvalidState = 112,
 
-    // Object (json, config, key, claim and etc...) passed by library caller has invalid structure
+    // Object (json, config, key, credential and etc...) passed by library caller has invalid structure
     CommonInvalidStructure = 113,
 
     // IO Error
     CommonIOError = 114,
 
-    // Trying to issue non-revocation claim with full anoncreds revocation accumulator
+    // Trying to issue non-revocation credential with full anoncreds revocation accumulator
     AnoncredsRevocationAccumulatorIsFull = 115,
 
     // Invalid revocation accumulator index
     AnoncredsInvalidRevocationAccumulatorIndex = 116,
 
-    // Claim revoked
-    AnoncredsClaimRevoked = 117,
+    // Credential revoked
+    AnoncredsCredentialRevoked = 117,
 
     // Proof rejected
     AnoncredsProofRejected = 118,

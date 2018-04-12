@@ -1507,7 +1507,7 @@ mod tests {
 
         let cred_values = issuer::mocks::credential_values();
 
-        // Issue first correct Claim
+        // Issue first correct Credential
         let master_secret = Prover::new_master_secret().unwrap();
         let master_secret_blinding_nonce = new_nonce().unwrap();
 

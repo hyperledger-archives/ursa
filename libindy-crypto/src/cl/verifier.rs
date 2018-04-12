@@ -238,7 +238,7 @@ impl ProofVerifier {
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, cred_schema: {:?}", sub_proof_request, cred_schema);
 
         if sub_proof_request.revealed_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain requested attribute")));
+            return Err(IndyCryptoError::InvalidStructure(format!("Credential doesn't contain requested attribute")));
         }
 
         let predicates_attrs =
@@ -247,7 +247,7 @@ impl ProofVerifier {
                 .collect::<HashSet<String>>();
 
         if predicates_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Claim doesn't contain attribute requested in predicate")));
+            return Err(IndyCryptoError::InvalidStructure(format!("Credential doesn't contain attribute requested in predicate")));
         }
 
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
