@@ -101,6 +101,16 @@ macro_rules! check_useful_c_reference_array {
     }
 }
 
+macro_rules! check_useful_hashset {
+    ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
+        if $ptr.is_null() {
+            return $err1
+        }
+
+        let $ptr = HashSet::from_iter( unsafe {  slice::from_raw_parts($ptr, $len) }.iter().cloned());
+    }
+}
+
 macro_rules! check_useful_c_ptr {
     ($ptr:ident, $err1:expr) => {
         if $ptr.is_null() {
