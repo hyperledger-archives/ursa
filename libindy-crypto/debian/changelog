@@ -1,6 +1,6 @@
 libindy-crypto (0.4.0) unstable; urgency=medium
 
   [ Indy Crypto ]
-  * Anoncreds Revocation
+  * Anoncreds API refactoring for better revocation support
 
  -- Hyperledger <info@hyperledger.org>  Tue, 12 Sep 2017 19:19:00 +0300
