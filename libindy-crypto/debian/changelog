@@ -1,7 +1,6 @@
-libindy-crypto (0.1.3) unstable; urgency=medium
+libindy-crypto (0.4.0) unstable; urgency=medium
 
   [ Indy Crypto ]
-  * Python wrapper provided. Closes: #315
-  * Initial revision. Closes: #314
+  * Anoncreds Revocation
 
  -- Hyperledger <info@hyperledger.org>  Tue, 12 Sep 2017 19:19:00 +0300
