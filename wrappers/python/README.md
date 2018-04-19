@@ -32,4 +32,4 @@ Pull requests welcome!
 [indy_crypto](https://pypi.python.org/pypi/indy-crypto) package is available.
 
 ### Example use
-For the main workflow examples check sample project: https://github.com/hyperledger/indy-crypto/samples/python
+For the main workflow examples check sample project: https://github.com/hyperledger/indy-crypto/tree/master/samples/python
