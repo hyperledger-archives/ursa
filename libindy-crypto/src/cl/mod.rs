@@ -13,7 +13,8 @@ use pair::*;
 use utils::json::{JsonEncodable, JsonDecodable};
 
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{HashMap, HashSet, BTreeSet, BTreeMap};
+use std::hash::Hash;
 
 /// Creates random nonce
 ///
@@ -870,17 +871,17 @@ pub struct PrimaryEqualProof {
     a_prime: BigNumber,
     e: BigNumber,
     v: BigNumber,
-    m: BTreeMap<String /* attr_name of all except revealed */, BigNumber>,
+    m: HashMap<String /* attr_name of all except revealed */, BigNumber>,
     m2: BigNumber
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryPredicateGEProof {
-    u: BTreeMap<String, BigNumber>,
-    r: BTreeMap<String, BigNumber>,
+    u: HashMap<String, BigNumber>,
+    r: HashMap<String, BigNumber>,
     mj: BigNumber,
     alpha: BigNumber,
-    t: BTreeMap<String, BigNumber>,
+    t: HashMap<String, BigNumber>,
     predicate: Predicate
 }
 
@@ -953,7 +954,7 @@ pub struct PrimaryEqualInitProof {
     e_prime: BigNumber,
     v_tilde: BigNumber,
     v_prime: BigNumber,
-    m_tilde: BTreeMap<String, BigNumber>,
+    m_tilde: HashMap<String, BigNumber>,
     m2_tilde: BigNumber,
     m2: BigNumber,
 }
@@ -972,13 +973,13 @@ impl PrimaryEqualInitProof {
 pub struct PrimaryPredicateGEInitProof {
     c_list: Vec<BigNumber>,
     tau_list: Vec<BigNumber>,
-    u: BTreeMap<String, BigNumber>,
-    u_tilde: BTreeMap<String, BigNumber>,
-    r: BTreeMap<String, BigNumber>,
-    r_tilde: BTreeMap<String, BigNumber>,
+    u: HashMap<String, BigNumber>,
+    u_tilde: HashMap<String, BigNumber>,
+    r: HashMap<String, BigNumber>,
+    r_tilde: HashMap<String, BigNumber>,
     alpha_tilde: BigNumber,
     predicate: Predicate,
-    t: BTreeMap<String, BigNumber>,
+    t: HashMap<String, BigNumber>,
 }
 
 impl PrimaryPredicateGEInitProof {
@@ -1159,9 +1160,9 @@ impl AppendByteArray for Vec<Vec<u8>> {
     }
 }
 
-fn clone_bignum_map<K: Clone + Eq + Ord>(other: &BTreeMap<K, BigNumber>) -> Result<BTreeMap<K, BigNumber>, IndyCryptoError> {
-    let mut res = BTreeMap::new();
-    for (k, v) in other {
+fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>) -> Result<HashMap<K, BigNumber>, IndyCryptoError> {
+    let mut res = HashMap::new();
+    for (k, v) in other.iter() {
         res.insert(k.clone(), v.clone()?);
     }
     Ok(res)
