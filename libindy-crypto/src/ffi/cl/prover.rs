@@ -1414,21 +1414,22 @@ mod tests {
     fn indy_crypto_cl_prover_get_credential_revocation_index_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
-        let master_secret = _master_secret();
-        let master_secret_blinding_nonce = _nonce();
-        let (blinded_master_secret, master_secret_blinding_data,
-            blinded_master_secret_correctness_proof) = _blinded_master_secret(credential_pub_key,
+        let credential_values = _credential_values();
+        let credential_nonce = _nonce();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof) = _blinded_credential_secrets(credential_pub_key,
                                                                               credential_key_correctness_proof,
-                                                                              master_secret,
-                                                                              master_secret_blinding_nonce);
+                                                                              credential_values,
+                                                                              credential_nonce);
         let credential_issuance_nonce = _nonce();
         let tail_storage = FFISimpleTailStorage::new(rev_tails_generator);
 
         let (credential_signature, signature_correctness_proof, _) =
-            _credential_signature_with_revoc(blinded_master_secret,
-                                             blinded_master_secret_correctness_proof,
-                                             master_secret_blinding_nonce,
+            _credential_signature_with_revoc(blinded_credential_secrets,
+                                             blinded_credential_secrets_correctness_proof,
+                                             credential_nonce,
                                              credential_issuance_nonce,
+                                             credential_values,
                                              credential_pub_key,
                                              credential_priv_key,
                                              rev_key_priv,
@@ -1441,9 +1442,9 @@ mod tests {
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
         _free_revocation_registry_def(rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator);
-        _free_master_secret(master_secret);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
-        _free_nonce(master_secret_blinding_nonce);
+        _free_credential_values(credential_values);
+        _free_blinded_credential_secrets(blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof);
+        _free_nonce(credential_nonce);
         _free_nonce(credential_issuance_nonce);
         _free_credential_signature(credential_signature, signature_correctness_proof);
     }

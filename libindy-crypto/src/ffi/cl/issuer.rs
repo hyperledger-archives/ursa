@@ -1963,21 +1963,22 @@ mod tests {
     fn indy_crypto_cl_issuer_merge_revoc_deltas_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
-        let master_secret = _master_secret();
-        let master_secret_blinding_nonce = _nonce();
-        let (blinded_master_secret, master_secret_blinding_data,
-            blinded_master_secret_correctness_proof) = _blinded_master_secret(credential_pub_key,
+        let credential_values = _credential_values();
+        let credential_nonce = _nonce();
+        let (blinded_credential_secrets, credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof) = _blinded_credential_secrets(credential_pub_key,
                                                                               credential_key_correctness_proof,
-                                                                              master_secret,
-                                                                              master_secret_blinding_nonce);
+                                                                              credential_values,
+                                                                              credential_nonce);
         let credential_issuance_nonce = _nonce();
         let tail_storage = FFISimpleTailStorage::new(rev_tails_generator);
 
         let (credential_signature, signature_correctness_proof, revocation_registry_delta) =
-            _credential_signature_with_revoc(blinded_master_secret,
-                                             blinded_master_secret_correctness_proof,
-                                             master_secret_blinding_nonce,
+            _credential_signature_with_revoc(blinded_credential_secrets,
+                                             blinded_credential_secrets_correctness_proof,
+                                             credential_nonce,
                                              credential_issuance_nonce,
+                                             credential_values,
                                              credential_pub_key,
                                              credential_priv_key,
                                              rev_key_priv,
@@ -2004,9 +2005,9 @@ mod tests {
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
         _free_revocation_registry_def(rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator);
-        _free_blinded_master_secret(blinded_master_secret, master_secret_blinding_data, blinded_master_secret_correctness_proof);
-        _free_master_secret(master_secret);
-        _free_nonce(master_secret_blinding_nonce);
+        _free_blinded_credential_secrets(blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof);
+        _free_credential_values(credential_values);
+        _free_nonce(credential_nonce);
         _free_nonce(credential_issuance_nonce);
         _free_credential_signature_with_revoc(credential_signature, signature_correctness_proof, revocation_registry_delta);
     }
@@ -2119,8 +2120,11 @@ pub mod mocks {
         (credential_signature_p, credential_signature_correctness_proof_p)
     }
 
-    pub fn _credential_signature_with_revoc(blinded_credential_secrets: *const c_void, blinded_credential_secrets_correctness_proof: *const c_void,
-                                            credential_nonce: *const c_void, credential_issuance_nonce: *const c_void, credential_values: *const c_void,
+    pub fn _credential_signature_with_revoc(blinded_credential_secrets: *const c_void,
+                                            blinded_credential_secrets_correctness_proof: *const c_void,
+                                            credential_nonce: *const c_void,
+                                            credential_issuance_nonce: *const c_void,
+                                            credential_values: *const c_void,
                                             credential_pub_key: *const c_void, credential_priv_key: *const c_void, rev_key_priv: *const c_void,
                                             rev_reg: *const c_void, tail_storage_ctx: *const c_void) -> (*const c_void, *const c_void, *const c_void) {
         let prover_id = _prover_did();
