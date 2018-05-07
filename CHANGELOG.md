@@ -1,3 +1,6 @@
+0.4.1
+- Bugfix: correct format of KeyCorrectness proof JSON representation
+
 0.4.0
 - Anoncreds API refactoring for better revocation support
 
