@@ -12,7 +12,7 @@ use errors::IndyCryptoError;
 use pair::*;
 use utils::json::{JsonEncodable, JsonDecodable};
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 /// Creates random nonce
@@ -153,7 +153,7 @@ pub struct CredentialPrimaryPublicKey {
     n: BigNumber,
     s: BigNumber,
     rms: BigNumber,
-    r: BTreeMap<String /* attr_name */, BigNumber>,
+    r: HashMap<String /* attr_name */, BigNumber>,
     rctxt: BigNumber,
     z: BigNumber
 }
@@ -164,7 +164,7 @@ impl CredentialPrimaryPublicKey {
             n: self.n.clone()?,
             s: self.s.clone()?,
             rms: self.rms.clone()?,
-            r: clone_btree_bignum_map(&self.r)?,
+            r: clone_bignum_map(&self.r)?,
             rctxt: self.rctxt.clone()?,
             z: self.z.clone()?
         })
@@ -182,15 +182,16 @@ pub struct CredentialPrimaryPrivateKey {
 #[derive(Debug)]
 pub struct CredentialPrimaryPublicKeyMetadata {
     xz: BigNumber,
-    xr: BTreeMap<String, BigNumber>
+    xr: HashMap<String, BigNumber>
 }
 
 /// Proof of `Issuer Public Key` correctness
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialKeyCorrectnessProof {
     c: BigNumber,
+    attrs: Vec<String>,
     xz_cap: BigNumber,
-    xr_cap: BTreeMap<String, BigNumber>
+    xr_cap: HashMap<String, BigNumber>
 }
 
 impl JsonEncodable for CredentialKeyCorrectnessProof {}
@@ -972,15 +973,6 @@ impl AppendByteArray for Vec<Vec<u8>> {
 fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>)
                                           -> Result<HashMap<K, BigNumber>, IndyCryptoError> {
     let mut res: HashMap<K, BigNumber> = HashMap::new();
-    for (k, v) in other {
-        res.insert(k.clone(), v.clone()?);
-    }
-    Ok(res)
-}
-
-fn clone_btree_bignum_map<K: Clone + Eq + Hash + Ord>(other: &BTreeMap<K, BigNumber>)
-                                                      -> Result<BTreeMap<K, BigNumber>, IndyCryptoError> {
-    let mut res: BTreeMap<K, BigNumber> = BTreeMap::new();
     for (k, v) in other {
         res.insert(k.clone(), v.clone()?);
     }
