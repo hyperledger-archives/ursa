@@ -104,5 +104,5 @@ def getUserUid() {
 }
 
 def setupRust() {
-    sh "rustup default 1.20.0"
+    sh "rustup default 1.25.0"
 }
