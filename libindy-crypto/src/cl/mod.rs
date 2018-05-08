@@ -189,9 +189,8 @@ pub struct CredentialPrimaryPublicKeyMetadata {
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CredentialKeyCorrectnessProof {
     c: BigNumber,
-    attrs: Vec<String>,
     xz_cap: BigNumber,
-    xr_cap: HashMap<String, BigNumber>
+    xr_cap: Vec<(String, BigNumber)>,
 }
 
 impl JsonEncodable for CredentialKeyCorrectnessProof {}
