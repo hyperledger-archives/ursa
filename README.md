@@ -34,6 +34,10 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
    cd libindy-crypto
    cargo test
    ```
+**Note:**
+By default `cargo build` produce debug artifacts with a large amount of run-time checks.
+It's good for development, but this build can be in 100+ times slower for some math calculation.
+If you would like to analyse CPU performance of libindy-crypto for your use case, you have to use release artifacts (`cargo build --release`).
 
 ### Windows build dependency
 System OpenSSL library is required.
