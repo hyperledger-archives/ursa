@@ -5,7 +5,7 @@ If you haven't done so already, please visit the main resource for all things "I
 
 # Indy Crypto
 
-This is the shared crypto libirary for [Hyperledger Indy](https://www.hyperledger.org/projects) components.
+This is the shared crypto library for [Hyperledger Indy](https://www.hyperledger.org/projects) components.
 
 [Hyperledger Indy](https://www.hyperledger.org/projects) provides a distributed-ledger-based foundation for [self-sovereign identity](https://sovrin.org).
 
