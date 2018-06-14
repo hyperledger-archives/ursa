@@ -475,6 +475,12 @@ impl From<ErrorStack> for IndyCryptoError {
     }
 }
 
+impl Default for BigNumber {
+    fn default() -> BigNumber {
+        BigNumber::from_u32(0).unwrap()
+    }
+}
+
 // Constants that are used throughout the code, so avoiding recomputation.
 lazy_static! {
     pub static ref BIGNUMBER_1: BigNumber = BigNumber::from_u32(1).unwrap();
