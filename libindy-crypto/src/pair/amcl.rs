@@ -73,13 +73,14 @@ fn random_mod_order() -> Result<BIG, IndyCryptoError> {
 }
 
 fn _random_mod_order() -> Result<BIG, IndyCryptoError> {
-    let mut seed = vec![0; 128];
+    let entropy_bytes = 128;
+    let mut seed = vec![0; entropy_bytes];
     let mut os_rng = OsRng::new().unwrap();
     os_rng.fill_bytes(&mut seed.as_mut_slice());
     let mut rng = RAND::new();
     rng.clean();
     // AMCL recommends to initialise from at least 128 bytes, check doc for `RAND.seed`
-    rng.seed(128, &seed);
+    rng.seed(entropy_bytes, &seed);
     Ok(BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng))
 }
 
