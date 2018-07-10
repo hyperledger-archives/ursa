@@ -1,6 +1,11 @@
 [package]
 name = "z-mix"
 version = "0.1.0"
-authors = ["Folks from evernym <dev@evernym.com>"]
+authors = ["Michael Lodder <redmike7@gmail.com>"]
+license = "Apache-2.0"
+
+[lib]
+name = "zmix"
+crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
