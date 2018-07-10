@@ -15,3 +15,13 @@ impl CommitmentScheme for PedersenCommitment {
         unimplemented!();
     }
 }
+
+// Alternate implementation
+
+/*
+impl<Group> CommitmentScheme for PedersenCommitment {
+    fn setup(num_elements: u32) -> Vec<Group::Element> {
+        unimplemented!();
+    }
+}
+*/

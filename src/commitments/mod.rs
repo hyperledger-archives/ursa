@@ -1,6 +1,10 @@
 pub mod pedersen;
 
 
+// QUESTION: It would be better if we use generic group element for this trait so it can be used
+// with Elliptic curves or IntegerMod groups like
+// trait CommitmentScheme<T: Group> {
+// fn setup(num_elements: u32) -> Vec<T:Element>;
 trait CommitmentScheme {
     // Returns `num_elements` + 1 generators. This is useful when committing to several messages say
     // m_1, m_2, m_3, and so on. `setup` will this output g_1, g_2, g_3, g_4 and so on which can then be
