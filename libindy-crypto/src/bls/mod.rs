@@ -379,14 +379,18 @@ impl Bls {
     /// assert!(valid)
     /// ```
     pub fn verify_multi_sig(multi_sig: &MultiSignature, message: &[u8], ver_keys: &[&VerKey], gen: &Generator) -> Result<bool, IndyCryptoError> {
-        let msg_hash = Bls::_hash(message)?;
-
         // Since each signer (identified by a Verkey) has signed the same message, the public keys
         // can be added together to form the aggregated verkey
         let mut aggregated_verkey = PointG2::new_inf()?;
         for ver_key in ver_keys {
             aggregated_verkey = aggregated_verkey.add(&ver_key.point)?;
         }
+
+        // TODO: Add a new method that takes a message and an aggregated verkey and expose using
+        // the C API. Verifiers can thus cache the aggregated verkey and avoid several EC point additions.
+        // The code below should be moved to such method.
+
+        let msg_hash = Bls::_hash(message)?;
 
         let lhs = Pair::pair(&multi_sig.point, &gen.point)?;
         let rhs = Pair::pair(&msg_hash, &aggregated_verkey)?;
