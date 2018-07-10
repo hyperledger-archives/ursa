@@ -1,0 +1,6 @@
+[package]
+name = "z-mix"
+version = "0.1.0"
+authors = ["Folks from evernym <dev@evernym.com>"]
+
+[dependencies]
