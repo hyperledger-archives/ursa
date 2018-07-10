@@ -120,7 +120,7 @@ impl SignKey {
 }
 
 /// BLS verification key.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VerKey {
     point: PointG2,
     bytes: Vec<u8>
