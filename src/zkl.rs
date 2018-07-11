@@ -10,9 +10,21 @@ pub struct ProofSpec {}
 
 pub struct ProofSpecBuilder {}
 
+impl ProofSpecBuilder {
+    pub fn new() -> ProofSpecBuilder {
+        ProofSpecBuilder{}
+    }
+}
+
 pub struct Witness {}
 
 pub struct WitnessBuilder {}
+
+impl WitnessBuilder {
+    pub fn new() -> WitnessBuilder {
+        WitnessBuilder {}
+    }
+}
 
 pub struct Proof {}
 
