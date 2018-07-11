@@ -8,7 +8,11 @@ impl Parser {
 
 pub struct ProofSpec {}
 
+pub struct ProofSpecBuilder {}
+
 pub struct Witness {}
+
+pub struct WitnessBuilder {}
 
 pub struct Proof {}
 
