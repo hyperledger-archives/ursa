@@ -1,4 +1,6 @@
 pub mod commitments;
+pub mod ffi;
+pub mod zkl;
 
 #[cfg(test)]
 mod tests {
