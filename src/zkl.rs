@@ -1,7 +1,7 @@
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse(proof_spec: &ProofSpec, witness: &Witness) -> Result<Proof, ParseError> {
+    pub fn parse(proof_spec: &ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
         unimplemented!();
     }
 }
@@ -29,14 +29,14 @@ impl WitnessBuilder {
 pub struct Proof {}
 
 impl Proof {
-    pub fn verify(&self, proof_spec: &ProofSpec) -> Result<bool, ParseError> {
+    pub fn verify(&self, proof_spec: &ProofSpec) -> Result<bool, ZKLError> {
         unimplemented!();
     }
 }
 
 #[repr(i32)]
 #[derive(Debug, Eq, PartialEq)]
-pub enum ParseError {
+pub enum ZKLError {
     InvalidProofSpec = 1,
     InvalidWitness = 2
 }
@@ -52,7 +52,7 @@ mod tests {
         let result = Parser::parse(&proof_spec, &witness);
         assert!(result.is_err());
         if let Err(e) = result {
-            assert_eq!(e, ParseError::InvalidProofSpec);
+            assert_eq!(e, ZKLError::InvalidProofSpec);
         }
     }
 
@@ -103,5 +103,16 @@ mod tests {
         let proof = Parser::parse(&proof_spec, &witness).unwrap();
 
         assert!(proof.verify(&proof_spec).is_ok());
+    }
+
+    #[test]
+    fn proof_verify_fail_attribute_mismatch() {
+        let proof_spec = ProofSpec{};
+        let witness = Witness{};
+        let proof = Parser::parse(&proof_spec, &witness).unwrap();
+
+        //Different proof spec
+        let proof_spec = ProofSpec{};
+        assert!(proof.verify(&proof_spec).is_err());
     }
 }
