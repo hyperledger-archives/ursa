@@ -17,7 +17,7 @@ a \- w: matches
 a -> a: generate <b>Proof Resolution</b> \n(from matches & Proof Request)
 
 a --\ reg: GET_CRED_DEF, GET_REVOC_REG request
-a \-- reg: CRED_DEF, REVOC_REG (issuer pubkey and revocation regsitry for cred)
+a \-- reg: CRED_DEF, REVOC_REG (issuer pubkey and revocation registry for cred)
 a -> a: generate <b>ZKL-ProofSpec</b> \n(from Proof Resolution & Public Keys)
 
 a -\ w: secrets request

@@ -19,12 +19,13 @@ impl CommitmentScheme for PedersenCommitment {
     }
 }
 
-// Alternate implementation
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/*
-impl<Group> CommitmentScheme for PedersenCommitment {
-    fn setup(num_elements: u32) -> Vec<Group::Element> {
-        unimplemented!();
+    #[test]
+    fn setup_one_element() {
+        let result = PedersenCommitment::setup(1);
+        assert_eq!(result.len(), 1);
     }
 }
-*/
