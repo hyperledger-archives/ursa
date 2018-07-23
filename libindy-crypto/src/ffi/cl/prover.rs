@@ -3,11 +3,10 @@ use cl::*;
 use errors::ToErrorCode;
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
-use utils::json::{JsonEncodable, JsonDecodable};
 
-use libc::c_char;
-
+use serde_json;
 use std::os::raw::c_void;
+use libc::c_char;
 
 /// Creates a master secret.
 ///
@@ -53,7 +52,7 @@ pub extern fn indy_crypto_cl_master_secret_to_json(master_secret: *const c_void,
 
     trace!("indy_crypto_cl_master_secret_to_json: entity >>> master_secret: {:?}", master_secret);
 
-    let res = match master_secret.to_json() {
+    let res = match serde_json::to_string(master_secret) {
         Ok(master_secret_json) => {
             trace!("indy_crypto_cl_master_secret_to_json: master_secret_json: {:?}", master_secret_json);
             unsafe {
@@ -63,7 +62,7 @@ pub extern fn indy_crypto_cl_master_secret_to_json(master_secret: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_master_secret_to_json: <<< res: {:?}", res);
@@ -88,7 +87,7 @@ pub extern fn indy_crypto_cl_master_secret_from_json(master_secret_json: *const 
 
     trace!("indy_crypto_cl_master_secret_from_json: entity: master_secret_json: {:?}", master_secret_json);
 
-    let res = match MasterSecret::from_json(&master_secret_json) {
+    let res = match serde_json::from_str::<MasterSecret>(&master_secret_json) {
         Ok(master_secret) => {
             trace!("indy_crypto_cl_master_secret_from_json: master_secret: {:?}", master_secret);
             unsafe {
@@ -97,7 +96,7 @@ pub extern fn indy_crypto_cl_master_secret_from_json(master_secret_json: *const 
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_master_secret_from_json: <<< res: {:?}", res);
@@ -229,7 +228,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_to_json(blinded_credenti
 
     trace!("indy_crypto_cl_blinded_credential_secrets_to_json: entity >>> blinded_credential_secrets: {:?}", blinded_credential_secrets);
 
-    let res = match blinded_credential_secrets.to_json() {
+    let res = match serde_json::to_string(blinded_credential_secrets) {
         Ok(blinded_credential_secrets_json) => {
             trace!("indy_crypto_cl_blinded_credential_secrets_to_json: blinded_credential_secrets_json: {:?}", blinded_credential_secrets_json);
             unsafe {
@@ -240,7 +239,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_to_json(blinded_credenti
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_blinded_credential_secrets_to_json: <<< res: {:?}", res);
@@ -265,7 +264,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_from_json(blinded_creden
 
     trace!("indy_crypto_cl_blinded_credential_secrets_from_json: entity: blinded_credential_secrets_json: {:?}", blinded_credential_secrets_json);
 
-    let res = match BlindedCredentialSecrets::from_json(&blinded_credential_secrets_json) {
+    let res = match serde_json::from_str::<BlindedCredentialSecrets>(&blinded_credential_secrets_json) {
         Ok(blinded_credential_secrets) => {
             trace!("indy_crypto_cl_blinded_credential_secrets_from_json: blinded_credential_secrets: {:?}", blinded_credential_secrets);
             unsafe {
@@ -274,7 +273,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_from_json(blinded_creden
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_blinded_credential_secrets_from_json: <<< res: {:?}", res);
@@ -316,7 +315,7 @@ pub extern fn indy_crypto_cl_credential_secrets_blinding_factors_to_json(credent
 
     trace!("indy_crypto_cl_credential_secret_blinding_factors_to_json: entity >>> credential_secrets_blinding_factors: {:?}", credential_secrets_blinding_factors);
 
-    let res = match credential_secrets_blinding_factors.to_json() {
+    let res = match serde_json::to_string(credential_secrets_blinding_factors) {
         Ok(credential_secrets_blinding_factors_json) => {
             trace!("indy_crypto_cl_credential_secret_blinding_factors_to_json: credential_secrets_blinding_factors_json: {:?}", credential_secrets_blinding_factors_json);
             unsafe {
@@ -326,7 +325,7 @@ pub extern fn indy_crypto_cl_credential_secrets_blinding_factors_to_json(credent
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_credential_secret_blinding_factors_to_json: <<< res: {:?}", res);
@@ -352,7 +351,7 @@ pub extern fn indy_crypto_cl_credential_secrets_blinding_factors_from_json(crede
 
     trace!("indy_crypto_cl_credential_secrets_blinding_factors_from_json: entity: credential_secrets_blinding_factors_json: {:?}", credential_secrets_blinding_factors_json);
 
-    let res = match CredentialSecretsBlindingFactors::from_json(&credential_secrets_blinding_factors_json) {
+    let res = match serde_json::from_str::<CredentialSecretsBlindingFactors>(&credential_secrets_blinding_factors_json) {
         Ok(credential_secrets_blinding_factors) => {
             trace!("indy_crypto_cl_credential_secrets_blinding_factors_from_json: credential_secrets_blinding_factors: {:?}", credential_secrets_blinding_factors);
             unsafe {
@@ -361,7 +360,7 @@ pub extern fn indy_crypto_cl_credential_secrets_blinding_factors_from_json(crede
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_credential_secrets_blinding_factors_from_json: <<< res: {:?}", res);
@@ -404,7 +403,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_correctness_proof_to_jso
     trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_to_json: entity >>> blinded_credential_secrets_correctness_proof: {:?}",
            blinded_credential_secrets_correctness_proof);
 
-    let res = match blinded_credential_secrets_correctness_proof.to_json() {
+    let res = match serde_json::to_string(blinded_credential_secrets_correctness_proof) {
         Ok(blinded_credential_secrets_correctness_proof_json) => {
             trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_to_json: blinded_credential_secrets_correctness_proof: {:?}",
                    blinded_credential_secrets_correctness_proof_json);
@@ -416,7 +415,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_correctness_proof_to_jso
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_to_json: <<< res: {:?}", res);
@@ -443,7 +442,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_correctness_proof_from_j
     trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_from_json: entity: blinded_credential_secrets_correctness_proof_json: {:?}",
            blinded_credential_secrets_correctness_proof_json);
 
-    let res = match BlindedCredentialSecretsCorrectnessProof::from_json(&blinded_credential_secrets_correctness_proof_json) {
+    let res = match serde_json::from_str::<BlindedCredentialSecretsCorrectnessProof>(&blinded_credential_secrets_correctness_proof_json) {
         Ok(blinded_credential_secrets_correctness_proof) => {
             trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_from_json: blinded_credential_secrets_correctness_proof: {:?}",
                    blinded_credential_secrets_correctness_proof);
@@ -454,7 +453,7 @@ pub extern fn indy_crypto_cl_blinded_credential_secrets_correctness_proof_from_j
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_blinded_credential_secrets_correctness_proof_from_json: <<< res: {:?}", res);
@@ -760,7 +759,7 @@ pub extern fn indy_crypto_cl_proof_to_json(proof: *const c_void,
 
     trace!("indy_crypto_cl_proof_to_json: entity >>> proof: {:?}", proof);
 
-    let res = match proof.to_json() {
+    let res = match serde_json::to_string(proof) {
         Ok(proof_json) => {
             trace!("indy_crypto_cl_proof_to_json: proof_json: {:?}", proof_json);
             unsafe {
@@ -770,7 +769,7 @@ pub extern fn indy_crypto_cl_proof_to_json(proof: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_proof_to_json: <<< res: {:?}", res);
@@ -794,7 +793,7 @@ pub extern fn indy_crypto_cl_proof_from_json(proof_json: *const c_char,
 
     trace!("indy_crypto_cl_proof_from_json: entity: proof_json: {:?}", proof_json);
 
-    let res = match Proof::from_json(&proof_json) {
+    let res = match serde_json::from_str::<Proof>(&proof_json) {
         Ok(proof) => {
             trace!("indy_crypto_cl_proof_from_json: proof: {:?}", proof);
             unsafe {
@@ -803,7 +802,7 @@ pub extern fn indy_crypto_cl_proof_from_json(proof_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_proof_from_json: <<< res: {:?}", res);

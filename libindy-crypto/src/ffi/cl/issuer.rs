@@ -4,13 +4,12 @@ use errors::ToErrorCode;
 use ffi::ErrorCode;
 use ffi::cl::{FFITailTake, FFITailPut, FFITailsAccessor};
 use utils::ctypes::CTypesUtils;
-use utils::json::{JsonEncodable, JsonDecodable};
 use libc::c_char;
 
+use serde_json;
 use std::os::raw::c_void;
 use std::ptr::null;
 use std::slice;
-
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
@@ -99,7 +98,7 @@ pub extern fn indy_crypto_cl_credential_public_key_to_json(credential_pub_key: *
 
     trace!("indy_crypto_cl_credential_public_key_to_json: entity >>> credential_pub_key: {:?}", credential_pub_key);
 
-    let res = match credential_pub_key.to_json() {
+    let res = match serde_json::to_string(credential_pub_key) {
         Ok(credential_pub_key_json) => {
             trace!("indy_crypto_cl_credential_public_key_to_json: credential_pub_key_json: {:?}", credential_pub_key_json);
             unsafe {
@@ -109,7 +108,7 @@ pub extern fn indy_crypto_cl_credential_public_key_to_json(credential_pub_key: *
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_credential_public_key_to_json: <<< res: {:?}", res);
@@ -134,7 +133,7 @@ pub extern fn indy_crypto_cl_credential_public_key_from_json(credential_pub_key_
 
     trace!("indy_crypto_cl_credential_public_key_from_json: entity: credential_pub_key_json: {:?}", credential_pub_key_json);
 
-    let res = match CredentialPublicKey::from_json(&credential_pub_key_json) {
+    let res = match serde_json::from_str::<CredentialPublicKey>(&credential_pub_key_json) {
         Ok(credential_pub_key) => {
             trace!("indy_crypto_cl_credential_public_key_from_json: credential_pub_key: {:?}", credential_pub_key);
             unsafe {
@@ -143,7 +142,7 @@ pub extern fn indy_crypto_cl_credential_public_key_from_json(credential_pub_key_
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_credential_public_key_from_json: <<< res: {:?}", res);
@@ -184,7 +183,7 @@ pub extern fn indy_crypto_cl_credential_private_key_to_json(credential_priv_key:
 
     trace!("indy_crypto_cl_credential_private_key_to_json: entity >>> credential_priv_key: {:?}", credential_priv_key);
 
-    let res = match credential_priv_key.to_json() {
+    let res = match serde_json::to_string(credential_priv_key) {
         Ok(credential_priv_key_json) => {
             trace!("indy_crypto_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", credential_priv_key_json);
             unsafe {
@@ -194,7 +193,7 @@ pub extern fn indy_crypto_cl_credential_private_key_to_json(credential_priv_key:
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_credential_private_key_to_json: <<< res: {:?}", res);
@@ -219,7 +218,7 @@ pub extern fn indy_crypto_cl_credential_private_key_from_json(credential_priv_ke
 
     trace!("indy_crypto_cl_credential_private_key_from_json: entity: credential_priv_key_json: {:?}", credential_priv_key_json);
 
-    let res = match CredentialPrivateKey::from_json(&credential_priv_key_json) {
+    let res = match serde_json::from_str::<CredentialPrivateKey>(&credential_priv_key_json) {
         Ok(credential_priv_key) => {
             trace!("indy_crypto_cl_credential_private_key_from_json: credential_priv_key: {:?}", credential_priv_key);
             unsafe {
@@ -228,7 +227,7 @@ pub extern fn indy_crypto_cl_credential_private_key_from_json(credential_priv_ke
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_credential_private_key_from_json: <<< res: {:?}", res);
@@ -270,7 +269,7 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_to_json(credential
 
     trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: entity >>> credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
 
-    let res = match credential_key_correctness_proof.to_json() {
+    let res = match serde_json::to_string(credential_key_correctness_proof) {
         Ok(credential_key_correctness_proof_json) => {
             trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
             unsafe {
@@ -280,7 +279,7 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_to_json(credential
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: <<< res: {:?}", res);
@@ -306,7 +305,7 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_from_json(credenti
 
     trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: entity: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
 
-    let res = match CredentialKeyCorrectnessProof::from_json(&credential_key_correctness_proof_json) {
+    let res = match serde_json::from_str::<CredentialKeyCorrectnessProof>(&credential_key_correctness_proof_json) {
         Ok(credential_key_correctness_proof) => {
             trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
             unsafe {
@@ -315,7 +314,7 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_from_json(credenti
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: <<< res: {:?}", res);
@@ -420,7 +419,7 @@ pub extern fn indy_crypto_cl_revocation_key_public_to_json(rev_key_pub: *const c
 
     trace!("indy_crypto_cl_revocation_key_public_to_json: entity >>> rev_key_pub: {:?}", rev_key_pub);
 
-    let res = match rev_key_pub.to_json() {
+    let res = match serde_json::to_string(rev_key_pub) {
         Ok(rev_key_pub_json) => {
             trace!("indy_crypto_cl_revocation_key_public_to_json: rev_key_pub_json: {:?}", rev_key_pub_json);
             unsafe {
@@ -430,7 +429,7 @@ pub extern fn indy_crypto_cl_revocation_key_public_to_json(rev_key_pub: *const c
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_revocation_key_public_to_json: <<< res: {:?}", res);
@@ -455,7 +454,7 @@ pub extern fn indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *
 
     trace!("indy_crypto_cl_revocation_key_public_from_json: entity: rev_key_pub_json: {:?}", rev_key_pub_json);
 
-    let res = match RevocationKeyPublic::from_json(&rev_key_pub_json) {
+    let res = match serde_json::from_str::<RevocationKeyPublic>(&rev_key_pub_json) {
         Ok(rev_key_pub) => {
             trace!("indy_crypto_cl_revocation_key_public_from_json: rev_key_pub: {:?}", rev_key_pub);
             unsafe {
@@ -464,7 +463,7 @@ pub extern fn indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_revocation_key_public_from_json: <<< res: {:?}", res);
@@ -505,7 +504,7 @@ pub extern fn indy_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const
 
     trace!("indy_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", rev_key_priv);
 
-    let res = match rev_key_priv.to_json() {
+    let res = match serde_json::to_string(rev_key_priv) {
         Ok(rev_key_priv_json) => {
             trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", rev_key_priv_json);
             unsafe {
@@ -515,7 +514,7 @@ pub extern fn indy_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_revocation_key_private_to_json: <<< res: {:?}", res);
@@ -541,7 +540,7 @@ pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json:
 
     trace!("indy_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", rev_key_priv_json);
 
-    let res = match RevocationKeyPrivate::from_json(&rev_key_priv_json) {
+    let res = match serde_json::from_str::<RevocationKeyPrivate>(&rev_key_priv_json) {
         Ok(rev_key_priv) => {
             trace!("indy_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", rev_key_priv);
             unsafe {
@@ -550,7 +549,7 @@ pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json:
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_revocation_key_private_from_json: <<< res: {:?}", res);
@@ -592,7 +591,7 @@ pub extern fn indy_crypto_cl_revocation_registry_to_json(rev_reg: *const c_void,
 
     trace!("indy_crypto_cl_revocation_registry_to_json: entity >>> rev_reg: {:?}", rev_reg);
 
-    let res = match rev_reg.to_json() {
+    let res = match serde_json::to_string(rev_reg) {
         Ok(rev_reg_json) => {
             trace!("indy_crypto_cl_revocation_registry_to_json: rev_reg_json: {:?}", rev_reg_json);
             unsafe {
@@ -602,7 +601,7 @@ pub extern fn indy_crypto_cl_revocation_registry_to_json(rev_reg: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_revocation_registry_to_json: <<< res: {:?}", res);
@@ -628,7 +627,7 @@ pub extern fn indy_crypto_cl_revocation_registry_from_json(rev_reg_json: *const 
 
     trace!("indy_crypto_cl_revocation_registry_from_json: entity: rev_reg_json: {:?}", rev_reg_json);
 
-    let res = match RevocationRegistry::from_json(&rev_reg_json) {
+    let res = match serde_json::from_str::<RevocationRegistry>(&rev_reg_json) {
         Ok(rev_reg) => {
             trace!("indy_crypto_cl_revocation_registry_from_json: rev_reg: {:?}", rev_reg);
             unsafe {
@@ -637,7 +636,7 @@ pub extern fn indy_crypto_cl_revocation_registry_from_json(rev_reg_json: *const 
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_revocation_registry_from_json: <<< res: {:?}", res);
@@ -679,7 +678,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_to_json(rev_tails_genera
 
     trace!("indy_crypto_cl_revocation_tails_generator_to_json: entity >>> rev_tails_generator: {:?}", rev_tails_generator);
 
-    let res = match rev_tails_generator.to_json() {
+    let res = match serde_json::to_string(rev_tails_generator) {
         Ok(rev_tails_generator_json) => {
             trace!("indy_crypto_cl_revocation_tails_generator_to_json: rev_tails_generator_json: {:?}", rev_tails_generator_json);
             unsafe {
@@ -689,7 +688,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_to_json(rev_tails_genera
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_revocation_tails_generator_to_json: <<< res: {:?}", res);
@@ -715,7 +714,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_from_json(rev_tails_gene
 
     trace!("indy_crypto_cl_revocation_tails_generator_from_json: entity: rev_tails_generator_json: {:?}", rev_tails_generator_json);
 
-    let res = match RevocationTailsGenerator::from_json(&rev_tails_generator_json) {
+    let res = match serde_json::from_str::<RevocationTailsGenerator>(&rev_tails_generator_json) {
         Ok(rev_tails_generator) => {
             trace!("indy_crypto_cl_revocation_tails_generator_from_json: rev_tails_generator: {:?}", rev_tails_generator);
             unsafe {
@@ -724,7 +723,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_from_json(rev_tails_gene
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_revocation_tails_generator_from_json: <<< res: {:?}", res);
@@ -953,7 +952,7 @@ pub extern fn indy_crypto_cl_credential_signature_to_json(credential_signature: 
 
     trace!("indy_crypto_cl_credential_signature_to_json: entity >>> credential_signature: {:?}", credential_signature);
 
-    let res = match credential_signature.to_json() {
+    let res = match serde_json::to_string(credential_signature) {
         Ok(credential_signature_json) => {
             trace!("indy_crypto_cl_credential_signature_to_json: credential_signature_json: {:?}", credential_signature_json);
             unsafe {
@@ -963,7 +962,7 @@ pub extern fn indy_crypto_cl_credential_signature_to_json(credential_signature: 
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_credential_signature_to_json: <<< res: {:?}", res);
@@ -989,7 +988,7 @@ pub extern fn indy_crypto_cl_credential_signature_from_json(credential_signature
 
     trace!("indy_crypto_cl_credential_signature_from_json: entity: credential_signature_json: {:?}", credential_signature_json);
 
-    let res = match CredentialSignature::from_json(&credential_signature_json) {
+    let res = match serde_json::from_str::<CredentialSignature>(&credential_signature_json) {
         Ok(credential_signature) => {
             trace!("indy_crypto_cl_credential_signature_from_json: credential_signature: {:?}", credential_signature);
             unsafe {
@@ -998,7 +997,7 @@ pub extern fn indy_crypto_cl_credential_signature_from_json(credential_signature
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_credential_signature_from_json: <<< res: {:?}", res);
@@ -1039,7 +1038,7 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_to_json(signature_corre
 
     trace!("indy_crypto_cl_signature_correctness_proof_to_json: entity >>> signature_correctness_proof: {:?}", signature_correctness_proof);
 
-    let res = match signature_correctness_proof.to_json() {
+    let res = match serde_json::to_string(signature_correctness_proof) {
         Ok(signature_correctness_proof_json) => {
             trace!("indy_crypto_cl_signature_correctness_proof_to_json: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
             unsafe {
@@ -1049,7 +1048,7 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_to_json(signature_corre
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_signature_correctness_proof_to_json: <<< res: {:?}", res);
@@ -1075,7 +1074,7 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_from_json(signature_cor
 
     trace!("indy_crypto_cl_signature_correctness_proof_from_json: entity: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
 
-    let res = match SignatureCorrectnessProof::from_json(&signature_correctness_proof_json) {
+    let res = match serde_json::from_str::<SignatureCorrectnessProof>(&signature_correctness_proof_json) {
         Ok(signature_correctness_proof) => {
             trace!("indy_crypto_cl_signature_correctness_proof_from_json: signature_correctness_proof: {:?}", signature_correctness_proof);
             unsafe {
@@ -1084,7 +1083,7 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_from_json(signature_cor
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_signature_correctness_proof_from_json: <<< res: {:?}", res);
@@ -1125,7 +1124,7 @@ pub extern fn indy_crypto_cl_revocation_registry_delta_to_json(revocation_regist
 
     trace!("indy_crypto_cl_revocation_registry_delta_to_json: entity >>> revocation_registry_delta: {:?}", revocation_registry_delta);
 
-    let res = match revocation_registry_delta.to_json() {
+    let res = match serde_json::to_string(revocation_registry_delta) {
         Ok(revocation_registry_delta_json) => {
             trace!("indy_crypto_cl_revocation_registry_delta_to_json: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
             unsafe {
@@ -1135,7 +1134,7 @@ pub extern fn indy_crypto_cl_revocation_registry_delta_to_json(revocation_regist
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_revocation_registry_delta_to_json: <<< res: {:?}", res);
@@ -1161,7 +1160,7 @@ pub extern fn indy_crypto_cl_revocation_registry_delta_from_json(revocation_regi
 
     trace!("indy_crypto_cl_revocation_registry_delta_from_json: entity: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
 
-    let res = match SignatureCorrectnessProof::from_json(&revocation_registry_delta_json) {
+    let res = match serde_json::from_str::<SignatureCorrectnessProof>(&revocation_registry_delta_json) {
         Ok(revocation_registry_delta) => {
             trace!("indy_crypto_cl_revocation_registry_delta_from_json: revocation_registry_delta: {:?}", revocation_registry_delta);
             unsafe {
@@ -1170,7 +1169,7 @@ pub extern fn indy_crypto_cl_revocation_registry_delta_from_json(revocation_regi
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_revocation_registry_delta_from_json: <<< res: {:?}", res);

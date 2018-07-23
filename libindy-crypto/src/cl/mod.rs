@@ -1,5 +1,3 @@
-extern crate serde_json;
-
 mod constants;
 #[macro_use]
 mod helpers;
@@ -10,7 +8,6 @@ pub mod verifier;
 use bn::BigNumber;
 use errors::IndyCryptoError;
 use pair::*;
-use utils::json::{JsonEncodable, JsonDecodable};
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, BTreeSet, BTreeMap};
@@ -142,10 +139,6 @@ impl CredentialValue {
         }
     }
 }
-
-impl JsonEncodable for CredentialValue {}
-
-impl<'a> JsonDecodable<'a> for CredentialValue {}
 
 /// Values of attributes from `Claim Schema` (must be integers).
 #[derive(Debug)]
@@ -283,10 +276,6 @@ impl CredentialPublicKey {
     }
 }
 
-impl JsonEncodable for CredentialPublicKey {}
-
-impl<'a> JsonDecodable<'a> for CredentialPublicKey {}
-
 /// `Issuer Private Key`: contains 2 internal parts.
 /// One for signing primary credentials and second for signing non-revocation credentials.
 #[derive(Debug, Deserialize, Serialize)]
@@ -294,10 +283,6 @@ pub struct CredentialPrivateKey {
     p_key: CredentialPrimaryPrivateKey,
     r_key: Option<CredentialRevocationPrivateKey>,
 }
-
-impl JsonEncodable for CredentialPrivateKey {}
-
-impl<'a> JsonDecodable<'a> for CredentialPrivateKey {}
 
 /// Issuer's "Public Key" is used to verify the Issuer's signature over the Credential's attributes' values (primary credential).
 #[derive(Debug, PartialEq, Serialize)]
@@ -370,10 +355,6 @@ pub struct CredentialKeyCorrectnessProof {
     xr_cap: Vec<(String, BigNumber)>,
 }
 
-impl JsonEncodable for CredentialKeyCorrectnessProof {}
-
-impl<'a> JsonDecodable<'a> for CredentialKeyCorrectnessProof {}
-
 /// `Revocation Public Key` is used to verify that credential was'nt revoked by Issuer.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct CredentialRevocationPublicKey {
@@ -413,10 +394,6 @@ impl From<RevocationRegistryDelta> for RevocationRegistry {
     }
 }
 
-impl JsonEncodable for RevocationRegistry {}
-
-impl<'a> JsonDecodable<'a> for RevocationRegistry {}
-
 /// `Revocation Registry Delta` contains Accumulator changes.
 /// Must be applied to `Revocation Registry`
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -432,10 +409,6 @@ pub struct RevocationRegistryDelta {
     #[serde(default)]
     revoked: HashSet<u32>
 }
-
-impl JsonEncodable for RevocationRegistryDelta {}
-
-impl<'a> JsonDecodable<'a> for RevocationRegistryDelta {}
 
 impl RevocationRegistryDelta {
     pub fn from_parts(rev_reg_from: Option<&RevocationRegistry>,
@@ -482,19 +455,11 @@ pub struct RevocationKeyPublic {
     z: Pair
 }
 
-impl JsonEncodable for RevocationKeyPublic {}
-
-impl<'a> JsonDecodable<'a> for RevocationKeyPublic {}
-
 /// `Revocation Key Private` Accumulator primate key.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RevocationKeyPrivate {
     gamma: GroupOrderElement
 }
-
-impl JsonEncodable for RevocationKeyPrivate {}
-
-impl<'a> JsonDecodable<'a> for RevocationKeyPrivate {}
 
 /// `Tail` point of curve used to update accumulator.
 pub type Tail = PointG2;
@@ -544,10 +509,6 @@ impl RevocationTailsGenerator {
     }
 }
 
-impl JsonEncodable for RevocationTailsGenerator {}
-
-impl<'a> JsonDecodable<'a> for RevocationTailsGenerator {}
-
 pub trait RevocationTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError>;
 }
@@ -590,10 +551,6 @@ impl CredentialSignature {
     }
 }
 
-impl JsonEncodable for CredentialSignature {}
-
-impl<'a> JsonDecodable<'a> for CredentialSignature {}
-
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryCredentialSignature {
     m_2: BigNumber,
@@ -619,18 +576,10 @@ pub struct SignatureCorrectnessProof {
     c: BigNumber
 }
 
-impl JsonEncodable for SignatureCorrectnessProof {}
-
-impl<'a> JsonDecodable<'a> for SignatureCorrectnessProof {}
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Witness {
     omega: PointG2
 }
-
-impl JsonEncodable for Witness {}
-
-impl<'a> JsonDecodable<'a> for Witness {}
 
 impl Witness {
     pub fn new<RTA>(rev_idx: u32,
@@ -730,10 +679,6 @@ impl MasterSecret {
     }
 }
 
-impl JsonEncodable for MasterSecret {}
-
-impl<'a> JsonDecodable<'a> for MasterSecret {}
-
 /// Blinded Master Secret uses by Issuer in credential creation.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BlindedCredentialSecrets {
@@ -743,20 +688,12 @@ pub struct BlindedCredentialSecrets {
     committed_attributes: BTreeMap<String, BigNumber>
 }
 
-impl JsonEncodable for BlindedCredentialSecrets {}
-
-impl<'a> JsonDecodable<'a> for BlindedCredentialSecrets {}
-
 /// `CredentialSecretsBlindingFactors` used by Prover for post processing of credentials received from Issuer.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CredentialSecretsBlindingFactors {
     v_prime: BigNumber,
     vr_prime: Option<GroupOrderElement>
 }
-
-impl JsonEncodable for CredentialSecretsBlindingFactors {}
-
-impl<'a> JsonDecodable<'a> for CredentialSecretsBlindingFactors {}
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct PrimaryBlindedCredentialSecretsFactors {
@@ -779,10 +716,6 @@ pub struct BlindedCredentialSecretsCorrectnessProof {
     m_caps: BTreeMap<String, BigNumber>, // Values for proving knowledge of committed values
     r_caps: BTreeMap<String, BigNumber>, // Blinding values for m_caps
 }
-
-impl JsonEncodable for BlindedCredentialSecretsCorrectnessProof {}
-
-impl<'a> JsonDecodable<'a> for BlindedCredentialSecretsCorrectnessProof {}
 
 /// “Sub Proof Request” - input to create a Proof for a credential;
 /// Contains attributes to be revealed and predicates.
@@ -869,10 +802,6 @@ pub struct Proof {
     proofs: Vec<SubProof>,
     aggregated_proof: AggregatedProof,
 }
-
-impl JsonEncodable for Proof {}
-
-impl<'a> JsonDecodable<'a> for Proof {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SubProof {
@@ -1161,10 +1090,6 @@ impl NonRevocProofTauList {
 /// Random BigNumber that uses `Prover` for proof generation and `Verifier` for proof verification.
 pub type Nonce = BigNumber;
 
-impl JsonEncodable for Nonce {}
-
-impl<'a> JsonDecodable<'a> for Nonce {}
-
 #[derive(Debug)]
 pub struct VerifiableCredential {
     pub_key: CredentialPublicKey,
@@ -1235,6 +1160,7 @@ fn clone_credential_value_map<K: Clone + Eq + Ord>(other: &BTreeMap<K, Credentia
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json;
     use self::issuer::Issuer;
     use self::prover::Prover;
     use self::verifier::Verifier;

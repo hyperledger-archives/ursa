@@ -4,12 +4,11 @@ use cl::verifier::Verifier;
 use errors::{IndyCryptoError, ToErrorCode};
 use ffi::ErrorCode;
 use utils::ctypes::CTypesUtils;
-use utils::json::{JsonEncodable, JsonDecodable};
 
-use libc::c_char;
-
+use serde_json;
 use std::ptr;
 use std::os::raw::c_void;
+use libc::c_char;
 
 pub mod issuer;
 pub mod prover;
@@ -735,7 +734,7 @@ pub extern fn indy_crypto_cl_nonce_to_json(nonce: *const c_void,
 
     trace!("indy_crypto_cl_nonce_to_json: entity >>> nonce: {:?}", nonce);
 
-    let res = match nonce.to_json() {
+    let res = match serde_json::to_string(nonce) {
         Ok(nonce_json) => {
             trace!("indy_crypto_cl_nonce_to_json: nonce_json: {:?}", nonce_json);
             unsafe {
@@ -745,7 +744,7 @@ pub extern fn indy_crypto_cl_nonce_to_json(nonce: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidState
     };
 
     trace!("indy_crypto_cl_nonce_to_json: <<< res: {:?}", res);
@@ -769,7 +768,7 @@ pub extern fn indy_crypto_cl_nonce_from_json(nonce_json: *const c_char,
 
     trace!("indy_crypto_cl_nonce_from_json: entity: nonce_json: {:?}", nonce_json);
 
-    let res = match Nonce::from_json(&nonce_json) {
+    let res = match serde_json::from_str::<Nonce>(&nonce_json) {
         Ok(nonce) => {
             trace!("indy_crypto_cl_nonce_from_json: nonce: {:?}", nonce);
             unsafe {
@@ -778,7 +777,7 @@ pub extern fn indy_crypto_cl_nonce_from_json(nonce_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(_) => ErrorCode::CommonInvalidStructure
     };
 
     trace!("indy_crypto_cl_nonce_from_json: <<< res: {:?}", res);
