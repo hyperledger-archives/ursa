@@ -3,6 +3,9 @@ use commitments::CommitmentScheme;
 struct PedersenCommitment {}
 
 impl CommitmentScheme for PedersenCommitment {
+    // Returns `num_elements` + 1 generators. This is useful when committing to several messages say
+    // m_1, m_2, m_3, and so on. `setup` will this output g_1, g_2, g_3, g_4 and so on which can then be
+    // used for commitment f(g_1, g_2, g_3, g_4, ..., m_1, m_2, m_3...)
     fn setup(num_elements: u32) -> Vec<Vec<u8>> {
         unimplemented!();
     }
@@ -11,7 +14,7 @@ impl CommitmentScheme for PedersenCommitment {
         unimplemented!();
     }
 
-    fn open(commitment: &[u8], secret: &[u8], generators: &[&[u8]], messages: &[&[u8]]) -> bool {
+    fn verify(commitment: &[u8], opening: &[u8], generators: &[&[u8]], messages: &[&[u8]]) -> bool {
         unimplemented!();
     }
 }
