@@ -158,6 +158,8 @@ def windowsTesting() {
                         }
                         stash includes: 'target/release/*.dll', name: 'LibindyCryptoWindowsBuildResult'
                     }
+                    stash includes: 'target/release/*.dll', name: 'LibindyCryptoWindowsBuildResult'
+                }
 
                     //TODO wrappers testing
 
@@ -214,14 +216,11 @@ def windowsPublishing() {
 
                 version = getSrcVersion()
 
+                echo 'Publish Windows files: Build docker image'
+                testEnv = dockerHelpers.build('indy-crypto', 'libindy-crypto/ci/ubuntu.dockerfile libindy-crypto/ci')
+
                 dir('libindy-crypto') {
-                    echo "Publish Windows files"
-
-                    unstash name: 'LibindyCryptoWindowsBuildResult'
-
-                    withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-                        sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER"
-                    }
+                    windowsPublishArtifact(testEnv, "LibindyCryptoWindowsBuildResult")
                 }
             }
             finally {
@@ -231,6 +230,46 @@ def windowsPublishing() {
         }
     }
     return version
+}
+
+def windowsPublishArtifact(testEnv, stashName) {
+    testEnv.inside {
+        sh 'chmod -R 777 ci'
+
+        unstash name: stashName
+
+        withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
+            sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER"
+        }
+    }
+}
+
+def libindyCryptoDebPublishing(testEnv, version) {
+    dir('libindy-crypto') {
+        testEnv.inside('-u 0:0') {
+            sh 'chmod -R 755 ci/*.sh'
+
+            dir('sovrin-packaging') {
+                downloadPackagingUtils()
+            }
+
+            withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
+                try {
+                    sh 'mkdir /root/.ssh && ln -sf $sovrin_repo_key /root/.ssh'
+                    sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $env.BUILD_NUMBER"
+
+                    if (env.BRANCH_NAME == 'rc') {
+                        stash includes: 'debs/*', name: 'libindyCryptoDebs'
+                    }
+                }
+                finally {
+                    sh "rm -rf debian"
+                    sh 'rm -f ~/.ssh/$sovrin_repo_key'
+                }
+            }
+        }
+    }
+
 }
 
 def getSuffix(isRelease, target) {

@@ -19,8 +19,10 @@ mkdir libindy_crypto-zip
 mkdir libindy_crypto-zip/lib
 cp -r ./include ./libindy_crypto-zip
 cp ./target/release/*.dll ./libindy_crypto-zip/lib/
-powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('libindy_crypto-zip', 'libindy_crypto_$version.zip'); }"
-rm -rf ./libindy-zip
+
+cd libindy_crypto-zip && zip -r libindy_crypto_${version}.zip ./* && mv libindy_crypto_${version}.zip .. && cd ..
+
+rm -rf libindy_crypto-zip
 
 cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.115
 mkdir /var/repository/repos/windows/libindy_crypto/$type/$version-$number
