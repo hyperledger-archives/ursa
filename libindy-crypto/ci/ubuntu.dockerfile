@@ -39,6 +39,8 @@ RUN curl -fsOSL $RUST_DOWNLOAD_URL \
 
 ENV PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.cargo/bin"
 
+RUN apt-get install -y zip
+
 RUN useradd -ms /bin/bash -u $uid indy
 USER indy
 
