@@ -23,6 +23,7 @@ libc = "0.2.33"
 log = "0.3.8"
 rand = "0.3"
 sha2 = "0.6.0"
+sha3 = "0.7.3"
 time = "0.1.36"
 env_logger = "0.4.3"
 openssl = { version = "0.9.21", optional = true }

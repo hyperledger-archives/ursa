@@ -221,6 +221,30 @@ class Bls:
         return res
 
     @staticmethod
+    def sign_pop(message: bytes, sign_key: SignKey) -> Signature:
+        """
+        Signs the message and returns signature to provide proof of possession.
+
+        :param: message - Message to sign
+        :param: sign_key - Sign key
+        :return: Signature
+        """
+
+        logger = logging.getLogger(__name__)
+        logger.debug("Bls::sign_pop: >>> message: %r, sign_key: %r", message, sign_key)
+
+        c_instance = c_void_p()
+        do_call('indy_crypto_bls_sign_pop',
+                message, len(message),
+                sign_key.c_instance,
+                byref(c_instance))
+
+        res = Signature(c_instance)
+
+        logger.debug("Bls::sign_pop: <<< res: %r", res)
+        return res
+
+    @staticmethod
     def verify(signature: Signature, message: bytes, ver_key: VerKey, gen: Generator) -> bool:
         """
         Verifies the message signature and returns true - if signature valid or false otherwise.
@@ -246,6 +270,35 @@ class Bls:
 
         res = valid
         logger.debug("Bls::verify: <<< res: %r", res)
+        return res
+
+    @staticmethod
+    def verify_pop(signature: Signature, message: bytes, ver_key: VerKey, gen: Generator) -> bool:
+        """
+        Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
+
+        :param: signature - Signature to verify
+        :param: message - Message to verify
+        :param: ver_key - Verification key
+        :param: gen - Generator point
+        :return: true if signature valid
+        """
+
+        logger = logging.getLogger(__name__)
+        logger.debug("Bls::verify_pop: >>> signature: %r, message: %r, ver_key: %r, gen: %r", signature, message,
+                     ver_key,
+                     gen)
+
+        valid = c_bool()
+        do_call('indy_crypto_bsl_verify_pop',
+                signature.c_instance,
+                message, len(message),
+                ver_key.c_instance,
+                gen.c_instance,
+                byref(valid))
+
+        res = valid
+        logger.debug("Bls::verify_pop: <<< res: %r", res)
         return res
 
     @staticmethod

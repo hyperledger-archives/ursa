@@ -9,8 +9,17 @@ def test_sign_for_seed(signature2: Signature):
     assert signature2 is not None
 
 
+def test_sign_pop(signature_pop: Signature):
+    assert signature_pop is not None
+
+
 def test_verify(generator: Generator, message: bytes, ver_key1: VerKey, signature1: Signature):
     valid = Bls.verify(signature1, message, ver_key1, generator)
+    assert valid
+
+
+def test_verify_pop(generator: Generator, message: bytes, ver_key1: VerKey, signature_pop: Signature):
+    valid = Bls.verify_pop(signature_pop, message, ver_key1, generator)
     assert valid
 
 

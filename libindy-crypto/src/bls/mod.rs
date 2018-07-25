@@ -1,7 +1,8 @@
 use errors::IndyCryptoError;
 use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 
-use sha2::{Sha256, Digest};
+use sha2::{Sha256, Digest as Sha2Digest};
+use sha3::{Keccak256, Digest as Sha3Digest};
 
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
@@ -288,7 +289,6 @@ impl MultiSignature {
 pub struct Bls {}
 
 impl Bls {
-
     /// Signs the message and returns signature.
     ///
     /// # Arguments
@@ -305,7 +305,30 @@ impl Bls {
     /// Bls::sign(&message, &sign_key).unwrap();
     /// ```
     pub fn sign(message: &[u8], sign_key: &SignKey) -> Result<Signature, IndyCryptoError> {
-        let point = Bls::_hash(message)?.mul(&sign_key.group_order_element)?;
+        let point = Bls::_hash_sha2(message)?.mul(&sign_key.group_order_element)?;
+        Ok(Signature {
+            point,
+            bytes: point.to_bytes()?
+        })
+    }
+
+    /// Signs the message and returns signature to provide proof of possession.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - Message to sign
+    /// * `sign_key` - Sign key
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use indy_crypto::bls::*;
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// Bls::sign_pop(&message, &sign_key).unwrap();
+    /// ```
+    pub fn sign_pop(message: &[u8], sign_key: &SignKey) -> Result<Signature, IndyCryptoError> {
+        let point = Bls::_hash_sha3(message)?.mul(&sign_key.group_order_element)?;
         Ok(Signature {
             point,
             bytes: point.to_bytes()?
@@ -335,7 +358,34 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        let h = Bls::_hash(message)?;
+        let h = Bls::_hash_sha2(message)?;
+        Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
+    }
+
+    /// Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
+    ///
+    /// # Arguments
+    ///
+    /// * `signature` - Signature to verify
+    /// * `message` - Message to verify
+    /// * `ver_key` - Verification key
+    /// * `gen` - Generator point
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use indy_crypto::bls::*;
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let signature = Bls::sign_pop(&message, &sign_key).unwrap();
+    ///
+    /// let valid = Bls::verify_pop(&signature, &message, &ver_key, &gen).unwrap();
+    /// assert!(valid);
+    /// ```
+    pub fn verify_pop(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
+        let h = Bls::_hash_sha3(message)?;
         Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
     }
 
@@ -390,7 +440,7 @@ impl Bls {
         // the C API. Verifiers can thus cache the aggregated verkey and avoid several EC point additions.
         // The code below should be moved to such method.
 
-        let msg_hash = Bls::_hash(message)?;
+        let msg_hash = Bls::_hash_sha2(message)?;
 
         let lhs = Pair::pair(&multi_sig.point, &gen.point)?;
         let rhs = Pair::pair(&msg_hash, &aggregated_verkey)?;
@@ -398,8 +448,15 @@ impl Bls {
         Ok(lhs.eq(&rhs))
     }
 
-    fn _hash(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
+    fn _hash_sha2(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
         let mut hasher = Sha256::default();
+        hasher.input(message);
+
+        Ok(PointG1::from_hash(hasher.result().as_slice())?)
+    }
+
+    fn _hash_sha3(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
+        let mut hasher = Keccak256::default();
         hasher.input(message);
 
         Ok(PointG1::from_hash(hasher.result().as_slice())?)
@@ -442,6 +499,14 @@ mod tests {
     }
 
     #[test]
+    fn bls_sign_pop_works() {
+        let sign_key = SignKey::new(None).unwrap();
+        let message = vec![1, 2, 3, 4, 5];
+
+        Bls::sign_pop(&message, &sign_key).unwrap();
+    }
+
+    #[test]
     fn multi_signature_new_works() {
         let message = vec![1, 2, 3, 4, 5];
 
@@ -469,6 +534,19 @@ mod tests {
         let signature = Bls::sign(&message, &sign_key).unwrap();
 
         let valid = Bls::verify(&signature, &message, &ver_key, &gen).unwrap();
+        assert!(valid)
+    }
+
+    #[test]
+    fn verify_pop_works() {
+        let message = vec![1, 2, 3, 4, 5];
+
+        let gen = Generator::new().unwrap();
+        let sign_key = SignKey::new(None).unwrap();
+        let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+        let signature = Bls::sign_pop(&message, &sign_key).unwrap();
+
+        let valid = Bls::verify_pop(&signature, &message, &ver_key, &gen).unwrap();
         assert!(valid)
     }
 

@@ -75,6 +75,15 @@ def signature2(message: bytes, sign_key2: SignKey) -> Signature:
 
 
 @pytest.fixture
+def signature_pop(message: bytes, sign_key1: SignKey) -> Signature:
+    signature = Bls.sign_pop(message, sign_key1)
+
+    assert type(signature) is Signature
+    assert signature.c_instance is not None
+    return signature
+
+
+@pytest.fixture
 def multi_sig(signature1: Signature, signature2: Signature) -> MultiSignature:
     multi_sig = MultiSignature.new([signature1, signature2])
 

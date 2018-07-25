@@ -4,6 +4,7 @@ extern crate env_logger;
 extern crate log;
 extern crate rand;
 extern crate sha2;
+extern crate sha3;
 
 // To use macros from util inside of other modules it must me loaded first.
 #[macro_use]
