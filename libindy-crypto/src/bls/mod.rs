@@ -1,8 +1,8 @@
 use errors::IndyCryptoError;
 use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 
-use sha2::{Sha256, Digest as Sha2Digest};
-use sha3::{Keccak256, Digest as Sha3Digest};
+use sha2::{Sha256, Digest};
+use sha3::Keccak256;
 
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
@@ -305,11 +305,7 @@ impl Bls {
     /// Bls::sign(&message, &sign_key).unwrap();
     /// ```
     pub fn sign(message: &[u8], sign_key: &SignKey) -> Result<Signature, IndyCryptoError> {
-        let point = Bls::_hash_sha2(message)?.mul(&sign_key.group_order_element)?;
-        Ok(Signature {
-            point,
-            bytes: point.to_bytes()?
-        })
+        Bls::_gen_signature(message, sign_key, Sha256::default())
     }
 
     /// Signs the message and returns signature to provide proof of possession.
@@ -328,11 +324,7 @@ impl Bls {
     /// Bls::sign_pop(&message, &sign_key).unwrap();
     /// ```
     pub fn sign_pop(message: &[u8], sign_key: &SignKey) -> Result<Signature, IndyCryptoError> {
-        let point = Bls::_hash_sha3(message)?.mul(&sign_key.group_order_element)?;
-        Ok(Signature {
-            point,
-            bytes: point.to_bytes()?
-        })
+        Bls::_gen_signature(message, sign_key, Keccak256::default())
     }
 
     /// Verifies the message signature and returns true - if signature valid or false otherwise.
@@ -358,8 +350,7 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        let h = Bls::_hash_sha2(message)?;
-        Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
+        Bls::_verify_signature(signature, message, ver_key, gen, Sha256::default())
     }
 
     /// Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
@@ -385,8 +376,7 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify_pop(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        let h = Bls::_hash_sha3(message)?;
-        Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
+        Bls::_verify_signature(signature, message, ver_key, gen, Keccak256::default())
     }
 
     /// Verifies the message multi signature and returns true - if signature valid or false otherwise.
@@ -440,7 +430,7 @@ impl Bls {
         // the C API. Verifiers can thus cache the aggregated verkey and avoid several EC point additions.
         // The code below should be moved to such method.
 
-        let msg_hash = Bls::_hash_sha2(message)?;
+        let msg_hash = Bls::_hash(message, Sha256::default())?;
 
         let lhs = Pair::pair(&multi_sig.point, &gen.point)?;
         let rhs = Pair::pair(&msg_hash, &aggregated_verkey)?;
@@ -448,17 +438,21 @@ impl Bls {
         Ok(lhs.eq(&rhs))
     }
 
-    fn _hash_sha2(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
-        let mut hasher = Sha256::default();
-        hasher.input(message);
-
-        Ok(PointG1::from_hash(hasher.result().as_slice())?)
+    fn _gen_signature<T>(message: &[u8], sign_key: &SignKey, hasher: T) -> Result<Signature, IndyCryptoError> where T: Digest {
+        let point = Bls::_hash(message, hasher)?.mul(&sign_key.group_order_element)?;
+        Ok(Signature {
+            point,
+            bytes: point.to_bytes()?
+        })
     }
 
-    fn _hash_sha3(message: &[u8]) -> Result<PointG1, IndyCryptoError> {
-        let mut hasher = Keccak256::default();
-        hasher.input(message);
+    pub fn _verify_signature<T>(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator, hasher: T) -> Result<bool, IndyCryptoError> where T: Digest {
+        let h = Bls::_hash(message, hasher)?;
+        Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
+    }
 
+    fn _hash<T>(message: &[u8], mut hasher: T) -> Result<PointG1, IndyCryptoError> where T: Digest {
+        hasher.input(message);
         Ok(PointG1::from_hash(hasher.result().as_slice())?)
     }
 }
