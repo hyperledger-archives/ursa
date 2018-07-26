@@ -350,7 +350,7 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        Bls::_verify_signature(signature, message, ver_key, gen, Sha256::default())
+        Bls::_verify_signature(&signature.point, message, &ver_key.point, gen, Sha256::default())
     }
 
     /// Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
@@ -376,7 +376,7 @@ impl Bls {
     /// assert!(valid);
     /// ```
     pub fn verify_pop(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> Result<bool, IndyCryptoError> {
-        Bls::_verify_signature(signature, message, ver_key, gen, Keccak256::default())
+        Bls::_verify_signature(&signature.point, message, &ver_key.point, gen, Keccak256::default())
     }
 
     /// Verifies the message multi signature and returns true - if signature valid or false otherwise.
@@ -430,12 +430,7 @@ impl Bls {
         // the C API. Verifiers can thus cache the aggregated verkey and avoid several EC point additions.
         // The code below should be moved to such method.
 
-        let msg_hash = Bls::_hash(message, Sha256::default())?;
-
-        let lhs = Pair::pair(&multi_sig.point, &gen.point)?;
-        let rhs = Pair::pair(&msg_hash, &aggregated_verkey)?;
-
-        Ok(lhs.eq(&rhs))
+        Bls::_verify_signature(&multi_sig.point, message, &aggregated_verkey, gen, Sha256::default())
     }
 
     fn _gen_signature<T>(message: &[u8], sign_key: &SignKey, hasher: T) -> Result<Signature, IndyCryptoError> where T: Digest {
@@ -446,9 +441,9 @@ impl Bls {
         })
     }
 
-    pub fn _verify_signature<T>(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator, hasher: T) -> Result<bool, IndyCryptoError> where T: Digest {
+    pub fn _verify_signature<T>(signature: &PointG1, message: &[u8], ver_key: &PointG2, gen: &Generator, hasher: T) -> Result<bool, IndyCryptoError> where T: Digest {
         let h = Bls::_hash(message, hasher)?;
-        Ok(Pair::pair(&signature.point, &gen.point)?.eq(&Pair::pair(&h, &ver_key.point)?))
+        Ok(Pair::pair(&signature, &gen.point)?.eq(&Pair::pair(&h, &ver_key)?))
     }
 
     fn _hash<T>(message: &[u8], mut hasher: T) -> Result<PointG1, IndyCryptoError> where T: Digest {
