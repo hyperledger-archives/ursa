@@ -352,6 +352,123 @@ pub extern fn indy_crypto_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode 
     res
 }
 
+/// Creates and returns BLS proof of possession that corresponds to ver key and sign key.
+///
+/// Note: Proof of possession instance deallocation must be performed by calling indy_crypto_bls_pop_free.
+///
+/// # Arguments
+/// * `ver_key` - Ver key instance
+/// * `sign_key` - Sign key instance
+/// * `pop_p` - Reference that will contain proof of possession instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_bls_pop_new(ver_key: *const c_void,
+                                      sign_key: *const c_void,
+                                      pop_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_bls_pop_new: >>> ver_key: {:?}, sign_key: {:?}, pop_p: {:?}", ver_key, sign_key, pop_p);
+
+    check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam2);
+
+    trace!("indy_crypto_bls_pop_new: ver_key: {:?}, sign_key: {:?}", ver_key, sign_key);
+
+    let res = match ProofOfPossession::new(ver_key, sign_key) {
+        Ok(pop) => {
+            trace!("indy_crypto_bls_pop_new: pop: {:?}", pop);
+            unsafe {
+                *pop_p = Box::into_raw(Box::new(pop)) as *const c_void;
+                trace!("indy_crypto_bls_pop_new: *pop_p: {:?}", *pop_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_bls_pop_new: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns proof of possession from bytes representation.
+///
+/// Note: Proof of possession instance deallocation must be performed by calling indy_crypto_bls_pop_free
+///
+/// # Arguments
+/// * `bytes` - Bytes buffer pointer
+/// * `bytes_len` - Bytes buffer len
+/// * `pop_p` - Reference that will contain proof of possession instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_bls_pop_from_bytes(bytes: *const u8, bytes_len: usize,
+                                             pop_p: *mut *const c_void) -> ErrorCode {
+    trace!("indy_crypto_bls_pop_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}", bytes, bytes_len, pop_p);
+
+    check_useful_c_byte_array!(bytes, bytes_len,
+                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(pop_p, ErrorCode::CommonInvalidParam3);
+
+    trace!("indy_crypto_bls_pop_from_bytes: bytes: {:?}", bytes);
+
+    let res = match ProofOfPossession::from_bytes(bytes) {
+        Ok(pop) => {
+            trace!("indy_crypto_bls_pop_from_bytes: pop: {:?}", pop);
+            unsafe {
+                *pop_p = Box::into_raw(Box::new(pop)) as *const c_void;
+                trace!("indy_crypto_bls_pop_from_bytes: *pop_p: {:?}", *pop_p);
+            }
+            ErrorCode::Success
+        }
+        Err(err) => err.to_error_code()
+    };
+
+    trace!("indy_crypto_bls_pop_from_bytes: <<< res: {:?}", res);
+    res
+}
+
+/// Returns bytes representation of proof of possession.
+///
+/// Note: Returned buffer lifetime is the same as proof of possession instance.
+///
+/// # Arguments
+/// * `pop` - Proof of possession instance pointer
+/// * `bytes_p` - Pointer that will contains bytes buffer
+/// * `bytes_len_p` - Pointer that will contains bytes buffer len
+#[no_mangle]
+pub extern fn indy_crypto_bls_pop_as_bytes(pop: *const c_void,
+                                           bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
+    trace!("indy_crypto_bls_pop_as_bytes: >>> pop: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", pop, bytes_p, bytes_len_p);
+
+    check_useful_c_reference!(pop, ProofOfPossession, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
+    check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
+
+    trace!("indy_crypto_bls_pop_as_bytes: pop: {:?}", pop);
+
+    unsafe {
+        *bytes_p = pop.as_bytes().as_ptr();
+        *bytes_len_p = pop.as_bytes().len();
+    };
+
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_bls_pop_as_bytes: <<< res: {:?}", res);
+    res
+}
+
+/// Deallocates proof of possession instance.
+///
+/// # Arguments
+/// * `pop` - Proof of possession instance pointer
+#[no_mangle]
+pub extern fn indy_crypto_bls_pop_free(pop: *const c_void) -> ErrorCode {
+    check_useful_c_ptr!(pop, ErrorCode::CommonInvalidParam1);
+
+    trace!("indy_crypto_bls_pop_free: >>> pop: {:?}", pop);
+
+    unsafe { Box::from_raw(pop as *mut ProofOfPossession); }
+    let res = ErrorCode::Success;
+
+    trace!("indy_crypto_bls_pop_free: <<< res: {:?}", res);
+    res
+}
+
 /// Creates and returns signature from bytes representation.
 ///
 /// Note: Signature instance deallocation must be performed by calling indy_crypto_bls_signature_free
@@ -676,76 +793,29 @@ pub extern fn indy_crypto_bls_verify_multi_sig(multi_sig: *const c_void,
     res
 }
 
-/// Signs the message and returns signature to provide proof of possession.
-///
-/// Note: allocated buffer referenced by (signature_p, signature_len_p) must be
-/// deallocated by calling indy_crypto_bls_free_array.
+/// Verifies the proof of possession and returns true - if signature valid or false otherwise.
 ///
 /// # Arguments
 ///
-/// * `message` - Message to sign buffer pointer
-/// * `message_len` - Message to sign buffer len
-/// * `sign_key` - Pointer to Sign Key instance
-/// * `signature_p` - Reference that will contain Signture Instance pointer
-#[no_mangle]
-pub extern fn indy_crypto_bls_sign_pop(message: *const u8,
-                                       message_len: usize,
-                                       sign_key: *const c_void,
-                                       signature_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_bls_sign_pop: >>> message: {:?}, message_len: {:?}, sign_key: {:?}, signature_p: {:?}", message, message_len, sign_key, signature_p);
-
-    check_useful_c_byte_array!(message, message_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
-    check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam3);
-    check_useful_c_ptr!(signature_p, ErrorCode::CommonInvalidParam5);
-
-    trace!("indy_crypto_bls_sign_pop: message: {:?}, sign_key: {:?}", message, sign_key);
-
-    let res = match Bls::sign_pop(message, sign_key) {
-        Ok(signature) => {
-            unsafe {
-                trace!("indy_crypto_bls_sign_pop: signature: {:?}", signature);
-                *signature_p = Box::into_raw(Box::new(signature)) as *const c_void;
-                trace!("indy_crypto_bls_sign_pop: *signature_p: {:?}", *signature_p);
-            }
-            ErrorCode::Success
-        }
-        Err(err) => err.to_error_code()
-    };
-
-    trace!("indy_crypto_bls_sign_pop: <<< res: {:?}", res);
-    res
-}
-
-/// Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
-///
-/// # Arguments
-///
-/// * `signature` - Signature instance pointer
-/// * `message` - Message to verify buffer pointer
-/// * `message_len` - Message to verify buffer len
+/// * `pop` - Proof of possession
 /// * `ver_key` - Verification key instance pinter
 /// * `gen` - Generator instance pointer
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn indy_crypto_bsl_verify_pop(signature: *const c_void,
-                                         message: *const u8,
-                                         message_len: usize,
+pub extern fn indy_crypto_bsl_verify_pop(pop: *const c_void,
                                          ver_key: *const c_void,
                                          gen: *const c_void,
                                          valid_p: *mut bool) -> ErrorCode {
-    trace!("indy_crypto_bsl_verify_pop: >>> signature: {:?}, message: {:?}, message_len: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", signature, message, message_len, ver_key, gen, valid_p);
+    trace!("indy_crypto_bsl_verify_pop: >>> pop: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", pop, ver_key, gen, valid_p);
 
-    check_useful_c_reference!(signature, Signature, ErrorCode::CommonInvalidParam1);
-    check_useful_c_byte_array!(message, message_len,
-                               ErrorCode::CommonInvalidParam2, ErrorCode::CommonInvalidParam3);
-    check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam4);
-    check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam5);
-    check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam6);
+    check_useful_c_reference!(pop, ProofOfPossession, ErrorCode::CommonInvalidParam1);
+    check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam3);
+    check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam4);
 
-    trace!("indy_crypto_bsl_verify_pop: signature: {:?}, message: {:?}, ver_key: {:?}, gen: {:?}", signature, message, ver_key, gen);
+    trace!("indy_crypto_bsl_verify_pop: pop: {:?}, ver_key: {:?}, gen: {:?}", pop, ver_key, gen);
 
-    let res = match Bls::verify_pop(signature, message, ver_key, gen) {
+    let res = match Bls::verify_proof_of_posession(pop, ver_key, gen) {
         Ok(valid) => {
             trace!("indy_crypto_bsl_verify_pop: valid: {:?}", valid);
             unsafe { *valid_p = valid; }
@@ -1448,6 +1518,161 @@ mod tests {
     }
 
     #[test]
+    fn indy_crypto_bls_pop_new_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!ver_key.is_null());
+
+        let mut pop: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_new(ver_key, sign_key, &mut pop);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!pop.is_null());
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_pop_free(pop);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_pop_as_bytes_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut pop: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_new(ver_key, sign_key, &mut pop);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut bytes: *const u8 = ptr::null();
+        let mut bytes_len: usize = 0;
+        let err_code = indy_crypto_bls_pop_as_bytes(pop, &mut bytes, &mut bytes_len);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!bytes.is_null());
+        assert!(bytes_len > 0);
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_pop_free(pop);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_pop_from_bytes_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut pop: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_new(ver_key, sign_key, &mut pop);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut bytes: *const u8 = ptr::null();
+        let mut bytes_len: usize = 0;
+        let err_code = indy_crypto_bls_pop_as_bytes(pop, &mut bytes, &mut bytes_len);
+        assert_eq!(err_code, ErrorCode::Success);
+        assert!(!bytes.is_null());
+        assert!(bytes_len > 0);
+
+        let mut pop2: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_from_bytes(bytes, bytes_len, &mut pop2);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_pop_free(pop);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_pop_free(pop2);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn indy_crypto_bls_pop_free_works() {
+        let mut gen: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_generator_new(&mut gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut sign_key: *const c_void = ptr::null();
+        let seed: *const u8 = ptr::null();
+        let seed_len: usize = 0;
+        let err_code = indy_crypto_bls_sign_key_new(seed, seed_len, &mut sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut ver_key: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut pop: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_new(ver_key, sign_key, &mut pop);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_generator_free(gen);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_sign_key_free(sign_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_ver_key_free(ver_key);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let err_code = indy_crypto_bls_pop_free(pop);
+        assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
     fn indy_crypto_bsl_verify_pop_works() {
         let mut gen: *const c_void = ptr::null();
         let err_code = indy_crypto_bls_generator_new(&mut gen);
@@ -1463,20 +1688,16 @@ mod tests {
         let err_code = indy_crypto_bls_ver_key_new(gen, sign_key, &mut ver_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let message_v = vec![1, 2, 3, 4, 5];
-        let message = message_v.as_ptr();
-        let message_len = message_v.len();
-
-        let mut signature: *const c_void = ptr::null();
-        let err_code = indy_crypto_bls_sign_pop(message, message_len, sign_key, &mut signature);
+        let mut pop: *const c_void = ptr::null();
+        let err_code = indy_crypto_bls_pop_new(ver_key, sign_key, &mut pop);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut valid = false;
 
-        let err_code = indy_crypto_bsl_verify_pop(signature,
-                                                  message, message_len,
+        let err_code = indy_crypto_bsl_verify_pop(pop,
                                                   ver_key,
-                                                  gen, &mut valid);
+                                                  gen,
+                                                  &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(valid);
 
@@ -1489,7 +1710,7 @@ mod tests {
         let err_code = indy_crypto_bls_ver_key_free(ver_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_bls_signature_free(signature);
+        let err_code = indy_crypto_bls_pop_free(pop);
         assert_eq!(err_code, ErrorCode::Success);
     }
 

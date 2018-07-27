@@ -148,6 +148,35 @@ class VerKey(BlsEntity):
         return res
 
 
+class ProofOfPossession(BlsEntity):
+    """
+    BLS proof of possession.
+    """
+    new_handler = 'indy_crypto_bls_pop_new'
+    from_bytes_handler = 'indy_crypto_bls_pop_from_bytes'
+    as_bytes_handler = 'indy_crypto_bls_pop_as_bytes'
+    free_handler = 'indy_crypto_bls_pop_free'
+
+    @classmethod
+    def new(cls, ver_key: VerKey, sign_key: SignKey) -> 'ProofOfPossession':
+        """
+        Creates and returns BLS proof of possession that corresponds to the given ver key and sign key.
+        :param: ver_key - Ver Key
+        :param: sign_key - Sign Key
+        :return: BLS proof of possession
+        """
+        logger = logging.getLogger(__name__)
+        logger.debug("ProofOfPossession::new: >>>")
+
+        c_instance = c_void_p()
+        do_call(cls.new_handler, ver_key.c_instance, sign_key.c_instance, byref(c_instance))
+
+        res = cls(c_instance)
+
+        logger.debug("ProofOfPossession::new: <<< res: %r", res)
+        return res
+
+
 class Signature(BlsEntity):
     """
     BLS signature.
@@ -221,30 +250,6 @@ class Bls:
         return res
 
     @staticmethod
-    def sign_pop(message: bytes, sign_key: SignKey) -> Signature:
-        """
-        Signs the message and returns signature to provide proof of possession.
-
-        :param: message - Message to sign
-        :param: sign_key - Sign key
-        :return: Signature
-        """
-
-        logger = logging.getLogger(__name__)
-        logger.debug("Bls::sign_pop: >>> message: %r, sign_key: %r", message, sign_key)
-
-        c_instance = c_void_p()
-        do_call('indy_crypto_bls_sign_pop',
-                message, len(message),
-                sign_key.c_instance,
-                byref(c_instance))
-
-        res = Signature(c_instance)
-
-        logger.debug("Bls::sign_pop: <<< res: %r", res)
-        return res
-
-    @staticmethod
     def verify(signature: Signature, message: bytes, ver_key: VerKey, gen: Generator) -> bool:
         """
         Verifies the message signature and returns true - if signature valid or false otherwise.
@@ -273,26 +278,25 @@ class Bls:
         return res
 
     @staticmethod
-    def verify_pop(signature: Signature, message: bytes, ver_key: VerKey, gen: Generator) -> bool:
+    def verify_pop(pop: ProofOfPossession, ver_key: VerKey, gen: Generator) -> bool:
         """
-        Verifies the proof of possession message signature and returns true - if signature valid or false otherwise.
+        Verifies the proof of possession and returns true - if signature valid or false otherwise.
 
-        :param: signature - Signature to verify
-        :param: message - Message to verify
+        :param: pop - Proof of possession
         :param: ver_key - Verification key
         :param: gen - Generator point
         :return: true if signature valid
         """
 
         logger = logging.getLogger(__name__)
-        logger.debug("Bls::verify_pop: >>> signature: %r, message: %r, ver_key: %r, gen: %r", signature, message,
+        logger.debug("Bls::verify_pop: >>> pop: %r, ver_key: %r, gen: %r",
+                     pop,
                      ver_key,
                      gen)
 
         valid = c_bool()
         do_call('indy_crypto_bsl_verify_pop',
-                signature.c_instance,
-                message, len(message),
+                pop.c_instance,
                 ver_key.c_instance,
                 gen.c_instance,
                 byref(valid))
