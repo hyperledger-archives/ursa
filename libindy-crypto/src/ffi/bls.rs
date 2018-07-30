@@ -135,11 +135,11 @@ pub extern fn indy_crypto_bls_sign_key_new(seed: *const u8,
     check_useful_opt_c_byte_array!(seed, seed_len,
                                    ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_bls_sign_key_new: seed: {:?}", seed);
+    trace!("indy_crypto_bls_sign_key_new: seed: {:?}", secret!(&seed));
 
     let res = match SignKey::new(seed) {
         Ok(sign_key) => {
-            trace!("indy_crypto_bls_generator_new: gen: {:?}", sign_key);
+            trace!("indy_crypto_bls_generator_new: gen: {:?}", secret!(&sign_key));
             unsafe {
                 *sign_key_p = Box::into_raw(Box::new(sign_key)) as *const c_void;
                 trace!("indy_crypto_bls_sign_key_new: *sign_key_p: {:?}", *sign_key_p);
@@ -170,11 +170,11 @@ pub extern fn indy_crypto_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: u
                                ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
     check_useful_c_ptr!(sign_key_p, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_bls_sign_key_from_bytes: bytes: {:?}", bytes);
+    trace!("indy_crypto_bls_sign_key_from_bytes: bytes: {:?}", secret!(&bytes));
 
     let res = match SignKey::from_bytes(bytes) {
         Ok(sign_key) => {
-            trace!("indy_crypto_bls_sign_key_from_bytes: sign_key: {:?}", sign_key);
+            trace!("indy_crypto_bls_sign_key_from_bytes: sign_key: {:?}", secret!(&sign_key));
             unsafe {
                 *sign_key_p = Box::into_raw(Box::new(sign_key)) as *const c_void;
                 trace!("indy_crypto_bls_sign_key_from_bytes: *sign_key_p: {:?}", *sign_key_p);
@@ -205,7 +205,7 @@ pub extern fn indy_crypto_bls_sign_key_as_bytes(sign_key: *const c_void,
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
     check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
-    trace!("indy_crypto_bls_sign_key_as_bytes: sign_key: {:?}", sign_key);
+    trace!("indy_crypto_bls_sign_key_as_bytes: sign_key: {:?}", secret!(sign_key));
 
     unsafe {
         *bytes_p = sign_key.as_bytes().as_ptr();
@@ -226,7 +226,7 @@ pub extern fn indy_crypto_bls_sign_key_as_bytes(sign_key: *const c_void,
 pub extern fn indy_crypto_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(sign_key, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_bls_sign_key_free: >>> sign_key: {:?}", sign_key);
+    trace!("indy_crypto_bls_sign_key_free: >>> sign_key: {:?}", secret!(sign_key));
 
     unsafe { Box::from_raw(sign_key as *mut SignKey); }
     let res = ErrorCode::Success;
@@ -252,7 +252,7 @@ pub extern fn indy_crypto_bls_ver_key_new(gen: *const c_void,
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_bls_ver_key_new: gen: {:?}, sign_key: {:?}", gen, sign_key);
+    trace!("indy_crypto_bls_ver_key_new: gen: {:?}, sign_key: {:?}", gen, secret!(sign_key));
 
     let res = match VerKey::new(gen, sign_key) {
         Ok(ver_key) => {
@@ -692,7 +692,7 @@ pub extern fn indy_crypto_bls_sign(message: *const u8,
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(signature_p, ErrorCode::CommonInvalidParam5);
 
-    trace!("indy_crypto_bls_sign: message: {:?}, sign_key: {:?}", message, sign_key);
+    trace!("indy_crypto_bls_sign: message: {:?}, sign_key: {:?}", message, secret!(sign_key));
 
     let res = match Bls::sign(message, sign_key) {
         Ok(signature) => {

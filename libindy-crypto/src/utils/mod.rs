@@ -2,6 +2,8 @@
 pub mod ctypes;
 pub mod commitment;
 pub mod rsa;
+#[macro_use]
+pub mod logger;
 
 use bn::BigNumber;
 use errors::IndyCryptoError;

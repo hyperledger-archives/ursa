@@ -66,7 +66,7 @@ pub extern fn indy_crypto_cl_issuer_new_credential_def(credential_schema: *const
     let res = match Issuer::new_credential_def(credential_schema, non_credential_schema, support_revocation) {
         Ok((credential_pub_key, credential_priv_key, credential_key_correctness_proof)) => {
             trace!("indy_crypto_cl_issuer_new_credential_def: credential_pub_key: {:?}, credential_priv_key: {:?}, credential_key_correctness_proof: {:?}",
-                   credential_pub_key, credential_priv_key, credential_key_correctness_proof);
+                   credential_pub_key, secret!(&credential_priv_key), credential_key_correctness_proof);
             unsafe {
                 *credential_pub_key_p = Box::into_raw(Box::new(credential_pub_key)) as *const c_void;
                 *credential_priv_key_p = Box::into_raw(Box::new(credential_priv_key)) as *const c_void;
@@ -181,11 +181,11 @@ pub extern fn indy_crypto_cl_credential_private_key_to_json(credential_priv_key:
     check_useful_c_reference!(credential_priv_key, CredentialPrivateKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_priv_key_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_private_key_to_json: entity >>> credential_priv_key: {:?}", credential_priv_key);
+    trace!("indy_crypto_cl_credential_private_key_to_json: entity >>> credential_priv_key: {:?}", secret!(&credential_priv_key));
 
     let res = match serde_json::to_string(credential_priv_key) {
         Ok(credential_priv_key_json) => {
-            trace!("indy_crypto_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", credential_priv_key_json);
+            trace!("indy_crypto_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
             unsafe {
                 let credential_priv_key_json = CTypesUtils::string_to_cstring(credential_priv_key_json);
                 *credential_priv_key_json_p = credential_priv_key_json.into_raw();
@@ -216,11 +216,11 @@ pub extern fn indy_crypto_cl_credential_private_key_from_json(credential_priv_ke
     check_useful_c_str!(credential_priv_key_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_priv_key_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_private_key_from_json: entity: credential_priv_key_json: {:?}", credential_priv_key_json);
+    trace!("indy_crypto_cl_credential_private_key_from_json: entity: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
 
     let res = match serde_json::from_str::<CredentialPrivateKey>(&credential_priv_key_json) {
         Ok(credential_priv_key) => {
-            trace!("indy_crypto_cl_credential_private_key_from_json: credential_priv_key: {:?}", credential_priv_key);
+            trace!("indy_crypto_cl_credential_private_key_from_json: credential_priv_key: {:?}", secret!(&credential_priv_key));
             unsafe {
                 *credential_priv_key_p = Box::into_raw(Box::new(credential_priv_key)) as *const c_void;
                 trace!("indy_crypto_cl_credential_private_key_from_json: *credential_priv_key_p: {:?}", *credential_priv_key_p);
@@ -244,8 +244,8 @@ pub extern fn indy_crypto_cl_credential_private_key_free(credential_priv_key: *c
 
     check_useful_c_ptr!(credential_priv_key, ErrorCode::CommonInvalidParam1);
 
-    let credential_priv_key = unsafe { Box::from_raw(credential_priv_key as *mut CredentialPrivateKey); };
-    trace!("indy_crypto_cl_credential_private_key_free: entity: credential_priv_key: {:?}", credential_priv_key);
+    let _credential_priv_key = unsafe { Box::from_raw(credential_priv_key as *mut CredentialPrivateKey); };
+    trace!("indy_crypto_cl_credential_private_key_free: entity: credential_priv_key: {:?}", secret!(_credential_priv_key));
 
     let res = ErrorCode::Success;
 
@@ -385,7 +385,7 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_k
     let res = match Issuer::new_revocation_registry_def(credential_pub_key, max_cred_num, issuance_by_default) {
         Ok((rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator)) => {
             trace!("indy_crypto_cl_issuer_new_revocation_registry_def: rev_key_pub_p: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
-                   rev_key_pub_p, rev_key_priv, rev_reg, rev_tails_generator);
+                   rev_key_pub_p, secret!(&rev_key_priv), rev_reg, rev_tails_generator);
             unsafe {
                 *rev_key_pub_p = Box::into_raw(Box::new(rev_key_pub)) as *const c_void;
                 *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
@@ -502,11 +502,11 @@ pub extern fn indy_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const
     check_useful_c_reference!(rev_key_priv, RevocationKeyPrivate, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_priv_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", rev_key_priv);
+    trace!("indy_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", secret!(&rev_key_priv));
 
     let res = match serde_json::to_string(rev_key_priv) {
         Ok(rev_key_priv_json) => {
-            trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", rev_key_priv_json);
+            trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
             unsafe {
                 let rev_reg_def_priv_json = CTypesUtils::string_to_cstring(rev_key_priv_json);
                 *rev_key_priv_json_p = rev_reg_def_priv_json.into_raw();
@@ -538,11 +538,11 @@ pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json:
     check_useful_c_str!(rev_key_priv_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_priv_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", rev_key_priv_json);
+    trace!("indy_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
 
     let res = match serde_json::from_str::<RevocationKeyPrivate>(&rev_key_priv_json) {
         Ok(rev_key_priv) => {
-            trace!("indy_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", rev_key_priv);
+            trace!("indy_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", secret!(&rev_key_priv));
             unsafe {
                 *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
                 trace!("indy_crypto_cl_revocation_key_private_from_json: *rev_key_priv_p: {:?}", *rev_key_priv_p);
@@ -566,8 +566,8 @@ pub extern fn indy_crypto_cl_revocation_key_private_free(rev_key_priv: *const c_
 
     check_useful_c_ptr!(rev_key_priv, ErrorCode::CommonInvalidParam1);
 
-    let rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate); };
-    trace!("indy_crypto_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", rev_key_priv);
+    let _rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate); };
+    trace!("indy_crypto_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", secret!(_rev_key_priv));
 
     let res = ErrorCode::Success;
 
@@ -800,7 +800,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
     trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?},\
      credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}",
            prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce, credential_issuance_nonce,
-           credential_values, credential_pub_key, credential_priv_key);
+           secret!(&credential_values), credential_pub_key, secret!(&credential_priv_key));
 
     let res = match Issuer::sign_credential(&prover_id,
                                             &blinded_credential_secrets,
@@ -812,7 +812,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
                                             &credential_priv_key) {
         Ok((credential_signature, credential_signature_correctness_proof)) => {
             trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
-                   credential_signature, credential_signature_correctness_proof);
+                   secret!(&credential_signature), credential_signature_correctness_proof);
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
                 *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
@@ -900,7 +900,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
     trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
     credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
     rev_idx: {:?}, rev_reg: {:?}, rev_key_priv: {:?}", prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce,
-           credential_issuance_nonce, credential_values, credential_pub_key, credential_priv_key, rev_idx, rev_reg, rev_key_priv);
+           credential_issuance_nonce, secret!(credential_values), credential_pub_key, secret!(credential_priv_key), secret!(rev_idx), rev_reg, secret!(rev_key_priv));
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match Issuer::sign_credential_with_revoc(&prover_id,
@@ -919,7 +919,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
                                                        &rta) {
         Ok((credential_signature, credential_signature_correctness_proof, delta)) => {
             trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
-                   credential_signature, credential_signature_correctness_proof);
+                   secret!(&credential_signature), credential_signature_correctness_proof);
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
                 *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
@@ -950,11 +950,11 @@ pub extern fn indy_crypto_cl_credential_signature_to_json(credential_signature: 
     check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_signature_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_signature_to_json: entity >>> credential_signature: {:?}", credential_signature);
+    trace!("indy_crypto_cl_credential_signature_to_json: entity >>> credential_signature: {:?}", secret!(&credential_signature));
 
     let res = match serde_json::to_string(credential_signature) {
         Ok(credential_signature_json) => {
-            trace!("indy_crypto_cl_credential_signature_to_json: credential_signature_json: {:?}", credential_signature_json);
+            trace!("indy_crypto_cl_credential_signature_to_json: credential_signature_json: {:?}", secret!(&credential_signature_json));
             unsafe {
                 let credential_signature_json = CTypesUtils::string_to_cstring(credential_signature_json);
                 *credential_signature_json_p = credential_signature_json.into_raw();
@@ -986,11 +986,11 @@ pub extern fn indy_crypto_cl_credential_signature_from_json(credential_signature
     check_useful_c_str!(credential_signature_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_signature_from_json: entity: credential_signature_json: {:?}", credential_signature_json);
+    trace!("indy_crypto_cl_credential_signature_from_json: entity: credential_signature_json: {:?}", secret!(&credential_signature_json));
 
     let res = match serde_json::from_str::<CredentialSignature>(&credential_signature_json) {
         Ok(credential_signature) => {
-            trace!("indy_crypto_cl_credential_signature_from_json: credential_signature: {:?}", credential_signature);
+            trace!("indy_crypto_cl_credential_signature_from_json: credential_signature: {:?}", secret!(&credential_signature));
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
                 trace!("indy_crypto_cl_credential_signature_from_json: *credential_signature_p: {:?}", *credential_signature_p);
@@ -1014,8 +1014,8 @@ pub extern fn indy_crypto_cl_credential_signature_free(credential_signature: *co
 
     check_useful_c_ptr!(credential_signature, ErrorCode::CommonInvalidParam1);
 
-    let credential_signature = unsafe { Box::from_raw(credential_signature as *mut CredentialSignature); };
-    trace!("indy_crypto_cl_credential_signature_free: entity: credential_signature: {:?}", credential_signature);
+    let _credential_signature = unsafe { Box::from_raw(credential_signature as *mut CredentialSignature); };
+    trace!("indy_crypto_cl_credential_signature_free: entity: credential_signature: {:?}", secret!(_credential_signature));
     let res = ErrorCode::Success;
 
     trace!("indy_crypto_cl_credential_signature_free: <<< res: {:?}", res);
@@ -1248,7 +1248,7 @@ pub extern fn indy_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
 
     check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_cl_issuer_revoke_credential: entities: rev_reg: {:?}", rev_reg);
+    trace!("indy_crypto_cl_issuer_revoke_credential: entities: rev_reg: {:?}", secret!(&rev_reg));
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match Issuer::revoke_credential(rev_reg, max_cred_num, rev_idx, &rta) {

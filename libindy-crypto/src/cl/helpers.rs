@@ -134,7 +134,7 @@ pub fn _generate_v_prime_prime() -> Result<BigNumber, IndyCryptoError> {
 
     let v_prime_prime = bitwise_or_big_int(&a, &LARGE_VPRIME_PRIME_VALUE)?;
 
-    trace!("Helpers::generate_v_prime_prime: <<< v_prime_prime: {:?}", v_prime_prime);
+    trace!("Helpers::generate_v_prime_prime: <<< v_prime_prime: {:?}", secret!(&v_prime_prime));
 
     Ok(v_prime_prime)
 }
@@ -153,11 +153,11 @@ pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<Big
 }
 
 pub fn _generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
-    trace!("Helpers::generate_prime_in_range: >>> start: {:?}, end: {:?}", start, end);
+    trace!("Helpers::generate_prime_in_range: >>> start: {:?}, end: {:?}", secret!(start), secret!(end));
 
     let prime = BigNumber::generate_prime_in_range(start, end)?;
 
-    trace!("Helpers::generate_prime_in_range: <<< prime: {:?}", prime);
+    trace!("Helpers::generate_prime_in_range: <<< prime: {:?}", secret!(&prime));
 
     Ok(prime)
 }
@@ -185,7 +185,7 @@ pub fn _generate_safe_prime(size: usize) -> Result<BigNumber, IndyCryptoError> {
 
     let safe_prime = BigNumber::generate_safe_prime(size)?;
 
-    trace!("Helpers::generate_safe_prime: <<< safe_prime: {:?}", safe_prime);
+    trace!("Helpers::generate_safe_prime: <<< safe_prime: {:?}", secret!(&safe_prime));
 
     Ok(safe_prime)
 }

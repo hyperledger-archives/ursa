@@ -82,7 +82,7 @@ impl Issuer {
                                                           &p_key_meta)?;
 
         trace!("Issuer::new_credential_def: <<< cred_pub_key: {:?}, cred_priv_key: {:?}, cred_key_correctness_proof: {:?}",
-               cred_pub_key, cred_priv_key, cred_key_correctness_proof);
+               cred_pub_key, secret!(&cred_priv_key), cred_key_correctness_proof);
 
         Ok((cred_pub_key, cred_priv_key, cred_key_correctness_proof))
     }
@@ -139,7 +139,7 @@ impl Issuer {
             cred_rev_pub_key.g_dash.clone());
 
         trace!("Issuer::new_revocation_registry_def: <<< rev_key_pub: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
-               rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator);
+               rev_key_pub, secret!(&rev_key_priv), rev_reg, rev_tails_generator);
 
         Ok((rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator))
     }
@@ -235,9 +235,9 @@ impl Issuer {
                                             blinded_credential_secrets_correctness_proof,
                                             credential_nonce,
                                             credential_issuance_nonce,
-                                            credential_values,
+                                            secret!(credential_values),
                                             credential_pub_key,
-                                            credential_priv_key);
+                                            secret!(credential_priv_key));
 
         Issuer::_check_blinded_credential_secrets_correctness_proof(blinded_credential_secrets,
                                                                blinded_credential_secrets_correctness_proof,
@@ -263,7 +263,7 @@ impl Issuer {
 
 
         trace!("Issuer::sign_credential: <<< cred_signature: {:?}, signature_correctness_proof: {:?}",
-               cred_signature, signature_correctness_proof);
+               secret!(&cred_signature), signature_correctness_proof);
 
         Ok((cred_signature, signature_correctness_proof))
     }
@@ -355,8 +355,8 @@ impl Issuer {
         trace!("Issuer::sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?},\
         credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
         rev_idx: {:?}, max_cred_num: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
-               prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce, credential_values, credential_issuance_nonce,
-               credential_pub_key, credential_priv_key, rev_idx, max_cred_num, rev_reg, rev_key_priv);
+               prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce, secret!(credential_values), credential_issuance_nonce,
+               credential_pub_key, secret!(credential_priv_key), secret!(rev_idx), max_cred_num, rev_reg, secret!(rev_key_priv));
 
         Issuer::_check_blinded_credential_secrets_correctness_proof(blinded_credential_secrets,
                                                                     blinded_credential_secrets_correctness_proof,
@@ -393,7 +393,7 @@ impl Issuer {
 
 
         trace!("Issuer::sign_credential: <<< cred_signature: {:?}, signature_correctness_proof: {:?}, rev_reg_delta: {:?}",
-               cred_signature, signature_correctness_proof, rev_reg_delta);
+               secret!(&cred_signature), signature_correctness_proof, rev_reg_delta);
 
         Ok((cred_signature, signature_correctness_proof, rev_reg_delta))
     }
@@ -462,7 +462,7 @@ impl Issuer {
                                   max_cred_num: u32,
                                   rev_idx: u32,
                                   rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, IndyCryptoError> where RTA: RevocationTailsAccessor {
-        trace!("Issuer::revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, rev_idx);
+        trace!("Issuer::revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, secret!(rev_idx));
 
         let prev_accum = rev_reg.accum.clone();
 
@@ -550,7 +550,7 @@ impl Issuer {
                                     max_cred_num: u32,
                                     rev_idx: u32,
                                     rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, IndyCryptoError> where RTA: RevocationTailsAccessor {
-        trace!("Issuer::recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, rev_idx);
+        trace!("Issuer::recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, secret!(rev_idx));
 
         let prev_accum = rev_reg.accum.clone();
 
@@ -618,7 +618,7 @@ impl Issuer {
         let cred_pr_pub_key_metadata = CredentialPrimaryPublicKeyMetadata { xz, xr };
 
         trace!("Issuer::_new_credential_primary_keys: <<< cred_pr_pub_key: {:?}, cred_pr_priv_key: {:?}, cred_pr_pub_key_metadata: {:?}",
-               cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_metadata);
+               cred_pr_pub_key, secret!(&cred_pr_priv_key), cred_pr_pub_key_metadata);
 
         Ok((cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_metadata))
     }
@@ -647,7 +647,7 @@ impl Issuer {
         let cred_rev_pub_key = CredentialRevocationPublicKey { g, g_dash, h, h0, h1, h2, htilde, h_cap, u, pk, y };
         let cred_rev_priv_key = CredentialRevocationPrivateKey { x, sk };
 
-        trace!("Issuer::_new_credential_revocation_keys: <<< cred_rev_pub_key: {:?}, cred_rev_priv_key: {:?}", cred_rev_pub_key, cred_rev_priv_key);
+        trace!("Issuer::_new_credential_revocation_keys: <<< cred_rev_pub_key: {:?}, cred_rev_priv_key: {:?}", cred_rev_pub_key, secret!(&cred_rev_priv_key));
 
         Ok((cred_rev_pub_key, cred_rev_priv_key))
     }
@@ -656,7 +656,7 @@ impl Issuer {
                                              cred_pr_priv_key: &CredentialPrimaryPrivateKey,
                                              cred_pr_pub_key_meta: &CredentialPrimaryPublicKeyMetadata) -> Result<CredentialKeyCorrectnessProof, IndyCryptoError> {
         trace!("Issuer::_new_credential_key_correctness_proof: >>> cred_pr_pub_key: {:?}, cred_pr_priv_key: {:?}, cred_pr_pub_key_meta: {:?}",
-               cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_meta);
+               cred_pr_pub_key, secret!(cred_pr_priv_key), cred_pr_pub_key_meta);
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -714,7 +714,7 @@ impl Issuer {
                                 max_cred_num: u32,
                                 issuance_by_default: bool) -> Result<RevocationRegistry, IndyCryptoError> {
         trace!("Issuer::_new_revocation_registry: >>> cred_rev_pub_key: {:?}, rev_key_priv: {:?}, max_cred_num: {:?}, issuance_by_default: {:?}",
-               cred_rev_pub_key, rev_key_priv, max_cred_num, issuance_by_default);
+               cred_rev_pub_key, secret!(rev_key_priv), max_cred_num, issuance_by_default);
 
         let mut accum = Accumulator::new_inf()?;
 
@@ -749,7 +749,7 @@ impl Issuer {
         let rev_key_pub = RevocationKeyPublic { z };
         let rev_key_priv = RevocationKeyPrivate { gamma };
 
-        trace!("Issuer::_new_revocation_registry_keys: <<< rev_key_pub: {:?}, rev_key_priv: {:?}", rev_key_pub, rev_key_priv);
+        trace!("Issuer::_new_revocation_registry_keys: <<< rev_key_pub: {:?}, rev_key_priv: {:?}", rev_key_pub, secret!(&rev_key_priv));
 
         Ok((rev_key_pub, rev_key_priv))
     }
@@ -816,7 +816,7 @@ impl Issuer {
 
     // In the anoncreds whitepaper, `credential context` is denoted by `m2`
     fn _gen_credential_context(prover_id: &str, rev_idx: Option<u32>) -> Result<BigNumber, IndyCryptoError> {
-        trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, rev_idx);
+        trace!("Issuer::_calc_m2: >>> prover_id: {:?}, rev_idx: {:?}", prover_id, secret!(rev_idx));
 
         let rev_idx = rev_idx.map(|i| i as i32).unwrap_or(-1);
 
@@ -829,7 +829,7 @@ impl Issuer {
 
         let credential_context = get_hash_as_int(&vec![values])?;
 
-        trace!("Issuer::_gen_credential_context: <<< credential_context: {:?}", credential_context);
+        trace!("Issuer::_gen_credential_context: <<< credential_context: {:?}", secret!(&credential_context));
 
         Ok(credential_context)
     }
@@ -840,7 +840,7 @@ impl Issuer {
                                blinded_credential_secrets: &BlindedCredentialSecrets,
                                cred_values: &CredentialValues) -> Result<(PrimaryCredentialSignature, BigNumber), IndyCryptoError> {
         trace!("Issuer::_new_primary_credential: >>> credential_context: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, blinded_ms: {:?},\
-         cred_values: {:?}", credential_context, cred_pub_key, cred_priv_key, blinded_credential_secrets, cred_values);
+         cred_values: {:?}", secret!(credential_context), cred_pub_key, secret!(cred_priv_key), blinded_credential_secrets, secret!(cred_values));
 
         let v = generate_v_prime_prime()?;
 
@@ -849,7 +849,7 @@ impl Issuer {
 
         let pr_cred_sig = PrimaryCredentialSignature { m_2: credential_context.clone()?, a, e, v };
 
-        trace!("Issuer::_new_primary_credential: <<< pr_cred_sig: {:?}, q: {:?}", pr_cred_sig, q);
+        trace!("Issuer::_new_primary_credential: <<< pr_cred_sig: {:?}, q: {:?}", secret!(&pr_cred_sig), secret!(&q));
 
         Ok((pr_cred_sig, q))
     }
@@ -867,7 +867,8 @@ impl Issuer {
                                                       cred_values: {:?}, \
                                                       v: {:?},\
                                                       blinded_cred_secrets: {:?}, \
-                                                      e: {:?}", cred_pub_key, cred_priv_key, cred_context, cred_values, v, blinded_cred_secrets, e);
+                                                      e: {:?}", cred_pub_key, secret!(cred_priv_key), secret!(cred_context), secret!(cred_values),
+                                                                secret!(v), blinded_cred_secrets, secret!(e));
 
         let p_pub_key = &cred_pub_key.p_key;
         let p_priv_key = &cred_priv_key.p_key;
@@ -898,7 +899,7 @@ impl Issuer {
 
         let a = q.mod_exp(&e_inverse, &p_pub_key.n, Some(&mut context))?;
 
-        trace!("Issuer::_sign_primary_credential: <<< a: {:?}, q: {:?}", a, q);
+        trace!("Issuer::_sign_primary_credential: <<< a: {:?}, q: {:?}", secret!(&a), secret!(&q));
 
         Ok((a, q))
     }
@@ -909,7 +910,7 @@ impl Issuer {
                                         q: &BigNumber,
                                         nonce: &BigNumber) -> Result<SignatureCorrectnessProof, IndyCryptoError> {
         trace!("Issuer::_new_signature_correctness_proof: >>> p_pub_key: {:?}, p_priv_key: {:?}, p_cred_signature: {:?}, q: {:?}, nonce: {:?}",
-               p_pub_key, p_priv_key, p_cred_signature, q, nonce);
+               p_pub_key, secret!(p_priv_key), secret!(p_cred_signature), secret!(q), nonce);
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -956,7 +957,8 @@ impl Issuer {
                                       -> Result<(NonRevocationCredentialSignature, Option<RevocationRegistryDelta>), IndyCryptoError> {
         trace!("Issuer::_new_non_revocation_credential: >>> rev_idx: {:?}, cred_context: {:?}, blinded_ms: {:?}, cred_pub_key: {:?}, cred_priv_key: {:?}, \
         max_cred_num: {:?}, issuance_by_default: {:?}, rev_reg: {:?}, rev_key_priv: {:?}",
-               rev_idx, cred_context, blinded_credential_secrets, cred_pub_key, cred_priv_key, max_cred_num, issuance_by_default, rev_reg, rev_key_priv);
+               secret!(rev_idx), secret!(cred_context), blinded_credential_secrets, cred_pub_key, secret!(cred_priv_key), max_cred_num,
+               issuance_by_default, rev_reg, secret!(rev_key_priv));
 
         let ur = blinded_credential_secrets.ur
             .ok_or(IndyCryptoError::InvalidStructure(format!("No revocation part present in blinded master secret.")))?;
@@ -1033,7 +1035,7 @@ impl Issuer {
         };
 
         trace!("Issuer::_new_non_revocation_credential: <<< non_revocation_cred_sig: {:?}, rev_reg_delta: {:?}",
-               non_revocation_cred_sig, rev_reg_delta);
+               secret!(&non_revocation_cred_sig), rev_reg_delta);
 
         Ok((non_revocation_cred_sig, rev_reg_delta))
     }
