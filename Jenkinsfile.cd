@@ -302,7 +302,6 @@ def libindyCryptoDebPublishing(testEnv) {
 
         unstash name: 'LibindyCryptoUbuntuBuildResult'
         sh 'mkdir --parent libindy-crypto/target/release/ && mv target/release/* libindy-crypto/target/release/'
-        sh "cp LICENSE libindy-crypto/debian/copyright"
 
         withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_key')]) {
             sh "cd libindy-crypto && ./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $suffix $SOVRIN_SDK_REPO_NAME $SOVRIN_REPO_HOST $sovrin_key"
