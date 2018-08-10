@@ -1,3 +1,8 @@
+0.4.3
+- BLS: add proof of possession functionality
+- Remove custom JsonEncodable/Decodable trait from API
+- Avoid secrets tracing
+
 0.4.2
 - BLS: verification optimization
 - Rust API enhancements (add more Clone derives for structures)
