@@ -208,7 +208,7 @@ def ubuntuPublishing() {
 }
 
 def windowsPublishing() {
-    node('win2016') {
+    node('ubuntu') {
         stage('Publish Libindy Crypto Windows Files') {
             try {
                 echo 'Publish Windows files: Checkout csm'
