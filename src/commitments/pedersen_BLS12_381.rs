@@ -1,8 +1,8 @@
 use commitments::CommitmentScheme;
 
-struct PedersenCommitment {}
+struct PedersenCommitmentBLS12381 {}
 
-impl CommitmentScheme for PedersenCommitment {
+impl CommitmentScheme for PedersenCommitmentBLS12381 {
     // Returns `num_elements` + 1 generators. This is useful when committing to several messages say
     // m_1, m_2, m_3, and so on. `setup` will this output g_1, g_2, g_3, g_4 and so on which can then be
     // used for commitment f(g_1, g_2, g_3, g_4, ..., m_1, m_2, m_3...)

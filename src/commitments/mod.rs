@@ -1,4 +1,4 @@
-pub mod pedersen;
+pub mod pedersen_BLS12_381;
 
 
 // QUESTION: It would be better if we use generic group element for this trait so it can be used
