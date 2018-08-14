@@ -9,3 +9,6 @@ name = "zmix"
 crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
+
+[dependencies.amcl]
+path = "./amcl"
