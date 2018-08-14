@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 /*
 One way function like modular exponentiation.
 Say you want to exponentiate in a prime field `p` with generator `g`, there would be an implementation of this
