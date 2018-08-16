@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 /*
-One way function like modular exponentiation.
+Pseudo Random Function like modular exponentiation.
 Say you want to exponentiate in a prime field `p` with generator `g`, there would be an implementation of this
 trait, say `ModExpPrimeField`
 ```
-impl OneWayFunction for ModExpPrimeField .... {
+impl PRF for ModExpPrimeField .... {
     ......
 }
 let mut args = HashMap::new();
@@ -18,8 +18,8 @@ let x = [100, 200, 250, 901, .....]
 owf.compute(&x)
 ```
 */
-trait OneWayFunction {
-    // Creates a new one way function. `args` is a map, some example args can be curve type,
+trait PRF {
+    // Creates a new Pseudo Random Function. `args` is a map, some example args can be curve type,
     // curve order, compression support.
     fn new(args: HashMap<String, &[u8]>) -> Self;
 
