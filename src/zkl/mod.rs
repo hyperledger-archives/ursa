@@ -1,18 +1,10 @@
+pub mod spec;
+
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse(proof_spec: &ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
+    pub fn parse(proof_spec: &spec::ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
         unimplemented!();
-    }
-}
-
-pub struct ProofSpec {}
-
-pub struct ProofSpecBuilder {}
-
-impl ProofSpecBuilder {
-    pub fn new() -> ProofSpecBuilder {
-        ProofSpecBuilder{}
     }
 }
 
@@ -29,7 +21,7 @@ impl WitnessBuilder {
 pub struct Proof {}
 
 impl Proof {
-    pub fn verify(&self, proof_spec: &ProofSpec) -> Result<bool, ZKLError> {
+    pub fn verify(&self, proof_spec: &spec::ProofSpec) -> Result<bool, ZKLError> {
         unimplemented!();
     }
 }
