@@ -1,7 +1,6 @@
 pub mod cl;
 pub mod bls;
-
-use env_logger;
+pub mod logger;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(usize)]
@@ -67,9 +66,4 @@ pub enum ErrorCode
 
     // Proof rejected
     AnoncredsProofRejected = 118,
-}
-
-#[no_mangle]
-pub extern fn indy_crypto_init_logger() {
-    env_logger::init().unwrap();
 }
