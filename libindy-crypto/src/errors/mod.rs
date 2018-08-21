@@ -1,4 +1,5 @@
 extern crate serde_json;
+extern crate log;
 
 use ffi::ErrorCode;
 
@@ -122,5 +123,11 @@ impl ToErrorCode for IndyCryptoError {
 impl From<serde_json::Error> for IndyCryptoError {
     fn from(err: serde_json::Error) -> IndyCryptoError {
         IndyCryptoError::InvalidStructure(err.to_string())
+    }
+}
+
+impl From<log::SetLoggerError> for IndyCryptoError {
+    fn from(err: log::SetLoggerError) -> IndyCryptoError{
+        IndyCryptoError::InvalidState(err.description().to_owned())
     }
 }

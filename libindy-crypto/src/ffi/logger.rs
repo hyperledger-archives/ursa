@@ -7,8 +7,9 @@ use ffi::ErrorCode;
 extern crate time;
 extern crate log;
 
-use utils::logger::{EnabledCB, LogCB, FlushCB, init_indy_crypto_logger, init_default_logger};
+use errors::ToErrorCode;
 
+use utils::logger::{EnabledCB, LogCB, FlushCB, IndyCryptoLogger, IndyCryptoDefaultLogger};
 use utils::ctypes::CTypesUtils;
 
 /// Set custom logger implementation.
@@ -16,26 +17,25 @@ use utils::ctypes::CTypesUtils;
 /// Allows library user to provide custom logger implementation as set of handlers.
 ///
 /// #Params
-/// context: logger context
-/// enabled: "enabled" operation handler
-///     NOTE: it's ignored and is a false positive.
-/// log: "log" operation handler
-/// flush: "flush" operation handler
+/// context: pointer to some logger context that will be available in logger handlers.
+/// enabled: (optional) "enabled" operation handler - calls to determines if a log record would be logged. (false positive if not specified)
+/// log: "log" operation handler - calls to logs a record.
+/// flush: (optional) "flush" operation handler - calls to flushes buffered records (in case of crash or signal).
 ///
 /// #Returns
 /// Error code
 #[no_mangle]
 pub extern fn indy_crypto_set_logger(context: *const c_void,
-                                     _enabled: Option<EnabledCB>,
+                                     enabled: Option<EnabledCB>,
                                      log: Option<LogCB>,
                                      flush: Option<FlushCB>) -> ErrorCode {
-    trace!("indy_crypto_set_logger >>> context: {:?}, log: {:?}, flush: {:?}", context, log, flush);
+    trace!("indy_crypto_set_logger >>> context: {:?}, enabled: {:?}, log: {:?}, flush: {:?}", context, log, enabled, flush);
 
     check_useful_c_callback!(log, ErrorCode::CommonInvalidParam3);
 
-    let res = match init_indy_crypto_logger(context, log, flush) {
+    let res = match IndyCryptoLogger::init(context, enabled, log, flush) {
         Ok(()) => ErrorCode::Success,
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => err.to_error_code()
     };
 
     trace!("indy_crypto_set_logger: <<< res: {:?}", res);
@@ -45,24 +45,27 @@ pub extern fn indy_crypto_set_logger(context: *const c_void,
 
 /// Set default logger implementation.
 ///
-/// Allows library user use default "environment" logger implementation.
+/// Allows library user use `env_logger` logger as default implementation.
+/// More details about `env_logger` and its customization can be found here: https://crates.io/crates/env_logger
 ///
 /// #Params
-/// level: min level of message to log
+/// pattern: (optional) pattern that corresponds with the log messages to show.
+///
+/// NOTE: You should specify either `pattern` parameter or `RUST_LOG` environment variable to init logger.
 ///
 /// #Returns
 /// Error code
 #[no_mangle]
-pub extern fn indy_crypto_set_default_logger(level: *const c_char) -> ErrorCode {
-    trace!("indy_crypto_set_default_logger >>> level: {:?}", level);
+pub extern fn indy_crypto_set_default_logger(pattern: *const c_char) -> ErrorCode {
+    trace!("indy_crypto_set_default_logger >>> pattern: {:?}", pattern);
 
-    check_useful_opt_c_str!(level, ErrorCode::CommonInvalidParam1);
+    check_useful_opt_c_str!(pattern, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_set_default_logger: entities >>> level: {:?}", level);
+    trace!("indy_crypto_set_default_logger: entities >>> pattern: {:?}", pattern);
 
-    let res = match init_default_logger(level) {
+    let res = match IndyCryptoDefaultLogger::init(pattern) {
         Ok(()) => ErrorCode::Success,
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => err.to_error_code()
     };
 
     trace!("indy_crypto_set_default_logger: <<< res: {:?}", res);
