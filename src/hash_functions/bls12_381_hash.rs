@@ -64,33 +64,30 @@ impl BLS12_381_SHA256 {
 mod test {
     use super::*;
 
+    fn gen_test_msgs<'a>() -> Vec<&'a str> {
+        vec!["hello world",
+             "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+             "",
+             "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source."
+        ]
+    }
+
     #[test]
-    fn test_msg_digest_sucess() {
+    fn test_msg_digest() {
         let hm: HashMap<String, &[u8]> = HashMap::new();
         let hf = BLS12_381_SHA256::new(Some(hm));
         assert!(hf.is_err());
 
-        let msgs = vec!["hello world",
-                        "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-                        "",
-                        "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source."
-        ];
-        for msg in &msgs {
+        for msg in &gen_test_msgs() {
             let mut hf = BLS12_381_SHA256::new(None).unwrap();
             hf.update(msg.as_bytes());
             let d1 = hf.digest(None).unwrap();
-            let mut g1n1 = hf.hash_on_group_g1().unwrap();
-            let mut g2n1 = hf.hash_on_group_g2().unwrap();
 
             let mut hf = BLS12_381_SHA256::new(None).unwrap();
             hf.update(msg.as_bytes());
             let d2 = hf.digest(None).unwrap();
-            let mut g1n2 = hf.hash_on_group_g1().unwrap();
-            let mut g2n2 = hf.hash_on_group_g2().unwrap();
 
             assert_eq!(d1, d2);
-            assert_eq!(g1n1.tostring(), g1n2.tostring());
-            assert_eq!(g2n1.tostring(), g2n2.tostring());
 
             let d = hf.digest(Some(MODBYTES+1));
             assert!(d.is_err());
@@ -102,13 +99,13 @@ mod test {
         }
 
         let mut hf1 = BLS12_381_SHA256::new(None).unwrap();
-        for msg in &msgs {
+        for msg in &gen_test_msgs() {
             hf1.update(msg.as_bytes());
         }
         let d1 = hf1.digest(None).unwrap();
 
         let mut hf2 = BLS12_381_SHA256::new(None).unwrap();
-        for msg in &msgs {
+        for msg in &gen_test_msgs() {
             hf2.update(msg.as_bytes());
         }
         let d2 = hf2.digest(None).unwrap();
@@ -116,4 +113,22 @@ mod test {
         assert_eq!(d1, d2);
     }
 
+    #[test]
+    fn test_hashing_on_groups() {
+        for msg in &gen_test_msgs() {
+            let mut hf = BLS12_381_SHA256::new(None).unwrap();
+            hf.update(msg.as_bytes());
+            let mut g1n1 = hf.hash_on_group_g1().unwrap();
+            let mut g2n1 = hf.hash_on_group_g2().unwrap();
+
+            let mut hf = BLS12_381_SHA256::new(None).unwrap();
+            hf.update(msg.as_bytes());
+            let mut g1n2 = hf.hash_on_group_g1().unwrap();
+            let mut g2n2 = hf.hash_on_group_g2().unwrap();
+
+            assert_eq!(g1n1.tostring(), g1n2.tostring());
+            assert_eq!(g2n1.tostring(), g2n2.tostring());
+
+        }
+    }
 }
