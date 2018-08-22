@@ -25,7 +25,7 @@ there would be an implementation of this trait, say `SHA3_Hash`
 impl HashFunction for SHA3_Hash .... {
     ......
 }
-let hf = BLS12_381_G1_Hash::new(None);
+let hf = BLS12_381_Hash::new(None);
 let x = [100, 200, 250, 11, .....]
 hf.update(&x)
 let y = [234, 57, 99, 76, .....]
@@ -34,16 +34,23 @@ hf.digest()
 ```
 */
 
+#[derive(Debug)]
+pub enum HashError {
+    InvalidArgs(String),
+    InvalidDigestLength(String)
+}
 
-trait HashFunction {
+trait HashFunction where Self: Sized {
     // Creates a new one hash function. `args` is a map, some example args can be curve type,
     // curve order, key (in case of keyed hash function), compression support
-    fn new(args: Option<HashMap<String, &[u8]>>) -> Self;
+    fn new(args: Option<HashMap<String, &[u8]>>) -> Result<Self, HashError>;
 
     // Updates the hash object. Can be called any number of times
-    fn update(&self, input: &[u8]);
+    fn update(&mut self, input: &[u8]);
 
     // Returns the digest. Length is passed as `Some(<some lenght>)` in case of an XOF like SHAKE;
     // `None` otherwise
-    fn digest(&self, length: Option<usize>) -> Vec<u8>;
+    fn digest(&self, length: Option<usize>) -> Result<Vec<u8>, HashError>;
 }
+
+pub mod bls12_381_hash;
