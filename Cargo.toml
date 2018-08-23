@@ -9,5 +9,6 @@ name = "zmix"
 crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
+rand = "0.5.3"
 amcl = { path = "amcl" }
 serde_json = "1.0.26"

@@ -40,7 +40,7 @@ pub enum HashError {
     InvalidDigestLength(String)
 }
 
-trait HashFunction where Self: Sized {
+pub trait HashFunction where Self: Sized {
     // Creates a new one hash function. `args` is a map, some example args can be curve type,
     // curve order, key (in case of keyed hash function), compression support
     fn new(args: Option<HashMap<String, &[u8]>>) -> Result<Self, HashError>;
