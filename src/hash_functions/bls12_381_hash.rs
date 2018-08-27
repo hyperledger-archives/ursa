@@ -119,35 +119,35 @@ mod test {
     }
 
     macro_rules! digest_test {
-        ( $x:ident, $y:expr ) => {
+        ( $HashFunc:ident, $output_byte_size:expr ) => {
 
             for msg in &gen_test_msgs() {
-                let mut hf = $x::new(None).unwrap();
+                let mut hf = $HashFunc::new(None).unwrap();
                 hf.update(msg.as_bytes());
                 let d1 = hf.digest(None).unwrap();
 
-                let mut hf = $x::new(None).unwrap();
+                let mut hf = $HashFunc::new(None).unwrap();
                 hf.update(msg.as_bytes());
                 let d2 = hf.digest(None).unwrap();
 
                 assert_eq!(d1, d2);
 
-                let d = hf.digest(Some($y+10));
+                let d = hf.digest(Some($output_byte_size+10));
                 assert!(d.is_err());
 
-                for n in vec![1, 2, 10, 20, $y] {
-                    let d = hf.digest(Some($y-n)).unwrap();
-                    assert_eq!(d2[0..$y-n], d[0..$y-n]);
+                for n in vec![1, 2, 10, 20, $output_byte_size] {
+                    let d = hf.digest(Some($output_byte_size-n)).unwrap();
+                    assert_eq!(d2[0..$output_byte_size-n], d[0..$output_byte_size-n]);
                 }
             }
 
-            let mut hf1 = $x::new(None).unwrap();
+            let mut hf1 = $HashFunc::new(None).unwrap();
             for msg in &gen_test_msgs() {
                 hf1.update(msg.as_bytes());
             }
             let d1 = hf1.digest(None).unwrap();
 
-            let mut hf2 = $x::new(None).unwrap();
+            let mut hf2 = $HashFunc::new(None).unwrap();
             for msg in &gen_test_msgs() {
                 hf2.update(msg.as_bytes());
             }
@@ -158,13 +158,13 @@ mod test {
     }
 
     macro_rules! hashing_on_groups_test {
-        ( $x:ident ) => {
+        ( $HashFunc:ident ) => {
             for msg in &gen_test_msgs() {
-                let mut hf = $x::new(None).unwrap();
+                let mut hf = $HashFunc::new(None).unwrap();
                 hf.update(msg.as_bytes());
                 let mut g1n1 = hf.hash_on_group();
 
-                let mut hf = $x::new(None).unwrap();
+                let mut hf = $HashFunc::new(None).unwrap();
                 hf.update(msg.as_bytes());
                 let mut g1n2 = hf.hash_on_group();
 
