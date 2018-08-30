@@ -8,7 +8,7 @@ use indy_crypto::cl::issuer::Issuer;
 use indy_crypto::cl::prover::Prover;
 use indy_crypto::cl::verifier::Verifier;
 use indy_crypto::pair::PointG2;
-use self::indy_crypto::utils::logger;
+use self::indy_crypto::utils::logger::IndyCryptoDefaultLogger;
 use std::collections::HashSet;
 
 pub const PROVER_ID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
@@ -20,7 +20,7 @@ mod test {
 
     #[test]
     fn anoncreds_demo() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -245,7 +245,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_primary_proof_only() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -323,7 +323,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_issuance_on_demand() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -425,7 +425,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_issuance_by_default() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -529,7 +529,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_multiple_credentials_used_for_proof() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -653,7 +653,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_for_three_credentials_proving_first() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -842,7 +842,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_first_proving_third() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1035,7 +1035,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_third_proving_first() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1225,7 +1225,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_for_three_credentials_revoke_first_and_third_proving_second() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1423,7 +1423,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_revocation_proof_for_two_credentials_proving_first_with_outdated_witness() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1562,7 +1562,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_proof_created_before_credential_revoked() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1666,7 +1666,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_proof_created_after_credential_revoked() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1770,7 +1770,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_recovery_credential() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1900,7 +1900,7 @@ mod test {
     #[test]
     #[ignore]
     fn anoncreds_works_for_full_accumulator() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -1969,7 +1969,7 @@ mod test {
     #[test]
     #[ignore]
     fn anoncreds_works_for_reissue_credential_with_same_index() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2180,7 +2180,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_missed_process_credential_step() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2244,7 +2244,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_proof_created_with_wrong_master_secret() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2323,7 +2323,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_used_different_nonce() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2401,7 +2401,7 @@ mod test {
 
     #[test]
     fn anoncreds_works_for_proof_not_correspond_to_verifier_proof_request() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2479,7 +2479,7 @@ mod test {
 
     #[test]
     fn issuer_create_keys_works_for_empty_credential_schema() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
@@ -2493,7 +2493,7 @@ mod test {
 
     #[test]
     fn issuer_create_revocation_registry_works_for_keys_without_revocation_part() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2511,7 +2511,7 @@ mod test {
     #[test]
     #[ignore]
     fn issuer_revoke_works_for_invalid_revocation_index() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2535,7 +2535,7 @@ mod test {
 
     #[test]
     fn issuer_sign_credential_works_for_credential_values_not_correspond_to_issuer_keys() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2578,7 +2578,7 @@ mod test {
 
     #[test]
     fn proof_builder_add_sub_proof_works_for_credential_values_not_correspond_to_credential_schema() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2644,7 +2644,7 @@ mod test {
 
     #[test]
     fn proof_builder_add_sub_proof_works_for_credential_not_satisfy_to_sub_proof_request() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2708,7 +2708,7 @@ mod test {
 
     #[test]
     fn proof_builder_add_sub_proof_works_for_credential_not_contained_requested_attribute() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2774,7 +2774,7 @@ mod test {
 
     #[test]
     fn proof_builder_add_sub_proof_works_for_credential_not_satisfied_requested_predicate() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2841,7 +2841,7 @@ mod test {
 
     #[test]
     fn proof_verifier_add_sub_proof_request_works_for_credential_schema_not_satisfied_to_sub_proof_request() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2866,7 +2866,7 @@ mod test {
 
     #[test]
     fn prover_blind_credential_secrets_works_for_key_correctness_proof_not_correspond_to_public_key() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Prover creates master secret
         let master_secret = Prover::new_master_secret().unwrap();
@@ -2897,7 +2897,7 @@ mod test {
 
     #[test]
     fn issuer_sign_credential_works_for_prover_used_different_nonce_to_blind_credential_secrets() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -2938,7 +2938,7 @@ mod test {
 
     #[test]
     fn issuer_sign_credential_works_for_keys_not_correspond_to_blinded_credential_secrets_correctness_proof() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates GVT credential definition
         let credential_schema = helpers::gvt_credential_schema();
@@ -2980,7 +2980,7 @@ mod test {
 
     #[test]
     fn issuer_sign_credential_works_for_blinded_credential_secrets_not_correspond_to_blinded_credential_secrets_correctness_proof() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates GVT credential definition
         let credential_schema = helpers::gvt_credential_schema();
@@ -3021,7 +3021,7 @@ mod test {
 
     #[test]
     fn prover_process_credential_signature_works_for_issuer_used_different_nonce() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -3071,7 +3071,7 @@ mod test {
 
     #[test]
     fn prover_process_credential_signature_works_for_credential_signature_not_correspond_to_signature_correctness_proof() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -3131,7 +3131,7 @@ mod test {
 
     #[test]
     fn prover_process_credential_signature_works_for_credential_secrets_blinding_factors_not_correspond_to_signature() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
@@ -3183,7 +3183,7 @@ mod test {
 
     #[test]
     fn prover_process_credential_signature_works_for_use_different_nonce() {
-        logger::init_default_logger(None).ok();
+        IndyCryptoDefaultLogger::init(None).ok();
 
         // 1. Issuer creates credential schema
         let credential_schema = helpers::gvt_credential_schema();
