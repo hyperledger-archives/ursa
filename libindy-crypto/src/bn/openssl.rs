@@ -2,8 +2,8 @@ use errors::IndyCryptoError;
 
 use int_traits::IntTraits;
 
-use openssl::bn::{BigNum, BigNumRef, BigNumContext, MSB_MAYBE_ZERO};
-use openssl::hash::{hash2, MessageDigest, Hasher};
+use openssl::bn::{BigNum, BigNumRef, BigNumContext, MsbOption};
+use openssl::hash::{hash, MessageDigest, Hasher};
 use openssl::error::ErrorStack;
 
 #[cfg(feature = "serialization")]
@@ -109,7 +109,7 @@ impl BigNumber {
 
     pub fn rand(size: usize) -> Result<BigNumber, IndyCryptoError> {
         let mut bn = BigNumber::new()?;
-        BigNumRef::rand(&mut bn.openssl_bn, size as i32, MSB_MAYBE_ZERO, false)?;
+        BigNumRef::rand(&mut bn.openssl_bn, size as i32, MsbOption::MAYBE_ZERO, false)?;
         Ok(bn)
     }
 
@@ -175,7 +175,7 @@ impl BigNumber {
     }
 
     pub fn hash(data: &[u8]) -> Result<Vec<u8>, IndyCryptoError> {
-        Ok(hash2(MessageDigest::sha256(), data)?.to_vec())
+        Ok(hash(MessageDigest::sha256(), data)?.to_vec())
     }
 
     pub fn add(&self, a: &BigNumber) -> Result<BigNumber, IndyCryptoError> {
@@ -414,7 +414,7 @@ impl BigNumber {
             sha256.update(&num)?;
         }
 
-        Ok(sha256.finish2()?.to_vec())
+        Ok(sha256.finish()?.to_vec())
     }
 }
 
