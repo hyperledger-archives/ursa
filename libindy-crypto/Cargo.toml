@@ -8,7 +8,7 @@ license = "MIT/Apache-2.0"
 [lib]
 name = "indy_crypto"
 path = "src/lib.rs"
-crate-type = ["staticlib","rlib", "dylib"]
+crate-type = ["staticlib", "rlib", "dylib"]
 
 [features]
 default = ["bn_openssl", "pair_amcl", "serialization"]
