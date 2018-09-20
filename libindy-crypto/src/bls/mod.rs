@@ -4,13 +4,16 @@ use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 use sha2::{Sha256, Digest};
 use sha3::Keccak256;
 
+#[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
+#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
 /// The most of BLS methods require generator to be provided.
 #[derive(Debug)]
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Generator {
     point: PointG2,
     bytes: Vec<u8>

@@ -15,6 +15,7 @@ default = ["bn_openssl", "pair_amcl", "serialization"]
 bn_openssl = ["openssl", "int_traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
+wasm = ["wasm-bindgen"]
 
 [dependencies]
 amcl = { version = "0.1.2",  optional = true, default-features = false, features = ["BN254"]}
@@ -31,4 +32,4 @@ serde = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 lazy_static = "1.0"
-wasm-bindgen = "0.2"
+wasm-bindgen = { version = "0.2", optional = true }

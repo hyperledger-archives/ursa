@@ -1,3 +1,5 @@
+#![feature(custom_attribute)]
+#[cfg(feature = "pair_amcl")]
 extern crate amcl;
 extern crate env_logger;
 #[macro_use]
