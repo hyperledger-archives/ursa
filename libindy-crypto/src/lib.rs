@@ -6,7 +6,7 @@ extern crate rand;
 extern crate sha2;
 extern crate sha3;
 
-// To use macros from util inside of other modules it must me loaded first.
+// To use macros from util inside of other modules it must be loaded first.
 #[macro_use]
 pub mod utils;
 

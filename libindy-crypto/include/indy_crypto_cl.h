@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-    /// TODO: FIXME: Probide list of interfaces for ffi/cl/mod.rs
+    /// TODO: FIXME: Provide list of interfaces for ffi/cl/mod.rs
 
 #ifdef __cplusplus
 }

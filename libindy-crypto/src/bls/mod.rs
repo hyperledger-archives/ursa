@@ -4,6 +4,9 @@ use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 use sha2::{Sha256, Digest};
 use sha3::Keccak256;
 
+extern crate wasm_bindgen;
+use wasm_bindgen::prelude::*;
+
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
 /// The most of BLS methods require generator to be provided.
