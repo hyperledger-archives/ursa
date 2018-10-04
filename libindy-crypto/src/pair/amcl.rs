@@ -654,7 +654,7 @@ impl<'a> Deserialize<'a> for Pair {
 mod tests {
     use super::*;
     use errors::ToErrorCode;
-    use ffi::ErrorCode;
+    use errors::ErrorCode;
 
     #[test]
     fn group_order_element_new_from_seed_works_for_invalid_seed_len() {

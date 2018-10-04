@@ -15,7 +15,7 @@ pub const PROVER_ID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFV
 
 mod test {
     use super::*;
-    use indy_crypto::ffi::ErrorCode;
+    use indy_crypto::errors::ErrorCode;
     use indy_crypto::errors::ToErrorCode;
 
     #[test]

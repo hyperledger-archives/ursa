@@ -1,7 +1,7 @@
 use cl::verifier::*;
 use cl::*;
 use errors::ToErrorCode;
-use ffi::ErrorCode;
+use errors::ErrorCode;
 
 use std::os::raw::c_void;
 

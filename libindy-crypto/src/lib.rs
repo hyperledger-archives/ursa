@@ -47,6 +47,7 @@ pub mod bls;
 pub mod bn;
 
 pub mod errors;
+#[cfg(feature = "ffi")]
 pub mod ffi;
 
 #[cfg(feature = "pair_amcl")]

@@ -1,7 +1,6 @@
 use bn::{BigNumber, BigNumberContext};
 use errors::IndyCryptoError;
 
-
 /// Generate a pedersen commitment to a given number
 ///
 /// # Arguments

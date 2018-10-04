@@ -1,8 +1,8 @@
 use cl::prover::*;
 use cl::*;
 use errors::ToErrorCode;
-use ffi::ErrorCode;
-use utils::ctypes::CTypesUtils;
+use errors::ErrorCode;
+use ffi::ctypes::CTypesUtils;
 
 use serde_json;
 use std::os::raw::c_void;

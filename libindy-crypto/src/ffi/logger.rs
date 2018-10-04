@@ -2,7 +2,7 @@ extern crate libc;
 
 use self::libc::{c_void, c_char};
 
-use ffi::ErrorCode;
+use errors::ErrorCode;
 
 extern crate time;
 extern crate log;
@@ -10,7 +10,7 @@ extern crate log;
 use errors::ToErrorCode;
 
 use utils::logger::{EnabledCB, LogCB, FlushCB, IndyCryptoLogger, IndyCryptoDefaultLogger};
-use utils::ctypes::CTypesUtils;
+use ffi::ctypes::CTypesUtils;
 
 /// Set custom logger implementation.
 ///

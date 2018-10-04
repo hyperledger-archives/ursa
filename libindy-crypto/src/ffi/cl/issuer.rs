@@ -1,9 +1,9 @@
 use cl::issuer::*;
 use cl::*;
 use errors::ToErrorCode;
-use ffi::ErrorCode;
+use errors::ErrorCode;
 use ffi::cl::{FFITailTake, FFITailPut, FFITailsAccessor};
-use utils::ctypes::CTypesUtils;
+use ffi::ctypes::CTypesUtils;
 use libc::c_char;
 
 use serde_json;

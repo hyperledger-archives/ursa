@@ -2,8 +2,8 @@ use cl::*;
 use cl::issuer::Issuer;
 use cl::verifier::Verifier;
 use errors::{IndyCryptoError, ToErrorCode};
-use ffi::ErrorCode;
-use utils::ctypes::CTypesUtils;
+use errors::ErrorCode;
+use ffi::ctypes::CTypesUtils;
 
 use serde_json;
 use std::ptr;

@@ -1,6 +1,6 @@
 use bls::*;
 
-use ffi::ErrorCode;
+use errors::ErrorCode;
 use errors::ToErrorCode;
 use std::os::raw::c_void;
 use std::slice;
