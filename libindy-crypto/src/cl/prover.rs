@@ -4,8 +4,8 @@ use cl::constants::*;
 use errors::IndyCryptoError;
 use pair::*;
 use super::helpers::*;
-use utils::commitment::get_pedersen_commitment;
-use utils::get_hash_as_int;
+use cl::commitment::get_pedersen_commitment;
+use cl::hash::get_hash_as_int;
 
 use std::collections::{HashSet, BTreeMap, BTreeSet};
 

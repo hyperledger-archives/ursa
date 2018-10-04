@@ -2,11 +2,11 @@ use bn::BigNumber;
 use cl::*;
 use cl::constants::{LARGE_E_START_VALUE, ITERATION};
 use cl::helpers::*;
+use cl::hash::get_hash_as_int;
 use errors::IndyCryptoError;
 
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
-use utils::get_hash_as_int;
 
 /// Party that wants to check that prover has some credentials provided by issuer.
 pub struct Verifier {}

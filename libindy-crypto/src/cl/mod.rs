@@ -1,6 +1,12 @@
+#[macro_use]
+pub mod logger;
+mod commitment;
 mod constants;
 #[macro_use]
+mod datastructures;
+#[macro_use]
 mod helpers;
+mod hash;
 pub mod issuer;
 pub mod prover;
 pub mod verifier;

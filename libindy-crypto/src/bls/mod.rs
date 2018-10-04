@@ -12,8 +12,8 @@ use wasm_bindgen::prelude::*;
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
 /// The most of BLS methods require generator to be provided.
-#[derive(Debug)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
+#[derive(Debug)]
 pub struct Generator {
     point: PointG2,
     bytes: Vec<u8>

@@ -11,12 +11,13 @@ path = "src/lib.rs"
 crate-type = ["staticlib", "rlib", "dylib"]
 
 [features]
-default = ["bn_openssl", "pair_amcl", "serialization", "ffi"]
+default = ["bn_openssl", "pair_amcl", "serialization", "ffi", "cl"]
 bn_openssl = ["openssl", "int_traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
 wasm = ["wasm-bindgen"]
 ffi = []
+cl = ["bn_openssl"]
 
 [dependencies]
 amcl = { version = "0.1.2",  optional = true, default-features = false, features = ["BN254"]}

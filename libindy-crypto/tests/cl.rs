@@ -8,7 +8,7 @@ use indy_crypto::cl::issuer::Issuer;
 use indy_crypto::cl::prover::Prover;
 use indy_crypto::cl::verifier::Verifier;
 use indy_crypto::pair::PointG2;
-use self::indy_crypto::utils::logger::IndyCryptoDefaultLogger;
+use self::indy_crypto::cl::logger::IndyCryptoDefaultLogger;
 use std::collections::HashSet;
 
 pub const PROVER_ID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";

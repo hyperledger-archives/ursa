@@ -8,10 +8,6 @@ extern crate rand;
 extern crate sha2;
 extern crate sha3;
 
-// To use macros from util inside of other modules it must be loaded first.
-#[macro_use]
-pub mod utils;
-
 #[cfg(feature = "serialization")]
 extern crate serde;
 
@@ -35,10 +31,13 @@ extern crate openssl;
 #[cfg(feature = "bn_openssl")]
 extern crate int_traits;
 
+#[cfg(feature = "ffi")]
 extern crate libc;
 
 extern crate time;
 
+#[cfg(feature = "cl")]
+#[macro_use]
 pub mod cl;
 pub mod bls;
 

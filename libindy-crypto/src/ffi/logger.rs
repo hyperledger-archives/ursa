@@ -9,7 +9,7 @@ extern crate log;
 
 use errors::ToErrorCode;
 
-use utils::logger::{EnabledCB, LogCB, FlushCB, IndyCryptoLogger, IndyCryptoDefaultLogger};
+use cl::logger::{EnabledCB, LogCB, FlushCB, IndyCryptoLogger, IndyCryptoDefaultLogger};
 use ffi::ctypes::CTypesUtils;
 
 /// Set custom logger implementation.
