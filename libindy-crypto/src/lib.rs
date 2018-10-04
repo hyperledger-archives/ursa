@@ -1,4 +1,6 @@
-#![feature(custom_attribute)]
+#[cfg(feature = "wasm")]
+extern crate wasm_bindgen;
+
 #[cfg(feature = "pair_amcl")]
 extern crate amcl;
 extern crate env_logger;

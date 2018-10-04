@@ -5,8 +5,6 @@ use sha2::{Sha256, Digest};
 use sha3::Keccak256;
 
 #[cfg(feature = "wasm")]
-extern crate wasm_bindgen;
-#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
 /// BLS generator point.
@@ -19,6 +17,7 @@ pub struct Generator {
     bytes: Vec<u8>
 }
 
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Generator {
     /// Creates and returns random generator point that satisfy BLS algorithm requirements.
     ///
