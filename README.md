@@ -81,3 +81,11 @@ sudo apt-get update
 sudo apt-get install -y libindy-crypto
 ```
 
+## WebAssembly Bindings
+Indy Crypto has [WebAssembly](https://webassembly.org/) (WASM) bindings for interoperability with JavaScript, both for the browser and Node.js. These bindings are generated with the help of the [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen) project, which lets you compile Rust to WASM. It also provides a tool to process compiled WASM into a JavaScript package, targeting either the browser or Node.js.
+
+The WASM bindings code exists beneath the directory src/wasm, and is all organized into a feature called 'wasm'. This feature is disabled by default. The bindings expose only the BLS functionality of libindy-crypto.
+
+### Building
+We provide a build script for the WASM bindings, in wrappers/wasm/build.js.
+

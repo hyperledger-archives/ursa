@@ -2,10 +2,13 @@
 extern crate serde_json;
 extern crate log;
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
 use std::error::Error;
 use std::{fmt, io};
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone, Serialize)]
 #[repr(usize)]
 pub enum ErrorCode
 {
@@ -76,7 +79,7 @@ pub trait ToErrorCode {
 }
 
 #[derive(Debug)]
-pub enum IndyCryptoError {
+    pub enum IndyCryptoError {
     InvalidParam1(String),
     InvalidParam2(String),
     InvalidParam3(String),

@@ -10,6 +10,8 @@ extern crate rand;
 extern crate sha2;
 extern crate sha3;
 
+extern crate console_error_panic_hook;
+
 #[cfg(feature = "serialization")]
 extern crate serde;
 
@@ -57,3 +59,6 @@ pub mod pair;
 
 #[macro_use]
 extern crate lazy_static;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;

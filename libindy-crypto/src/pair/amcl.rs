@@ -20,8 +20,8 @@ use amcl::fp2::FP2;
 use amcl::pair::{ate, g1mul, g2mul, gtpow, fexp};
 use amcl::rand::RAND;
 
-use rand::os::OsRng;
-use rand::Rng;
+use rand::rngs::OsRng;
+use rand::RngCore;
 use std::fmt::{Debug, Formatter, Error};
 
 #[cfg(feature = "serialization")]

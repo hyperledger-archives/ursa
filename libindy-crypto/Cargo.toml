@@ -8,14 +8,14 @@ license = "MIT/Apache-2.0"
 [lib]
 name = "indy_crypto"
 path = "src/lib.rs"
-crate-type = ["staticlib", "rlib", "dylib"]
+crate-type = ["staticlib", "rlib", "dylib", "cdylib"]
 
 [features]
 default = ["bn_openssl", "pair_amcl", "serialization", "ffi", "cl"]
 bn_openssl = ["openssl", "int_traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
-wasm = ["wasm-bindgen"]
+wasm = ["wasm-bindgen", "web-sys"]
 ffi = []
 cl = ["bn_openssl"]
 
@@ -24,7 +24,8 @@ amcl = { version = "0.1.2",  optional = true, default-features = false, features
 int_traits = { version = "0.1.1", optional = true }
 libc = "0.2.33"
 log = "0.4.1"
-rand = "0.3"
+# TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm featuer
+rand = { git = "https://github.com/rust-random/rand", features = ["wasm-bindgen"] }
 sha2 = "0.7.1"
 sha3 = "0.7.3"
 time = "0.1.36"
@@ -34,4 +35,6 @@ serde = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 lazy_static = "1.0"
-wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
+web-sys = { version = "0.3.1", optional = true, features = ["console"] }
+console_error_panic_hook = "0.1.5"
