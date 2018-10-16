@@ -14,21 +14,21 @@ impl From<IndyCryptoError> for JsValue {
 }
 
 #[wasm_bindgen]
-pub fn create_sign_key() -> Result<JsValue, JsValue> {
+pub fn create_sign_key() -> Result<Vec<u8>, JsValue> {
     console_error_panic_hook::set_once();
     console::log_1(&"Creating SignKey".into());
     let sk = SignKey::new(None)?;
     console::log_1(&"Created SignKey".into());
-    Ok(JsValue::from_serde(sk.as_bytes()).unwrap())
+    Ok(sk.as_bytes().to_vec())
 }
 
-
 #[wasm_bindgen]
-pub fn bls_sign(message: &[u8], sign_key: &[u8]) -> Result<JsValue, JsValue> {
+pub fn bls_sign(message: &[u8], sign_key: &[u8]) -> Result<Vec<u8>, JsValue> {
     console::log_2(&"Signing message".into(), &format!("{:?}", message).into());
     let sk = SignKey::from_bytes(sign_key)?;
     console::log_1(&"Got SignKey".into());
     let signature = Bls::sign(message, &sk)?;
     console::log_1(&"Signed message".into());
-    Ok(JsValue::from_serde(signature.as_bytes()).unwrap())
+    let signature_bytes = signature.as_bytes().to_vec();
+    Ok(signature_bytes)
 }
