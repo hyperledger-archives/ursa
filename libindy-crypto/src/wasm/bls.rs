@@ -48,8 +48,9 @@ pub fn blsGeneratorFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn blsSignKey() -> Result<JsValue, JsValue> {
-    let sk = bls::SignKey::new(None)?;
+pub fn blsSignKey(seed: Option<Vec<u8>>) -> Result<JsValue, JsValue> {
+    let seedOption = seed.as_ref().map(|v| v.as_slice());
+    let sk = bls::SignKey::new(seedOption)?;
     Ok(JsValue::from_serde(&sk).unwrap())
 }
 
