@@ -24,7 +24,7 @@ amcl = { version = "0.1.2",  optional = true, default-features = false, features
 int_traits = { version = "0.1.1", optional = true }
 libc = "0.2.33"
 log = "0.4.1"
-# TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm featuer
+# TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { git = "https://github.com/rust-random/rand", features = ["wasm-bindgen"] }
 sha2 = "0.7.1"
 sha3 = "0.7.3"
