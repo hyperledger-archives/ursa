@@ -33,8 +33,37 @@ pub fn blsGenerator() -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+pub fn blsGeneratorAsBytes(generator: &JsValue) -> Result<Vec<u8>, JsValue> {
+    let gen: bls::Generator = convert_from_js(generator)?;
+    Ok(gen.as_bytes().to_vec())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsGeneratorFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let gen = bls::Generator::from_bytes(bytes)?;
+    Ok(JsValue::from_serde(&gen).unwrap())
+}
+
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
 pub fn blsSignKey() -> Result<JsValue, JsValue> {
     let sk = bls::SignKey::new(None)?;
+    Ok(JsValue::from_serde(&sk).unwrap())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsSignKeyAsBytes(signKey: &JsValue) -> Result<Vec<u8>, JsValue> {
+    let sk: bls::SignKey = convert_from_js(signKey)?;
+    Ok(sk.as_bytes().to_vec())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsSignKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let sk = bls::SignKey::from_bytes(bytes)?;
     Ok(JsValue::from_serde(&sk).unwrap())
 }
 
@@ -57,6 +86,20 @@ pub fn blsVerKey(generator: &JsValue, signKey: &JsValue) -> Result<JsValue, JsVa
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+pub fn blsVerKeyAsBytes(verKey: &JsValue) -> Result<Vec<u8>, JsValue> {
+    let vk: bls::VerKey = convert_from_js(verKey)?;
+    Ok(vk.as_bytes().to_vec())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsVerKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let vk = bls::VerKey::from_bytes(bytes)?;
+    Ok(JsValue::from_serde(&vk).unwrap())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
 pub fn blsProofOfPossession(verKey: &JsValue, signKey: &JsValue) -> Result<JsValue, JsValue> {
     let vk: bls::VerKey = convert_from_js(verKey)?;
     let sk: bls::SignKey = convert_from_js(signKey)?;
@@ -66,9 +109,37 @@ pub fn blsProofOfPossession(verKey: &JsValue, signKey: &JsValue) -> Result<JsVal
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
+pub fn blsProofOfPossessionAsBytes(proofOfPossession: &JsValue) -> Result<Vec<u8>, JsValue> {
+    let pop: bls::ProofOfPossession = convert_from_js(proofOfPossession)?;
+    Ok(pop.as_bytes().to_vec())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsProofOfPossessionFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let pop = bls::ProofOfPossession::from_bytes(bytes)?;
+    Ok(JsValue::from_serde(&pop).unwrap())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
 pub fn blsMultiSignature(signatures: Vec<JsValue>) -> Result<JsValue, JsValue> {
     let sigs: Vec<bls::Signature> = signatures.iter().map(|x| x.into_serde().unwrap()).collect();
     let ms = bls::MultiSignature::new(sigs.iter().collect::<Vec<_>>().as_slice())?;
+    Ok(JsValue::from_serde(&ms).unwrap())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsMultiSignatureAsBytes(multiSignature: &JsValue) -> Result<Vec<u8>, JsValue> {
+    let ms: bls::MultiSignature = convert_from_js(multiSignature)?;
+    Ok(ms.as_bytes().to_vec())
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+pub fn blsMultiSignatureFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let ms = bls::MultiSignature::from_bytes(bytes)?;
     Ok(JsValue::from_serde(&ms).unwrap())
 }
 
