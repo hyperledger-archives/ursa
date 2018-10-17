@@ -2,9 +2,6 @@
 extern crate serde_json;
 extern crate log;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 use std::error::Error;
 use std::{fmt, io};
 
