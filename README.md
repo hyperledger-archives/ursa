@@ -87,5 +87,10 @@ Indy Crypto has [WebAssembly](https://webassembly.org/) (WASM) bindings for inte
 The WASM bindings code exists beneath the directory src/wasm, and is all organized into a feature called 'wasm'. This feature is disabled by default. The bindings expose only the BLS functionality of libindy-crypto.
 
 ### Building
-We provide a build script for the WASM bindings, in wrappers/wasm/build.js.
+1. Verify that rustc is v1.30 or higher
+2. Install rustup: `curl https://sh.rustup.rs -sSf | sh`
+3. `rustup target add --toolchain nightly wasm32-unknown-unknown`
+4. `PKG_CONFIG_ALLOW_CROSS=1 cargo +nightly build --lib --release --target wasm32-unknown-unknown --features wasm,serialization,pair_amcl --no-default-features`
+5. `cargo +nightly install wasm-bindgen-cli`
+6. `rm -rf pkg && mkdir pkg && wasm-bindgen target/wasm32-unknown-unknown/release/indy_crypto.wasm --out-dir pkg --nodejs`
 
