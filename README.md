@@ -62,6 +62,7 @@ API documentation is now available as rust doc in code. See:
 ## Wrappers documentation
 
 * [Python](wrappers/python/README.md)
+* [JavaScript](wrappers/javascript/README.md)
 
 ## Binaries
 
@@ -80,17 +81,3 @@ sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
 sudo apt-get update
 sudo apt-get install -y libindy-crypto
 ```
-
-## WebAssembly Bindings
-Indy Crypto has [WebAssembly](https://webassembly.org/) (WASM) bindings for interoperability with JavaScript, both for the browser and Node.js. These bindings are generated with the help of the [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen) project, which lets you compile Rust to WASM. It also provides a tool to process compiled WASM into a JavaScript package, targeting either the browser or Node.js.
-
-The WASM bindings code exists beneath the directory src/wasm, and is all organized into a feature called 'wasm'. This feature is disabled by default. The bindings expose only the BLS functionality of libindy-crypto.
-
-### Building
-1. Verify that rustc is v1.30 or higher
-2. Install rustup: `curl https://sh.rustup.rs -sSf | sh`
-3. `rustup target add --toolchain nightly wasm32-unknown-unknown`
-4. `PKG_CONFIG_ALLOW_CROSS=1 cargo +nightly build --lib --release --target wasm32-unknown-unknown --features wasm,serialization,pair_amcl --no-default-features`
-5. `cargo +nightly install wasm-bindgen-cli`
-6. `rm -rf pkg && mkdir pkg && wasm-bindgen target/wasm32-unknown-unknown/release/indy_crypto.wasm --out-dir pkg --nodejs`
-
