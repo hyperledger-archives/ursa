@@ -14,7 +14,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    /// Creates and returns random generator point that satisfy BLS algorithm requirements.
+    /// Creates and returns random generator point that satisfies BLS algorithm requirements.
     ///
     /// # Example
     ///
