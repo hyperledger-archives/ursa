@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/aknuds1/indy-crypto#readme",
   "devDependencies": {
-    "ava": "^1.0.0-rc.1"
+    "ava": "^1.0.0-rc.1",
+    "ramda": "^0.25.0"
   }
 }

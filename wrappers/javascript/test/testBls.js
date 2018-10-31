@@ -1,4 +1,5 @@
 const test = require('ava')
+const range = require('ramda/src/range')
 
 const indyCrypto = require('../')
 
@@ -43,6 +44,11 @@ fromBytesMacro.title = (_, typeName) => {
 test([constructMacro, asBytesMacro, fromBytesMacro,], 'Generator')
 
 test([constructMacro, asBytesMacro, fromBytesMacro,], 'SignKey')
+
+test('blsSignKey with seed', (t) => {
+  const signKey = indyCrypto.blsSignKey(range(1, 33))
+  t.false(signKey == null)
+})
 
 test([constructMacro, asBytesMacro, fromBytesMacro,], 'VerKey', indyCrypto.blsGenerator(),
   indyCrypto.blsSignKey())
