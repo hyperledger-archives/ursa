@@ -1,0 +1,531 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Indy Crypto 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-indy-crypto-s-documentation">
+<h1>Welcome to Indy Crypto’s documentation!<a class="headerlink" href="#welcome-to-indy-crypto-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<span id="document-reference"></span><div class="section" id="module-indycrypto">
+<span id="indy-crypto-api-reference"></span><h2>Indy Crypto API Reference<a class="headerlink" href="#module-indycrypto" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="indycrypto.blsGenerator">
+<code class="descclassname">indycrypto.</code><code class="descname">blsGenerator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsGenerator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns random generator point that satisfies BLS algorithm requirements.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A Generator.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsGeneratorAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsGeneratorAsBytes</code><span class="sig-paren">(</span><em>generator</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsGeneratorAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS generator point bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>generator</strong> – The generator.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsGeneratorFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsGeneratorFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsGeneratorFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns generator point from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsGeneratorAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A Generator.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSignKey">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSignKey</code><span class="sig-paren">(</span><span class="optional">[</span><em>seed</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSignKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns random (with optional seed) BLS sign key algorithm requirements.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>seed</strong> – A seed as an array of bytes (length 32).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A SignKey.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSignKeyAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSignKeyAsBytes</code><span class="sig-paren">(</span><em>signKey</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSignKeyAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS sign key bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>signKey</strong> – A SignKey.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSignKeyFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSignKeyFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSignKeyFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS sign key from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsSignKeyAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A SignKey.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerKey">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerKey</code><span class="sig-paren">(</span><em>generator</em>, <em>signKey</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS ver key that corresponds to sign key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>generator</strong> – A Generator.</li>
+<li><strong>signKey</strong> – A SignKey.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A VerKey.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerKeyAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerKeyAsBytes</code><span class="sig-paren">(</span><em>verKey</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerKeyAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS verification key bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>verKey</strong> – A VerKey.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerKeyFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerKeyFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerKeyFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS verification key from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsVerKeyAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A VerKey.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsProofOfPossession">
+<code class="descclassname">indycrypto.</code><code class="descname">blsProofOfPossession</code><span class="sig-paren">(</span><em>verKey</em>, <em>signKey</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsProofOfPossession" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS proof of possession that corresponds to ver key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>verKey</strong> – A VerKey.</li>
+<li><strong>signKey</strong> – A SignKey.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A ProofOfPossession.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsProofOfPossessionAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsProofOfPossessionAsBytes</code><span class="sig-paren">(</span><em>proofOfPossession</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsProofOfPossessionAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS proof of possession to bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>proofOfPossession</strong> – A ProofOfPossession.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsProofOfPossessionFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsProofOfPossessionFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsProofOfPossessionFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS proof of possession from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsProofOfPossessionAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A ProofOfPossession.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSignatureAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSignatureAsBytes</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSignatureAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS signature to bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>signature</strong> – A Signature.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSignatureFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSignatureFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSignatureFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS signature from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsSignatureAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A Signature.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsMultiSignature">
+<code class="descclassname">indycrypto.</code><code class="descname">blsMultiSignature</code><span class="sig-paren">(</span><em>signatures</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsMultiSignature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns multi signature for provided list of signatures.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>signatures</strong> – An array of signatures.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A MultiSignature.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsMultiSignatureAsBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsMultiSignatureAsBytes</code><span class="sig-paren">(</span><em>multiSignature</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsMultiSignatureAsBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns BLS multi signature bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>multiSignature</strong> – A MultiSignature.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A byte array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsMultiSignatureFromBytes">
+<code class="descclassname">indycrypto.</code><code class="descname">blsMultiSignatureFromBytes</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsMultiSignatureFromBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates and returns BLS multi signature from bytes representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>bytes</strong> – An array of bytes, as returned by blsMultiSignatureAsBytes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A MultiSignature.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsSign">
+<code class="descclassname">indycrypto.</code><code class="descname">blsSign</code><span class="sig-paren">(</span><em>message</em>, <em>signKey</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsSign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs the message and returns signature.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>message</strong> (<em>string</em>) – The message to sign.</li>
+<li><strong>signKey</strong> – A SignKey.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A Signature.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerify">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerify</code><span class="sig-paren">(</span><em>signature</em>, <em>message</em>, <em>verKey</em>, <em>generator</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies the message signature and returns true if signature valid or false otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>signature</strong> – Signature to verify.</li>
+<li><strong>message</strong> (<em>string</em>) – Message to verify.</li>
+<li><strong>verKey</strong> – A VerKey.</li>
+<li><strong>generator</strong> – A Generator.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">boolean.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerifyProofOfPossession">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerifyProofOfPossession</code><span class="sig-paren">(</span><em>proofOfPossession</em>, <em>verKey</em>, <em>generator</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerifyProofOfPossession" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies the proof of possession and returns true if signature valid or false otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>proofOfPossession</strong> – Proof of possession.</li>
+<li><strong>verKey</strong> – A VerKey.</li>
+<li><strong>generator</strong> – A Generator.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">boolean.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="indycrypto.blsVerifyMultiSig">
+<code class="descclassname">indycrypto.</code><code class="descname">blsVerifyMultiSig</code><span class="sig-paren">(</span><em>multiSig</em>, <em>message</em>, <em>verKeys</em>, <em>generator</em><span class="sig-paren">)</span><a class="headerlink" href="#indycrypto.blsVerifyMultiSig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies the message multi signature and returns true if signature valid or false otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>multiSig</strong> – MultiSignature to verify.</li>
+<li><strong>message</strong> (<em>string</em>) – Message to verify.</li>
+<li><strong>verKeys</strong> – An array of VerKeys.</li>
+<li><strong>generator</strong> – A Generator.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">boolean.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html#document-index">Indy Crypto</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-reference">Indy Crypto API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html#document-index">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Hyperledger Indy team.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -24,7 +24,6 @@ where
     }
 }
 
-/// Creates and returns random generator point that satisfies BLS algorithm requirements.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsGenerator() -> Result<JsValue, JsValue> {
@@ -32,7 +31,6 @@ pub fn blsGenerator() -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&gen).unwrap())
 }
 
-/// Returns BLS generator point bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsGeneratorAsBytes(generator: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -40,7 +38,6 @@ pub fn blsGeneratorAsBytes(generator: &JsValue) -> Result<Vec<u8>, JsValue> {
     Ok(gen.as_bytes().to_vec())
 }
 
-/// Creates and returns generator point from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsGeneratorFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -48,7 +45,6 @@ pub fn blsGeneratorFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&gen).unwrap())
 }
 
-/// Creates and returns random (or seeded from seed) BLS sign key algorithm requirements.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSignKey(seed: Option<Vec<u8>>) -> Result<JsValue, JsValue> {
@@ -57,7 +53,6 @@ pub fn blsSignKey(seed: Option<Vec<u8>>) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&sk).unwrap())
 }
 
-/// Returns BLS sign key bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSignKeyAsBytes(signKey: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -65,7 +60,6 @@ pub fn blsSignKeyAsBytes(signKey: &JsValue) -> Result<Vec<u8>, JsValue> {
     Ok(sk.as_bytes().to_vec())
 }
 
-/// Creates and returns BLS sign key from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSignKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -73,7 +67,6 @@ pub fn blsSignKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&sk).unwrap())
 }
 
-/// Signs the message and returns signature.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSign(message: &[u8], signKey: &JsValue) -> Result<JsValue, JsValue> {
@@ -82,7 +75,6 @@ pub fn blsSign(message: &[u8], signKey: &JsValue) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&signature).unwrap())
 }
 
-/// Creates and returns BLS ver key that corresponds to sign key.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerKey(generator: &JsValue, signKey: &JsValue) -> Result<JsValue, JsValue> {
@@ -92,7 +84,6 @@ pub fn blsVerKey(generator: &JsValue, signKey: &JsValue) -> Result<JsValue, JsVa
     Ok(JsValue::from_serde(&vk).unwrap())
 }
 
-/// Returns BLS verification key to bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerKeyAsBytes(verKey: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -100,7 +91,6 @@ pub fn blsVerKeyAsBytes(verKey: &JsValue) -> Result<Vec<u8>, JsValue> {
     Ok(vk.as_bytes().to_vec())
 }
 
-/// Creates and returns BLS verification key from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -108,7 +98,6 @@ pub fn blsVerKeyFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&vk).unwrap())
 }
 
-/// Creates and returns BLS proof of possession that corresponds to ver key.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsProofOfPossession(verKey: &JsValue, signKey: &JsValue) -> Result<JsValue, JsValue> {
@@ -118,7 +107,6 @@ pub fn blsProofOfPossession(verKey: &JsValue, signKey: &JsValue) -> Result<JsVal
     Ok(JsValue::from_serde(&pop).unwrap())
 }
 
-/// Returns BLS proof of possession to bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsProofOfPossessionAsBytes(proofOfPossession: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -126,7 +114,6 @@ pub fn blsProofOfPossessionAsBytes(proofOfPossession: &JsValue) -> Result<Vec<u8
     Ok(pop.as_bytes().to_vec())
 }
 
-/// Creates and returns BLS proof of possession from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsProofOfPossessionFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -134,7 +121,6 @@ pub fn blsProofOfPossessionFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&pop).unwrap())
 }
 
-/// Creates and returns multi signature for provided list of signatures.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsMultiSignature(signatures: Vec<JsValue>) -> Result<JsValue, JsValue> {
@@ -143,7 +129,6 @@ pub fn blsMultiSignature(signatures: Vec<JsValue>) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&ms).unwrap())
 }
 
-/// Returns BLS multi signature bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsMultiSignatureAsBytes(multiSignature: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -151,7 +136,6 @@ pub fn blsMultiSignatureAsBytes(multiSignature: &JsValue) -> Result<Vec<u8>, JsV
     Ok(ms.as_bytes().to_vec())
 }
 
-/// Creates and returns BLS multi signature from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsMultiSignatureFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -159,7 +143,6 @@ pub fn blsMultiSignatureFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {
     Ok(JsValue::from_serde(&ms).unwrap())
 }
 
-/// Verifies the message signature and returns true if signature valid or false otherwise.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerify(
@@ -174,7 +157,6 @@ pub fn blsVerify(
     Ok(bls::Bls::verify(&sig, message, &vk, &gen)?)
 }
 
-/// Verifies the proof of possession and returns true if valid or false otherwise.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerifyProofOfPossession(
@@ -188,7 +170,6 @@ pub fn blsVerifyProofOfPossession(
     Ok(bls::Bls::verify_proof_of_posession(&pop, &vk, &gen)?)
 }
 
-/// Verifies the message multi signature and returns true if signature valid or false otherwise.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsVerifyMultiSig(
@@ -213,7 +194,6 @@ pub fn blsVerifyMultiSig(
     )?)
 }
 
-/// Returns BLS signature to bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSignatureAsBytes(signature: &JsValue) -> Result<Vec<u8>, JsValue> {
@@ -221,7 +201,6 @@ pub fn blsSignatureAsBytes(signature: &JsValue) -> Result<Vec<u8>, JsValue> {
     Ok(sig.as_bytes().to_vec())
 }
 
-/// Creates and returns BLS signature from bytes representation.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 pub fn blsSignatureFromBytes(bytes: &[u8]) -> Result<JsValue, JsValue> {

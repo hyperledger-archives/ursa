@@ -280,7 +280,7 @@ pub struct MultiSignature {
 }
 
 impl MultiSignature {
-    /// Creates and returns multi signature for provided list of signatures.
+   /// Creates and returns multi signature for provided list of signatures.
    ///
    /// # Arguments
    ///
