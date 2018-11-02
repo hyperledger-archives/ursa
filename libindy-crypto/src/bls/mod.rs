@@ -78,7 +78,7 @@ impl SignKey {
     ///
     /// ```
     /// use indy_crypto::bls::SignKey;
-    /// SignKey::new().unwrap();
+    /// SignKey::new(None).unwrap();
     /// ```
     pub fn new(seed: Option<&[u8]>) -> Result<SignKey, IndyCryptoError> {
         let group_order_element = match seed {
@@ -133,8 +133,12 @@ impl VerKey {
     /// # Example
     ///
     /// ```
+    /// use indy_crypto::bls::Generator;
+    /// use indy_crypto::bls::SignKey;
     /// use indy_crypto::bls::VerKey;
-    /// VerKey::new().unwrap();
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// VerKey::new(&gen, &sign_key).unwrap();
     /// ```
     pub fn new(gen: &Generator, sign_key: &SignKey) -> Result<VerKey, IndyCryptoError> {
         let point = gen.point.mul(&sign_key.group_order_element)?;
