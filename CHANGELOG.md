@@ -1,3 +1,6 @@
+0.4.4
+- Predicates: Added greater than (GT), less than (LT), and less than or equal (LE)
+
 0.4.3
 - BLS: add proof of possession functionality
 - Remove custom JsonEncodable/Decodable trait from API

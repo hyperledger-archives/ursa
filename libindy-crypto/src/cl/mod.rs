@@ -749,6 +749,9 @@ impl SubProofRequestBuilder {
     pub fn add_predicate(&mut self, attr_name: &str, p_type: &str, value: i32) -> Result<(), IndyCryptoError> {
         let p_type = match p_type {
             "GE" => PredicateType::GE,
+            "LE" => PredicateType::LE,
+            "GT" => PredicateType::GT,
+            "LT" => PredicateType::LT,
             p_type => return Err(IndyCryptoError::InvalidStructure(format!("Invalid predicate type: {:?}", p_type)))
         };
 
@@ -775,10 +778,40 @@ pub struct Predicate {
     value: i32,
 }
 
-/// Condition type (Currently GE only).
+impl Predicate {
+    pub fn get_delta(&self, attr_value: i32) -> i32 {
+        match self.p_type {
+            PredicateType::GE => attr_value - self.value,
+            PredicateType::GT => attr_value - self.value - 1,
+            PredicateType::LE => self.value - attr_value,
+            PredicateType::LT => self.value - attr_value - 1
+        }
+    }
+
+    pub fn get_delta_prime(&self) -> Result<BigNumber, IndyCryptoError> {
+        match self.p_type {
+            PredicateType::GE => BigNumber::from_dec(&self.value.to_string()),
+            PredicateType::GT => BigNumber::from_dec(&(self.value + 1).to_string()),
+            PredicateType::LE => BigNumber::from_dec(&self.value.to_string()),
+            PredicateType::LT => BigNumber::from_dec(&(self.value - 1).to_string())
+        }
+    }
+
+    pub fn is_less(&self) -> bool {
+        match self.p_type {
+            PredicateType::GE | PredicateType::GT => false,
+            PredicateType::LE | PredicateType::LT => true
+        }
+    }
+}
+
+/// Condition type
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum PredicateType {
-    GE
+    GE,
+    LE,
+    GT,
+    LT
 }
 
 impl Ord for Predicate {
@@ -818,7 +851,7 @@ pub struct AggregatedProof {
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryProof {
     eq_proof: PrimaryEqualProof,
-    ge_proofs: Vec<PrimaryPredicateGEProof>
+    ne_proofs: Vec<PrimaryPredicateInequalityProof>
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -861,7 +894,7 @@ impl <'a> ::serde::de::Deserialize<'a> for PrimaryEqualProof {
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct PrimaryPredicateGEProof {
+pub struct PrimaryPredicateInequalityProof {
     u: HashMap<String, BigNumber>,
     r: HashMap<String, BigNumber>,
     mj: BigNumber,
@@ -890,22 +923,22 @@ pub struct InitProof {
 #[derive(Debug, Eq, PartialEq)]
 pub struct PrimaryInitProof {
     eq_proof: PrimaryEqualInitProof,
-    ge_proofs: Vec<PrimaryPredicateGEInitProof>
+    ne_proofs: Vec<PrimaryPredicateInequalityInitProof>
 }
 
 impl PrimaryInitProof {
     pub fn as_c_list(&self) -> Result<Vec<Vec<u8>>, IndyCryptoError> {
         let mut c_list: Vec<Vec<u8>> = self.eq_proof.as_list()?;
-        for ge_proof in self.ge_proofs.iter() {
-            c_list.append_vec(ge_proof.as_list()?)?;
+        for ne_proof in self.ne_proofs.iter() {
+            c_list.append_vec(ne_proof.as_list()?)?;
         }
         Ok(c_list)
     }
 
     pub fn as_tau_list(&self) -> Result<Vec<Vec<u8>>, IndyCryptoError> {
         let mut tau_list: Vec<Vec<u8>> = self.eq_proof.as_tau_list()?;
-        for ge_proof in self.ge_proofs.iter() {
-            tau_list.append_vec(ge_proof.as_tau_list()?)?;
+        for ne_proof in self.ne_proofs.iter() {
+            tau_list.append_vec(ne_proof.as_tau_list()?)?;
         }
         Ok(tau_list)
     }
@@ -955,7 +988,7 @@ impl PrimaryEqualInitProof {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct PrimaryPredicateGEInitProof {
+pub struct PrimaryPredicateInequalityInitProof {
     c_list: Vec<BigNumber>,
     tau_list: Vec<BigNumber>,
     u: HashMap<String, BigNumber>,
@@ -967,7 +1000,7 @@ pub struct PrimaryPredicateGEInitProof {
     t: HashMap<String, BigNumber>,
 }
 
-impl PrimaryPredicateGEInitProof {
+impl PrimaryPredicateInequalityInitProof {
     pub fn as_list(&self) -> Result<&Vec<BigNumber>, IndyCryptoError> {
         Ok(&self.c_list)
     }
@@ -1164,6 +1197,115 @@ mod test {
     use self::issuer::Issuer;
     use self::prover::Prover;
     use self::verifier::Verifier;
+    
+    #[test]
+    fn multiple_predicates() {
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("funds_sold_and_securities_purchased").unwrap();
+        credential_schema_builder.add_attr("other_earning_assets").unwrap();
+        credential_schema_builder.add_attr("cash").unwrap();
+        credential_schema_builder.add_attr("allowance").unwrap();
+        credential_schema_builder.add_attr("total_assets").unwrap();
+        credential_schema_builder.add_attr("domestic_interest_bearing_deposits").unwrap();
+        credential_schema_builder.add_attr("funds_purchased").unwrap();
+        credential_schema_builder.add_attr("long_term_debt").unwrap();
+        credential_schema_builder.add_attr("non_interest_bearing_liabilities").unwrap();
+        credential_schema_builder.add_attr("shareholder_equity").unwrap();
+        credential_schema_builder.add_attr("total_liabilities").unwrap();
+
+        let credential_schema = credential_schema_builder.finalize().unwrap();
+
+        let mut non_credential_schema_builder = NonCredentialSchemaBuilder::new().unwrap();
+        non_credential_schema_builder.add_attr("master_secret").unwrap();
+        let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
+
+        let master_secret = Prover::new_master_secret().unwrap();
+        let credential_nonce = new_nonce().unwrap();
+
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_value_hidden("master_secret", &master_secret.value().unwrap()).unwrap();
+        credential_values_builder.add_dec_known("funds_sold_and_securities_purchased", "50").unwrap();
+        credential_values_builder.add_dec_known("other_earning_assets", "60").unwrap();
+        credential_values_builder.add_dec_known("cash", "70").unwrap();
+        credential_values_builder.add_dec_known("allowance", "80").unwrap();
+        credential_values_builder.add_dec_known("total_assets", "260").unwrap();
+
+        credential_values_builder.add_dec_known("domestic_interest_bearing_deposits", "10").unwrap();
+        credential_values_builder.add_dec_known("funds_purchased", "20").unwrap();
+        credential_values_builder.add_dec_known("long_term_debt", "30").unwrap();
+        credential_values_builder.add_dec_known("non_interest_bearing_liabilities", "40").unwrap();
+        credential_values_builder.add_dec_known("shareholder_equity", "50").unwrap();
+        credential_values_builder.add_dec_known("total_liabilities", "150").unwrap();
+        let cred_values = credential_values_builder.finalize().unwrap();
+
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&cred_pub_key,
+                                        &cred_key_correctness_proof,
+                                        &cred_values,
+                                        &credential_nonce).unwrap();
+
+        let cred_issuance_nonce = new_nonce().unwrap();
+
+        let (mut cred_signature, signature_correctness_proof) = Issuer::sign_credential("b977afe22b5b446109797ad925d9f133fc33c1914081071295d2ac1ddce3385d",
+                                                                                        &blinded_credential_secrets,
+                                                                                        &blinded_credential_secrets_correctness_proof,
+                                                                                        &credential_nonce,
+                                                                                        &cred_issuance_nonce,
+                                                                                        &cred_values,
+                                                                                        &cred_pub_key,
+                                                                                        &cred_priv_key).unwrap();
+
+        Prover::process_credential_signature(&mut cred_signature,
+                                             &cred_values,
+                                             &signature_correctness_proof,
+                                             &credential_secrets_blinding_factors,
+                                             &cred_pub_key,
+                                             &cred_issuance_nonce,
+                                             None,
+                                             None,
+                                             None).unwrap();
+
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
+        sub_proof_request_builder.add_revealed_attr("total_liabilities").unwrap();
+
+        sub_proof_request_builder.add_predicate("funds_sold_and_securities_purchased", "LT", 100).unwrap();
+        sub_proof_request_builder.add_predicate("other_earning_assets", "LT", 100).unwrap();
+        sub_proof_request_builder.add_predicate("cash", "LT", 100).unwrap();
+        sub_proof_request_builder.add_predicate("allowance", "LT", 100).unwrap();
+        sub_proof_request_builder.add_predicate("total_assets", "GT", 100).unwrap();
+
+        sub_proof_request_builder.add_predicate("domestic_interest_bearing_deposits", "LE", 100).unwrap();
+        sub_proof_request_builder.add_predicate("funds_purchased", "LE", 100).unwrap();
+        sub_proof_request_builder.add_predicate("long_term_debt", "LE", 100).unwrap();
+        sub_proof_request_builder.add_predicate("non_interest_bearing_liabilities", "LE", 100).unwrap();
+        sub_proof_request_builder.add_predicate("shareholder_equity", "LE", 100).unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_common_attribute("master_secret").unwrap();
+        proof_builder.add_sub_proof_request(&sub_proof_request,
+                                            &credential_schema,
+                                            &non_credential_schema,
+                                            &cred_signature,
+                                            &cred_values,
+                                            &cred_pub_key,
+                                            None,
+                                            None).unwrap();
+
+        let proof_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proof_request_nonce).unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
+                                             &credential_schema,
+                                             &non_credential_schema,
+                                             &cred_pub_key,
+                                             None,
+                                             None).unwrap();
+        assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
+    }
 
     #[test]
     fn credential_primary_public_key_conversion_works() {

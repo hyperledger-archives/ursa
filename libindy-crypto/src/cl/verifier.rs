@@ -290,8 +290,8 @@ impl ProofVerifier {
             }
 
             let proof_predicates =
-                proof_for_credential.primary_proof.ge_proofs.iter()
-                    .map(|ge_proof| ge_proof.predicate.clone())
+                proof_for_credential.primary_proof.ne_proofs.iter()
+                    .map(|ne_proof| ne_proof.predicate.clone())
                     .collect::<BTreeSet<Predicate>>();
 
             if proof_predicates != credential.sub_proof_request.predicates {
@@ -320,8 +320,8 @@ impl ProofVerifier {
                                                                         non_cred_schema,
                                                                         sub_proof_request)?;
 
-        for ge_proof in primary_proof.ge_proofs.iter() {
-            t_hat.append(&mut ProofVerifier::_verify_ge_predicate(p_pub_key, ge_proof, c_hash)?)
+        for ne_proof in primary_proof.ne_proofs.iter() {
+            t_hat.append(&mut ProofVerifier::_verify_ne_predicate(p_pub_key, ne_proof, c_hash)?)
         }
 
         trace!("ProofVerifier::_verify_primary_proof: <<< t_hat: {:?}", t_hat);
@@ -375,14 +375,14 @@ impl ProofVerifier {
         Ok(vec![t])
     }
 
-    fn _verify_ge_predicate(p_pub_key: &CredentialPrimaryPublicKey,
-                            proof: &PrimaryPredicateGEProof,
+    fn _verify_ne_predicate(p_pub_key: &CredentialPrimaryPublicKey,
+                            proof: &PrimaryPredicateInequalityProof,
                             c_hash: &BigNumber) -> Result<Vec<BigNumber>, IndyCryptoError> {
-        trace!("ProofVerifier::_verify_ge_predicate: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}", p_pub_key, proof, c_hash);
+        trace!("ProofVerifier::_verify_ne_predicate: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}", p_pub_key, proof, c_hash);
 
         let mut ctx = BigNumber::new_context()?;
-        let mut tau_list = calc_tge(&p_pub_key, &proof.u, &proof.r, &proof.mj,
-                                    &proof.alpha, &proof.t)?;
+        let mut tau_list = calc_tne(&p_pub_key, &proof.u, &proof.r, &proof.mj,
+                                    &proof.alpha, &proof.t, proof.predicate.is_less())?;
 
         for i in 0..ITERATION {
             let cur_t = proof.t.get(&i.to_string())
@@ -397,10 +397,16 @@ impl ProofVerifier {
         let delta = proof.t.get("DELTA")
             .ok_or(IndyCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
+        let delta_prime = if proof.predicate.is_less() {
+            delta.inverse(&p_pub_key.n, Some(&mut ctx))?
+        } else {
+            delta.clone()?
+        };
+
         tau_list[ITERATION] = p_pub_key.z
-            .mod_exp(&BigNumber::from_dec(&proof.predicate.value.to_string())?,
+            .mod_exp(&proof.predicate.get_delta_prime()?,
                 &p_pub_key.n, Some(&mut ctx))?
-            .mul(&delta, Some(&mut ctx))?
+            .mul(&delta_prime, Some(&mut ctx))?
             .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&tau_list[ITERATION], &p_pub_key.n, Some(&mut ctx))?;
@@ -410,7 +416,7 @@ impl ProofVerifier {
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&tau_list[ITERATION + 1], &p_pub_key.n, Some(&mut ctx))?;
 
-        trace!("ProofVerifier::_verify_ge_predicate: <<< tau_list: {:?},", tau_list);
+        trace!("ProofVerifier::_verify_ne_predicate: <<< tau_list: {:?},", tau_list);
 
         Ok(tau_list)
     }
@@ -495,14 +501,14 @@ mod tests {
     }
 
     #[test]
-    fn _verify_ge_predicate_works() {
+    fn _verify_ne_predicate_works() {
         MockHelper::inject();
 
-        let proof = prover::mocks::ge_proof();
+        let proof = prover::mocks::ne_proof();
         let c_h = prover::mocks::aggregated_proof().c_hash;
         let pk = issuer::mocks::credential_primary_public_key();
 
-        let res = ProofVerifier::_verify_ge_predicate(&pk, &proof, &c_h);
+        let res = ProofVerifier::_verify_ne_predicate(&pk, &proof, &c_h);
 
         assert!(res.is_ok());
         let res_data = res.unwrap();

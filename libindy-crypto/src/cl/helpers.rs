@@ -325,12 +325,13 @@ pub fn calc_teq(p_pub_key: &CredentialPrimaryPublicKey,
     Ok(result)
 }
 
-pub fn calc_tge(p_pub_key: &CredentialPrimaryPublicKey,
+pub fn calc_tne(p_pub_key: &CredentialPrimaryPublicKey,
                 u: &HashMap<String, BigNumber>,
                 r: &HashMap<String, BigNumber>,
                 mj: &BigNumber,
                 alpha: &BigNumber,
-                t: &HashMap<String, BigNumber>) -> Result<Vec<BigNumber>, IndyCryptoError> {
+                t: &HashMap<String, BigNumber>,
+		is_less: bool) -> Result<Vec<BigNumber>, IndyCryptoError> {
     trace!("Helpers::calc_tge: >>> p_pub_key: {:?}, u: {:?}, r: {:?}, mj: {:?}, alpha: {:?}, t: {:?}", p_pub_key, u, r, mj, alpha, t);
 
     let mut tau_list: Vec<BigNumber> = Vec::new();
@@ -354,11 +355,16 @@ pub fn calc_tge(p_pub_key: &CredentialPrimaryPublicKey,
 
     let delta = r.get("DELTA")
         .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", "DELTA")))?;
+    let delta_predicate = if is_less {
+        delta.set_negative(true)?
+    } else {
+        delta.clone()?
+    };
 
     let t_tau = p_pub_key.z
         .mod_exp(&mj, &p_pub_key.n, Some(&mut ctx))?
         .mod_mul(
-            &p_pub_key.s.mod_exp(&delta, &p_pub_key.n, Some(&mut ctx))?,
+            &p_pub_key.s.mod_exp(&delta_predicate, &p_pub_key.n, Some(&mut ctx))?,
             &p_pub_key.n, Some(&mut ctx)
         )?;
 
@@ -383,7 +389,7 @@ pub fn calc_tge(p_pub_key: &CredentialPrimaryPublicKey,
 
     tau_list.push(q);
 
-    trace!("Helpers::calc_tge: <<< tau_list: {:?}", tau_list);
+    trace!("Helpers::calc_tne: <<< tau_list: {:?}", tau_list);
 
     Ok(tau_list)
 }
@@ -638,11 +644,11 @@ mod tests {
     }
 
     #[test]
-    fn calc_tge_works() {
-        let proof = prover::mocks::ge_proof();
+    fn calc_tne_works() {
+        let proof = prover::mocks::ne_proof();
         let pk = issuer::mocks::credential_primary_public_key();
 
-        let res = calc_tge(&pk, &proof.u, &proof.r, &proof.mj, &proof.alpha, &proof.t);
+        let res = calc_tne(&pk, &proof.u, &proof.r, &proof.mj, &proof.alpha, &proof.t, proof.predicate.is_less());
 
         assert!(res.is_ok());
 

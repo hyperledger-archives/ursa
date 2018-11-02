@@ -1078,18 +1078,18 @@ impl ProofBuilder {
                                                     m2_t,
         )?;
 
-        let mut ge_proofs: Vec<PrimaryPredicateGEInitProof> = Vec::new();
+        let mut ne_proofs: Vec<PrimaryPredicateInequalityInitProof> = Vec::new();
         for predicate in sub_proof_request.predicates.iter() {
-            let ge_proof = ProofBuilder::_init_ge_proof(
+            let ne_proof = ProofBuilder::_init_ne_proof(
                 &issuer_pub_key,
                 &eq_proof.m_tilde,
                 cred_values,
                 predicate,
             )?;
-            ge_proofs.push(ge_proof);
+            ne_proofs.push(ne_proof);
         }
 
-        let primary_init_proof = PrimaryInitProof { eq_proof, ge_proofs };
+        let primary_init_proof = PrimaryInitProof { eq_proof, ne_proofs };
 
         trace!("ProofBuilder::_init_primary_proof: <<< primary_init_proof: {:?}", primary_init_proof);
 
@@ -1184,24 +1184,23 @@ impl ProofBuilder {
         Ok(primary_equal_init_proof)
     }
 
-    fn _init_ge_proof(p_pub_key: &CredentialPrimaryPublicKey,
+    fn _init_ne_proof(p_pub_key: &CredentialPrimaryPublicKey,
                       m_tilde: &HashMap<String, BigNumber>,
                       cred_values: &CredentialValues,
-                      predicate: &Predicate) -> Result<PrimaryPredicateGEInitProof, IndyCryptoError> {
-        trace!("ProofBuilder::_init_ge_proof: >>> p_pub_key: {:?}, m_tilde: {:?}, cred_values: {:?}, predicate: {:?}",
+                      predicate: &Predicate) -> Result<PrimaryPredicateInequalityInitProof, IndyCryptoError> {
+        trace!("ProofBuilder::_init_ne_proof: >>> p_pub_key: {:?}, m_tilde: {:?}, cred_values: {:?}, predicate: {:?}",
                p_pub_key, m_tilde, cred_values, predicate);
 
         let mut ctx = BigNumber::new_context()?;
-        let (k, value) = (&predicate.attr_name, predicate.value);
 
-        let attr_value = cred_values.attrs_values.get(k.as_str())
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_values", k)))?
+        let attr_value = cred_values.attrs_values.get(&predicate.attr_name)
+            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_values", predicate.attr_name)))?
             .value()
             .to_dec()?
             .parse::<i32>()
-            .map_err(|_| IndyCryptoError::InvalidStructure(format!("Value by key '{}' has invalid format", k)))?;
+            .map_err(|_| IndyCryptoError::InvalidStructure(format!("Value by key '{}' has invalid format", predicate.attr_name)))?;
 
-        let delta: i32 = attr_value - value;
+        let delta = predicate.get_delta(attr_value);
 
         if delta < 0 {
             return Err(IndyCryptoError::InvalidStructure("Predicate is not satisfied".to_string()));
@@ -1246,12 +1245,12 @@ impl ProofBuilder {
         r_tilde.insert("DELTA".to_string(), bn_rand(LARGE_RTILDE)?);
         let alpha_tilde = bn_rand(LARGE_ALPHATILDE)?;
 
-        let mj = m_tilde.get(k.as_str())
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", k)))?;
+        let mj = m_tilde.get(&predicate.attr_name)
+            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", predicate.attr_name)))?;
 
-        let tau_list = calc_tge(&p_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t)?;
+        let tau_list = calc_tne(&p_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t, predicate.is_less())?;
 
-        let primary_predicate_ge_init_proof = PrimaryPredicateGEInitProof {
+        let primary_predicate_ne_init_proof = PrimaryPredicateInequalityInitProof {
             c_list,
             tau_list,
             u,
@@ -1263,9 +1262,9 @@ impl ProofBuilder {
             t
         };
 
-        trace!("ProofBuilder::_init_ge_proof: <<< primary_predicate_ge_init_proof: {:?}", primary_predicate_ge_init_proof);
+        trace!("ProofBuilder::_init_ne_proof: <<< primary_predicate_ne_init_proof: {:?}", primary_predicate_ne_init_proof);
 
-        Ok(primary_predicate_ge_init_proof)
+        Ok(primary_predicate_ne_init_proof)
     }
 
     fn _finalize_eq_proof(init_proof: &PrimaryEqualInitProof,
@@ -1350,10 +1349,10 @@ impl ProofBuilder {
         Ok(primary_equal_proof)
     }
 
-    fn _finalize_ge_proof(c_h: &BigNumber,
-                          init_proof: &PrimaryPredicateGEInitProof,
-                          eq_proof: &PrimaryEqualProof) -> Result<PrimaryPredicateGEProof, IndyCryptoError> {
-        trace!("ProofBuilder::_finalize_ge_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}", c_h, init_proof, eq_proof);
+    fn _finalize_ne_proof(c_h: &BigNumber,
+                          init_proof: &PrimaryPredicateInequalityInitProof,
+                          eq_proof: &PrimaryEqualProof) -> Result<PrimaryPredicateInequalityProof, IndyCryptoError> {
+        trace!("ProofBuilder::_finalize_ne_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}", c_h, init_proof, eq_proof);
 
         let mut ctx = BigNumber::new_context()?;
         let mut u = HashMap::new();
@@ -1394,7 +1393,7 @@ impl ProofBuilder {
             .mul(&c_h, Some(&mut ctx))?
             .add(&init_proof.alpha_tilde)?;
 
-        let primary_predicate_ge_proof = PrimaryPredicateGEProof {
+        let primary_predicate_ne_proof = PrimaryPredicateInequalityProof {
             u,
             r,
             mj: eq_proof.m[&init_proof.predicate.attr_name].clone()?,
@@ -1403,9 +1402,9 @@ impl ProofBuilder {
             predicate: init_proof.predicate.clone()
         };
 
-        trace!("ProofBuilder::_finalize_ge_proof: <<< primary_predicate_ge_proof: {:?}", primary_predicate_ge_proof);
+        trace!("ProofBuilder::_finalize_ne_proof: <<< primary_predicate_ne_proof: {:?}", primary_predicate_ne_proof);
 
-        Ok(primary_predicate_ge_proof)
+        Ok(primary_predicate_ne_proof)
     }
 
     fn _finalize_primary_proof(init_proof: &PrimaryInitProof,
@@ -1432,14 +1431,14 @@ impl ProofBuilder {
             cred_values,
             sub_proof_request,
         )?;
-        let mut ge_proofs: Vec<PrimaryPredicateGEProof> = Vec::new();
+        let mut ne_proofs: Vec<PrimaryPredicateInequalityProof> = Vec::new();
 
-        for init_ge_proof in init_proof.ge_proofs.iter() {
-            let ge_proof = ProofBuilder::_finalize_ge_proof(challenge, init_ge_proof, &eq_proof)?;
-            ge_proofs.push(ge_proof);
+        for init_ne_proof in init_proof.ne_proofs.iter() {
+            let ne_proof = ProofBuilder::_finalize_ne_proof(challenge, init_ne_proof, &eq_proof)?;
+            ne_proofs.push(ne_proof);
         }
 
-        let primary_proof = PrimaryProof { eq_proof, ge_proofs };
+        let primary_proof = PrimaryProof { eq_proof, ne_proofs };
 
         trace!("ProofBuilder::_finalize_primary_proof: <<< primary_proof: {:?}", primary_proof);
 
@@ -1759,7 +1758,7 @@ mod tests {
     }
 
     #[test]
-    fn init_ge_proof_works() {
+    fn init_ne_proof_works() {
         MockHelper::inject();
 
         let pk = issuer::mocks::credential_primary_public_key();
@@ -1767,12 +1766,12 @@ mod tests {
         let predicate = mocks::predicate();
         let credential_values = issuer::mocks::credential_values();
 
-        let init_ge_proof = ProofBuilder::_init_ge_proof(&pk,
+        let init_ne_proof = ProofBuilder::_init_ne_proof(&pk,
                                                          &init_eq_proof.m_tilde,
                                                          &credential_values,
                                                          &predicate).unwrap();
 
-        assert_eq!(mocks::primary_ge_init_proof(), init_ge_proof);
+        assert_eq!(mocks::primary_ne_init_proof(), init_ne_proof);
     }
 
     #[test]
@@ -1821,17 +1820,17 @@ mod tests {
     }
 
     #[test]
-    fn finalize_ge_proof_works() {
+    fn finalize_ne_proof_works() {
         MockHelper::inject();
 
         let c_h = mocks::aggregated_proof().c_hash;
-        let ge_proof = mocks::primary_ge_init_proof();
+        let ne_proof = mocks::primary_ne_init_proof();
         let eq_proof = mocks::eq_proof();
 
-        let ge_proof = ProofBuilder::_finalize_ge_proof(&c_h,
-                                                        &ge_proof,
+        let ne_proof = ProofBuilder::_finalize_ne_proof(&c_h,
+                                                        &ne_proof,
                                                         &eq_proof).unwrap();
-        assert_eq!(mocks::ge_proof(), ge_proof);
+        assert_eq!(mocks::ne_proof(), ne_proof);
     }
 
     #[test]
@@ -2129,7 +2128,7 @@ pub mod mocks {
     pub fn primary_init_proof() -> PrimaryInitProof {
         PrimaryInitProof {
             eq_proof: primary_equal_init_proof(),
-            ge_proofs: vec![primary_ge_init_proof()]
+            ne_proofs: vec![primary_ne_init_proof()]
         }
     }
 
@@ -2152,8 +2151,8 @@ pub mod mocks {
         }
     }
 
-    pub fn primary_ge_init_proof() -> PrimaryPredicateGEInitProof {
-        PrimaryPredicateGEInitProof {
+    pub fn primary_ne_init_proof() -> PrimaryPredicateInequalityInitProof {
+        PrimaryPredicateInequalityInitProof {
             c_list: vec![BigNumber::from_dec("43417630723399995147405704831160043226699738088974193922655952212791839159754229694686612556171069291164098371675806713394528764380709961777960841038615195545807927068699240698185936054936058987270723246617225807473853778766553004798072895122353570790092748990750480624057398606328445597615405248766964525613248873555789413697599780484025628512744521163202295727342982847311596077107082893351168466054656892320738566499198863605986805507318252961936985165071695751733674272963680749928972044675415743646575121033161921861708756912378060863266945905724585703789710405474198524740599479287511121708188363170466265186645").unwrap(),
                          BigNumber::from_dec("36722226848982314680567811997771062638383828354047012538919806599939999127160456447237226368950393496439962666992459033698311124733744083963711166393470803955290971381911274507193981709387505523191368117187074091384646924346700638973173807722733727281592410397831676026466279786567075569837905995849670457506509424137093869661050737596446262008457839619766874798049461600065862281592856187622939978475437479264484697284570903713919546205855317475701520320262681749419906746018812343025594374083863097715974951329849978864273409720176255874977432080252739943546406857149724432737271924184396597489413743665435203185036").unwrap(),
                          BigNumber::from_dec("36722226848982314680567811997771062638383828354047012538919806599939999127160456447237226368950393496439962666992459033698311124733744083963711166393470803955290971381911274507193981709387505523191368117187074091384646924346700638973173807722733727281592410397831676026466279786567075569837905995849670457506509424137093869661050737596446262008457839619766874798049461600065862281592856187622939978475437479264484697284570903713919546205855317475701520320262681749419906746018812343025594374083863097715974951329849978864273409720176255874977432080252739943546406857149724432737271924184396597489413743665435203185036").unwrap(),
@@ -2274,8 +2273,8 @@ pub mod mocks {
         }
     }
 
-    pub fn ge_proof() -> PrimaryPredicateGEProof {
-        PrimaryPredicateGEProof {
+    pub fn ne_proof() -> PrimaryPredicateInequalityProof {
+        PrimaryPredicateInequalityProof {
             u: hashmap![
                 "0".to_string() => BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567840955194878756992885557928540339524545643043778980131879253885097381913472262").unwrap(),
                 "1".to_string() => BigNumber::from_dec("6461691768834933403326572830814516653957231030793837560544354737855803497655300429843454445497126567804220939482881605788321274222433127267661785215741754659020236304375978218300").unwrap(),
@@ -2305,7 +2304,7 @@ pub mod mocks {
     pub fn primary_proof() -> PrimaryProof {
         PrimaryProof {
             eq_proof: eq_proof(),
-            ge_proofs: vec![ge_proof()]
+            ne_proofs: vec![ne_proof()]
         }
     }
 
