@@ -15,7 +15,7 @@ default = ["bn_openssl", "pair_amcl", "serialization", "ffi", "cl"]
 bn_openssl = ["openssl", "int_traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
-wasm = ["wasm-bindgen"]
+wasm = ["wasm-bindgen", "console_error_panic_hook"]
 ffi = []
 cl = ["bn_openssl"]
 
@@ -36,4 +36,4 @@ serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 lazy_static = "1.0"
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
-console_error_panic_hook = "0.1.5"
+console_error_panic_hook = { version = "0.1.5", optional = true }

@@ -1,5 +1,7 @@
 #[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
+#[cfg(feature = "wasm")]
+extern crate console_error_panic_hook;
 
 #[cfg(feature = "pair_amcl")]
 extern crate amcl;
@@ -9,8 +11,6 @@ extern crate log;
 extern crate rand;
 extern crate sha2;
 extern crate sha3;
-
-extern crate console_error_panic_hook;
 
 #[cfg(feature = "serialization")]
 extern crate serde;
