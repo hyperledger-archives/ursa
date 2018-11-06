@@ -331,7 +331,7 @@ pub fn calc_tne(p_pub_key: &CredentialPrimaryPublicKey,
                 mj: &BigNumber,
                 alpha: &BigNumber,
                 t: &HashMap<String, BigNumber>,
-		is_less: bool) -> Result<Vec<BigNumber>, IndyCryptoError> {
+                is_less: bool) -> Result<Vec<BigNumber>, IndyCryptoError> {
     trace!("Helpers::calc_tge: >>> p_pub_key: {:?}, u: {:?}, r: {:?}, mj: {:?}, alpha: {:?}, t: {:?}", p_pub_key, u, r, mj, alpha, t);
 
     let mut tau_list: Vec<BigNumber> = Vec::new();
