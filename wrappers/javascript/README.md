@@ -22,3 +22,6 @@ Within this directory, do the following:
 ### How to Test
 
 Within this directory, invoke `npm test`.
+
+### Examples
+There are examples of using this library in the examples/ directory.
