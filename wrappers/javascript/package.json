@@ -2,7 +2,8 @@
   "name": "indycrypto",
   "version": "0.4.3",
   "description": "Shared crypto library for Hyperledger Indy components.",
-  "main": "index.js",
+  "main": "dist/node/indy_crypto.js",
+  "module": "dist/module/indy_crypto.js",
   "scripts": {
     "test": "ava",
     "build": "./build.sh"
