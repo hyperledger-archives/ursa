@@ -15,7 +15,6 @@ use bn::BigNumber;
 use errors::IndyCryptoError;
 use pair::*;
 
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, BTreeSet, BTreeMap};
 use std::hash::Hash;
 
@@ -777,7 +776,7 @@ impl SubProofRequestBuilder {
 }
 
 /// Some condition that must be satisfied.
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub struct Predicate {
     attr_name: String,
     p_type: PredicateType,
@@ -812,24 +811,12 @@ impl Predicate {
 }
 
 /// Condition type
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
 pub enum PredicateType {
     GE,
     LE,
     GT,
     LT
-}
-
-impl Ord for Predicate {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.attr_name.cmp(&other.attr_name)
-    }
-}
-
-impl PartialOrd for Predicate {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 /// Proof is complex crypto structure created by prover over multiple credentials that allows to prove that prover:
@@ -1277,6 +1264,7 @@ mod test {
         sub_proof_request_builder.add_revealed_attr("total_liabilities").unwrap();
 
         sub_proof_request_builder.add_predicate("funds_sold_and_securities_purchased", "LT", 100).unwrap();
+        sub_proof_request_builder.add_predicate("funds_sold_and_securities_purchased", "GT", 0).unwrap();
         sub_proof_request_builder.add_predicate("other_earning_assets", "LT", 100).unwrap();
         sub_proof_request_builder.add_predicate("cash", "LT", 100).unwrap();
         sub_proof_request_builder.add_predicate("allowance", "LT", 100).unwrap();
