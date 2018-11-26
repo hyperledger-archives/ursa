@@ -146,7 +146,7 @@ def windowsTesting() {
                         echo "Windows Test: Build"
                         withEnv([
                                 "OPENSSL_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
-                                "INDY_CRYPTO_PREBUILT_DEPS_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
+                                "PATH=$WORKSPACE\\libindy-crypto\\prebuilt\\lib;$PATH",
                                 "RUST_BACKTRACE=1"
                         ]) {
                             bat "cargo test --release --no-run"
@@ -156,7 +156,7 @@ def windowsTesting() {
                                 bat "cargo test --release"
                             }
                         }
-                        stash includes: 'target/release/*.dll', name: 'LibindyCryptoWindowsBuildResult'
+                        stash includes: 'target/release/*.dll;prebuilt/lib/*.dll', name: 'LibindyCryptoWindowsBuildResult'
                     }
                     stash includes: 'target/release/*.dll', name: 'LibindyCryptoWindowsBuildResult'
                 }
