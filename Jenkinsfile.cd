@@ -239,7 +239,7 @@ def windowsPublishArtifact(testEnv, stashName) {
         unstash name: stashName
 
         withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-            sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER"
+            sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER ./prebuilt"
         }
     }
 }

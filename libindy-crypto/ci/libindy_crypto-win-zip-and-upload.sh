@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 
 if [ "$1" = "--help" ] ; then
-  echo "Usage: <version> <key> <type> <number>"
+  echo "Usage: <version> <key> <type> <number> <prebuit_path>"
   return
 fi
 
@@ -14,11 +14,13 @@ number="$4"
 [ -z $key ] && exit 2
 [ -z $type ] && exit 3
 [ -z $number ] && exit 4
+[ -z $prebuit_path ] && exit 5
 
 mkdir libindy_crypto-zip
 mkdir libindy_crypto-zip/lib
 cp -r ./include ./libindy_crypto-zip
 cp ./target/release/*.dll ./libindy_crypto-zip/lib/
+cp $prebuit_path/lib/*.dll ./libindy_crypto-zip/lib/
 
 cd libindy_crypto-zip && zip -r libindy_crypto_${version}.zip ./* && mv libindy_crypto_${version}.zip .. && cd ..
 
