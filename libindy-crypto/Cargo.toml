@@ -20,7 +20,7 @@ ffi = []
 cl = ["bn_openssl"]
 
 [dependencies]
-amcl = { version = "0.1.2",  optional = true, default-features = false, features = ["BN254"]}
+amcl = { version = "0.1.3",  optional = true, default-features = false, features = ["BN254"]}
 int_traits = { version = "0.1.1", optional = true }
 libc = "0.2.33"
 log = "0.4.1"

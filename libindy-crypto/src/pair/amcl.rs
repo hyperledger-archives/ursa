@@ -65,7 +65,7 @@ fn random_mod_order() -> Result<BIG, IndyCryptoError> {
 #[cfg(test)]
 fn random_mod_order() -> Result<BIG, IndyCryptoError> {
     if PairMocksHelper::is_injected() {
-        Ok(BIG::from_hex("B7D7DC1499EA50 6F16C9B5FE2C00 466542B923D8C9 FB01F2122DE924 22EB5716".to_string()))
+        Ok(BIG::from_hex("22EB5716FB01F2122DE924466542B923D8C96F16C9B5FE2C00B7D7DC1499EA50".to_string()))
     }
     else {
         _random_mod_order()
@@ -470,7 +470,8 @@ impl GroupOrderElement {
     }
 
     pub fn to_string(&self) -> Result<String, IndyCryptoError> {
-        Ok(self.bn.to_hex())
+        let mut bn = self.bn;
+        Ok(bn.to_hex())
     }
 
     pub fn from_string(str: &str) -> Result<GroupOrderElement, IndyCryptoError> {
@@ -513,7 +514,8 @@ impl GroupOrderElement {
 
 impl Debug for GroupOrderElement {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "GroupOrderElement {{ bn: {} }}", self.bn.to_hex())
+        let mut bn = self.bn;
+        write!(f, "GroupOrderElement {{ bn: {} }}", bn.to_hex())
     }
 }
 
@@ -750,7 +752,7 @@ mod serialization_tests {
     #[test]
     fn serialize_deserialize_works_for_group_order_element() {
         let structure = TestGroupOrderElementStructure {
-            field: GroupOrderElement::from_string("A6F18598A10FAE 736E4DAFC3F174 FA57A6D2B80083 D533FEDE2C88B8 129AA6F2").unwrap()
+            field: GroupOrderElement::from_string("09181F00DD41F2F92026FC20E189DE31926EEE6E05C6A17E676556E08075C6111").unwrap()
         };
         let deserialized: TestGroupOrderElementStructure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
 
@@ -760,7 +762,7 @@ mod serialization_tests {
     #[test]
     fn serialize_deserialize_works_for_point_g1() {
         let structure = TestPointG1Structure {
-            field: PointG1::from_string("false 6556E08075C674 EE6E05C6A17E67 20E189DE31926E DD41F2F92026FC 9181F00 BEC671398C0F1 25D98934EA6B2D 9600760C4F9729 51F977993486B1 9BC9712 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD").unwrap()
+            field: PointG1::from_string("false 09181F00DD41F2F92026FC20E189DE31926EEE6E05C6A17E676556E08075C6 09BC971251F977993486B19600760C4F972925D98934EA6B2D0BEC671398C0 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8").unwrap()
         };
 
         let deserialized: TestPointG1Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
@@ -771,7 +773,7 @@ mod serialization_tests {
     #[test]
     fn deserialize_works_for_point_g2() {
         let structure = TestPointG2Structure {
-            field: PointG2::from_string("false 4EAC2B37C43A02 9AB45BED53CE00 56EDA01AC795F7 6CAC874CAE0696 6CA435C 4FB2CB47DCFF1A 23E4966C196375 196238CE0B83FE 41788980E5F233 514F85B F72F76C4F52B69 BADA0D1D556306 413BD4FF30211 3A64D182D7BF25 1A40A6E4 44AD0B40DC32E8 96259C38242511 87743EFF5CDBBE 4F7649B5A5A3B3 10601954 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap()
+            field: PointG2::from_string("false 16027A65C15E16E00BFCAD948F216B5CFBE07B98876D8889A5DEE03DE7C57B 0EC9DBC2286A9485A0DA8525C5BE0F88E27C2B3C337E522DDC170C1764D615 1A021C8EFE70DCC7F81DD8E8CDC74F3D64E63E886C73B3A8B9849696E99FF3 2505CB0CFAAE75ACCAF60CB5A9F7E7A8250918155886E7FFF9A32D7B5A0500 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8 00000000000000000000000000000000000000000000000000000000000000").unwrap()
         };
         let deserialized: TestPointG2Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
 
@@ -779,12 +781,21 @@ mod serialization_tests {
     }
 
     #[test]
+    fn deserialize_works_for_big_sum() {
+        let mut big = ECP2::from_hex("false 7A574E39839EBC8E7F8D567865D5D9AAC54952659F0E393BE35C7FC3BE93CDA6 AFB9BF4A3B655BFFDC89C14720101773569FDD36A67440AEB7C2FFB861B74025 1F25D2A75390350C9C77DE886B503D5EA2CC3685037460F9CF93601BFA88028E 306E80C709AAA293B8D2AAABF04838C8AB96BFB3F8E0C4A89940D227A8BF8B01 6867E792BBE850A8716C97F7140D95FD6DB76C5DB0F4876E800B18E2CB0226B3 427CB9FC452B316239ABCA9C0078E5F36B4E9FC777B6D91587BB7DA64C1C1E94".to_string());
+        let mut big_2 = big.clone();
+        big.add(&mut big_2);
+        let deserialized = ECP2::from_hex(big.to_hex());
+        assert_eq!(deserialized, big);
+    }
+
+    #[test]
     fn serialize_deserialize_works_for_pair() {
         let point_g1 = PointG1 {
-            point: PointG1::from_string("false 6944F7AC340BD5 BFE2AC0F2996F4 21E205643FDCC1 C5B03061739A46 1FC3950 26812069BB116C 6C255738808107 4B7BE8A38AAFE6 EE2EA7F7E34076 1056E3F5 FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD").unwrap().point
+            point: PointG1::from_string("false 01FC3950C5B03061739A4621E205643FDCC1BFE2AC0F2996F46944F7AC340B 1056E3F5EE2EA7F7E340764B7BE8A38AAFE66C25573880810726812069BB11 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8").unwrap().point
         };
         let point_g2 = PointG2 {
-            point: PointG2::from_string("false DEE03DE7C57BCC 7B98876D8889A5 948F216B5CFBE0 C15E16E00BFCAD 16027A65 170C1764D6155B 2B3C337E522DDC 25C5BE0F88E27C 286A9485A0DA85 EC9DBC2 849696E99FF31D 3E886C73B3A8B9 E8CDC74F3D64E6 FE70DCC7F81DD8 1A021C8E A32D7B5A0500DC 18155886E7FFF9 B5A9F7E7A82509 FAAE75ACCAF60C 2505CB0C FFFFFF7D07A8A8 FFFF7888802F07 FFC63D474548B7 F417D05FB10933 95E45DD 0 0 0 0 0").unwrap().point
+            point: PointG2::from_string("false 16027A65C15E16E00BFCAD948F216B5CFBE07B98876D8889A5DEE03DE7C57B 0EC9DBC2286A9485A0DA8525C5BE0F88E27C2B3C337E522DDC170C1764D615 1A021C8EFE70DCC7F81DD8E8CDC74F3D64E63E886C73B3A8B9849696E99FF3 2505CB0CFAAE75ACCAF60CB5A9F7E7A8250918155886E7FFF9A32D7B5A0500 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8 00000000000000000000000000000000000000000000000000000000000000").unwrap().point
         };
         let pair = TestPairStructure {
             field: Pair::pair(&point_g1, &point_g2).unwrap()
