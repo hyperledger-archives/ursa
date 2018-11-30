@@ -158,8 +158,6 @@ def windowsTesting() {
                         }
                         stash includes: 'target/release/*.dll;prebuilt/lib/*.dll', name: 'LibindyCryptoWindowsBuildResult'
                     }
-                    stash includes: 'target/release/*.dll', name: 'LibindyCryptoWindowsBuildResult'
-                }
 
                     //TODO wrappers testing
 
@@ -242,34 +240,6 @@ def windowsPublishArtifact(testEnv, stashName) {
             sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER ./prebuilt"
         }
     }
-}
-
-def libindyCryptoDebPublishing(testEnv, version) {
-    dir('libindy-crypto') {
-        testEnv.inside('-u 0:0') {
-            sh 'chmod -R 755 ci/*.sh'
-
-            dir('sovrin-packaging') {
-                downloadPackagingUtils()
-            }
-
-            withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-                try {
-                    sh 'mkdir /root/.ssh && ln -sf $sovrin_repo_key /root/.ssh'
-                    sh "./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $env.BUILD_NUMBER"
-
-                    if (env.BRANCH_NAME == 'rc') {
-                        stash includes: 'debs/*', name: 'libindyCryptoDebs'
-                    }
-                }
-                finally {
-                    sh "rm -rf debian"
-                    sh 'rm -f ~/.ssh/$sovrin_repo_key'
-                }
-            }
-        }
-    }
-
 }
 
 def getSuffix(isRelease, target) {

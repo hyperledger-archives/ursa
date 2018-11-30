@@ -294,7 +294,7 @@ pub struct CredentialPrivateKey {
 pub struct CredentialPrimaryPublicKey {
     n: BigNumber,
     s: BigNumber,
-    r: BTreeMap<String /* attr_name */, BigNumber>,
+    r: HashMap<String /* attr_name */, BigNumber>,
     rctxt: BigNumber,
     z: BigNumber
 }
@@ -1174,6 +1174,7 @@ fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>) -> Resu
     }
     Ok(res)
 }
+
 
 fn clone_credential_value_map<K: Clone + Eq + Ord>(other: &BTreeMap<K, CredentialValue>) -> Result<BTreeMap<K, CredentialValue>, IndyCryptoError> {
     let mut res = BTreeMap::new();

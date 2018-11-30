@@ -595,7 +595,7 @@ impl Issuer {
         let s = random_qr(&n)?;
         let xz = gen_x(&p, &q)?;
 
-        let mut xr = BTreeMap::new();
+        let mut xr = HashMap::new();
         for non_schema_element in &non_credential_schema.attrs {
             xr.insert(non_schema_element.to_string(), gen_x(&p, &q)?);
         }

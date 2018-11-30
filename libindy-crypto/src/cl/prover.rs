@@ -306,16 +306,9 @@ impl Prover {
             ordered_r_values.push(r_value.clone()?);
 
             let r_inverse = r_value.inverse(&pr_pub_key.n, Some(&mut ctx))?;
-            let val = get_pedersen_commitment(
-                &r_inverse,
-                &key_correctness_proof.c,
-                &pr_pub_key.s,
-                &xr_cap_value,
-                &pr_pub_key.n,
-                &mut ctx,
-            )?;
-
-            r_cap.insert(key.to_owned(), val);
+            let val = get_pedersen_commitment(&r_inverse, &key_correctness_proof.c,
+                                              &pr_pub_key.s, &xr_cap_value, &pr_pub_key.n, &mut ctx)?;
+            ordered_r_cap_values.push(val);
         }
 
         let mut values: Vec<u8> = Vec::new();
