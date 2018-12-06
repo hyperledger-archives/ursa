@@ -1,0 +1,108 @@
+#!groovy
+
+testing()
+
+def testing() {
+    stage('Testing') {
+        parallel([
+                'ubuntu-test' : { ubuntuTesting() },
+                'windows-test': { windowsTesting() }
+        ])
+    }
+}
+
+def ubuntuTesting() {
+    node('ubuntu') {
+        stage('Ubuntu Test') {
+            linuxTesting("ci/ubuntu.dockerfile ci", "Ubuntu")
+        }
+    }
+}
+
+def windowsTesting() {
+    node('win2016') {
+        stage('Windows Test') {
+            def ws_path = "workspace/${env.JOB_NAME}".replace(' ', '_')
+            ws(ws_path) {
+                try {
+                    echo "Windows Test: Checkout scm"
+                    checkout scm
+
+                    setupRust()
+
+                    dir('libindy-crypto') {
+                        echo "Windows Test: Download prebuilt dependencies"
+                        bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libindy_crypto/deps/indy-crypto-deps.zip"'
+                        bat 'unzip prebuilt.zip -d prebuilt'
+
+                        echo "Windows Test: Build"
+                        withEnv([
+                                "OPENSSL_DIR=$WORKSPACE\\libindy-crypto\\prebuilt",
+                                "PATH=$WORKSPACE\\libindy-crypto\\prebuilt\\lib;$PATH",
+                                "RUST_BACKTRACE=1"
+                        ]) {
+                            bat "cargo test --no-run"
+
+                            echo "Windows Test: Run tests"
+                            withEnv(["RUST_LOG=trace"]) {
+                                bat "cargo test"
+                            }
+                        }
+                    }
+
+                    //TODO wrappers testing
+                } finally {
+                    cleanWs()
+                }
+            }
+            cleanWs()
+        }
+    }
+}
+
+def linuxTesting(file, env_name) {
+    try {
+        echo "${env_name} Test: Checkout csm"
+        checkout scm
+
+        def testEnv
+
+        dir('libindy-crypto') {
+            echo "${env_name} Test: Build docker image"
+
+            testEnv = docker.build("libindy-crypto-test", "--build-arg uid=${getUserUid()} -f $file")
+            testEnv.inside {
+                echo "${env_name} Test: Test"
+
+                echo "${env_name} Test: Build"
+                sh "RUST_BACKTRACE=1 cargo test --no-run"
+
+                echo "${env_name} Test: Run tests"
+                sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test"
+            }
+        }
+
+        sh "cp libindy-crypto/target/debug/libindy_crypto.so wrappers/python"
+        dir('wrappers/python') {
+            testEnv.inside {
+                echo "${env_name} Test: Test python wrapper"
+
+                sh '''
+                    python3.5 -m pip install --user -e .
+                    LD_LIBRARY_PATH=./ RUST_LOG=trace python3.5 -m pytest
+                '''
+            }
+        }
+    }
+    finally {
+        step([$class: 'WsCleanup'])
+    }
+}
+
+def getUserUid() {
+    return sh(returnStdout: true, script: 'id -u').trim()
+}
+
+def setupRust() {
+    sh "rustup default 1.25.0"
+}

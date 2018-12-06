@@ -1,0 +1,2 @@
+include/*.h usr/include/indy_crypto/
+target/release/libindy_crypto.a usr/lib/
