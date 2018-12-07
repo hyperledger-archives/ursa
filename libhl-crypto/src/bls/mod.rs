@@ -19,7 +19,7 @@ impl Generator {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::Generator;
+    /// use hl_crypto::bls::Generator;
     /// Generator::new().unwrap();
     /// ```
     pub fn new() -> Result<Generator, IndyCryptoError> {
@@ -35,7 +35,7 @@ impl Generator {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::*;
+    /// use hl_crypto::bls::*;
     /// let gen = Generator::new().unwrap();
     /// let gen_bytes = gen.as_bytes();
     /// assert!(gen_bytes.len() > 0);
@@ -49,7 +49,7 @@ impl Generator {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::Generator;
+    /// use hl_crypto::bls::Generator;
     /// let gen = Generator::new().unwrap();
     /// let gen_bytes = gen.as_bytes();
     /// Generator::from_bytes(gen_bytes).unwrap();
@@ -77,7 +77,7 @@ impl SignKey {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::SignKey;
+    /// use hl_crypto::bls::SignKey;
     /// SignKey::new(None).unwrap();
     /// ```
     pub fn new(seed: Option<&[u8]>) -> Result<SignKey, IndyCryptoError> {
@@ -133,9 +133,9 @@ impl VerKey {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::Generator;
-    /// use indy_crypto::bls::SignKey;
-    /// use indy_crypto::bls::VerKey;
+    /// use hl_crypto::bls::Generator;
+    /// use hl_crypto::bls::SignKey;
+    /// use hl_crypto::bls::VerKey;
     /// let gen = Generator::new().unwrap();
     /// let sign_key = SignKey::new(None).unwrap();
     /// VerKey::new(&gen, &sign_key).unwrap();
@@ -197,7 +197,7 @@ impl ProofOfPossession {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::{Generator, SignKey, VerKey, ProofOfPossession};
+    /// use hl_crypto::bls::{Generator, SignKey, VerKey, ProofOfPossession};
     /// let gen = Generator::new().unwrap();
     /// let sign_key = SignKey::new(None).unwrap();
     /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
@@ -293,7 +293,7 @@ impl MultiSignature {
    /// # Example
    ///
    /// ```
-   /// use indy_crypto::bls::*;
+   /// use hl_crypto::bls::*;
    /// let sign_key1 = SignKey::new(None).unwrap();
    /// let sign_key2 = SignKey::new(None).unwrap();
    ///
@@ -364,7 +364,7 @@ impl Bls {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::*;
+    /// use hl_crypto::bls::*;
     /// let message = vec![1, 2, 3, 4, 5];
     /// let sign_key = SignKey::new(None).unwrap();
     /// Bls::sign(&message, &sign_key).unwrap();
@@ -390,7 +390,7 @@ impl Bls {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::*;
+    /// use hl_crypto::bls::*;
     /// let gen = Generator::new().unwrap();
     /// let sign_key = SignKey::new(None).unwrap();
     /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
@@ -415,7 +415,7 @@ impl Bls {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::*;
+    /// use hl_crypto::bls::*;
     /// let gen = Generator::new().unwrap();
     /// let sign_key = SignKey::new(None).unwrap();
     /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
@@ -440,7 +440,7 @@ impl Bls {
     /// # Example
     ///
     /// ```
-    /// use indy_crypto::bls::*;
+    /// use hl_crypto::bls::*;
     /// let gen = Generator::new().unwrap();
     ///
     /// let sign_key1 = SignKey::new(None).unwrap();

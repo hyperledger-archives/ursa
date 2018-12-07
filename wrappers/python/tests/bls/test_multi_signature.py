@@ -1,4 +1,4 @@
-from indy_crypto.bls import MultiSignature
+from hl_crypto.bls import MultiSignature
 
 
 def test_new(multi_sig: MultiSignature):

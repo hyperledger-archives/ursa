@@ -1,4 +1,4 @@
-from indy_crypto.bls import Bls, Generator, SignKey, VerKey, ProofOfPossession, Signature, MultiSignature
+from hl_crypto.bls import Bls, Generator, SignKey, VerKey, ProofOfPossession, Signature, MultiSignature
 
 
 def test_sign(signature1: Signature):

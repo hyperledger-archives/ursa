@@ -19,7 +19,7 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let _master_secret = Prover::new_master_secret().unwrap();
     /// ```
@@ -37,9 +37,9 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -137,9 +137,9 @@ impl Prover {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -244,7 +244,7 @@ impl Prover {
     /// The purpose of proof builder is building of proof entity according to the given request .
     /// # Example
     /// ```
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let _proof_builder = Prover::new_proof_builder();
     pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
@@ -740,10 +740,10 @@ impl ProofBuilder {
     ///
     /// #Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -886,10 +886,10 @@ impl ProofBuilder {
     ///
     /// #Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();

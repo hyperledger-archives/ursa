@@ -1,4 +1,4 @@
-from indy_crypto.bls import ProofOfPossession
+from hl_crypto.bls import ProofOfPossession
 
 
 def test_new(pop: ProofOfPossession):

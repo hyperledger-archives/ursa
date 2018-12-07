@@ -1,4 +1,4 @@
-from indy_crypto.bls import Generator
+from hl_crypto.bls import Generator
 
 
 def test_new(generator: Generator):

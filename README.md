@@ -38,7 +38,7 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
 
     *For Windows*
 
-    * Download the prebuilt dependencies [here](https://repo.sovrin.org/windows/libindy_crypto/deps/)
+    * Download the prebuilt dependencies [here](https://repo.sovrin.org/windows/libhl_crypto/deps/)
     * Extract them into the folder _C:\BIN\x64_. Note it really doesn't matter where you put these as long as you
       remember where so you can set the environment variables to this path
     * Point path to this directory using environment variables:
@@ -89,9 +89,9 @@ Note: Binaries creation is in progress now!!!
 Builded binaries can be downloaded from [https://repo.sovrin.org](https://repo.sovrin.org):
 
 * sdk/lib/apt/xenial/{master,stable,rc} - Ubuntu deb packages
-* windows/libindy_crypto/{master,stable,rc} - Windows zip-archive with all required DLLs (include libindy itself) and headers
-* ios/libindy_crypto/stable/ - Pods for iOS
-* rhel/libindy_crypto/{master,stable,rc} - RHEL rpms
+* windows/libhl_crypto/{master,stable,rc} - Windows zip-archive with all required DLLs (include libindy itself) and headers
+* ios/libhl_crypto/stable/ - Pods for iOS
+* rhel/libhl_crypto/{master,stable,rc} - RHEL rpms
 
 Also Ubundu deb packages can be installed from APT repository:
 

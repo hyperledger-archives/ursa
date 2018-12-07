@@ -13,7 +13,7 @@ Pull requests welcome!
 
 - Install native "Indy Crypto" library:
 	* Ubuntu:  https://repo.sovrin.org/lib/apt/xenial/
-	* Windows: https://repo.sovrin.org/windows/libindy_crypto/
+	* Windows: https://repo.sovrin.org/windows/libhl_crypto/
 
 - Clone indy-crypto repo from https://github.com/hyperledger/indy-crypto
 
@@ -29,7 +29,7 @@ Pull requests welcome!
 
 
 ### PyPi package
-[indy_crypto](https://pypi.python.org/pypi/indy-crypto) package is available.
+[hl_crypto](https://pypi.python.org/pypi/indy-crypto) package is available.
 
 ### Example use
 For the main workflow examples check sample project: https://github.com/hyperledger/indy-crypto/tree/master/samples/python

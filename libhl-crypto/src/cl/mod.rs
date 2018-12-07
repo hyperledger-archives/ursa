@@ -22,7 +22,7 @@ use std::hash::Hash;
 ///
 /// # Example
 /// ```
-/// use indy_crypto::cl::new_nonce;
+/// use hl_crypto::cl::new_nonce;
 ///
 /// let _nonce = new_nonce().unwrap();
 /// ```

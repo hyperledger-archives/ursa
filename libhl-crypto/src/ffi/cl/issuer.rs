@@ -17,13 +17,13 @@ use std::iter::FromIterator;
 /// Creates and returns credential definition (public and private keys, correctness proof) entities.
 ///
 /// Note that credential public key instances deallocation must be performed by
-/// calling indy_crypto_cl_credential_public_key_free.
+/// calling hl_crypto_cl_credential_public_key_free.
 ///
 /// Note that credential private key instances deallocation must be performed by
-/// calling indy_crypto_cl_credential_private_key_free.
+/// calling hl_crypto_cl_credential_private_key_free.
 ///
 /// Note that credential key correctness proof instances deallocation must be performed by
-/// calling indy_crypto_cl_credential_key_correctness_proof_free.
+/// calling hl_crypto_cl_credential_key_correctness_proof_free.
 ///
 /// # Arguments
 /// * `credential_schema` - Reference that contains credential schema instance pointer.
@@ -33,13 +33,13 @@ use std::iter::FromIterator;
 /// * `credential_priv_key_p` - Reference that will contain credential private key instance pointer.
 /// * `credential_key_correctness_proof_p` - Reference that will contain credential keys correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_issuer_new_credential_def(credential_schema: *const c_void,
+pub extern fn hl_crypto_cl_issuer_new_credential_def(credential_schema: *const c_void,
                                                        non_credential_schema: *const c_void,
                                                        support_revocation: bool,
                                                        credential_pub_key_p: *mut *const c_void,
                                                        credential_priv_key_p: *mut *const c_void,
                                                        credential_key_correctness_proof_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_new_credential_def: >>> credential_schema: {:?}, \
+    trace!("hl_crypto_cl_issuer_new_credential_def: >>> credential_schema: {:?}, \
                                                           non_credential_schema: {:?}, \
                                                           support_revocation: {:?}, \
                                                           credential_pub_key_p: {:?}, \
@@ -58,20 +58,20 @@ pub extern fn indy_crypto_cl_issuer_new_credential_def(credential_schema: *const
     check_useful_c_ptr!(credential_priv_key_p, ErrorCode::CommonInvalidParam4);
     check_useful_c_ptr!(credential_key_correctness_proof_p, ErrorCode::CommonInvalidParam5);
 
-    trace!("indy_crypto_cl_issuer_new_credential_def: entities: \
+    trace!("hl_crypto_cl_issuer_new_credential_def: entities: \
                                                       credential_schema: {:?}, \
                                                       non_credential_schema: {:?}, \
                                                       support_revocation: {:?}", credential_schema, non_credential_schema, support_revocation);
 
     let res = match Issuer::new_credential_def(credential_schema, non_credential_schema, support_revocation) {
         Ok((credential_pub_key, credential_priv_key, credential_key_correctness_proof)) => {
-            trace!("indy_crypto_cl_issuer_new_credential_def: credential_pub_key: {:?}, credential_priv_key: {:?}, credential_key_correctness_proof: {:?}",
+            trace!("hl_crypto_cl_issuer_new_credential_def: credential_pub_key: {:?}, credential_priv_key: {:?}, credential_key_correctness_proof: {:?}",
                    credential_pub_key, secret!(&credential_priv_key), credential_key_correctness_proof);
             unsafe {
                 *credential_pub_key_p = Box::into_raw(Box::new(credential_pub_key)) as *const c_void;
                 *credential_priv_key_p = Box::into_raw(Box::new(credential_priv_key)) as *const c_void;
                 *credential_key_correctness_proof_p = Box::into_raw(Box::new(credential_key_correctness_proof)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_new_credential_def: *credential_pub_key_p: {:?}, *credential_priv_key_p: {:?}, *credential_key_correctness_proof_p: {:?}",
+                trace!("hl_crypto_cl_issuer_new_credential_def: *credential_pub_key_p: {:?}, *credential_priv_key_p: {:?}, *credential_key_correctness_proof_p: {:?}",
                        *credential_pub_key_p, *credential_priv_key_p, *credential_key_correctness_proof_p);
             }
             ErrorCode::Success
@@ -79,7 +79,7 @@ pub extern fn indy_crypto_cl_issuer_new_credential_def(credential_schema: *const
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_new_credential_def: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_new_credential_def: <<< res: {:?}", res);
     res
 }
 
@@ -89,63 +89,63 @@ pub extern fn indy_crypto_cl_issuer_new_credential_def(credential_schema: *const
 /// * `credential_pub_key` - Reference that contains credential public key instance pointer.
 /// * `credential_pub_key_p` - Reference that will contain credential public key json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_public_key_to_json(credential_pub_key: *const c_void,
+pub extern fn hl_crypto_cl_credential_public_key_to_json(credential_pub_key: *const c_void,
                                                            credential_pub_key_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_public_key_to_json: >>> credential_pub_key: {:?}, credential_pub_key_json_p: {:?}", credential_pub_key, credential_pub_key_json_p);
+    trace!("hl_crypto_cl_credential_public_key_to_json: >>> credential_pub_key: {:?}, credential_pub_key_json_p: {:?}", credential_pub_key, credential_pub_key_json_p);
 
     check_useful_c_reference!(credential_pub_key, CredentialPublicKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_pub_key_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_public_key_to_json: entity >>> credential_pub_key: {:?}", credential_pub_key);
+    trace!("hl_crypto_cl_credential_public_key_to_json: entity >>> credential_pub_key: {:?}", credential_pub_key);
 
     let res = match serde_json::to_string(credential_pub_key) {
         Ok(credential_pub_key_json) => {
-            trace!("indy_crypto_cl_credential_public_key_to_json: credential_pub_key_json: {:?}", credential_pub_key_json);
+            trace!("hl_crypto_cl_credential_public_key_to_json: credential_pub_key_json: {:?}", credential_pub_key_json);
             unsafe {
                 let issuer_pub_key_json = CTypesUtils::string_to_cstring(credential_pub_key_json);
                 *credential_pub_key_json_p = issuer_pub_key_json.into_raw();
-                trace!("indy_crypto_cl_credential_private_key_to_json: credential_pub_key_json_p: {:?}", *credential_pub_key_json_p);
+                trace!("hl_crypto_cl_credential_private_key_to_json: credential_pub_key_json_p: {:?}", *credential_pub_key_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_credential_public_key_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_public_key_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns credential public key from json.
 ///
 /// Note: Credential public key instance deallocation must be performed
-/// by calling indy_crypto_cl_credential_public_key_free
+/// by calling hl_crypto_cl_credential_public_key_free
 ///
 /// # Arguments
 /// * `credential_pub_key_json` - Reference that contains credential public key json.
 /// * `credential_pub_key_p` - Reference that will contain credential public key instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_public_key_from_json(credential_pub_key_json: *const c_char,
+pub extern fn hl_crypto_cl_credential_public_key_from_json(credential_pub_key_json: *const c_char,
                                                              credential_pub_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_public_key_from_json: >>> credential_pub_key_json: {:?}, credential_pub_key_p: {:?}", credential_pub_key_json, credential_pub_key_p);
+    trace!("hl_crypto_cl_credential_public_key_from_json: >>> credential_pub_key_json: {:?}, credential_pub_key_p: {:?}", credential_pub_key_json, credential_pub_key_p);
 
     check_useful_c_str!(credential_pub_key_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_pub_key_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_public_key_from_json: entity: credential_pub_key_json: {:?}", credential_pub_key_json);
+    trace!("hl_crypto_cl_credential_public_key_from_json: entity: credential_pub_key_json: {:?}", credential_pub_key_json);
 
     let res = match serde_json::from_str::<CredentialPublicKey>(&credential_pub_key_json) {
         Ok(credential_pub_key) => {
-            trace!("indy_crypto_cl_credential_public_key_from_json: credential_pub_key: {:?}", credential_pub_key);
+            trace!("hl_crypto_cl_credential_public_key_from_json: credential_pub_key: {:?}", credential_pub_key);
             unsafe {
                 *credential_pub_key_p = Box::into_raw(Box::new(credential_pub_key)) as *const c_void;
-                trace!("indy_crypto_cl_credential_public_key_from_json: *credential_pub_key_p: {:?}", *credential_pub_key_p);
+                trace!("hl_crypto_cl_credential_public_key_from_json: *credential_pub_key_p: {:?}", *credential_pub_key_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_credential_public_key_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_public_key_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -154,17 +154,17 @@ pub extern fn indy_crypto_cl_credential_public_key_from_json(credential_pub_key_
 /// # Arguments
 /// * `credential_pub_key` - Reference that contains credential public key instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_public_key_free(credential_pub_key: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_public_key_free: >>> credential_pub_key: {:?}", credential_pub_key);
+pub extern fn hl_crypto_cl_credential_public_key_free(credential_pub_key: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_credential_public_key_free: >>> credential_pub_key: {:?}", credential_pub_key);
 
     check_useful_c_ptr!(credential_pub_key, ErrorCode::CommonInvalidParam1);
 
     let credential_pub_key = unsafe { Box::from_raw(credential_pub_key as *mut CredentialPublicKey); };
-    trace!("indy_crypto_cl_credential_public_key_free: entity: credential_pub_key: {:?}", credential_pub_key);
+    trace!("hl_crypto_cl_credential_public_key_free: entity: credential_pub_key: {:?}", credential_pub_key);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_credential_public_key_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_public_key_free: <<< res: {:?}", res);
     res
 }
 
@@ -174,63 +174,63 @@ pub extern fn indy_crypto_cl_credential_public_key_free(credential_pub_key: *con
 /// * `credential_priv_key` - Reference that contains credential private key instance pointer.
 /// * `credential_pub_key_p` - Reference that will contain credential private key json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_private_key_to_json(credential_priv_key: *const c_void,
+pub extern fn hl_crypto_cl_credential_private_key_to_json(credential_priv_key: *const c_void,
                                                             credential_priv_key_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_private_key_to_json: >>> credential_priv_key: {:?}, credential_priv_key_json_p: {:?}", credential_priv_key, credential_priv_key_json_p);
+    trace!("hl_crypto_cl_credential_private_key_to_json: >>> credential_priv_key: {:?}, credential_priv_key_json_p: {:?}", credential_priv_key, credential_priv_key_json_p);
 
     check_useful_c_reference!(credential_priv_key, CredentialPrivateKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_priv_key_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_private_key_to_json: entity >>> credential_priv_key: {:?}", secret!(&credential_priv_key));
+    trace!("hl_crypto_cl_credential_private_key_to_json: entity >>> credential_priv_key: {:?}", secret!(&credential_priv_key));
 
     let res = match serde_json::to_string(credential_priv_key) {
         Ok(credential_priv_key_json) => {
-            trace!("indy_crypto_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
+            trace!("hl_crypto_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
             unsafe {
                 let credential_priv_key_json = CTypesUtils::string_to_cstring(credential_priv_key_json);
                 *credential_priv_key_json_p = credential_priv_key_json.into_raw();
-                trace!("indy_crypto_cl_credential_private_key_to_json: credential_priv_key_json_p: {:?}", *credential_priv_key_json_p);
+                trace!("hl_crypto_cl_credential_private_key_to_json: credential_priv_key_json_p: {:?}", *credential_priv_key_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_credential_private_key_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_private_key_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns credential private key from json.
 ///
 /// Note: Credential private key instance deallocation must be performed
-/// by calling indy_crypto_cl_credential_private_key_free
+/// by calling hl_crypto_cl_credential_private_key_free
 ///
 /// # Arguments
 /// * `credential_priv_key_json` - Reference that contains credential private key json.
 /// * `credential_priv_key_p` - Reference that will contain credential private key instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_private_key_from_json(credential_priv_key_json: *const c_char,
+pub extern fn hl_crypto_cl_credential_private_key_from_json(credential_priv_key_json: *const c_char,
                                                               credential_priv_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_private_key_from_json: >>> credential_priv_key_json: {:?}, credential_priv_key_p: {:?}", credential_priv_key_json, credential_priv_key_p);
+    trace!("hl_crypto_cl_credential_private_key_from_json: >>> credential_priv_key_json: {:?}, credential_priv_key_p: {:?}", credential_priv_key_json, credential_priv_key_p);
 
     check_useful_c_str!(credential_priv_key_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_priv_key_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_private_key_from_json: entity: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
+    trace!("hl_crypto_cl_credential_private_key_from_json: entity: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
 
     let res = match serde_json::from_str::<CredentialPrivateKey>(&credential_priv_key_json) {
         Ok(credential_priv_key) => {
-            trace!("indy_crypto_cl_credential_private_key_from_json: credential_priv_key: {:?}", secret!(&credential_priv_key));
+            trace!("hl_crypto_cl_credential_private_key_from_json: credential_priv_key: {:?}", secret!(&credential_priv_key));
             unsafe {
                 *credential_priv_key_p = Box::into_raw(Box::new(credential_priv_key)) as *const c_void;
-                trace!("indy_crypto_cl_credential_private_key_from_json: *credential_priv_key_p: {:?}", *credential_priv_key_p);
+                trace!("hl_crypto_cl_credential_private_key_from_json: *credential_priv_key_p: {:?}", *credential_priv_key_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_credential_private_key_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_private_key_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -239,17 +239,17 @@ pub extern fn indy_crypto_cl_credential_private_key_from_json(credential_priv_ke
 /// # Arguments
 /// * `credential_priv_key` - Reference that contains credential private key instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_private_key_free(credential_priv_key: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_private_key_free: >>> credential_priv_key: {:?}", credential_priv_key);
+pub extern fn hl_crypto_cl_credential_private_key_free(credential_priv_key: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_credential_private_key_free: >>> credential_priv_key: {:?}", credential_priv_key);
 
     check_useful_c_ptr!(credential_priv_key, ErrorCode::CommonInvalidParam1);
 
     let _credential_priv_key = unsafe { Box::from_raw(credential_priv_key as *mut CredentialPrivateKey); };
-    trace!("indy_crypto_cl_credential_private_key_free: entity: credential_priv_key: {:?}", secret!(_credential_priv_key));
+    trace!("hl_crypto_cl_credential_private_key_free: entity: credential_priv_key: {:?}", secret!(_credential_priv_key));
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_credential_private_key_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_private_key_free: <<< res: {:?}", res);
     res
 }
 
@@ -259,65 +259,65 @@ pub extern fn indy_crypto_cl_credential_private_key_free(credential_priv_key: *c
 /// * `credential_key_correctness_proof` - Reference that contains credential key correctness proof instance pointer.
 /// * `credential_key_correctness_proof_p` - Reference that will contain credential key correctness proof json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof: *const c_void,
+pub extern fn hl_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof: *const c_void,
                                                                       credential_key_correctness_proof_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: >>> credential_key_correctness_proof: {:?}, credential_key_correctness_proof_p: {:?}",
+    trace!("hl_crypto_cl_credential_key_correctness_proof_to_json: >>> credential_key_correctness_proof: {:?}, credential_key_correctness_proof_p: {:?}",
            credential_key_correctness_proof, credential_key_correctness_proof_json_p);
 
     check_useful_c_reference!(credential_key_correctness_proof, CredentialKeyCorrectnessProof, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_key_correctness_proof_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: entity >>> credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_to_json: entity >>> credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
 
     let res = match serde_json::to_string(credential_key_correctness_proof) {
         Ok(credential_key_correctness_proof_json) => {
-            trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
+            trace!("hl_crypto_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
             unsafe {
                 let credential_key_correctness_proof_json = CTypesUtils::string_to_cstring(credential_key_correctness_proof_json);
                 *credential_key_correctness_proof_json_p = credential_key_correctness_proof_json.into_raw();
-                trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json_p: {:?}", *credential_key_correctness_proof_json_p);
+                trace!("hl_crypto_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json_p: {:?}", *credential_key_correctness_proof_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_credential_key_correctness_proof_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns credential key correctness proof from json.
 ///
 /// Note: Credential key correctness proof instance deallocation must be performed
-/// by calling indy_crypto_cl_credential_key_correctness_proof_free
+/// by calling hl_crypto_cl_credential_key_correctness_proof_free
 ///
 /// # Arguments
 /// * `credential_key_correctness_proof_json` - Reference that contains credential key correctness proof json.
 /// * `credential_key_correctness_proof_p` - Reference that will contain credential key correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_key_correctness_proof_from_json(credential_key_correctness_proof_json: *const c_char,
+pub extern fn hl_crypto_cl_credential_key_correctness_proof_from_json(credential_key_correctness_proof_json: *const c_char,
                                                                         credential_key_correctness_proof_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: >>> credential_key_correctness_proof_json: {:?}, credential_key_correctness_proof_p: {:?}",
+    trace!("hl_crypto_cl_credential_key_correctness_proof_from_json: >>> credential_key_correctness_proof_json: {:?}, credential_key_correctness_proof_p: {:?}",
            credential_key_correctness_proof_json, credential_key_correctness_proof_p);
 
     check_useful_c_str!(credential_key_correctness_proof_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_key_correctness_proof_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: entity: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_from_json: entity: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
 
     let res = match serde_json::from_str::<CredentialKeyCorrectnessProof>(&credential_key_correctness_proof_json) {
         Ok(credential_key_correctness_proof) => {
-            trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
+            trace!("hl_crypto_cl_credential_key_correctness_proof_from_json: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
             unsafe {
                 *credential_key_correctness_proof_p = Box::into_raw(Box::new(credential_key_correctness_proof)) as *const c_void;
-                trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: *credential_key_correctness_proof_p: {:?}", *credential_key_correctness_proof_p);
+                trace!("hl_crypto_cl_credential_key_correctness_proof_from_json: *credential_key_correctness_proof_p: {:?}", *credential_key_correctness_proof_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_credential_key_correctness_proof_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -326,31 +326,31 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_from_json(credenti
 /// # Arguments
 /// * `credential_key_correctness_proof` - Reference that contains credential key correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_key_correctness_proof_free: >>> credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
+pub extern fn hl_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_credential_key_correctness_proof_free: >>> credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
 
     check_useful_c_ptr!(credential_key_correctness_proof, ErrorCode::CommonInvalidParam1);
 
     let credential_key_correctness_proof = unsafe { Box::from_raw(credential_key_correctness_proof as *mut CredentialKeyCorrectnessProof); };
-    trace!("indy_crypto_cl_credential_key_correctness_proof_free: entity: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_free: entity: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_credential_key_correctness_proof_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_key_correctness_proof_free: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation registries definition (public and private keys, accumulator, tails generator) entities.
 ///
 /// Note that keys registries deallocation must be performed by
-/// calling indy_crypto_cl_revocation_key_public_free and
-/// indy_crypto_cl_revocation_key_private_free.
+/// calling hl_crypto_cl_revocation_key_public_free and
+/// hl_crypto_cl_revocation_key_private_free.
 ///
 /// Note that accumulator deallocation must be performed by
-/// calling indy_crypto_cl_revocation_registry_free.
+/// calling hl_crypto_cl_revocation_registry_free.
 ///
 /// Note that tails generator deallocation must be performed by
-/// calling indy_crypto_cl_revocation_tails_generator_free.
+/// calling hl_crypto_cl_revocation_tails_generator_free.
 ///
 /// # Arguments
 /// * `credential_pub_key` - Reference that contains credential pub key instance pointer.
@@ -363,14 +363,14 @@ pub extern fn indy_crypto_cl_credential_key_correctness_proof_free(credential_ke
 /// * `rev_reg_p` - Reference that will contain revocation registry instance pointer.
 /// * `rev_tails_generator_p` - Reference that will contain revocation tails generator instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key: *const c_void,
+pub extern fn hl_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key: *const c_void,
                                                                 max_cred_num: u32,
                                                                 issuance_by_default: bool,
                                                                 rev_key_pub_p: *mut *const c_void,
                                                                 rev_key_priv_p: *mut *const c_void,
                                                                 rev_reg_p: *mut *const c_void,
                                                                 rev_tails_generator_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_new_revocation_registry_def: >>> credential_pub_key: {:?}, max_cred_num: {:?}, rev_key_pub_p: {:?}, rev_key_priv_p: {:?}, \
+    trace!("hl_crypto_cl_issuer_new_revocation_registry_def: >>> credential_pub_key: {:?}, max_cred_num: {:?}, rev_key_pub_p: {:?}, rev_key_priv_p: {:?}, \
     rev_reg_p: {:?}, rev_tails_generator_p: {:?}",
            credential_pub_key, max_cred_num, rev_key_pub_p, rev_key_priv_p, rev_reg_p, rev_tails_generator_p);
 
@@ -380,18 +380,18 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_k
     check_useful_c_ptr!(rev_reg_p, ErrorCode::CommonInvalidParam6);
     check_useful_c_ptr!(rev_tails_generator_p, ErrorCode::CommonInvalidParam7);
 
-    trace!("indy_crypto_cl_issuer_new_revocation_registry_def: entities: credential_pub_key: {:?}, max_cred_num: {:?}", credential_pub_key, max_cred_num);
+    trace!("hl_crypto_cl_issuer_new_revocation_registry_def: entities: credential_pub_key: {:?}, max_cred_num: {:?}", credential_pub_key, max_cred_num);
 
     let res = match Issuer::new_revocation_registry_def(credential_pub_key, max_cred_num, issuance_by_default) {
         Ok((rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator)) => {
-            trace!("indy_crypto_cl_issuer_new_revocation_registry_def: rev_key_pub_p: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
+            trace!("hl_crypto_cl_issuer_new_revocation_registry_def: rev_key_pub_p: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
                    rev_key_pub_p, secret!(&rev_key_priv), rev_reg, rev_tails_generator);
             unsafe {
                 *rev_key_pub_p = Box::into_raw(Box::new(rev_key_pub)) as *const c_void;
                 *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
                 *rev_reg_p = Box::into_raw(Box::new(rev_reg)) as *const c_void;
                 *rev_tails_generator_p = Box::into_raw(Box::new(rev_tails_generator)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_new_revocation_registry_def: *rev_key_pub_p: {:?}, *rev_key_priv_p: {:?}, *rev_reg_p: {:?}, *rev_tails_generator_p: {:?}",
+                trace!("hl_crypto_cl_issuer_new_revocation_registry_def: *rev_key_pub_p: {:?}, *rev_key_priv_p: {:?}, *rev_reg_p: {:?}, *rev_tails_generator_p: {:?}",
                        *rev_key_pub_p, *rev_key_priv_p, *rev_reg_p, *rev_tails_generator_p);
             }
             ErrorCode::Success
@@ -399,7 +399,7 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_k
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_new_revocation_registry_def: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_new_revocation_registry_def: <<< res: {:?}", res);
     res
 }
 
@@ -409,64 +409,64 @@ pub extern fn indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_k
 /// * `rev_key_pub` - Reference that contains revocation key public pointer.
 /// * `rev_key_pub_json_p` - Reference that will contain revocation key public json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_public_to_json(rev_key_pub: *const c_void,
+pub extern fn hl_crypto_cl_revocation_key_public_to_json(rev_key_pub: *const c_void,
                                                            rev_key_pub_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_public_to_json: >>> rev_key_pub: {:?}, rev_key_pub_json_p: {:?}",
+    trace!("hl_crypto_cl_revocation_key_public_to_json: >>> rev_key_pub: {:?}, rev_key_pub_json_p: {:?}",
            rev_key_pub, rev_key_pub_json_p);
 
     check_useful_c_reference!(rev_key_pub, RevocationKeyPublic, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_pub_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_public_to_json: entity >>> rev_key_pub: {:?}", rev_key_pub);
+    trace!("hl_crypto_cl_revocation_key_public_to_json: entity >>> rev_key_pub: {:?}", rev_key_pub);
 
     let res = match serde_json::to_string(rev_key_pub) {
         Ok(rev_key_pub_json) => {
-            trace!("indy_crypto_cl_revocation_key_public_to_json: rev_key_pub_json: {:?}", rev_key_pub_json);
+            trace!("hl_crypto_cl_revocation_key_public_to_json: rev_key_pub_json: {:?}", rev_key_pub_json);
             unsafe {
                 let rev_reg_def_pub_json = CTypesUtils::string_to_cstring(rev_key_pub_json);
                 *rev_key_pub_json_p = rev_reg_def_pub_json.into_raw();
-                trace!("indy_crypto_cl_revocation_key_public_to_json: rev_key_pub_json_p: {:?}", *rev_key_pub_json_p);
+                trace!("hl_crypto_cl_revocation_key_public_to_json: rev_key_pub_json_p: {:?}", *rev_key_pub_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_revocation_key_public_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_public_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation key public from json.
 ///
 /// Note: Revocation registry public instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_key_public_free
+/// by calling hl_crypto_cl_revocation_key_public_free
 ///
 /// # Arguments
 /// * `rev_key_pub_json` - Reference that contains revocation key public json.
 /// * `rev_key_pub_p` - Reference that will contain revocation key public instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *const c_char,
+pub extern fn hl_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *const c_char,
                                                              rev_key_pub_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_public_from_json: >>> rev_key_pub_json: {:?}, rev_key_pub_p: {:?}", rev_key_pub_json, rev_key_pub_p);
+    trace!("hl_crypto_cl_revocation_key_public_from_json: >>> rev_key_pub_json: {:?}, rev_key_pub_p: {:?}", rev_key_pub_json, rev_key_pub_p);
 
     check_useful_c_str!(rev_key_pub_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_pub_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_public_from_json: entity: rev_key_pub_json: {:?}", rev_key_pub_json);
+    trace!("hl_crypto_cl_revocation_key_public_from_json: entity: rev_key_pub_json: {:?}", rev_key_pub_json);
 
     let res = match serde_json::from_str::<RevocationKeyPublic>(&rev_key_pub_json) {
         Ok(rev_key_pub) => {
-            trace!("indy_crypto_cl_revocation_key_public_from_json: rev_key_pub: {:?}", rev_key_pub);
+            trace!("hl_crypto_cl_revocation_key_public_from_json: rev_key_pub: {:?}", rev_key_pub);
             unsafe {
                 *rev_key_pub_p = Box::into_raw(Box::new(rev_key_pub)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_key_public_from_json: *rev_key_pub_p: {:?}", *rev_key_pub_p);
+                trace!("hl_crypto_cl_revocation_key_public_from_json: *rev_key_pub_p: {:?}", *rev_key_pub_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_revocation_key_public_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_public_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -475,16 +475,16 @@ pub extern fn indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json: *
 /// # Arguments
 /// * `rev_key_pub` - Reference that contains revocation key public instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_public_free(rev_key_pub: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_public_free: >>> rev_key_pub: {:?}", rev_key_pub);
+pub extern fn hl_crypto_cl_revocation_key_public_free(rev_key_pub: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_revocation_key_public_free: >>> rev_key_pub: {:?}", rev_key_pub);
 
     check_useful_c_ptr!(rev_key_pub, ErrorCode::CommonInvalidParam1);
     let rev_key_pub = unsafe { Box::from_raw(rev_key_pub as *mut RevocationKeyPublic); };
-    trace!("indy_crypto_cl_revocation_key_public_free: entity: rev_key_pub: {:?}", rev_key_pub);
+    trace!("hl_crypto_cl_revocation_key_public_free: entity: rev_key_pub: {:?}", rev_key_pub);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_key_public_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_public_free: <<< res: {:?}", res);
     res
 }
 
@@ -494,65 +494,65 @@ pub extern fn indy_crypto_cl_revocation_key_public_free(rev_key_pub: *const c_vo
 /// * `rev_key_priv` - Reference that contains issuer revocation key private pointer.
 /// * `rev_key_priv_json_p` - Reference that will contain revocation key private json
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const c_void,
+pub extern fn hl_crypto_cl_revocation_key_private_to_json(rev_key_priv: *const c_void,
                                                             rev_key_priv_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_private_to_json: >>> rev_key_priv: {:?}, rev_key_priv_json_p: {:?}",
+    trace!("hl_crypto_cl_revocation_key_private_to_json: >>> rev_key_priv: {:?}, rev_key_priv_json_p: {:?}",
            rev_key_priv, rev_key_priv_json_p);
 
     check_useful_c_reference!(rev_key_priv, RevocationKeyPrivate, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_priv_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", secret!(&rev_key_priv));
+    trace!("hl_crypto_cl_revocation_key_private_to_json: entity >>> rev_key_priv: {:?}", secret!(&rev_key_priv));
 
     let res = match serde_json::to_string(rev_key_priv) {
         Ok(rev_key_priv_json) => {
-            trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
+            trace!("hl_crypto_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
             unsafe {
                 let rev_reg_def_priv_json = CTypesUtils::string_to_cstring(rev_key_priv_json);
                 *rev_key_priv_json_p = rev_reg_def_priv_json.into_raw();
-                trace!("indy_crypto_cl_revocation_key_private_to_json: rev_key_priv_json_p: {:?}", *rev_key_priv_json_p);
+                trace!("hl_crypto_cl_revocation_key_private_to_json: rev_key_priv_json_p: {:?}", *rev_key_priv_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_revocation_key_private_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_private_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation key private from json.
 ///
 /// Note: Revocation registry private instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_key_private_free
+/// by calling hl_crypto_cl_revocation_key_private_free
 ///
 /// # Arguments
 /// * `rev_key_priv_json` - Reference that contains revocation key private json.
 /// * `rev_key_priv_p` - Reference that will contain revocation key private instance pointer
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json: *const c_char,
+pub extern fn hl_crypto_cl_revocation_key_private_from_json(rev_key_priv_json: *const c_char,
                                                               rev_key_priv_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_private_from_json: >>> rev_key_priv_json: {:?}, rev_key_priv_p: {:?}",
+    trace!("hl_crypto_cl_revocation_key_private_from_json: >>> rev_key_priv_json: {:?}, rev_key_priv_p: {:?}",
            rev_key_priv_json, rev_key_priv_p);
 
     check_useful_c_str!(rev_key_priv_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_key_priv_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
+    trace!("hl_crypto_cl_revocation_key_private_from_json: entity: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
 
     let res = match serde_json::from_str::<RevocationKeyPrivate>(&rev_key_priv_json) {
         Ok(rev_key_priv) => {
-            trace!("indy_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", secret!(&rev_key_priv));
+            trace!("hl_crypto_cl_revocation_key_private_from_json: rev_key_priv: {:?}", secret!(&rev_key_priv));
             unsafe {
                 *rev_key_priv_p = Box::into_raw(Box::new(rev_key_priv)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_key_private_from_json: *rev_key_priv_p: {:?}", *rev_key_priv_p);
+                trace!("hl_crypto_cl_revocation_key_private_from_json: *rev_key_priv_p: {:?}", *rev_key_priv_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_revocation_key_private_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_private_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -561,17 +561,17 @@ pub extern fn indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json:
 /// # Arguments
 /// * `rev_key_priv` - Reference that contains revocation key private instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_key_private_free(rev_key_priv: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_key_private_free: >>> rev_key_priv: {:?}", rev_key_priv);
+pub extern fn hl_crypto_cl_revocation_key_private_free(rev_key_priv: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_revocation_key_private_free: >>> rev_key_priv: {:?}", rev_key_priv);
 
     check_useful_c_ptr!(rev_key_priv, ErrorCode::CommonInvalidParam1);
 
     let _rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate); };
-    trace!("indy_crypto_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", secret!(_rev_key_priv));
+    trace!("hl_crypto_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", secret!(_rev_key_priv));
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_key_private_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_key_private_free: <<< res: {:?}", res);
     res
 }
 
@@ -581,65 +581,65 @@ pub extern fn indy_crypto_cl_revocation_key_private_free(rev_key_priv: *const c_
 /// * `rev_reg` - Reference that contains revocation registry pointer.
 /// * `rev_reg_p` - Reference that will contain revocation registry json
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_to_json(rev_reg: *const c_void,
+pub extern fn hl_crypto_cl_revocation_registry_to_json(rev_reg: *const c_void,
                                                          rev_reg_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_to_json: >>> rev_reg: {:?}, rev_reg_json_p: {:?}",
+    trace!("hl_crypto_cl_revocation_registry_to_json: >>> rev_reg: {:?}, rev_reg_json_p: {:?}",
            rev_reg, rev_reg_json_p);
 
     check_useful_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_reg_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_to_json: entity >>> rev_reg: {:?}", rev_reg);
+    trace!("hl_crypto_cl_revocation_registry_to_json: entity >>> rev_reg: {:?}", rev_reg);
 
     let res = match serde_json::to_string(rev_reg) {
         Ok(rev_reg_json) => {
-            trace!("indy_crypto_cl_revocation_registry_to_json: rev_reg_json: {:?}", rev_reg_json);
+            trace!("hl_crypto_cl_revocation_registry_to_json: rev_reg_json: {:?}", rev_reg_json);
             unsafe {
                 let rev_reg_json = CTypesUtils::string_to_cstring(rev_reg_json);
                 *rev_reg_json_p = rev_reg_json.into_raw();
-                trace!("indy_crypto_cl_revocation_registry_to_json: rev_reg_json_p: {:?}", *rev_reg_json_p);
+                trace!("hl_crypto_cl_revocation_registry_to_json: rev_reg_json_p: {:?}", *rev_reg_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_revocation_registry_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation registry from json.
 ///
 /// Note: Revocation registry instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_registry_free
+/// by calling hl_crypto_cl_revocation_registry_free
 ///
 /// # Arguments
 /// * `rev_reg_json` - Reference that contains revocation registry json.
 /// * `rev_reg_p` - Reference that will contain revocation registry instance pointer
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_from_json(rev_reg_json: *const c_char,
+pub extern fn hl_crypto_cl_revocation_registry_from_json(rev_reg_json: *const c_char,
                                                            rev_reg_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_from_json: >>> rev_reg_json: {:?}, rev_reg_p: {:?}",
+    trace!("hl_crypto_cl_revocation_registry_from_json: >>> rev_reg_json: {:?}, rev_reg_p: {:?}",
            rev_reg_json, rev_reg_p);
 
     check_useful_c_str!(rev_reg_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_reg_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_from_json: entity: rev_reg_json: {:?}", rev_reg_json);
+    trace!("hl_crypto_cl_revocation_registry_from_json: entity: rev_reg_json: {:?}", rev_reg_json);
 
     let res = match serde_json::from_str::<RevocationRegistry>(&rev_reg_json) {
         Ok(rev_reg) => {
-            trace!("indy_crypto_cl_revocation_registry_from_json: rev_reg: {:?}", rev_reg);
+            trace!("hl_crypto_cl_revocation_registry_from_json: rev_reg: {:?}", rev_reg);
             unsafe {
                 *rev_reg_p = Box::into_raw(Box::new(rev_reg)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_registry_from_json: *rev_reg_p: {:?}", *rev_reg_p);
+                trace!("hl_crypto_cl_revocation_registry_from_json: *rev_reg_p: {:?}", *rev_reg_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_revocation_registry_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -648,17 +648,17 @@ pub extern fn indy_crypto_cl_revocation_registry_from_json(rev_reg_json: *const 
 /// # Arguments
 /// * `rev_reg` - Reference that contains revocation registry instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_free(rev_reg: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_free: >>> rev_reg: {:?}", rev_reg);
+pub extern fn hl_crypto_cl_revocation_registry_free(rev_reg: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_revocation_registry_free: >>> rev_reg: {:?}", rev_reg);
 
     check_useful_c_ptr!(rev_reg, ErrorCode::CommonInvalidParam1);
 
     let rev_reg = unsafe { Box::from_raw(rev_reg as *mut RevocationRegistry); };
-    trace!("indy_crypto_cl_revocation_registry_free: entity: rev_reg: {:?}", rev_reg);
+    trace!("hl_crypto_cl_revocation_registry_free: entity: rev_reg: {:?}", rev_reg);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_registry_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_free: <<< res: {:?}", res);
     res
 }
 
@@ -668,65 +668,65 @@ pub extern fn indy_crypto_cl_revocation_registry_free(rev_reg: *const c_void) ->
 /// * `rev_tails_generator` - Reference that contains revocation tails generator pointer.
 /// * `rev_tails_generator_p` - Reference that will contain revocation tails generator json
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator: *const c_void,
+pub extern fn hl_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator: *const c_void,
                                                                 rev_tails_generator_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_tails_generator_to_json: >>> rev_tails_generator: {:?}, rev_tails_generator_json_p: {:?}",
+    trace!("hl_crypto_cl_revocation_tails_generator_to_json: >>> rev_tails_generator: {:?}, rev_tails_generator_json_p: {:?}",
            rev_tails_generator, rev_tails_generator_json_p);
 
     check_useful_c_reference!(rev_tails_generator, RevocationTailsGenerator, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_tails_generator_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_tails_generator_to_json: entity >>> rev_tails_generator: {:?}", rev_tails_generator);
+    trace!("hl_crypto_cl_revocation_tails_generator_to_json: entity >>> rev_tails_generator: {:?}", rev_tails_generator);
 
     let res = match serde_json::to_string(rev_tails_generator) {
         Ok(rev_tails_generator_json) => {
-            trace!("indy_crypto_cl_revocation_tails_generator_to_json: rev_tails_generator_json: {:?}", rev_tails_generator_json);
+            trace!("hl_crypto_cl_revocation_tails_generator_to_json: rev_tails_generator_json: {:?}", rev_tails_generator_json);
             unsafe {
                 let rev_tails_generator_json = CTypesUtils::string_to_cstring(rev_tails_generator_json);
                 *rev_tails_generator_json_p = rev_tails_generator_json.into_raw();
-                trace!("indy_crypto_cl_revocation_tails_generator_to_json: rev_tails_generator_json_p: {:?}", *rev_tails_generator_json_p);
+                trace!("hl_crypto_cl_revocation_tails_generator_to_json: rev_tails_generator_json_p: {:?}", *rev_tails_generator_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_revocation_tails_generator_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_tails_generator_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation tails generator from json.
 ///
 /// Note: Revocation tails generator instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_tails_generator_free
+/// by calling hl_crypto_cl_revocation_tails_generator_free
 ///
 /// # Arguments
 /// * `rev_tails_generator_json` - Reference that contains revocation tails generator json.
 /// * `rev_tails_generator_p` - Reference that will contain revocation tails generator instance pointer
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_tails_generator_from_json(rev_tails_generator_json: *const c_char,
+pub extern fn hl_crypto_cl_revocation_tails_generator_from_json(rev_tails_generator_json: *const c_char,
                                                                   rev_tails_generator_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_tails_generator_from_json: >>> rev_tails_generator_json: {:?}, rev_tails_generator_p: {:?}",
+    trace!("hl_crypto_cl_revocation_tails_generator_from_json: >>> rev_tails_generator_json: {:?}, rev_tails_generator_p: {:?}",
            rev_tails_generator_json, rev_tails_generator_p);
 
     check_useful_c_str!(rev_tails_generator_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(rev_tails_generator_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_tails_generator_from_json: entity: rev_tails_generator_json: {:?}", rev_tails_generator_json);
+    trace!("hl_crypto_cl_revocation_tails_generator_from_json: entity: rev_tails_generator_json: {:?}", rev_tails_generator_json);
 
     let res = match serde_json::from_str::<RevocationTailsGenerator>(&rev_tails_generator_json) {
         Ok(rev_tails_generator) => {
-            trace!("indy_crypto_cl_revocation_tails_generator_from_json: rev_tails_generator: {:?}", rev_tails_generator);
+            trace!("hl_crypto_cl_revocation_tails_generator_from_json: rev_tails_generator: {:?}", rev_tails_generator);
             unsafe {
                 *rev_tails_generator_p = Box::into_raw(Box::new(rev_tails_generator)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_tails_generator_from_json: *rev_tails_generator_p: {:?}", *rev_tails_generator_p);
+                trace!("hl_crypto_cl_revocation_tails_generator_from_json: *rev_tails_generator_p: {:?}", *rev_tails_generator_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_revocation_tails_generator_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_tails_generator_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -735,27 +735,27 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_from_json(rev_tails_gene
 /// # Arguments
 /// * `rev_tails_generator` - Reference that contains revocation tails generator instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_tails_generator_free(rev_tails_generator: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_tails_generator_free: >>> rev_tails_generator: {:?}", rev_tails_generator);
+pub extern fn hl_crypto_cl_revocation_tails_generator_free(rev_tails_generator: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_revocation_tails_generator_free: >>> rev_tails_generator: {:?}", rev_tails_generator);
 
     check_useful_c_ptr!(rev_tails_generator, ErrorCode::CommonInvalidParam1);
 
     let rev_tails_generator = unsafe { Box::from_raw(rev_tails_generator as *mut RevocationTailsGenerator); };
-    trace!("indy_crypto_cl_revocation_tails_generator_free: entity: rev_tails_generator: {:?}", rev_tails_generator);
+    trace!("hl_crypto_cl_revocation_tails_generator_free: entity: rev_tails_generator: {:?}", rev_tails_generator);
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_tails_generator_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_tails_generator_free: <<< res: {:?}", res);
     res
 }
 
 /// Signs credential values with primary keys only.
 ///
 /// Note that credential signature instances deallocation must be performed by
-/// calling indy_crypto_cl_credential_signature_free.
+/// calling hl_crypto_cl_credential_signature_free.
 ///
 /// Note that credential signature correctness proof instances deallocation must be performed by
-/// calling indy_crypto_cl_signature_correctness_proof_free.
+/// calling hl_crypto_cl_signature_correctness_proof_free.
 ///
 /// # Arguments
 /// * `prover_id` - Prover identifier.
@@ -769,7 +769,7 @@ pub extern fn indy_crypto_cl_revocation_tails_generator_free(rev_tails_generator
 /// * `credential_signature_p` - Reference that will contain credential signature instance pointer.
 /// * `credential_signature_correctness_proof_p` - Reference that will contain credential signature correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
+pub extern fn hl_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
                                                     blinded_credential_secrets: *const c_void,
                                                     blinded_credential_secrets_correctness_proof: *const c_void,
                                                     credential_nonce: *const c_void,
@@ -779,7 +779,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
                                                     credential_priv_key: *const c_void,
                                                     credential_signature_p: *mut *const c_void,
                                                     credential_signature_correctness_proof_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
+    trace!("hl_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
         credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
         credential_signature_p: {:?}, credential_signature_correctness_proof_p: {:?}",
            prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof,
@@ -797,7 +797,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
     check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidParam10);
     check_useful_c_ptr!(credential_signature_correctness_proof_p, ErrorCode::CommonInvalidParam11);
 
-    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?},\
+    trace!("hl_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?},\
      credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}",
            prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce, credential_issuance_nonce,
            secret!(&credential_values), credential_pub_key, secret!(&credential_priv_key));
@@ -811,12 +811,12 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
                                             &credential_pub_key,
                                             &credential_priv_key) {
         Ok((credential_signature, credential_signature_correctness_proof)) => {
-            trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
+            trace!("hl_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
                    secret!(&credential_signature), credential_signature_correctness_proof);
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
                 *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
+                trace!("hl_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
                        *credential_signature_p, *credential_signature_correctness_proof_p);
             }
             ErrorCode::Success
@@ -824,7 +824,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
@@ -832,14 +832,14 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
 ///
 ///
 /// Note that credential signature instances deallocation must be performed by
-/// calling indy_crypto_cl_credential_signature_free.
+/// calling hl_crypto_cl_credential_signature_free.
 ///
 /// Note that credential signature correctness proof instances deallocation must be performed by
-/// calling indy_crypto_cl_signature_correctness_proof_free.
+/// calling hl_crypto_cl_signature_correctness_proof_free.
 ///
 ///
 /// Note that credential signature correctness proof instances deallocation must be performed by
-/// calling indy_crypto_cl_revocation_registry_delta_free.
+/// calling hl_crypto_cl_revocation_registry_delta_free.
 ///
 /// # Arguments
 /// * `prover_id` - Prover identifier.
@@ -858,7 +858,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential(prover_id: *const c_char,
 /// * `credential_signature_correctness_proof_p` - Reference that will contain credential signature correctness proof instance pointer.
 /// * `revocation_registry_delta_p` - Reference that will contain revocation registry delta instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const c_char,
+pub extern fn hl_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const c_char,
                                                                blinded_credential_secrets: *const c_void,
                                                                blinded_credential_secrets_correctness_proof: *const c_void,
                                                                credential_nonce: *const c_void,
@@ -877,7 +877,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
                                                                credential_signature_p: *mut *const c_void,
                                                                credential_signature_correctness_proof_p: *mut *const c_void,
                                                                revocation_registry_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
+    trace!("hl_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
         credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
         rev_idx: {:?}, rev_key_pub: {:?}, rev_key_priv: {:?}, credential_signature_p: {:?}, credential_signature_correctness_proof_p: {:?}",
            prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce, credential_issuance_nonce,
@@ -897,7 +897,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
     check_useful_c_ptr!(credential_signature_correctness_proof_p, ErrorCode::CommonInvalidState); //TODO invalid param
     check_useful_c_ptr!(revocation_registry_delta_p, ErrorCode::CommonInvalidState); //TODO invalid param
 
-    trace!("indy_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
+    trace!("hl_crypto_cl_issuer_sign_credential: >>> prover_id: {:?}, blinded_credential_secrets: {:?}, blinded_credential_secrets_correctness_proof: {:?}, \
     credential_nonce: {:?}, credential_issuance_nonce: {:?}, credential_values: {:?}, credential_pub_key: {:?}, credential_priv_key: {:?}, \
     rev_idx: {:?}, rev_reg: {:?}, rev_key_priv: {:?}", prover_id, blinded_credential_secrets, blinded_credential_secrets_correctness_proof, credential_nonce,
            credential_issuance_nonce, secret!(credential_values), credential_pub_key, secret!(credential_priv_key), secret!(rev_idx), rev_reg, secret!(rev_key_priv));
@@ -918,13 +918,13 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
                                                        rev_key_priv,
                                                        &rta) {
         Ok((credential_signature, credential_signature_correctness_proof, delta)) => {
-            trace!("indy_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
+            trace!("hl_crypto_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
                    secret!(&credential_signature), credential_signature_correctness_proof);
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
                 *credential_signature_correctness_proof_p = Box::into_raw(Box::new(credential_signature_correctness_proof)) as *const c_void;
                 *revocation_registry_delta_p = if let Some(delta) = delta { Box::into_raw(Box::new(delta)) as *const c_void } else { null() };
-                trace!("indy_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
+                trace!("hl_crypto_cl_issuer_sign_credential: *credential_signature_p: {:?}, *credential_signature_correctness_proof_p: {:?}",
                        *credential_signature_p, *credential_signature_correctness_proof_p);
             }
             ErrorCode::Success
@@ -932,7 +932,7 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_sign_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
@@ -942,65 +942,65 @@ pub extern fn indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id: *const
 /// * `credential_signature` - Reference that contains credential signature pointer.
 /// * `credential_signature_json_p` - Reference that will contain credential signature json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_signature_to_json(credential_signature: *const c_void,
+pub extern fn hl_crypto_cl_credential_signature_to_json(credential_signature: *const c_void,
                                                           credential_signature_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_signature_to_json: >>> credential_signature: {:?}, credential_signature_json_p: {:?}",
+    trace!("hl_crypto_cl_credential_signature_to_json: >>> credential_signature: {:?}, credential_signature_json_p: {:?}",
            credential_signature, credential_signature_json_p);
 
     check_useful_c_reference!(credential_signature, CredentialSignature, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_signature_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_signature_to_json: entity >>> credential_signature: {:?}", secret!(&credential_signature));
+    trace!("hl_crypto_cl_credential_signature_to_json: entity >>> credential_signature: {:?}", secret!(&credential_signature));
 
     let res = match serde_json::to_string(credential_signature) {
         Ok(credential_signature_json) => {
-            trace!("indy_crypto_cl_credential_signature_to_json: credential_signature_json: {:?}", secret!(&credential_signature_json));
+            trace!("hl_crypto_cl_credential_signature_to_json: credential_signature_json: {:?}", secret!(&credential_signature_json));
             unsafe {
                 let credential_signature_json = CTypesUtils::string_to_cstring(credential_signature_json);
                 *credential_signature_json_p = credential_signature_json.into_raw();
-                trace!("indy_crypto_cl_credential_signature_to_json: credential_signature_json_p: {:?}", *credential_signature_json_p);
+                trace!("hl_crypto_cl_credential_signature_to_json: credential_signature_json_p: {:?}", *credential_signature_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_credential_signature_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_signature_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns credential signature from json.
 ///
 /// Note: Credential signature instance deallocation must be performed
-/// by calling indy_crypto_cl_credential_signature_free
+/// by calling hl_crypto_cl_credential_signature_free
 ///
 /// # Arguments
 /// * `credential_signature_json` - Reference that contains credential signature json.
 /// * `credential_signature_p` - Reference that will contain credential signature instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_signature_from_json(credential_signature_json: *const c_char,
+pub extern fn hl_crypto_cl_credential_signature_from_json(credential_signature_json: *const c_char,
                                                             credential_signature_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_signature_from_json: >>> credential_signature_json: {:?}, credential_signature_p: {:?}",
+    trace!("hl_crypto_cl_credential_signature_from_json: >>> credential_signature_json: {:?}, credential_signature_p: {:?}",
            credential_signature_json, credential_signature_p);
 
     check_useful_c_str!(credential_signature_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(credential_signature_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_credential_signature_from_json: entity: credential_signature_json: {:?}", secret!(&credential_signature_json));
+    trace!("hl_crypto_cl_credential_signature_from_json: entity: credential_signature_json: {:?}", secret!(&credential_signature_json));
 
     let res = match serde_json::from_str::<CredentialSignature>(&credential_signature_json) {
         Ok(credential_signature) => {
-            trace!("indy_crypto_cl_credential_signature_from_json: credential_signature: {:?}", secret!(&credential_signature));
+            trace!("hl_crypto_cl_credential_signature_from_json: credential_signature: {:?}", secret!(&credential_signature));
             unsafe {
                 *credential_signature_p = Box::into_raw(Box::new(credential_signature)) as *const c_void;
-                trace!("indy_crypto_cl_credential_signature_from_json: *credential_signature_p: {:?}", *credential_signature_p);
+                trace!("hl_crypto_cl_credential_signature_from_json: *credential_signature_p: {:?}", *credential_signature_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_credential_signature_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_signature_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -1009,16 +1009,16 @@ pub extern fn indy_crypto_cl_credential_signature_from_json(credential_signature
 /// # Arguments
 /// * `credential_signature` - Reference that contains credential signature instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_credential_signature_free(credential_signature: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_credential_signature_free: >>> credential_signature: {:?}", credential_signature);
+pub extern fn hl_crypto_cl_credential_signature_free(credential_signature: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_credential_signature_free: >>> credential_signature: {:?}", credential_signature);
 
     check_useful_c_ptr!(credential_signature, ErrorCode::CommonInvalidParam1);
 
     let _credential_signature = unsafe { Box::from_raw(credential_signature as *mut CredentialSignature); };
-    trace!("indy_crypto_cl_credential_signature_free: entity: credential_signature: {:?}", secret!(_credential_signature));
+    trace!("hl_crypto_cl_credential_signature_free: entity: credential_signature: {:?}", secret!(_credential_signature));
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_credential_signature_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_credential_signature_free: <<< res: {:?}", res);
     res
 }
 
@@ -1028,65 +1028,65 @@ pub extern fn indy_crypto_cl_credential_signature_free(credential_signature: *co
 /// * `signature_correctness_proof` - Reference that contains signature correctness proof instance pointer.
 /// * `signature_correctness_proof_json_p` - Reference that will contain signature correctness proof json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof: *const c_void,
+pub extern fn hl_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof: *const c_void,
                                                                  signature_correctness_proof_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_signature_correctness_proof_to_json: >>> signature_correctness_proof: {:?}, signature_correctness_proof_json_p: {:?}",
+    trace!("hl_crypto_cl_signature_correctness_proof_to_json: >>> signature_correctness_proof: {:?}, signature_correctness_proof_json_p: {:?}",
            signature_correctness_proof, signature_correctness_proof_json_p);
 
     check_useful_c_reference!(signature_correctness_proof, SignatureCorrectnessProof, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(signature_correctness_proof_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_signature_correctness_proof_to_json: entity >>> signature_correctness_proof: {:?}", signature_correctness_proof);
+    trace!("hl_crypto_cl_signature_correctness_proof_to_json: entity >>> signature_correctness_proof: {:?}", signature_correctness_proof);
 
     let res = match serde_json::to_string(signature_correctness_proof) {
         Ok(signature_correctness_proof_json) => {
-            trace!("indy_crypto_cl_signature_correctness_proof_to_json: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
+            trace!("hl_crypto_cl_signature_correctness_proof_to_json: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
             unsafe {
                 let signature_correctness_proof_json = CTypesUtils::string_to_cstring(signature_correctness_proof_json);
                 *signature_correctness_proof_json_p = signature_correctness_proof_json.into_raw();
-                trace!("indy_crypto_cl_signature_correctness_proof_to_json: signature_correctness_proof_json_p: {:?}", *signature_correctness_proof_json_p);
+                trace!("hl_crypto_cl_signature_correctness_proof_to_json: signature_correctness_proof_json_p: {:?}", *signature_correctness_proof_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_signature_correctness_proof_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_signature_correctness_proof_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns signature correctness proof from json.
 ///
 /// Note: Signature correctness proof instance deallocation must be performed
-/// by calling indy_crypto_cl_signature_correctness_proof_free
+/// by calling hl_crypto_cl_signature_correctness_proof_free
 ///
 /// # Arguments
 /// * `signature_correctness_proof_json` - Reference that contains signature correctness proof json.
 /// * `signature_correctness_proof_p` - Reference that will contain signature correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_signature_correctness_proof_from_json(signature_correctness_proof_json: *const c_char,
+pub extern fn hl_crypto_cl_signature_correctness_proof_from_json(signature_correctness_proof_json: *const c_char,
                                                                    signature_correctness_proof_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_signature_correctness_proof_from_json: >>> signature_correctness_proof_json: {:?}, signature_correctness_proof_p: {:?}",
+    trace!("hl_crypto_cl_signature_correctness_proof_from_json: >>> signature_correctness_proof_json: {:?}, signature_correctness_proof_p: {:?}",
            signature_correctness_proof_json, signature_correctness_proof_p);
 
     check_useful_c_str!(signature_correctness_proof_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(signature_correctness_proof_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_signature_correctness_proof_from_json: entity: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
+    trace!("hl_crypto_cl_signature_correctness_proof_from_json: entity: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
 
     let res = match serde_json::from_str::<SignatureCorrectnessProof>(&signature_correctness_proof_json) {
         Ok(signature_correctness_proof) => {
-            trace!("indy_crypto_cl_signature_correctness_proof_from_json: signature_correctness_proof: {:?}", signature_correctness_proof);
+            trace!("hl_crypto_cl_signature_correctness_proof_from_json: signature_correctness_proof: {:?}", signature_correctness_proof);
             unsafe {
                 *signature_correctness_proof_p = Box::into_raw(Box::new(signature_correctness_proof)) as *const c_void;
-                trace!("indy_crypto_cl_signature_correctness_proof_from_json: *signature_correctness_proof_p: {:?}", *signature_correctness_proof_p);
+                trace!("hl_crypto_cl_signature_correctness_proof_from_json: *signature_correctness_proof_p: {:?}", *signature_correctness_proof_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_signature_correctness_proof_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_signature_correctness_proof_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -1095,16 +1095,16 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_from_json(signature_cor
 /// # Arguments
 /// * `signature_correctness_proof` - Reference that contains signature correctness proof instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_signature_correctness_proof_free(signature_correctness_proof: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_signature_correctness_proof_free: >>> signature_correctness_proof: {:?}", signature_correctness_proof);
+pub extern fn hl_crypto_cl_signature_correctness_proof_free(signature_correctness_proof: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_signature_correctness_proof_free: >>> signature_correctness_proof: {:?}", signature_correctness_proof);
 
     check_useful_c_ptr!(signature_correctness_proof, ErrorCode::CommonInvalidParam1);
 
     let signature_correctness_proof = unsafe { Box::from_raw(signature_correctness_proof as *mut SignatureCorrectnessProof); };
-    trace!("indy_crypto_cl_signature_correctness_proof_free: entity: signature_correctness_proof: {:?}", signature_correctness_proof);
+    trace!("hl_crypto_cl_signature_correctness_proof_free: entity: signature_correctness_proof: {:?}", signature_correctness_proof);
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_signature_correctness_proof_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_signature_correctness_proof_free: <<< res: {:?}", res);
     res
 }
 
@@ -1114,65 +1114,65 @@ pub extern fn indy_crypto_cl_signature_correctness_proof_free(signature_correctn
 /// * `revocation_registry_delta` - Reference that contains revocation registry delta instance pointer.
 /// * `revocation_registry_delta_json_p` - Reference that will contain revocation registry delta json.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_delta_to_json(revocation_registry_delta: *const c_void,
+pub extern fn hl_crypto_cl_revocation_registry_delta_to_json(revocation_registry_delta: *const c_void,
                                                                revocation_registry_delta_json_p: *mut *const c_char) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_delta_to_json: >>> revocation_registry_delta: {:?}, revocation_registry_delta_json_p: {:?}",
+    trace!("hl_crypto_cl_revocation_registry_delta_to_json: >>> revocation_registry_delta: {:?}, revocation_registry_delta_json_p: {:?}",
            revocation_registry_delta, revocation_registry_delta_json_p);
 
     check_useful_c_reference!(revocation_registry_delta, SignatureCorrectnessProof, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(revocation_registry_delta_json_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_delta_to_json: entity >>> revocation_registry_delta: {:?}", revocation_registry_delta);
+    trace!("hl_crypto_cl_revocation_registry_delta_to_json: entity >>> revocation_registry_delta: {:?}", revocation_registry_delta);
 
     let res = match serde_json::to_string(revocation_registry_delta) {
         Ok(revocation_registry_delta_json) => {
-            trace!("indy_crypto_cl_revocation_registry_delta_to_json: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
+            trace!("hl_crypto_cl_revocation_registry_delta_to_json: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
             unsafe {
                 let revocation_registry_delta_json = CTypesUtils::string_to_cstring(revocation_registry_delta_json);
                 *revocation_registry_delta_json_p = revocation_registry_delta_json.into_raw();
-                trace!("indy_crypto_cl_revocation_registry_delta_to_json: revocation_registry_delta_json_p: {:?}", *revocation_registry_delta_json_p);
+                trace!("hl_crypto_cl_revocation_registry_delta_to_json: revocation_registry_delta_json_p: {:?}", *revocation_registry_delta_json_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidState
     };
 
-    trace!("indy_crypto_cl_revocation_registry_delta_to_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_delta_to_json: <<< res: {:?}", res);
     res
 }
 
 /// Creates and returns revocation registry delta from json.
 ///
 /// Note: Revocation registry delta instance deallocation must be performed
-/// by calling indy_crypto_cl_revocation_registry_delta_free
+/// by calling hl_crypto_cl_revocation_registry_delta_free
 ///
 /// # Arguments
 /// * `revocation_registry_delta_json` - Reference that contains revocation registry delta json.
 /// * `revocation_registry_delta_p` - Reference that will contain revocation registry delta instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_delta_from_json(revocation_registry_delta_json: *const c_char,
+pub extern fn hl_crypto_cl_revocation_registry_delta_from_json(revocation_registry_delta_json: *const c_char,
                                                                  revocation_registry_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_delta_from_json: >>> revocation_registry_delta_json: {:?}, revocation_registry_delta_p: {:?}",
+    trace!("hl_crypto_cl_revocation_registry_delta_from_json: >>> revocation_registry_delta_json: {:?}, revocation_registry_delta_p: {:?}",
            revocation_registry_delta_json, revocation_registry_delta_p);
 
     check_useful_c_str!(revocation_registry_delta_json, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(revocation_registry_delta_p, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_revocation_registry_delta_from_json: entity: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
+    trace!("hl_crypto_cl_revocation_registry_delta_from_json: entity: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
 
     let res = match serde_json::from_str::<SignatureCorrectnessProof>(&revocation_registry_delta_json) {
         Ok(revocation_registry_delta) => {
-            trace!("indy_crypto_cl_revocation_registry_delta_from_json: revocation_registry_delta: {:?}", revocation_registry_delta);
+            trace!("hl_crypto_cl_revocation_registry_delta_from_json: revocation_registry_delta: {:?}", revocation_registry_delta);
             unsafe {
                 *revocation_registry_delta_p = Box::into_raw(Box::new(revocation_registry_delta)) as *const c_void;
-                trace!("indy_crypto_cl_revocation_registry_delta_from_json: *revocation_registry_delta_p: {:?}", *revocation_registry_delta_p);
+                trace!("hl_crypto_cl_revocation_registry_delta_from_json: *revocation_registry_delta_p: {:?}", *revocation_registry_delta_p);
             }
             ErrorCode::Success
         }
         Err(_) => ErrorCode::CommonInvalidStructure
     };
 
-    trace!("indy_crypto_cl_revocation_registry_delta_from_json: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_delta_from_json: <<< res: {:?}", res);
     res
 }
 
@@ -1181,26 +1181,26 @@ pub extern fn indy_crypto_cl_revocation_registry_delta_from_json(revocation_regi
 /// # Arguments
 /// * `revocation_registry_delta` - Reference that contains revocation registry delta instance pointer.
 #[no_mangle]
-pub extern fn indy_crypto_cl_revocation_registry_delta_free(revocation_registry_delta: *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_revocation_registry_delta_free: >>> revocation_registry_delta: {:?}", revocation_registry_delta);
+pub extern fn hl_crypto_cl_revocation_registry_delta_free(revocation_registry_delta: *const c_void) -> ErrorCode {
+    trace!("hl_crypto_cl_revocation_registry_delta_free: >>> revocation_registry_delta: {:?}", revocation_registry_delta);
 
     check_useful_c_ptr!(revocation_registry_delta, ErrorCode::CommonInvalidParam1);
 
     let revocation_registry_delta = unsafe { Box::from_raw(revocation_registry_delta as *mut RevocationRegistryDelta); };
-    trace!("indy_crypto_cl_revocation_registry_delta_free: entity: revocation_registry_delta: {:?}", revocation_registry_delta);
+    trace!("hl_crypto_cl_revocation_registry_delta_free: entity: revocation_registry_delta: {:?}", revocation_registry_delta);
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_cl_revocation_registry_delta_free: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_revocation_registry_delta_free: <<< res: {:?}", res);
     res
 }
 
 #[no_mangle]
-pub extern fn indy_crypto_revocation_registry_delta_from_parts(rev_reg_from: *const c_void,
+pub extern fn hl_crypto_revocation_registry_delta_from_parts(rev_reg_from: *const c_void,
                                                                rev_reg_to: *const c_void,
                                                                issued: *const u32, issued_len: usize,
                                                                revoked: *const u32, revoked_len: usize,
                                                                rev_reg_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_revocation_registry_delta_from_parts: >>> rev_reg_from: {:?}, rev_reg_to: {:?}, issued: {:?},\
+    trace!("hl_crypto_revocation_registry_delta_from_parts: >>> rev_reg_from: {:?}, rev_reg_to: {:?}, issued: {:?},\
      issued_len: {:?}, revoked: {:?}, revoked_len: {:?}, rev_reg_delta_p: {:?}",
            rev_reg_from, rev_reg_to, issued, issued_len, revoked, revoked_len, rev_reg_delta_p);
 
@@ -1209,22 +1209,22 @@ pub extern fn indy_crypto_revocation_registry_delta_from_parts(rev_reg_from: *co
     check_useful_hashset!(issued, issued_len, ErrorCode::CommonInvalidParam3, ErrorCode::CommonInvalidParam4);
     check_useful_hashset!(revoked, revoked_len, ErrorCode::CommonInvalidParam5, ErrorCode::CommonInvalidParam6);
 
-    trace!("indy_crypto_revocation_registry_delta_from_parts: >>> rev_reg_from: {:?}, rev_reg_to: {:?}, issued: {:?}, revoked: {:?}",
+    trace!("hl_crypto_revocation_registry_delta_from_parts: >>> rev_reg_from: {:?}, rev_reg_to: {:?}, issued: {:?}, revoked: {:?}",
            rev_reg_from, rev_reg_to, issued, revoked);
 
     let rev_reg_delta =
         RevocationRegistryDelta::from_parts(rev_reg_from, rev_reg_to, &issued, &revoked);
 
-    trace!("indy_crypto_revocation_registry_delta_from_parts: rev_reg_delta: {:?}", rev_reg_delta);
+    trace!("hl_crypto_revocation_registry_delta_from_parts: rev_reg_delta: {:?}", rev_reg_delta);
 
     unsafe {
         *rev_reg_delta_p = Box::into_raw(Box::new(rev_reg_delta)) as *const c_void;
-        trace!("indy_crypto_revocation_registry_delta_from_parts: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
+        trace!("hl_crypto_revocation_registry_delta_from_parts: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
     }
 
     let res = ErrorCode::Success;
 
-    trace!("indy_crypto_revocation_registry_delta_from_parts: <<< res: {:?}", res);
+    trace!("hl_crypto_revocation_registry_delta_from_parts: <<< res: {:?}", res);
     res
 }
 
@@ -1236,33 +1236,33 @@ pub extern fn indy_crypto_revocation_registry_delta_from_parts(rev_reg_from: *co
 ///  * rev_idx` - Index of the user in the revocation registry.
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn indy_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
+pub extern fn hl_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
                                                       max_cred_num: u32,
                                                       rev_idx: u32,
                                                       ctx_tails: *const c_void,
                                                       take_tail: FFITailTake,
                                                       put_tail: FFITailPut,
                                                       rev_reg_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, \
+    trace!("hl_crypto_cl_issuer_revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, \
     put_tail {:?}, rev_reg_delta_p {:?}", rev_reg, max_cred_num, rev_idx, ctx_tails, take_tail, put_tail, rev_reg_delta_p);
 
     check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_cl_issuer_revoke_credential: entities: rev_reg: {:?}", secret!(&rev_reg));
+    trace!("hl_crypto_cl_issuer_revoke_credential: entities: rev_reg: {:?}", secret!(&rev_reg));
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match Issuer::revoke_credential(rev_reg, max_cred_num, rev_idx, &rta) {
         Ok(rev_reg_delta) => {
             unsafe {
                 *rev_reg_delta_p = Box::into_raw(Box::new(rev_reg_delta)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_revoke_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
+                trace!("hl_crypto_cl_issuer_revoke_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_revoke_credential: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_revoke_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
@@ -1274,62 +1274,62 @@ pub extern fn indy_crypto_cl_issuer_revoke_credential(rev_reg: *const c_void,
 ///  * rev_idx` - Index of the user in the revocation registry.
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn indy_crypto_cl_issuer_recovery_credential(rev_reg: *const c_void,
+pub extern fn hl_crypto_cl_issuer_recovery_credential(rev_reg: *const c_void,
                                                         max_cred_num: u32,
                                                         rev_idx: u32,
                                                         ctx_tails: *const c_void,
                                                         take_tail: FFITailTake,
                                                         put_tail: FFITailPut,
                                                         rev_reg_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, \
+    trace!("hl_crypto_cl_issuer_recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}, ctx_tails {:?}, take_tail {:?}, \
     put_tail {:?}, rev_reg_delta_p {:?}", rev_reg, max_cred_num, rev_idx, ctx_tails, take_tail, put_tail, rev_reg_delta_p);
 
     check_useful_mut_c_reference!(rev_reg, RevocationRegistry, ErrorCode::CommonInvalidParam1);
 
-    trace!("indy_crypto_cl_issuer_recovery_credential: entities: rev_reg: {:?}", rev_reg);
+    trace!("hl_crypto_cl_issuer_recovery_credential: entities: rev_reg: {:?}", rev_reg);
 
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match Issuer::recovery_credential(rev_reg, max_cred_num, rev_idx, &rta) {
         Ok(rev_reg_delta) => {
             unsafe {
                 *rev_reg_delta_p = Box::into_raw(Box::new(rev_reg_delta)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_recovery_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
+                trace!("hl_crypto_cl_issuer_recovery_credential: *rev_reg_delta_p: {:?}", *rev_reg_delta_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_recovery_credential: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_recovery_credential: <<< res: {:?}", res);
     ErrorCode::Success
 }
 
 #[no_mangle]
-pub extern fn indy_crypto_cl_issuer_merge_revocation_registry_deltas(revoc_reg_delta: *const c_void,
+pub extern fn hl_crypto_cl_issuer_merge_revocation_registry_deltas(revoc_reg_delta: *const c_void,
                                                                      other_revoc_reg_delta: *const c_void,
                                                                      merged_revoc_reg_delta_p: *mut *const c_void) -> ErrorCode {
-    trace!("indy_crypto_cl_issuer_merge_revocation_registry_deltas: >>> revoc_reg_delta: {:?}, other_revoc_reg_delta: {:?}",
+    trace!("hl_crypto_cl_issuer_merge_revocation_registry_deltas: >>> revoc_reg_delta: {:?}, other_revoc_reg_delta: {:?}",
            revoc_reg_delta, other_revoc_reg_delta);
 
     check_useful_mut_c_reference!(revoc_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(other_revoc_reg_delta, RevocationRegistryDelta, ErrorCode::CommonInvalidParam2);
 
-    trace!("indy_crypto_cl_issuer_merge_revocation_registry_deltas: entities: revoc_reg_delta: {:?}, other_revoc_reg_delta: {:?}",
+    trace!("hl_crypto_cl_issuer_merge_revocation_registry_deltas: entities: revoc_reg_delta: {:?}, other_revoc_reg_delta: {:?}",
            revoc_reg_delta, other_revoc_reg_delta);
 
     let res = match revoc_reg_delta.merge(other_revoc_reg_delta) {
         Ok(merged_revoc_reg_delta) => {
-            trace!("indy_crypto_cl_issuer_merge_revocation_registry_deltas: merged_revoc_reg_delta: {:?}", merged_revoc_reg_delta);
+            trace!("hl_crypto_cl_issuer_merge_revocation_registry_deltas: merged_revoc_reg_delta: {:?}", merged_revoc_reg_delta);
             unsafe {
                 *merged_revoc_reg_delta_p = Box::into_raw(Box::new(merged_revoc_reg_delta)) as *const c_void;
-                trace!("indy_crypto_cl_issuer_merge_revocation_registry_deltas: *merged_revoc_reg_delta_p: {:?}", *merged_revoc_reg_delta_p);
+                trace!("hl_crypto_cl_issuer_merge_revocation_registry_deltas: *merged_revoc_reg_delta_p: {:?}", *merged_revoc_reg_delta_p);
             }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("indy_crypto_cl_issuer_merge_revocation_registry_deltas: <<< res: {:?}", res);
+    trace!("hl_crypto_cl_issuer_merge_revocation_registry_deltas: <<< res: {:?}", res);
     res
 }
 
@@ -1343,14 +1343,14 @@ mod tests {
     use ffi::cl::prover::mocks::*;
 
     #[test]
-    fn indy_crypto_cl_issuer_new_credential_def_works() {
+    fn hl_crypto_cl_issuer_new_credential_def_works() {
         let credential_schema = _credential_schema();
         let non_credential_schema = _non_credential_schema();
         let mut credential_pub_key: *const c_void = ptr::null();
         let mut credential_priv_key: *const c_void = ptr::null();
         let mut credential_key_correctness_proof: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_new_credential_def(credential_schema,
+        let err_code = hl_crypto_cl_issuer_new_credential_def(credential_schema,
                                                                 non_credential_schema,
                                                                 true,
                                                                 &mut credential_pub_key,
@@ -1368,78 +1368,78 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_credential_public_key_to_json_works() {
+    fn hl_crypto_cl_credential_public_key_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_pub_key_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_public_key_to_json(credential_pub_key, &mut credential_pub_key_json_p);
+        let err_code = hl_crypto_cl_credential_public_key_to_json(credential_pub_key, &mut credential_pub_key_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_credential_public_key_from_json_works() {
+    fn hl_crypto_cl_credential_public_key_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_pub_key_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_public_key_to_json(credential_pub_key, &mut credential_pub_key_json_p);
+        let err_code = hl_crypto_cl_credential_public_key_to_json(credential_pub_key, &mut credential_pub_key_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut credential_pub_key_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_credential_public_key_from_json(credential_pub_key_json_p, &mut credential_pub_key_p);
+        let err_code = hl_crypto_cl_credential_public_key_from_json(credential_pub_key_json_p, &mut credential_pub_key_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_credential_private_key_to_json_works() {
+    fn hl_crypto_cl_credential_private_key_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_priv_key_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_private_key_to_json(credential_priv_key, &mut credential_priv_key_json_p);
+        let err_code = hl_crypto_cl_credential_private_key_to_json(credential_priv_key, &mut credential_priv_key_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_credential_private_key_from_json_works() {
+    fn hl_crypto_cl_credential_private_key_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_priv_key_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_private_key_to_json(credential_priv_key, &mut credential_priv_key_json_p);
+        let err_code = hl_crypto_cl_credential_private_key_to_json(credential_priv_key, &mut credential_priv_key_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut credential_priv_key_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_credential_private_key_from_json(credential_priv_key_json_p, &mut credential_priv_key_p);
+        let err_code = hl_crypto_cl_credential_private_key_from_json(credential_priv_key_json_p, &mut credential_priv_key_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_credential_key_correctness_proof_to_json_works() {
+    fn hl_crypto_cl_credential_key_correctness_proof_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_key_correctness_proof_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof, &mut credential_key_correctness_proof_json_p);
+        let err_code = hl_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof, &mut credential_key_correctness_proof_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_key_correctness_proof_from_json_works() {
+    fn hl_crypto_cl_issuer_key_correctness_proof_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
         let mut credential_key_correctness_proof_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof, &mut credential_key_correctness_proof_json_p);
+        let err_code = hl_crypto_cl_credential_key_correctness_proof_to_json(credential_key_correctness_proof, &mut credential_key_correctness_proof_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut credential_key_correctness_proof_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_credential_key_correctness_proof_from_json(credential_key_correctness_proof_json_p,
+        let err_code = hl_crypto_cl_credential_key_correctness_proof_from_json(credential_key_correctness_proof_json_p,
                                                                                  &mut credential_key_correctness_proof_p);
         assert_eq!(err_code, ErrorCode::Success);
 
@@ -1447,28 +1447,28 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_credential_def_free_works() {
+    fn hl_crypto_cl_credential_def_free_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
 
-        let err_code = indy_crypto_cl_credential_public_key_free(credential_pub_key);
+        let err_code = hl_crypto_cl_credential_public_key_free(credential_pub_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_credential_private_key_free(credential_priv_key);
+        let err_code = hl_crypto_cl_credential_private_key_free(credential_priv_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof);
+        let err_code = hl_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_new_revocation_registry_def_works() {
+    fn hl_crypto_cl_issuer_new_revocation_registry_def_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let mut rev_key_pub_p: *const c_void = ptr::null();
         let mut rev_key_priv_p: *const c_void = ptr::null();
         let mut rev_reg_p: *const c_void = ptr::null();
         let mut rev_tails_generator_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key,
+        let err_code = hl_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key,
                                                                          100,
                                                                          false,
                                                                          &mut rev_key_pub_p,
@@ -1486,12 +1486,12 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_key_public_to_json_works() {
+    fn hl_crypto_cl_revocation_key_public_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_key_pub_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_public_to_json(rev_key_pub, &mut rev_key_pub_json_p);
+        let err_code = hl_crypto_cl_revocation_key_public_to_json(rev_key_pub, &mut rev_key_pub_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1499,16 +1499,16 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_key_public_from_json_works() {
+    fn hl_crypto_cl_revocation_key_public_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_key_pub_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_public_to_json(rev_key_pub, &mut rev_key_pub_json_p);
+        let err_code = hl_crypto_cl_revocation_key_public_to_json(rev_key_pub, &mut rev_key_pub_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut rev_key_pub_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_public_from_json(rev_key_pub_json_p, &mut rev_key_pub_p);
+        let err_code = hl_crypto_cl_revocation_key_public_from_json(rev_key_pub_json_p, &mut rev_key_pub_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1516,12 +1516,12 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_key_private_to_json_works() {
+    fn hl_crypto_cl_revocation_key_private_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_key_priv_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_private_to_json(rev_key_priv, &mut rev_key_priv_json_p);
+        let err_code = hl_crypto_cl_revocation_key_private_to_json(rev_key_priv, &mut rev_key_priv_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1529,16 +1529,16 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_key_private_from_json_works() {
+    fn hl_crypto_cl_revocation_key_private_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_key_priv_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_private_to_json(rev_key_priv, &mut rev_key_priv_json_p);
+        let err_code = hl_crypto_cl_revocation_key_private_to_json(rev_key_priv, &mut rev_key_priv_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut rev_key_priv_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_revocation_key_private_from_json(rev_key_priv_json_p, &mut rev_key_priv_p);
+        let err_code = hl_crypto_cl_revocation_key_private_from_json(rev_key_priv_json_p, &mut rev_key_priv_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1546,12 +1546,12 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_registry_to_json_works() {
+    fn hl_crypto_cl_revocation_registry_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_reg_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_registry_to_json(rev_reg, &mut rev_reg_json_p);
+        let err_code = hl_crypto_cl_revocation_registry_to_json(rev_reg, &mut rev_reg_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1559,16 +1559,16 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_registry_from_json_works() {
+    fn hl_crypto_cl_revocation_registry_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_reg_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_registry_to_json(rev_reg, &mut rev_reg_json_p);
+        let err_code = hl_crypto_cl_revocation_registry_to_json(rev_reg, &mut rev_reg_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut rev_reg_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_revocation_registry_from_json(rev_reg_json_p, &mut rev_reg_p);
+        let err_code = hl_crypto_cl_revocation_registry_from_json(rev_reg_json_p, &mut rev_reg_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1576,12 +1576,12 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_tails_generator_to_json_works() {
+    fn hl_crypto_cl_revocation_tails_generator_to_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_tails_generator_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator, &mut rev_tails_generator_json_p);
+        let err_code = hl_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator, &mut rev_tails_generator_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1589,16 +1589,16 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_tails_generator_from_json_works() {
+    fn hl_crypto_cl_revocation_tails_generator_from_json_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
         let mut rev_tails_generator_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator, &mut rev_tails_generator_json_p);
+        let err_code = hl_crypto_cl_revocation_tails_generator_to_json(rev_tails_generator, &mut rev_tails_generator_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut rev_tails_generator_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_revocation_tails_generator_from_json(rev_tails_generator_json_p, &mut rev_tails_generator_p);
+        let err_code = hl_crypto_cl_revocation_tails_generator_from_json(rev_tails_generator_json_p, &mut rev_tails_generator_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1606,27 +1606,27 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_registry_def_free_works() {
+    fn hl_crypto_cl_revocation_registry_def_free_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
-        let err_code = indy_crypto_cl_revocation_key_public_free(rev_key_pub);
+        let err_code = hl_crypto_cl_revocation_key_public_free(rev_key_pub);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_key_private_free(rev_key_priv);
+        let err_code = hl_crypto_cl_revocation_key_private_free(rev_key_priv);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_registry_free(rev_reg);
+        let err_code = hl_crypto_cl_revocation_registry_free(rev_reg);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_tails_generator_free(rev_tails_generator);
+        let err_code = hl_crypto_cl_revocation_tails_generator_free(rev_tails_generator);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_sign_credential_with_revoc_works() {
+    fn hl_crypto_cl_issuer_sign_credential_with_revoc_works() {
         let prover_id = _prover_did();
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
@@ -1647,7 +1647,7 @@ mod tests {
         let mut credential_signature_p: *const c_void = ptr::null();
         let mut credential_signature_correctness_proof_p: *const c_void = ptr::null();
         let mut revocation_registry_delta_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id.as_ptr(),
+        let err_code = hl_crypto_cl_issuer_sign_credential_with_revoc(prover_id.as_ptr(),
                                                                         blinded_credential_secrets,
                                                                         blinded_credential_secrets_correctness_proof,
                                                                         credential_nonce,
@@ -1681,7 +1681,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_sign_credential_works() {
+    fn hl_crypto_cl_issuer_sign_credential_works() {
         let prover_id = _prover_did();
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
@@ -1695,7 +1695,7 @@ mod tests {
 
         let mut credential_signature_p: *const c_void = ptr::null();
         let mut credential_signature_correctness_proof_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_issuer_sign_credential(prover_id.as_ptr(),
+        let err_code = hl_crypto_cl_issuer_sign_credential(prover_id.as_ptr(),
                                                              blinded_credential_secrets,
                                                              blinded_credential_secrets_correctness_proof,
                                                              credential_nonce,
@@ -1718,7 +1718,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_credential_signature_to_json_works() {
+    fn hl_crypto_cl_credential_signature_to_json_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let credential_nonce = _nonce();
@@ -1738,7 +1738,7 @@ mod tests {
 
 
         let mut credential_signature_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_signature_to_json(credential_signature, &mut credential_signature_json_p);
+        let err_code = hl_crypto_cl_credential_signature_to_json(credential_signature, &mut credential_signature_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1750,7 +1750,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_credential_signature_from_json_works() {
+    fn hl_crypto_cl_credential_signature_from_json_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let credential_nonce = _nonce();
@@ -1770,11 +1770,11 @@ mod tests {
 
 
         let mut credential_signature_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_credential_signature_to_json(credential_signature, &mut credential_signature_json_p);
+        let err_code = hl_crypto_cl_credential_signature_to_json(credential_signature, &mut credential_signature_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut credential_signature_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_credential_signature_from_json(credential_signature_json_p, &mut credential_signature_p);
+        let err_code = hl_crypto_cl_credential_signature_from_json(credential_signature_json_p, &mut credential_signature_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1786,7 +1786,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_signature_correctness_proof_to_json_works() {
+    fn hl_crypto_cl_signature_correctness_proof_to_json_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let credential_nonce = _nonce();
@@ -1805,7 +1805,7 @@ mod tests {
                                                                                         credential_priv_key);
 
         let mut signature_correctness_proof_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof,
+        let err_code = hl_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof,
                                                                           &mut signature_correctness_proof_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
@@ -1818,7 +1818,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_signature_correctness_proof_from_json_works() {
+    fn hl_crypto_cl_signature_correctness_proof_from_json_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let credential_nonce = _nonce();
@@ -1837,12 +1837,12 @@ mod tests {
                                                                                         credential_priv_key);
 
         let mut signature_correctness_proof_json_p: *const c_char = ptr::null();
-        let err_code = indy_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof,
+        let err_code = hl_crypto_cl_signature_correctness_proof_to_json(signature_correctness_proof,
                                                                           &mut signature_correctness_proof_json_p);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut signature_correctness_proof_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_signature_correctness_proof_from_json(signature_correctness_proof_json_p,
+        let err_code = hl_crypto_cl_signature_correctness_proof_from_json(signature_correctness_proof_json_p,
                                                                             &mut signature_correctness_proof_p);
         assert_eq!(err_code, ErrorCode::Success);
 
@@ -1855,7 +1855,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_credential_signature_free_works() {
+    fn hl_crypto_cl_credential_signature_free_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let credential_nonce = _nonce();
@@ -1872,10 +1872,10 @@ mod tests {
                                                                                         credential_values,
                                                                                         credential_pub_key,
                                                                                         credential_priv_key);
-        let err_code = indy_crypto_cl_credential_signature_free(credential_signature);
+        let err_code = hl_crypto_cl_credential_signature_free(credential_signature);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
+        let err_code = hl_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
         assert_eq!(err_code, ErrorCode::Success);
 
         _free_credential_def(credential_pub_key, credential_priv_key, credential_key_correctness_proof);
@@ -1886,7 +1886,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_revoke_credential_works() {
+    fn hl_crypto_cl_issuer_revoke_credential_works() {
         let credential_values = _credential_values();
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
@@ -1913,7 +1913,7 @@ mod tests {
 
         let mut revocation_registry_delta_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_revoke_credential(rev_reg,
+        let err_code = hl_crypto_cl_issuer_revoke_credential(rev_reg,
                                                                5,
                                                                1,
                                                                tail_storage.get_ctx(),
@@ -1931,7 +1931,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_revocation_registry_delta_from_parts_works() {
+    fn hl_crypto_cl_revocation_registry_delta_from_parts_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
 
@@ -1947,7 +1947,7 @@ mod tests {
 
         let mut rev_reg_delta_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_revocation_registry_delta_from_parts(rev_reg_from,
+        let err_code = hl_crypto_revocation_registry_delta_from_parts(rev_reg_from,
                                                                         rev_reg,
                                                                         issued, issued_len,
                                                                         revoked, revoked_len,
@@ -1959,7 +1959,7 @@ mod tests {
     }
 
     #[test]
-    fn indy_crypto_cl_issuer_merge_revoc_deltas_works() {
+    fn hl_crypto_cl_issuer_merge_revoc_deltas_works() {
         let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) = _credential_def();
         let (rev_key_pub, rev_key_priv, rev_reg, rev_tails_generator) = _revocation_registry_def(credential_pub_key);
         let credential_values = _credential_values();
@@ -1986,7 +1986,7 @@ mod tests {
 
         let mut revocation_registry_delta_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_revoke_credential(rev_reg,
+        let err_code = hl_crypto_cl_issuer_revoke_credential(rev_reg,
                                                                5,
                                                                1,
                                                                tail_storage.get_ctx(),
@@ -1997,7 +1997,7 @@ mod tests {
 
         let mut merged_revocation_registry_delta_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_merge_revocation_registry_deltas(revocation_registry_delta,
+        let err_code = hl_crypto_cl_issuer_merge_revocation_registry_deltas(revocation_registry_delta,
                                                                               revocation_registry_delta_p,
                                                                               &mut merged_revocation_registry_delta_p);
         assert_eq!(err_code, ErrorCode::Success);
@@ -2027,7 +2027,7 @@ pub mod mocks {
         let mut credential_priv_key: *const c_void = ptr::null();
         let mut credential_key_correctness_proof: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_new_credential_def(credential_schema,
+        let err_code = hl_crypto_cl_issuer_new_credential_def(credential_schema,
                                                                 non_credential_schema,
                                                                 true,
                                                                 &mut credential_pub_key,
@@ -2045,13 +2045,13 @@ pub mod mocks {
     }
 
     pub fn _free_credential_def(credential_pub_key: *const c_void, credential_priv_key: *const c_void, credential_key_correctness_proof: *const c_void) {
-        let err_code = indy_crypto_cl_credential_public_key_free(credential_pub_key);
+        let err_code = hl_crypto_cl_credential_public_key_free(credential_pub_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_credential_private_key_free(credential_priv_key);
+        let err_code = hl_crypto_cl_credential_private_key_free(credential_priv_key);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof);
+        let err_code = hl_crypto_cl_credential_key_correctness_proof_free(credential_key_correctness_proof);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
@@ -2061,7 +2061,7 @@ pub mod mocks {
         let mut rev_reg_p: *const c_void = ptr::null();
         let mut rev_tails_generator_p: *const c_void = ptr::null();
 
-        let err_code = indy_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key,
+        let err_code = hl_crypto_cl_issuer_new_revocation_registry_def(credential_pub_key,
                                                                          5,
                                                                          false,
                                                                          &mut rev_key_pub_p,
@@ -2079,16 +2079,16 @@ pub mod mocks {
 
     pub fn _free_revocation_registry_def(rev_key_pub: *const c_void, rev_key_priv: *const c_void,
                                          rev_reg: *const c_void, rev_tails_generator: *const c_void) {
-        let err_code = indy_crypto_cl_revocation_key_public_free(rev_key_pub);
+        let err_code = hl_crypto_cl_revocation_key_public_free(rev_key_pub);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_key_private_free(rev_key_priv);
+        let err_code = hl_crypto_cl_revocation_key_private_free(rev_key_priv);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_registry_free(rev_reg);
+        let err_code = hl_crypto_cl_revocation_registry_free(rev_reg);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_tails_generator_free(rev_tails_generator);
+        let err_code = hl_crypto_cl_revocation_tails_generator_free(rev_tails_generator);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
@@ -2099,7 +2099,7 @@ pub mod mocks {
 
         let mut credential_signature_p: *const c_void = ptr::null();
         let mut credential_signature_correctness_proof_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_issuer_sign_credential(prover_id.as_ptr(),
+        let err_code = hl_crypto_cl_issuer_sign_credential(prover_id.as_ptr(),
                                                              blinded_credential_secrets,
                                                              blinded_credential_secrets_correctness_proof,
                                                              credential_nonce,
@@ -2134,7 +2134,7 @@ pub mod mocks {
         let mut credential_signature_p: *const c_void = ptr::null();
         let mut credential_signature_correctness_proof_p: *const c_void = ptr::null();
         let mut revocation_registry_delta_p: *const c_void = ptr::null();
-        let err_code = indy_crypto_cl_issuer_sign_credential_with_revoc(prover_id.as_ptr(),
+        let err_code = hl_crypto_cl_issuer_sign_credential_with_revoc(prover_id.as_ptr(),
                                                                         blinded_credential_secrets,
                                                                         blinded_credential_secrets_correctness_proof,
                                                                         credential_nonce,
@@ -2165,22 +2165,22 @@ pub mod mocks {
     }
 
     pub fn _free_credential_signature(credential_signature: *const c_void, signature_correctness_proof: *const c_void) {
-        let err_code = indy_crypto_cl_credential_signature_free(credential_signature);
+        let err_code = hl_crypto_cl_credential_signature_free(credential_signature);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
+        let err_code = hl_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
     pub fn _free_credential_signature_with_revoc(credential_signature: *const c_void, signature_correctness_proof: *const c_void,
                                                  revocation_registry_delta: *const c_void) {
-        let err_code = indy_crypto_cl_credential_signature_free(credential_signature);
+        let err_code = hl_crypto_cl_credential_signature_free(credential_signature);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
+        let err_code = hl_crypto_cl_signature_correctness_proof_free(signature_correctness_proof);
         assert_eq!(err_code, ErrorCode::Success);
 
-        let err_code = indy_crypto_cl_revocation_registry_delta_free(revocation_registry_delta);
+        let err_code = hl_crypto_cl_revocation_registry_delta_free(revocation_registry_delta);
         assert_eq!(err_code, ErrorCode::Success);
     }
 
