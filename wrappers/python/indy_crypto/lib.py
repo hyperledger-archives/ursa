@@ -40,13 +40,13 @@ def _load_cdll() -> CDLL:
     logger.debug("_load_cdll: Detected OS name: %s", os_name)
 
     try:
-        libindy_prefix = lib_prefix_mapping[os_name]
-        libindy_suffix = lib_suffix_mapping[os_name]
+        libhl_prefix = lib_prefix_mapping[os_name]
+        libhl_suffix = lib_suffix_mapping[os_name]
     except KeyError:
         logger.error("_load_cdll: OS isn't supported: %s", os_name)
         raise OSError("OS isn't supported: %s", os_name)
 
-    lib_name = "{0}indy_crypto{1}".format(libindy_prefix, libindy_suffix)
+    lib_name = "{0}hl_crypto{1}".format(libindy_prefix, libindy_suffix)
     logger.debug("_load_cdll: Resolved libindy name is: %s", lib_name)
 
     try:
@@ -68,11 +68,11 @@ def _set_logger():
     logger.debug("set_logger: >>>")
 
     def _log(context, level, target, message, module_path, file, line):
-        libindy_logger = logger.getChild('native.' + target.decode().replace('::', '.'))
+        libhl_logger = logger.getChild('native.' + target.decode().replace('::', '.'))
 
         level_mapping = {1: ERROR, 2: WARNING, 3: INFO, 4: DEBUG, 5: TRACE, }
 
-        libindy_logger.log(level_mapping[level],
+        libhl_logger.log(level_mapping[level],
                            "\t%s:%d | %s",
                            file.decode(),
                            line,
@@ -84,7 +84,7 @@ def _set_logger():
         'flush_cb': None
     }
 
-    do_call('indy_crypto_set_logger',
+    do_call('hl_crypto_set_logger',
             None,
             _set_logger.callbacks['enabled_cb'],
             _set_logger.callbacks['log_cb'],

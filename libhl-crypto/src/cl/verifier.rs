@@ -20,7 +20,7 @@ impl Verifier {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
     /// sub_proof_request_builder.add_revealed_attr("name").unwrap();
@@ -38,7 +38,7 @@ impl Verifier {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let _proof_verifier = Verifier::new_proof_verifier().unwrap();
     /// ```
@@ -68,8 +68,8 @@ impl ProofVerifier {
     ///
     /// #Example
     /// ```
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -126,10 +126,10 @@ impl ProofVerifier {
     ///
     /// #Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
-    /// use indy_crypto::cl::verifier::Verifier;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::verifier::Verifier;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();

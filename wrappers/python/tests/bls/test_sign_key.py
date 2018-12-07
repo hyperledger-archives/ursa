@@ -1,4 +1,4 @@
-from indy_crypto.bls import SignKey
+from hl_crypto.bls import SignKey
 
 
 def test_new(sign_key1: SignKey):

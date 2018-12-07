@@ -1,4 +1,4 @@
-from indy_crypto.bls import VerKey
+from hl_crypto.bls import VerKey
 
 
 def test_new(ver_key1: VerKey):

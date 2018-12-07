@@ -1,1 +1,1 @@
-target/release/libindy_crypto.so usr/lib/
+target/release/libhl_crypto.so usr/lib/

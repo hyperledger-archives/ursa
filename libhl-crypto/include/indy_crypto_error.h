@@ -1,5 +1,5 @@
-#ifndef __indy__crypto__error__included__
-#define __indy__cryoto__error__included__
+#ifndef __hl__crypto__error__included__
+#define __hl__cryoto__error__included__
 
 typedef enum
 {
@@ -51,7 +51,7 @@ typedef enum
 
     // IO Error
     CommonIOError = 114,
-} indy_crypto_error_t;
+} hl_crypto_error_t;
 
 #endif
 

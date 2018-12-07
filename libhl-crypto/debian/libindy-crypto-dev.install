@@ -1,2 +1,2 @@
-include/*.h usr/include/indy_crypto/
-target/release/libindy_crypto.a usr/lib/
+include/*.h usr/include/hl_crypto/
+target/release/libhl_crypto.a usr/lib/

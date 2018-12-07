@@ -1,7 +1,7 @@
-#ifndef __indy__crypto__included__
-#define __indy__crypto__included__
+#ifndef __hl__crypto__included__
+#define __hl__crypto__included__
 
-#include "indy_crypto_error.h"
-#include "indy_crypto_bls.h"
+#include "hl_crypto_error.h"
+#include "hl_crypto_bls.h"
 
 #endif

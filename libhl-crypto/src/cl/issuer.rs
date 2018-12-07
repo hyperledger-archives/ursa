@@ -20,7 +20,7 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::issuer::Issuer;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -44,7 +44,7 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::issuer::Issuer;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
@@ -98,7 +98,7 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::issuer::Issuer;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
@@ -151,7 +151,7 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::issuer::Issuer;
     ///
     /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
     /// credential_values_builder.add_dec_known("sex", "5944657099558967239210949258394887428692050081607692519917050011144233115103").unwrap();
@@ -177,9 +177,9 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::new_nonce;
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::new_nonce;
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("sex").unwrap();
@@ -287,9 +287,9 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::{new_nonce, SimpleTailsAccessor};
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
@@ -408,9 +408,9 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::{new_nonce, SimpleTailsAccessor};
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();
@@ -494,9 +494,9 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use indy_crypto::cl::{new_nonce, SimpleTailsAccessor};
-    /// use indy_crypto::cl::issuer::Issuer;
-    /// use indy_crypto::cl::prover::Prover;
+    /// use hl_crypto::cl::{new_nonce, SimpleTailsAccessor};
+    /// use hl_crypto::cl::issuer::Issuer;
+    /// use hl_crypto::cl::prover::Prover;
     ///
     /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
     /// credential_schema_builder.add_attr("name").unwrap();

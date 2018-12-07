@@ -1,4 +1,4 @@
-from indy_crypto.bls import Bls, Generator, VerKey, SignKey, Signature, MultiSignature
+from hl_crypto.bls import Bls, Generator, VerKey, SignKey, Signature, MultiSignature
 
 
 def demo():

@@ -68,10 +68,10 @@ class Generator(BlsEntity):
     BLS algorithm requires choosing of generator point that must be known to all parties.
     The most of BLS methods require generator to be provided.
     """
-    new_handler = 'indy_crypto_bls_generator_new'
-    from_bytes_handler = 'indy_crypto_bls_generator_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_generator_as_bytes'
-    free_handler = 'indy_crypto_bls_generator_free'
+    new_handler = 'hl_crypto_bls_generator_new'
+    from_bytes_handler = 'hl_crypto_bls_generator_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_generator_as_bytes'
+    free_handler = 'hl_crypto_bls_generator_free'
 
     @classmethod
     def new(cls) -> 'Generator':
@@ -95,10 +95,10 @@ class SignKey(BlsEntity):
     """
     BLS sign key.
     """
-    new_handler = 'indy_crypto_bls_sign_key_new'
-    from_bytes_handler = 'indy_crypto_bls_sign_key_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_sign_key_as_bytes'
-    free_handler = 'indy_crypto_bls_sign_key_free'
+    new_handler = 'hl_crypto_bls_sign_key_new'
+    from_bytes_handler = 'hl_crypto_bls_sign_key_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_sign_key_as_bytes'
+    free_handler = 'hl_crypto_bls_sign_key_free'
 
     @classmethod
     def new(cls, seed: Optional[bytes]) -> 'SignKey':
@@ -123,10 +123,10 @@ class VerKey(BlsEntity):
     """
     BLS verification key.
     """
-    new_handler = 'indy_crypto_bls_ver_key_new'
-    from_bytes_handler = 'indy_crypto_bls_ver_key_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_ver_key_as_bytes'
-    free_handler = 'indy_crypto_bls_ver_key_free'
+    new_handler = 'hl_crypto_bls_ver_key_new'
+    from_bytes_handler = 'hl_crypto_bls_ver_key_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_ver_key_as_bytes'
+    free_handler = 'hl_crypto_bls_ver_key_free'
 
     @classmethod
     def new(cls, gen: Generator, sign_key: SignKey) -> 'VerKey':
@@ -152,10 +152,10 @@ class ProofOfPossession(BlsEntity):
     """
     BLS proof of possession.
     """
-    new_handler = 'indy_crypto_bls_pop_new'
-    from_bytes_handler = 'indy_crypto_bls_pop_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_pop_as_bytes'
-    free_handler = 'indy_crypto_bls_pop_free'
+    new_handler = 'hl_crypto_bls_pop_new'
+    from_bytes_handler = 'hl_crypto_bls_pop_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_pop_as_bytes'
+    free_handler = 'hl_crypto_bls_pop_free'
 
     @classmethod
     def new(cls, ver_key: VerKey, sign_key: SignKey) -> 'ProofOfPossession':
@@ -182,19 +182,19 @@ class Signature(BlsEntity):
     BLS signature.
     """
     new_handler = None
-    from_bytes_handler = 'indy_crypto_bls_signature_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_signature_as_bytes'
-    free_handler = 'indy_crypto_bls_signature_free'
+    from_bytes_handler = 'hl_crypto_bls_signature_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_signature_as_bytes'
+    free_handler = 'hl_crypto_bls_signature_free'
 
 
 class MultiSignature(BlsEntity):
     """
     BLS multi signature.
     """
-    new_handler = 'indy_crypto_bls_multi_signature_new'
-    from_bytes_handler = 'indy_crypto_bls_multi_signature_from_bytes'
-    as_bytes_handler = 'indy_crypto_bls_multi_signature_as_bytes'
-    free_handler = 'indy_crypto_bls_multi_signature_free'
+    new_handler = 'hl_crypto_bls_multi_signature_new'
+    from_bytes_handler = 'hl_crypto_bls_multi_signature_from_bytes'
+    as_bytes_handler = 'hl_crypto_bls_multi_signature_as_bytes'
+    free_handler = 'hl_crypto_bls_multi_signature_free'
 
     @classmethod
     def new(cls, signatures: [Signature]) -> 'MultiSignature':
@@ -239,7 +239,7 @@ class Bls:
         logger.debug("Bls::sign: >>> message: %r, sign_key: %r", message, sign_key)
 
         c_instance = c_void_p()
-        do_call('indy_crypto_bls_sign',
+        do_call('hl_crypto_bls_sign',
                 message, len(message),
                 sign_key.c_instance,
                 byref(c_instance))
@@ -266,7 +266,7 @@ class Bls:
                      gen)
 
         valid = c_bool()
-        do_call('indy_crypto_bsl_verify',
+        do_call('hl_crypto_bsl_verify',
                 signature.c_instance,
                 message, len(message),
                 ver_key.c_instance,
@@ -295,7 +295,7 @@ class Bls:
                      gen)
 
         valid = c_bool()
-        do_call('indy_crypto_bsl_verify_pop',
+        do_call('hl_crypto_bsl_verify_pop',
                 pop.c_instance,
                 ver_key.c_instance,
                 gen.c_instance,
@@ -327,7 +327,7 @@ class Bls:
             ver_key_c_instances[i] = ver_keys[i].c_instance
 
         valid = c_bool()
-        do_call('indy_crypto_bls_verify_multi_sig',
+        do_call('hl_crypto_bls_verify_multi_sig',
                 multi_sig.c_instance,
                 message, len(message),
                 ver_key_c_instances, len(ver_keys),

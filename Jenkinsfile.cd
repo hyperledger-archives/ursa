@@ -100,7 +100,7 @@ def linuxTesting(file, env_name) {
                     echo "${env_name} Test: Run tests"
                     sh "RUST_BACKTRACE=1 RUST_LOG=trace cargo test --release"
 
-                    stash includes: 'target/release/libindy_crypto.so,target/release/libindy_crypto.a', name: 'LibindyCryptoUbuntuBuildResult'
+                    stash includes: 'target/release/libhl_crypto.so,target/release/libindy_crypto.a', name: 'LibindyCryptoUbuntuBuildResult'
                 }
                 finally {
                     /* TODO FIXME restore after xunit will be fixed
@@ -110,7 +110,7 @@ def linuxTesting(file, env_name) {
             }
         }
 
-        sh "cp libindy-crypto/target/release/libindy_crypto.so wrappers/python"
+        sh "cp libindy-crypto/target/release/libhl_crypto.so wrappers/python"
         dir('wrappers/python') {
             testEnv.inside() {
                 echo "${env_name} Test: Test python wrapper"
@@ -140,7 +140,7 @@ def windowsTesting() {
 
                     dir('libindy-crypto') {
                         echo "Windows Test: Download prebuilt dependencies"
-                        bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libindy_crypto/deps/indy-crypto-deps.zip"'
+                        bat 'wget -O prebuilt.zip "https://repo.sovrin.org/windows/libhl_crypto/deps/indy-crypto-deps.zip"'
                         bat 'unzip prebuilt.zip -d prebuilt'
 
                         echo "Windows Test: Build"
@@ -237,7 +237,7 @@ def windowsPublishArtifact(testEnv, stashName) {
         unstash name: stashName
 
         withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-            sh "./ci/libindy_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER ./prebuilt"
+            sh "./ci/libhl_crypto-win-zip-and-upload.sh $version '${sovrin_repo_key}' $env.BRANCH_NAME $env.BUILD_NUMBER ./prebuilt"
         }
     }
 }
@@ -274,7 +274,7 @@ def libindyCryptoDebPublishing(testEnv) {
         sh 'mkdir --parent libindy-crypto/target/release/ && mv target/release/* libindy-crypto/target/release/'
 
         withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_key')]) {
-            sh "cd libindy-crypto && ./ci/libindy_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $suffix $SOVRIN_SDK_REPO_NAME $SOVRIN_REPO_HOST $sovrin_key"
+            sh "cd libindy-crypto && ./ci/libhl_crypto-deb-build-and-upload.sh $version $env.BRANCH_NAME $suffix $SOVRIN_SDK_REPO_NAME $SOVRIN_REPO_HOST $sovrin_key"
 
             if (env.BRANCH_NAME == 'rc') {
                 stash includes: 'libindy-crypto/debs/*', name: 'libindyCryptoDebs'
@@ -383,8 +383,8 @@ def publishingRCtoStable() {
 def publishLibindyCryptoWindowsFilesRCtoStable(version) {
     rcFullVersion = "${version}-${env.BUILD_NUMBER}"
     withCredentials([file(credentialsId: 'SovrinRepoSSHKey', variable: 'sovrin_repo_key')]) {
-        src = "/var/repository/repos/windows/libindy_crypto/rc/$rcFullVersion/"
-        target = "/var/repository/repos/windows/libindy_crypto/stable/$version"
+        src = "/var/repository/repos/windows/libhl_crypto/rc/$rcFullVersion/"
+        target = "/var/repository/repos/windows/libhl_crypto/stable/$version"
 
         sh "ssh -v -oStrictHostKeyChecking=no -i '$sovrin_repo_key' repo@192.168.11.115 '! ls $target'"
         sh "ssh -v -oStrictHostKeyChecking=no -i '$sovrin_repo_key' repo@192.168.11.115 cp -r $src $target"

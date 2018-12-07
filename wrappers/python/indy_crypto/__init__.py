@@ -1,1 +1,1 @@
-from indy_crypto.error import IndyCryptoError
+from hl_crypto.error import IndyCryptoError

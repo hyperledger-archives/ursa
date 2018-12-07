@@ -1,4 +1,4 @@
-from indy_crypto.bls import Signature
+from hl_crypto.bls import Signature
 
 
 def test_new(signature1: Signature):
