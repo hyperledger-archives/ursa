@@ -1,4 +1,4 @@
-use errors::IndyCryptoError;
+use errors::HLCryptoError;
 
 use amcl::big::BIG;
 
@@ -58,12 +58,12 @@ impl PairMocksHelper {
 }
 
 #[cfg(not(test))]
-fn random_mod_order() -> Result<BIG, IndyCryptoError> {
+fn random_mod_order() -> Result<BIG, HLCryptoError> {
     _random_mod_order()
 }
 
 #[cfg(test)]
-fn random_mod_order() -> Result<BIG, IndyCryptoError> {
+fn random_mod_order() -> Result<BIG, HLCryptoError> {
     if PairMocksHelper::is_injected() {
         Ok(BIG::from_hex("22EB5716FB01F2122DE924466542B923D8C96F16C9B5FE2C00B7D7DC1499EA50".to_string()))
     }
@@ -72,7 +72,7 @@ fn random_mod_order() -> Result<BIG, IndyCryptoError> {
     }
 }
 
-fn _random_mod_order() -> Result<BIG, IndyCryptoError> {
+fn _random_mod_order() -> Result<BIG, HLCryptoError> {
     let entropy_bytes = 128;
     let mut seed = vec![0; entropy_bytes];
     let mut os_rng = OsRng::new().unwrap();
@@ -93,7 +93,7 @@ impl PointG1 {
     pub const BYTES_REPR_SIZE: usize = MODBYTES * 4;
 
     /// Creates new random PointG1
-    pub fn new() -> Result<PointG1, IndyCryptoError> {
+    pub fn new() -> Result<PointG1, HLCryptoError> {
         // generate random point from the group G1
         let point_x = BIG::new_ints(&CURVE_GX);
         let point_y = BIG::new_ints(&CURVE_GY);
@@ -107,7 +107,7 @@ impl PointG1 {
     }
 
     /// Creates new infinity PointG1
-    pub fn new_inf() -> Result<PointG1, IndyCryptoError> {
+    pub fn new_inf() -> Result<PointG1, HLCryptoError> {
         let mut r = ECP::new();
         r.inf();
         Ok(PointG1 {
@@ -116,13 +116,13 @@ impl PointG1 {
     }
 
     /// Checks infinity
-    pub fn is_inf(&self) -> Result<bool, IndyCryptoError> {
+    pub fn is_inf(&self) -> Result<bool, HLCryptoError> {
         let mut r = self.point;
         Ok(r.is_infinity())
     }
 
     /// PointG1 ^ GroupOrderElement
-    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG1, IndyCryptoError> {
+    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG1, HLCryptoError> {
         let mut r = self.point;
         let mut bn = e.bn;
         Ok(PointG1 {
@@ -131,7 +131,7 @@ impl PointG1 {
     }
 
     /// PointG1 * PointG1
-    pub fn add(&self, q: &PointG1) -> Result<PointG1, IndyCryptoError> {
+    pub fn add(&self, q: &PointG1) -> Result<PointG1, HLCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.add(&mut point);
@@ -141,7 +141,7 @@ impl PointG1 {
     }
 
     /// PointG1 / PointG1
-    pub fn sub(&self, q: &PointG1) -> Result<PointG1, IndyCryptoError> {
+    pub fn sub(&self, q: &PointG1) -> Result<PointG1, HLCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.sub(&mut point);
@@ -151,7 +151,7 @@ impl PointG1 {
     }
 
     /// 1 / PointG1
-    pub fn neg(&self) -> Result<PointG1, IndyCryptoError> {
+    pub fn neg(&self) -> Result<PointG1, HLCryptoError> {
         let mut r = self.point;
         r.neg();
         Ok(PointG1 {
@@ -159,26 +159,26 @@ impl PointG1 {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
+    pub fn to_string(&self) -> Result<String, HLCryptoError> {
         Ok(self.point.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<PointG1, IndyCryptoError> {
+    pub fn from_string(str: &str) -> Result<PointG1, HLCryptoError> {
         Ok(PointG1 {
             point: ECP::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, HLCryptoError> {
         let mut r = self.point;
         let mut vec = vec![0u8; Self::BYTES_REPR_SIZE];
         r.tobytes(&mut vec);
         Ok(vec)
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<PointG1, IndyCryptoError> {
+    pub fn from_bytes(b: &[u8]) -> Result<PointG1, HLCryptoError> {
         if b.len() != Self::BYTES_REPR_SIZE {
-            return Err(IndyCryptoError::InvalidStructure(
+            return Err(HLCryptoError::InvalidStructure(
                 "Invalid len of bytes representation".to_string()));
         }
         Ok(
@@ -188,7 +188,7 @@ impl PointG1 {
         )
     }
 
-    pub fn from_hash(hash: &[u8]) -> Result<PointG1, IndyCryptoError> {
+    pub fn from_hash(hash: &[u8]) -> Result<PointG1, HLCryptoError> {
         let mut el = GroupOrderElement::from_bytes(hash)?;
         let mut point = ECP::new_big(&el.bn);
 
@@ -248,7 +248,7 @@ impl PointG2 {
     pub const BYTES_REPR_SIZE: usize = MODBYTES * 4;
 
     /// Creates new random PointG2
-    pub fn new() -> Result<PointG2, IndyCryptoError> {
+    pub fn new() -> Result<PointG2, HLCryptoError> {
         let point_xa = BIG::new_ints(&CURVE_PXA);
         let point_xb = BIG::new_ints(&CURVE_PXB);
         let point_ya = BIG::new_ints(&CURVE_PYA);
@@ -267,7 +267,7 @@ impl PointG2 {
     }
 
     /// Creates new infinity PointG2
-    pub fn new_inf() -> Result<PointG2, IndyCryptoError> {
+    pub fn new_inf() -> Result<PointG2, HLCryptoError> {
         let mut point = ECP2::new();
         point.inf();
 
@@ -277,7 +277,7 @@ impl PointG2 {
     }
 
     /// PointG2 * PointG2
-    pub fn add(&self, q: &PointG2) -> Result<PointG2, IndyCryptoError> {
+    pub fn add(&self, q: &PointG2) -> Result<PointG2, HLCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.add(&mut point);
@@ -288,7 +288,7 @@ impl PointG2 {
     }
 
     /// PointG2 / PointG2
-    pub fn sub(&self, q: &PointG2) -> Result<PointG2, IndyCryptoError> {
+    pub fn sub(&self, q: &PointG2) -> Result<PointG2, HLCryptoError> {
         let mut r = self.point;
         let mut point = q.point;
         r.sub(&mut point);
@@ -299,7 +299,7 @@ impl PointG2 {
     }
 
     /// PointG2 ^ GroupOrderElement
-    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG2, IndyCryptoError> {
+    pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG2, HLCryptoError> {
         let mut r = self.point;
         let mut bn = e.bn;
         Ok(PointG2 {
@@ -307,26 +307,26 @@ impl PointG2 {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
+    pub fn to_string(&self) -> Result<String, HLCryptoError> {
         Ok(self.point.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<PointG2, IndyCryptoError> {
+    pub fn from_string(str: &str) -> Result<PointG2, HLCryptoError> {
         Ok(PointG2 {
             point: ECP2::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, HLCryptoError> {
         let mut point = self.point;
         let mut vec = vec![0u8; Self::BYTES_REPR_SIZE];
         point.tobytes(&mut vec);
         Ok(vec)
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<PointG2, IndyCryptoError> {
+    pub fn from_bytes(b: &[u8]) -> Result<PointG2, HLCryptoError> {
         if b.len() != Self::BYTES_REPR_SIZE {
-            return Err(IndyCryptoError::InvalidStructure(
+            return Err(HLCryptoError::InvalidStructure(
                 "Invalid len of bytes representation".to_string()));
         }
         Ok(
@@ -381,17 +381,17 @@ pub struct GroupOrderElement {
 impl GroupOrderElement {
     pub const BYTES_REPR_SIZE: usize = MODBYTES;
 
-    pub fn new() -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn new() -> Result<GroupOrderElement, HLCryptoError> {
         // returns random element in 0, ..., GroupOrder-1
         Ok(GroupOrderElement {
             bn: random_mod_order()?
         })
     }
 
-    pub fn new_from_seed(seed: &[u8]) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn new_from_seed(seed: &[u8]) -> Result<GroupOrderElement, HLCryptoError> {
         // returns random element in 0, ..., GroupOrder-1
         if seed.len() != MODBYTES {
-            return Err(IndyCryptoError::InvalidStructure(
+            return Err(HLCryptoError::InvalidStructure(
                 format!("Invalid len of seed: expected {}, actual {}", MODBYTES, seed.len())));
         }
         let mut rng = RAND::new();
@@ -404,7 +404,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement ^ GroupOrderElement) mod GroupOrder
-    pub fn pow_mod(&self, e: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn pow_mod(&self, e: &GroupOrderElement) -> Result<GroupOrderElement, HLCryptoError> {
         let mut base = self.bn;
         let mut pow = e.bn;
         Ok(GroupOrderElement {
@@ -413,7 +413,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement + GroupOrderElement) mod GroupOrder
-    pub fn add_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn add_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, HLCryptoError> {
         let mut sum = self.bn;
         sum.add(&r.bn);
         sum.rmod(&BIG::new_ints(&CURVE_ORDER));
@@ -423,7 +423,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement - GroupOrderElement) mod GroupOrder
-    pub fn sub_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn sub_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, HLCryptoError> {
         //need to use modneg if sub is negative
         let mut diff = self.bn;
         diff.sub(&r.bn);
@@ -442,7 +442,7 @@ impl GroupOrderElement {
     }
 
     /// (GroupOrderElement * GroupOrderElement) mod GroupOrder
-    pub fn mul_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn mul_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, HLCryptoError> {
         let mut base = self.bn;
         let mut r = r.bn;
         Ok(GroupOrderElement {
@@ -451,7 +451,7 @@ impl GroupOrderElement {
     }
 
     /// 1 / GroupOrderElement
-    pub fn inverse(&self) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn inverse(&self) -> Result<GroupOrderElement, HLCryptoError> {
         let mut bn = self.bn;
         bn.invmodp(&BIG::new_ints(&CURVE_ORDER));
 
@@ -461,7 +461,7 @@ impl GroupOrderElement {
     }
 
     /// - GroupOrderElement mod GroupOrder
-    pub fn mod_neg(&self) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn mod_neg(&self) -> Result<GroupOrderElement, HLCryptoError> {
         let mut r = self.bn;
         r = BIG::modneg(&mut r, &BIG::new_ints(&CURVE_ORDER));
         Ok(GroupOrderElement {
@@ -469,27 +469,27 @@ impl GroupOrderElement {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
+    pub fn to_string(&self) -> Result<String, HLCryptoError> {
         let mut bn = self.bn;
         Ok(bn.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn from_string(str: &str) -> Result<GroupOrderElement, HLCryptoError> {
         Ok(GroupOrderElement {
             bn: BIG::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, HLCryptoError> {
         let mut bn = self.bn;
         let mut vec = vec![0u8; Self::BYTES_REPR_SIZE];
         bn.tobytes(&mut vec);
         Ok(vec)
     }
 
-    pub fn from_bytes(b: &[u8]) -> Result<GroupOrderElement, IndyCryptoError> {
+    pub fn from_bytes(b: &[u8]) -> Result<GroupOrderElement, HLCryptoError> {
         if b.len() > Self::BYTES_REPR_SIZE {
-            return Err(IndyCryptoError::InvalidStructure(
+            return Err(HLCryptoError::InvalidStructure(
                 "Invalid len of bytes representation".to_string()));
         }
         let mut vec = b.to_vec();
@@ -557,7 +557,7 @@ pub struct Pair {
 impl Pair {
     pub const BYTES_REPR_SIZE: usize = MODBYTES * 16;
     /// e(PointG1, PointG2)
-    pub fn pair(p: &PointG1, q: &PointG2) -> Result<Pair, IndyCryptoError> {
+    pub fn pair(p: &PointG1, q: &PointG2) -> Result<Pair, HLCryptoError> {
         let mut p_new = *p;
         let mut q_new = *q;
         let mut result = fexp(&ate(&mut q_new.point, &mut p_new.point));
@@ -569,7 +569,7 @@ impl Pair {
     }
 
     /// e() * e()
-    pub fn mul(&self, b: &Pair) -> Result<Pair, IndyCryptoError> {
+    pub fn mul(&self, b: &Pair) -> Result<Pair, HLCryptoError> {
         let mut base = self.pair;
         let mut b = b.pair;
         base.mul(&mut b);
@@ -580,7 +580,7 @@ impl Pair {
     }
 
     /// e() ^ GroupOrderElement
-    pub fn pow(&self, b: &GroupOrderElement) -> Result<Pair, IndyCryptoError> {
+    pub fn pow(&self, b: &GroupOrderElement) -> Result<Pair, HLCryptoError> {
         let mut base = self.pair;
         let mut b = b.bn;
 
@@ -590,7 +590,7 @@ impl Pair {
     }
 
     /// 1 / e()
-    pub fn inverse(&self) -> Result<Pair, IndyCryptoError> {
+    pub fn inverse(&self) -> Result<Pair, HLCryptoError> {
         let mut r = self.pair;
         r.conj();
         Ok(Pair {
@@ -598,17 +598,17 @@ impl Pair {
         })
     }
 
-    pub fn to_string(&self) -> Result<String, IndyCryptoError> {
+    pub fn to_string(&self) -> Result<String, HLCryptoError> {
         Ok(self.pair.to_hex())
     }
 
-    pub fn from_string(str: &str) -> Result<Pair, IndyCryptoError> {
+    pub fn from_string(str: &str) -> Result<Pair, HLCryptoError> {
         Ok(Pair {
             pair: FP12::from_hex(str.to_string())
         })
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, IndyCryptoError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, HLCryptoError> {
         let mut r = self.pair;
         let mut vec = vec![0u8; Self::BYTES_REPR_SIZE];
         r.tobytes(&mut vec);

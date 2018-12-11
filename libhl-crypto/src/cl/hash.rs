@@ -1,7 +1,7 @@
 use bn::BigNumber;
-use errors::IndyCryptoError;
+use errors::HLCryptoError;
 
-pub fn get_hash_as_int(nums: &Vec<Vec<u8>>) -> Result<BigNumber, IndyCryptoError> {
+pub fn get_hash_as_int(nums: &Vec<Vec<u8>>) -> Result<BigNumber, HLCryptoError> {
     trace!("Helpers::get_hash_as_int: >>> nums: {:?}", nums);
 
     let hash = BigNumber::from_bytes(&BigNumber::hash_array(&nums)?);

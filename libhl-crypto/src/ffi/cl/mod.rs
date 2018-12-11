@@ -1,7 +1,7 @@
 use cl::*;
 use cl::issuer::Issuer;
 use cl::verifier::Verifier;
-use errors::{IndyCryptoError, ToErrorCode};
+use errors::{HLCryptoError, ToErrorCode};
 use errors::ErrorCode;
 use ffi::ctypes::CTypesUtils;
 
@@ -817,12 +817,12 @@ impl FFITailsAccessor {
 }
 
 impl RevocationTailsAccessor for FFITailsAccessor {
-    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), IndyCryptoError> {
+    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), HLCryptoError> {
         let mut tail_p = ptr::null();
 
         let res = (self.take)(self.ctx, tail_id, &mut tail_p);
         if res != ErrorCode::Success || tail_p.is_null() {
-            return Err(IndyCryptoError::InvalidState(
+            return Err(HLCryptoError::InvalidState(
                 format!("FFI call take_tail {:?} (ctx {:?}, id {}) failed: tail_p {:?}, returned error code {:?}",
                         self.take, self.ctx, tail_id, tail_p, res)));
         }
@@ -832,7 +832,7 @@ impl RevocationTailsAccessor for FFITailsAccessor {
 
         let res = (self.put)(self.ctx, tail_p);
         if res != ErrorCode::Success {
-            return Err(IndyCryptoError::InvalidState(
+            return Err(HLCryptoError::InvalidState(
                 format!("FFI call put_tail {:?} (ctx {:?}, tail_p {:?}) failed: returned error code {:?}",
                         self.take, self.ctx, tail_p, res)));
         }

@@ -1,7 +1,7 @@
 use bn::BigNumber;
 use cl::*;
 use cl::constants::*;
-use errors::IndyCryptoError;
+use errors::HLCryptoError;
 use pair::*;
 use super::helpers::*;
 use cl::commitment::get_pedersen_commitment;
@@ -23,7 +23,7 @@ impl Prover {
     ///
     /// let _master_secret = Prover::new_master_secret().unwrap();
     /// ```
-    pub fn new_master_secret() -> Result<MasterSecret, IndyCryptoError> {
+    pub fn new_master_secret() -> Result<MasterSecret, HLCryptoError> {
         Ok(MasterSecret { ms: bn_rand(LARGE_MASTER_SECRET)? })
     }
 
@@ -69,7 +69,7 @@ impl Prover {
                                     credential_values: &CredentialValues,
                                     credential_nonce: &Nonce) -> Result<(BlindedCredentialSecrets,
                                                                          CredentialSecretsBlindingFactors,
-                                                                         BlindedCredentialSecretsCorrectnessProof), IndyCryptoError> {
+                                                                         BlindedCredentialSecretsCorrectnessProof), HLCryptoError> {
         trace!("Prover::blind_credential_secrets: >>> credential_pub_key: {:?}, \
                                                       credential_key_correctness_proof: {:?}, \
                                                       credential_values: {:?}, \
@@ -190,7 +190,7 @@ impl Prover {
                                         nonce: &Nonce,
                                         rev_key_pub: Option<&RevocationKeyPublic>,
                                         rev_reg: Option<&RevocationRegistry>,
-                                        witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
+                                        witness: Option<&Witness>) -> Result<(), HLCryptoError> {
         trace!("Prover::process_credential_signature: >>> credential_signature: {:?}, \
                                                           credential_values: {:?}, \
                                                           signature_correctness_proof: {:?}, \
@@ -247,7 +247,7 @@ impl Prover {
     /// use hl_crypto::cl::prover::Prover;
     ///
     /// let _proof_builder = Prover::new_proof_builder();
-    pub fn new_proof_builder() -> Result<ProofBuilder, IndyCryptoError> {
+    pub fn new_proof_builder() -> Result<ProofBuilder, HLCryptoError> {
         Ok(ProofBuilder {
             common_attributes: HashMap::new(),
             init_proofs: Vec::new(),
@@ -258,12 +258,12 @@ impl Prover {
 
     #[cfg(test)]
     pub fn check_credential_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey,
-                                                  key_correctness_proof: &CredentialKeyCorrectnessProof) -> Result<(), IndyCryptoError> {
+                                                  key_correctness_proof: &CredentialKeyCorrectnessProof) -> Result<(), HLCryptoError> {
         Prover::_check_credential_key_correctness_proof(pr_pub_key, key_correctness_proof)
     }
 
     fn _check_credential_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey,
-                                               key_correctness_proof: &CredentialKeyCorrectnessProof) -> Result<(), IndyCryptoError> {
+                                               key_correctness_proof: &CredentialKeyCorrectnessProof) -> Result<(), HLCryptoError> {
         trace!("Prover::_check_credential_key_correctness_proof: >>> pr_pub_key: {:?}, key_correctness_proof: {:?}",
                pr_pub_key,
                key_correctness_proof
@@ -276,13 +276,13 @@ impl Prover {
                 //so for now if this is the only missing key, its okay
                 //In the future this "if" statement should be removed
                 if r_key != "master_secret" {
-                    return Err(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in key_correctness_proof.xr_cap", r_key)));
+                    return Err(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in key_correctness_proof.xr_cap", r_key)));
                 }
             }
         }
         for correctness_name in &correctness_names {
             if !pr_pub_key.r.contains_key(correctness_name.as_str()) {
-                return Err(IndyCryptoError::InvalidStructure(format!("Public key doesn't contains item for {} key in key_correctness_proof.xr_cap", correctness_name)));
+                return Err(HLCryptoError::InvalidStructure(format!("Public key doesn't contains item for {} key in key_correctness_proof.xr_cap", correctness_name)));
             }
         }
 
@@ -326,7 +326,7 @@ impl Prover {
         let valid = key_correctness_proof.c.eq(&c);
 
         if !valid {
-            return Err(IndyCryptoError::InvalidStructure(format!("Invalid Credential key correctness proof")));
+            return Err(HLCryptoError::InvalidStructure(format!("Invalid Credential key correctness proof")));
         }
 
         trace!("Prover::_check_credential_key_correctness_proof: <<<");
@@ -335,7 +335,7 @@ impl Prover {
     }
 
     fn _generate_blinded_primary_credential_secrets_factors(p_pub_key: &CredentialPrimaryPublicKey,
-                                                            credential_values: &CredentialValues) -> Result<PrimaryBlindedCredentialSecretsFactors, IndyCryptoError> {
+                                                            credential_values: &CredentialValues) -> Result<PrimaryBlindedCredentialSecretsFactors, HLCryptoError> {
         trace!("Prover::_generate_blinded_primary_credential_secrets_factors: >>> p_pub_key: {:?}, credential_values: {:?}",
                p_pub_key,
                credential_values
@@ -359,7 +359,7 @@ impl Prover {
             ),
             |acc, attr| {
                 let pk_r = p_pub_key.r.get(&attr.clone()).ok_or(
-                    IndyCryptoError::InvalidStructure(
+                    HLCryptoError::InvalidStructure(
                         format!("Value by key '{}' not found in pk.r", attr),
                     ),
                 )?;
@@ -407,7 +407,7 @@ impl Prover {
         Ok(primary_blinded_cred_secrets)
     }
 
-    fn _generate_blinded_revocation_credential_secrets(r_pub_key: &CredentialRevocationPublicKey) -> Result<RevocationBlindedCredentialSecretsFactors, IndyCryptoError> {
+    fn _generate_blinded_revocation_credential_secrets(r_pub_key: &CredentialRevocationPublicKey) -> Result<RevocationBlindedCredentialSecretsFactors, HLCryptoError> {
         trace!("Prover::_generate_blinded_revocation_credential_secrets: >>> r_pub_key: {:?}", r_pub_key);
 
         let vr_prime = GroupOrderElement::new()?;
@@ -423,7 +423,7 @@ impl Prover {
     fn _new_blinded_credential_secrets_correctness_proof(p_pub_key: &CredentialPrimaryPublicKey,
                                                          blinded_primary_credential_secrets: &PrimaryBlindedCredentialSecretsFactors,
                                                          nonce: &BigNumber,
-                                                         credential_values: &CredentialValues) -> Result<BlindedCredentialSecretsCorrectnessProof, IndyCryptoError> {
+                                                         credential_values: &CredentialValues) -> Result<BlindedCredentialSecretsCorrectnessProof, HLCryptoError> {
         trace!("Prover::_new_blinded_credential_secrets_correctness_proof: >>> p_pub_key: {:?}, \
                                                                                blinded_primary_credential_secrets: {:?}, \
                                                                                nonce: {:?}, \
@@ -452,7 +452,7 @@ impl Prover {
             .filter(|&(_, v)| v.is_hidden() || v.is_commitment()) {
             let m_tilde = bn_rand(LARGE_MTILDE)?;
             let pk_r = p_pub_key.r.get(attr).ok_or(
-                IndyCryptoError::InvalidStructure(
+                HLCryptoError::InvalidStructure(
                     format!(
                         "Value by key '{}' not found in pk.r",
                         attr
@@ -484,7 +484,7 @@ impl Prover {
                     values.extend_from_slice(&commitment_tilde.to_bytes()?);
                     let ca_value = blinded_primary_credential_secrets.committed_attributes
                         .get(attr)
-                        .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in primary_blinded_cred_secrets.committed_attributes", attr)))?;
+                        .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in primary_blinded_cred_secrets.committed_attributes", attr)))?;
                     values.extend_from_slice(&ca_value.to_bytes()?);
                     ()
                 }
@@ -507,7 +507,7 @@ impl Prover {
 
         for (attr, m_tilde) in &m_tildes {
             let ca = credential_values.attrs_values.get(attr).ok_or(
-                IndyCryptoError::InvalidStructure(format!(
+                HLCryptoError::InvalidStructure(format!(
                     "Value by key '{}' not found in cred_values.committed_attributes",
                     attr
                 )),
@@ -548,7 +548,7 @@ impl Prover {
     }
 
     fn _process_primary_credential(p_cred: &mut PrimaryCredentialSignature,
-                                   v_prime: &BigNumber) -> Result<(), IndyCryptoError> {
+                                   v_prime: &BigNumber) -> Result<(), HLCryptoError> {
         trace!("Prover::_process_primary_credential: >>> p_cred: {:?}, v_prime: {:?}", p_cred, v_prime);
 
         p_cred.v = v_prime.add(&p_cred.v)?;
@@ -563,7 +563,7 @@ impl Prover {
                                           cred_rev_pub_key: &CredentialRevocationPublicKey,
                                           rev_key_pub: &RevocationKeyPublic,
                                           rev_reg: &RevocationRegistry,
-                                          witness: &Witness) -> Result<(), IndyCryptoError> {
+                                          witness: &Witness) -> Result<(), HLCryptoError> {
         trace!("Prover::_process_non_revocation_credential: >>> r_cred: {:?}, vr_prime: {:?}, cred_rev_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}",
                r_cred, vr_prime, cred_rev_pub_key, rev_reg, rev_key_pub);
 
@@ -580,7 +580,7 @@ impl Prover {
                                           cred_values: &CredentialValues,
                                           signature_correctness_proof: &SignatureCorrectnessProof,
                                           p_pub_key: &CredentialPrimaryPublicKey,
-                                          nonce: &Nonce) -> Result<(), IndyCryptoError> {
+                                          nonce: &Nonce) -> Result<(), HLCryptoError> {
         trace!("Prover::_check_signature_correctness_proof: >>> p_cred_sig: {:?}, \
                                                                 cred_values: {:?}, \
                                                                 signature_correctness_proof: {:?}, \
@@ -597,14 +597,14 @@ impl Prover {
         let mut ctx = BigNumber::new_context()?;
 
         if !p_cred_sig.e.is_prime(Some(&mut ctx))? {
-            return Err(IndyCryptoError::InvalidStructure(format!("Invalid Signature correctness proof")));
+            return Err(HLCryptoError::InvalidStructure(format!("Invalid Signature correctness proof")));
         }
 
         if let Some((ref attr, _)) = cred_values.attrs_values
             .iter()
             .find(|&(ref attr, ref value)|
                 (value.is_known() || value.is_hidden()) && !p_pub_key.r.contains_key(attr.clone())) {
-            return Err(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in public key", attr)));
+            return Err(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in public key", attr)));
         }
 
         let rx = cred_values
@@ -640,7 +640,7 @@ impl Prover {
         let expected_q = p_cred_sig.a.mod_exp(&p_cred_sig.e, &p_pub_key.n, Some(&mut ctx))?;
 
         if !q.eq(&expected_q) {
-            return Err(IndyCryptoError::InvalidStructure(format!("Invalid Signature correctness proof q != q'")));
+            return Err(HLCryptoError::InvalidStructure(format!("Invalid Signature correctness proof q != q'")));
         }
 
         let degree = signature_correctness_proof.c.add(
@@ -660,7 +660,7 @@ impl Prover {
         let valid = signature_correctness_proof.c.eq(&c);
 
         if !valid {
-            return Err(IndyCryptoError::InvalidStructure(format!("Invalid Signature correctness proof c != c'")));
+            return Err(HLCryptoError::InvalidStructure(format!("Invalid Signature correctness proof c != c'")));
         }
 
         trace!("Prover::_check_signature_correctness_proof: <<<");
@@ -673,7 +673,7 @@ impl Prover {
                                rev_key_pub: &RevocationKeyPublic,
                                rev_reg: &RevocationRegistry,
                                witness: &Witness,
-                               r_cnxt_m2: &BigNumber) -> Result<(), IndyCryptoError> {
+                               r_cnxt_m2: &BigNumber) -> Result<(), HLCryptoError> {
         trace!("Prover::_test_witness_signature: >>> r_cred: {:?}, cred_rev_pub_key: {:?}, rev_key_pub: {:?}, rev_reg: {:?}, r_cnxt_m2: {:?}",
                r_cred, cred_rev_pub_key, rev_key_pub, rev_reg, r_cnxt_m2);
 
@@ -681,13 +681,13 @@ impl Prover {
             .mul(&Pair::pair(&cred_rev_pub_key.g, &witness.omega)?.inverse()?)?;
 
         if z_calc != rev_key_pub.z {
-            return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
+            return Err(HLCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
         }
         let pair_gg_calc = Pair::pair(&cred_rev_pub_key.pk.add(&r_cred.g_i)?, &r_cred.witness_signature.sigma_i)?;
         let pair_gg = Pair::pair(&cred_rev_pub_key.g, &cred_rev_pub_key.g_dash)?;
 
         if pair_gg_calc != pair_gg {
-            return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
+            return Err(HLCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
         }
 
         let m2 = GroupOrderElement::from_bytes(&r_cnxt_m2.to_bytes()?)?;
@@ -702,7 +702,7 @@ impl Prover {
         )?;
 
         if pair_h1 != pair_h2 {
-            return Err(IndyCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
+            return Err(HLCryptoError::InvalidStructure("Issuer is sending incorrect data".to_string()));
         }
 
         trace!("Prover::_test_witness_signature: <<<");
@@ -721,7 +721,7 @@ pub struct ProofBuilder {
 
 impl ProofBuilder {
     /// Creates m_tildes for attributes that will be the same across all subproofs
-    pub fn add_common_attribute(&mut self, attr_name: &str) -> Result<(), IndyCryptoError> {
+    pub fn add_common_attribute(&mut self, attr_name: &str) -> Result<(), HLCryptoError> {
         self.common_attributes.insert(attr_name.to_owned(), bn_rand(LARGE_MVECT)?);
         Ok(())
     }
@@ -809,7 +809,7 @@ impl ProofBuilder {
                                  credential_values: &CredentialValues,
                                  credential_pub_key: &CredentialPublicKey,
                                  rev_reg: Option<&RevocationRegistry>,
-                                 witness: Option<&Witness>) -> Result<(), IndyCryptoError> {
+                                 witness: Option<&Witness>) -> Result<(), HLCryptoError> {
         trace!("ProofBuilder::add_sub_proof_request: >>> sub_proof_request: {:?}, \
                                                          credential_schema: {:?}, \
                                                          non_credential_schema: {:?}, \
@@ -952,7 +952,7 @@ impl ProofBuilder {
     /// let proof_request_nonce = new_nonce().unwrap();
     /// let _proof = proof_builder.finalize(&proof_request_nonce).unwrap();
     /// ```
-    pub fn finalize(&self, nonce: &Nonce) -> Result<Proof, IndyCryptoError> {
+    pub fn finalize(&self, nonce: &Nonce) -> Result<Proof, HLCryptoError> {
         trace!("ProofBuilder::finalize: >>> nonce: {:?}", nonce);
 
         let mut values: Vec<Vec<u8>> = Vec::new();
@@ -998,7 +998,7 @@ impl ProofBuilder {
         sub_proof_request: &SubProofRequest,
         cred_schema: &CredentialSchema,
         non_credential_schema: &NonCredentialSchema,
-    ) -> Result<(), IndyCryptoError> {
+    ) -> Result<(), HLCryptoError> {
         trace!(
             "ProofBuilder::_check_add_sub_proof_request_params_consistency: >>> cred_values: {:?}, sub_proof_request: {:?}, cred_schema: {:?}",
             cred_values,
@@ -1015,7 +1015,7 @@ impl ProofBuilder {
         let cred_attrs = BTreeSet::from_iter(cred_values.attrs_values.keys().cloned());
 
         if schema_attrs != cred_attrs {
-            return Err(IndyCryptoError::InvalidStructure(format!("Credential doesn't correspond to credential schema")));
+            return Err(HLCryptoError::InvalidStructure(format!("Credential doesn't correspond to credential schema")));
         }
 
         if sub_proof_request
@@ -1023,7 +1023,7 @@ impl ProofBuilder {
             .difference(&cred_attrs)
             .count() != 0
             {
-                return Err(IndyCryptoError::InvalidStructure(
+                return Err(HLCryptoError::InvalidStructure(
                     format!("Credential doesn't contain requested attribute"),
                 ));
             }
@@ -1035,7 +1035,7 @@ impl ProofBuilder {
             .collect::<BTreeSet<String>>();
 
         if predicates_attrs.difference(&cred_attrs).count() != 0 {
-            return Err(IndyCryptoError::InvalidStructure(format!("Credential doesn't contain attribute requested in predicate")));
+            return Err(HLCryptoError::InvalidStructure(format!("Credential doesn't contain attribute requested in predicate")));
         }
 
         trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
@@ -1050,7 +1050,7 @@ impl ProofBuilder {
                            cred_schema: &CredentialSchema,
                            non_cred_schema_elems: &NonCredentialSchema,
                            sub_proof_request: &SubProofRequest,
-                           m2_t: Option<BigNumber>) -> Result<PrimaryInitProof, IndyCryptoError> {
+                           m2_t: Option<BigNumber>) -> Result<PrimaryInitProof, HLCryptoError> {
         trace!("ProofBuilder::_init_primary_proof: >>> common_attributes: {:?}, \
                                                        issuer_pub_key: {:?}, \
                                                        c1: {:?}, \
@@ -1092,7 +1092,7 @@ impl ProofBuilder {
     fn _init_non_revocation_proof(r_cred: &NonRevocationCredentialSignature,
                                   rev_reg: &RevocationRegistry,
                                   cred_rev_pub_key: &CredentialRevocationPublicKey,
-                                  witness: &Witness) -> Result<NonRevocInitProof, IndyCryptoError> {
+                                  witness: &Witness) -> Result<NonRevocInitProof, HLCryptoError> {
         trace!("ProofBuilder::_init_non_revocation_proof: >>> r_cred: {:?}, rev_reg: {:?}, cred_rev_pub_key: {:?}, witness: {:?}",
                r_cred, rev_reg, cred_rev_pub_key, witness);
 
@@ -1123,7 +1123,7 @@ impl ProofBuilder {
                       cred_schema: &CredentialSchema,
                       non_cred_schema_elems: &NonCredentialSchema,
                       sub_proof_request: &SubProofRequest,
-                      m2_t: Option<BigNumber>) -> Result<PrimaryEqualInitProof, IndyCryptoError> {
+                      m2_t: Option<BigNumber>) -> Result<PrimaryEqualInitProof, HLCryptoError> {
         trace!("ProofBuilder::_init_eq_proof: >>> cred_pub_key: {:?}, \
                                                   c1: {:?}, \
                                                   cred_schema: {:?}, \
@@ -1180,23 +1180,23 @@ impl ProofBuilder {
     fn _init_ne_proof(p_pub_key: &CredentialPrimaryPublicKey,
                       m_tilde: &HashMap<String, BigNumber>,
                       cred_values: &CredentialValues,
-                      predicate: &Predicate) -> Result<PrimaryPredicateInequalityInitProof, IndyCryptoError> {
+                      predicate: &Predicate) -> Result<PrimaryPredicateInequalityInitProof, HLCryptoError> {
         trace!("ProofBuilder::_init_ne_proof: >>> p_pub_key: {:?}, m_tilde: {:?}, cred_values: {:?}, predicate: {:?}",
                p_pub_key, m_tilde, cred_values, predicate);
 
         let mut ctx = BigNumber::new_context()?;
 
         let attr_value = cred_values.attrs_values.get(&predicate.attr_name)
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_values", predicate.attr_name)))?
+            .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_values", predicate.attr_name)))?
             .value()
             .to_dec()?
             .parse::<i32>()
-            .map_err(|_| IndyCryptoError::InvalidStructure(format!("Value by key '{}' has invalid format", predicate.attr_name)))?;
+            .map_err(|_| HLCryptoError::InvalidStructure(format!("Value by key '{}' has invalid format", predicate.attr_name)))?;
 
         let delta = predicate.get_delta(attr_value);
 
         if delta < 0 {
-            return Err(IndyCryptoError::InvalidStructure("Predicate is not satisfied".to_string()));
+            return Err(HLCryptoError::InvalidStructure("Predicate is not satisfied".to_string()));
         }
 
         let u = four_squares(delta)?;
@@ -1207,7 +1207,7 @@ impl ProofBuilder {
 
         for i in 0..ITERATION {
             let cur_u = u.get(&i.to_string())
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in u1", i)))?;
+                .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in u1", i)))?;
 
             let cur_r = bn_rand(LARGE_VPRIME)?;
             let cut_t = get_pedersen_commitment(&p_pub_key.z, &cur_u, &p_pub_key.s,
@@ -1239,7 +1239,7 @@ impl ProofBuilder {
         let alpha_tilde = bn_rand(LARGE_ALPHATILDE)?;
 
         let mj = m_tilde.get(&predicate.attr_name)
-            .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", predicate.attr_name)))?;
+            .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in eq_proof.mtilde", predicate.attr_name)))?;
 
         let tau_list = calc_tne(&p_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t, predicate.is_less())?;
 
@@ -1265,7 +1265,7 @@ impl ProofBuilder {
                           cred_schema: &CredentialSchema,
                           non_cred_schema_elems: &NonCredentialSchema,
                           cred_values: &CredentialValues,
-                          sub_proof_request: &SubProofRequest) -> Result<PrimaryEqualProof, IndyCryptoError> {
+                          sub_proof_request: &SubProofRequest) -> Result<PrimaryEqualProof, HLCryptoError> {
         trace!(
             "ProofBuilder::_finalize_eq_proof: >>> init_proof: {:?}, challenge: {:?}, cred_schema: {:?}, \
         cred_values: {:?}, sub_proof_request: {:?}",
@@ -1299,10 +1299,10 @@ impl ProofBuilder {
 
         for k in unrevealed_attrs.iter() {
             let cur_mtilde = init_proof.m_tilde.get(k)
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in init_proof.mtilde", k)))?;
+                .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in init_proof.mtilde", k)))?;
 
             let cur_val = cred_values.attrs_values.get(k)
-                .ok_or(IndyCryptoError::InvalidStructure(format!("Value by key '{}' not found in attributes_values", k)))?;
+                .ok_or(HLCryptoError::InvalidStructure(format!("Value by key '{}' not found in attributes_values", k)))?;
 
             let val = challenge
                 .mul(&cur_val.value(), Some(&mut ctx))?
@@ -1322,7 +1322,7 @@ impl ProofBuilder {
                 attr.clone(),
                 cred_values.attrs_values
                     .get(attr)
-                    .ok_or(IndyCryptoError::InvalidStructure(format!("Encoded value not found")))?
+                    .ok_or(HLCryptoError::InvalidStructure(format!("Encoded value not found")))?
                     .value()
                     .clone()?,
             );
@@ -1344,7 +1344,7 @@ impl ProofBuilder {
 
     fn _finalize_ne_proof(c_h: &BigNumber,
                           init_proof: &PrimaryPredicateInequalityInitProof,
-                          eq_proof: &PrimaryEqualProof) -> Result<PrimaryPredicateInequalityProof, IndyCryptoError> {
+                          eq_proof: &PrimaryEqualProof) -> Result<PrimaryPredicateInequalityProof, HLCryptoError> {
         trace!("ProofBuilder::_finalize_ne_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}", c_h, init_proof, eq_proof);
 
         let mut ctx = BigNumber::new_context()?;
@@ -1405,7 +1405,7 @@ impl ProofBuilder {
                                cred_schema: &CredentialSchema,
                                non_cred_schema_elems: &NonCredentialSchema,
                                cred_values: &CredentialValues,
-                               sub_proof_request: &SubProofRequest) -> Result<PrimaryProof, IndyCryptoError> {
+                               sub_proof_request: &SubProofRequest) -> Result<PrimaryProof, HLCryptoError> {
         trace!(
             "ProofBuilder::_finalize_primary_proof: >>> init_proof: {:?}, challenge: {:?}, cred_schema: {:?}, \
         cred_values: {:?}, sub_proof_request: {:?}",
@@ -1438,7 +1438,7 @@ impl ProofBuilder {
         Ok(primary_proof)
     }
 
-    fn _gen_c_list_params(r_cred: &NonRevocationCredentialSignature) -> Result<NonRevocProofXList, IndyCryptoError> {
+    fn _gen_c_list_params(r_cred: &NonRevocationCredentialSignature) -> Result<NonRevocProofXList, HLCryptoError> {
         trace!("ProofBuilder::_gen_c_list_params: >>> r_cred: {:?}", r_cred);
 
         let rho = GroupOrderElement::new()?;
@@ -1479,7 +1479,7 @@ impl ProofBuilder {
     fn _create_c_list_values(r_cred: &NonRevocationCredentialSignature,
                              params: &NonRevocProofXList,
                              r_pub_key: &CredentialRevocationPublicKey,
-                             witness: &Witness) -> Result<NonRevocProofCList, IndyCryptoError> {
+                             witness: &Witness) -> Result<NonRevocProofCList, HLCryptoError> {
         trace!("ProofBuilder::_create_c_list_values: >>> r_cred: {:?}, r_pub_key: {:?}", r_cred, r_pub_key);
 
         let e = r_pub_key.h
@@ -1534,7 +1534,7 @@ impl ProofBuilder {
         Ok(non_revoc_proof_c_list)
     }
 
-    fn _gen_tau_list_params() -> Result<NonRevocProofXList, IndyCryptoError> {
+    fn _gen_tau_list_params() -> Result<NonRevocProofXList, HLCryptoError> {
         trace!("ProofBuilder::_gen_tau_list_params: >>>");
 
         let non_revoc_proof_x_list = NonRevocProofXList {
@@ -1559,7 +1559,7 @@ impl ProofBuilder {
         Ok(non_revoc_proof_x_list)
     }
 
-    fn _finalize_non_revocation_proof(init_proof: &NonRevocInitProof, c_h: &BigNumber) -> Result<NonRevocProof, IndyCryptoError> {
+    fn _finalize_non_revocation_proof(init_proof: &NonRevocInitProof, c_h: &BigNumber) -> Result<NonRevocProof, HLCryptoError> {
         trace!("ProofBuilder::_finalize_non_revocation_proof: >>> init_proof: {:?}, c_h: {:?}", init_proof, c_h);
 
         let ch_num_z = bignum_to_group_element(&c_h)?;
