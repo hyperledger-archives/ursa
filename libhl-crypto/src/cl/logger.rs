@@ -8,7 +8,7 @@ use std::env;
 use std::io::Write;
 use log::{Record, Metadata};
 
-use errors::IndyCryptoError;
+use errors::HLCryptoError;
 
 use self::libc::{c_void, c_char};
 use std::ffi::CString;
@@ -28,20 +28,20 @@ pub type LogCB = extern fn(context: *const c_void,
 
 pub type FlushCB = extern fn(context: *const c_void);
 
-pub struct IndyCryptoLogger {
+pub struct HLCryptoLogger {
     context: *const c_void,
     enabled: Option<EnabledCB>,
     log: LogCB,
     flush: Option<FlushCB>,
 }
 
-impl IndyCryptoLogger {
+impl HLCryptoLogger {
     fn new(context: *const c_void, enabled: Option<EnabledCB>, log: LogCB, flush: Option<FlushCB>) -> Self {
-        IndyCryptoLogger { context, enabled, log, flush }
+        HLCryptoLogger { context, enabled, log, flush }
     }
 }
 
-impl log::Log for IndyCryptoLogger {
+impl log::Log for HLCryptoLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         if let Some(enabled_cb) = self.enabled {
             let level = metadata.level() as u32;
@@ -82,13 +82,13 @@ impl log::Log for IndyCryptoLogger {
     }
 }
 
-unsafe impl Sync for IndyCryptoLogger {}
+unsafe impl Sync for HLCryptoLogger {}
 
-unsafe impl Send for IndyCryptoLogger {}
+unsafe impl Send for HLCryptoLogger {}
 
-impl IndyCryptoLogger {
-    pub fn init(context: *const c_void, enabled: Option<EnabledCB>, log: LogCB, flush: Option<FlushCB>) -> Result<(), IndyCryptoError> {
-        let logger = IndyCryptoLogger::new(context, enabled, log, flush);
+impl HLCryptoLogger {
+    pub fn init(context: *const c_void, enabled: Option<EnabledCB>, log: LogCB, flush: Option<FlushCB>) -> Result<(), HLCryptoError> {
+        let logger = HLCryptoLogger::new(context, enabled, log, flush);
 
         log::set_boxed_logger(Box::new(logger))?;
         log::set_max_level(LevelFilter::Trace);
@@ -97,10 +97,10 @@ impl IndyCryptoLogger {
     }
 }
 
-pub struct IndyCryptoDefaultLogger;
+pub struct HLCryptoDefaultLogger;
 
-impl IndyCryptoDefaultLogger {
-    pub fn init(pattern: Option<String>) -> Result<(), IndyCryptoError> {
+impl HLCryptoDefaultLogger {
+    pub fn init(pattern: Option<String>) -> Result<(), HLCryptoError> {
         let pattern = pattern.or(env::var("RUST_LOG").ok());
 
         Builder::new()

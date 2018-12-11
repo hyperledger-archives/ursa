@@ -1,0 +1,8 @@
+[package]
+name = "rustlibsecp256k1"
+version = "0.1.0"
+authors = ["Michael Lodder <redmike7@gmail.com>"]
+description = "Solely exists to prevent a namespace collision with secp256k1"
+
+[dependencies]
+libsecp256k1 = "0.1.14"

@@ -5,4 +5,5 @@ build
 .venv
 .cache
 .DS_Store
+Cargo.lock
 Podfile.lock

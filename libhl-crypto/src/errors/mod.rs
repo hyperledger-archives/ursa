@@ -76,7 +76,7 @@ pub trait ToErrorCode {
 }
 
 #[derive(Debug)]
-    pub enum IndyCryptoError {
+pub enum HLCryptoError {
     InvalidParam1(String),
     InvalidParam2(String),
     InvalidParam3(String),
@@ -95,104 +95,104 @@ pub trait ToErrorCode {
     AnoncredsProofRejected(String),
 }
 
-impl fmt::Display for IndyCryptoError {
+impl fmt::Display for HLCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            IndyCryptoError::InvalidParam1(ref description) => write!(f, "Invalid param 1: {}", description),
-            IndyCryptoError::InvalidParam2(ref description) => write!(f, "Invalid param 2: {}", description),
-            IndyCryptoError::InvalidParam3(ref description) => write!(f, "Invalid param 3: {}", description),
-            IndyCryptoError::InvalidParam4(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidParam5(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidParam6(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidParam7(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidParam8(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidParam9(ref description) => write!(f, "Invalid param 4: {}", description),
-            IndyCryptoError::InvalidState(ref description) => write!(f, "Invalid library state: {}", description),
-            IndyCryptoError::InvalidStructure(ref description) => write!(f, "Invalid structure: {}", description),
-            IndyCryptoError::IOError(ref err) => err.fmt(f),
-            IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
-            IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
-            IndyCryptoError::AnoncredsCredentialRevoked(ref description) => write!(f, "Credential revoked: {}", description),
-            IndyCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
+            HLCryptoError::InvalidParam1(ref description) => write!(f, "Invalid param 1: {}", description),
+            HLCryptoError::InvalidParam2(ref description) => write!(f, "Invalid param 2: {}", description),
+            HLCryptoError::InvalidParam3(ref description) => write!(f, "Invalid param 3: {}", description),
+            HLCryptoError::InvalidParam4(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidParam5(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidParam6(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidParam7(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidParam8(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidParam9(ref description) => write!(f, "Invalid param 4: {}", description),
+            HLCryptoError::InvalidState(ref description) => write!(f, "Invalid library state: {}", description),
+            HLCryptoError::InvalidStructure(ref description) => write!(f, "Invalid structure: {}", description),
+            HLCryptoError::IOError(ref err) => err.fmt(f),
+            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
+            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
+            HLCryptoError::AnoncredsCredentialRevoked(ref description) => write!(f, "Credential revoked: {}", description),
+            HLCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
         }
     }
 }
 
-impl Error for IndyCryptoError {
+impl Error for HLCryptoError {
     fn description(&self) -> &str {
         match *self {
-            IndyCryptoError::InvalidParam1(ref description) => description,
-            IndyCryptoError::InvalidParam2(ref description) => description,
-            IndyCryptoError::InvalidParam3(ref description) => description,
-            IndyCryptoError::InvalidParam4(ref description) => description,
-            IndyCryptoError::InvalidParam5(ref description) => description,
-            IndyCryptoError::InvalidParam6(ref description) => description,
-            IndyCryptoError::InvalidParam7(ref description) => description,
-            IndyCryptoError::InvalidParam8(ref description) => description,
-            IndyCryptoError::InvalidParam9(ref description) => description,
-            IndyCryptoError::InvalidState(ref description) => description,
-            IndyCryptoError::InvalidStructure(ref description) => description,
-            IndyCryptoError::IOError(ref err) => err.description(),
-            IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
-            IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
-            IndyCryptoError::AnoncredsCredentialRevoked(ref description) => description,
-            IndyCryptoError::AnoncredsProofRejected(ref description) => description,
+            HLCryptoError::InvalidParam1(ref description) => description,
+            HLCryptoError::InvalidParam2(ref description) => description,
+            HLCryptoError::InvalidParam3(ref description) => description,
+            HLCryptoError::InvalidParam4(ref description) => description,
+            HLCryptoError::InvalidParam5(ref description) => description,
+            HLCryptoError::InvalidParam6(ref description) => description,
+            HLCryptoError::InvalidParam7(ref description) => description,
+            HLCryptoError::InvalidParam8(ref description) => description,
+            HLCryptoError::InvalidParam9(ref description) => description,
+            HLCryptoError::InvalidState(ref description) => description,
+            HLCryptoError::InvalidStructure(ref description) => description,
+            HLCryptoError::IOError(ref err) => err.description(),
+            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
+            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
+            HLCryptoError::AnoncredsCredentialRevoked(ref description) => description,
+            HLCryptoError::AnoncredsProofRejected(ref description) => description,
         }
     }
 
     fn cause(&self) -> Option<&Error> {
         match *self {
-            IndyCryptoError::InvalidParam1(_) |
-            IndyCryptoError::InvalidParam2(_) |
-            IndyCryptoError::InvalidParam3(_) |
-            IndyCryptoError::InvalidParam4(_) |
-            IndyCryptoError::InvalidParam5(_) |
-            IndyCryptoError::InvalidParam6(_) |
-            IndyCryptoError::InvalidParam7(_) |
-            IndyCryptoError::InvalidParam8(_) |
-            IndyCryptoError::InvalidParam9(_) |
-            IndyCryptoError::InvalidState(_) |
-            IndyCryptoError::InvalidStructure(_) => None,
-            IndyCryptoError::IOError(ref err) => Some(err),
-            IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
-            IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
-            IndyCryptoError::AnoncredsCredentialRevoked(_) => None,
-            IndyCryptoError::AnoncredsProofRejected(_) => None,
+            HLCryptoError::InvalidParam1(_) |
+            HLCryptoError::InvalidParam2(_) |
+            HLCryptoError::InvalidParam3(_) |
+            HLCryptoError::InvalidParam4(_) |
+            HLCryptoError::InvalidParam5(_) |
+            HLCryptoError::InvalidParam6(_) |
+            HLCryptoError::InvalidParam7(_) |
+            HLCryptoError::InvalidParam8(_) |
+            HLCryptoError::InvalidParam9(_) |
+            HLCryptoError::InvalidState(_) |
+            HLCryptoError::InvalidStructure(_) => None,
+            HLCryptoError::IOError(ref err) => Some(err),
+            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
+            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
+            HLCryptoError::AnoncredsCredentialRevoked(_) => None,
+            HLCryptoError::AnoncredsProofRejected(_) => None,
         }
     }
 }
 
-impl ToErrorCode for IndyCryptoError {
+impl ToErrorCode for HLCryptoError {
     fn to_error_code(&self) -> ErrorCode {
         match *self {
-            IndyCryptoError::InvalidParam1(_) => ErrorCode::CommonInvalidParam1,
-            IndyCryptoError::InvalidParam2(_) => ErrorCode::CommonInvalidParam2,
-            IndyCryptoError::InvalidParam3(_) => ErrorCode::CommonInvalidParam3,
-            IndyCryptoError::InvalidParam4(_) => ErrorCode::CommonInvalidParam4,
-            IndyCryptoError::InvalidParam5(_) => ErrorCode::CommonInvalidParam5,
-            IndyCryptoError::InvalidParam6(_) => ErrorCode::CommonInvalidParam6,
-            IndyCryptoError::InvalidParam7(_) => ErrorCode::CommonInvalidParam7,
-            IndyCryptoError::InvalidParam8(_) => ErrorCode::CommonInvalidParam8,
-            IndyCryptoError::InvalidParam9(_) => ErrorCode::CommonInvalidParam9,
-            IndyCryptoError::InvalidState(_) => ErrorCode::CommonInvalidState,
-            IndyCryptoError::InvalidStructure(_) => ErrorCode::CommonInvalidStructure,
-            IndyCryptoError::IOError(_) => ErrorCode::CommonIOError,
-            IndyCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
-            IndyCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
-            IndyCryptoError::AnoncredsCredentialRevoked(_) => ErrorCode::AnoncredsCredentialRevoked,
-            IndyCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
+            HLCryptoError::InvalidParam1(_) => ErrorCode::CommonInvalidParam1,
+            HLCryptoError::InvalidParam2(_) => ErrorCode::CommonInvalidParam2,
+            HLCryptoError::InvalidParam3(_) => ErrorCode::CommonInvalidParam3,
+            HLCryptoError::InvalidParam4(_) => ErrorCode::CommonInvalidParam4,
+            HLCryptoError::InvalidParam5(_) => ErrorCode::CommonInvalidParam5,
+            HLCryptoError::InvalidParam6(_) => ErrorCode::CommonInvalidParam6,
+            HLCryptoError::InvalidParam7(_) => ErrorCode::CommonInvalidParam7,
+            HLCryptoError::InvalidParam8(_) => ErrorCode::CommonInvalidParam8,
+            HLCryptoError::InvalidParam9(_) => ErrorCode::CommonInvalidParam9,
+            HLCryptoError::InvalidState(_) => ErrorCode::CommonInvalidState,
+            HLCryptoError::InvalidStructure(_) => ErrorCode::CommonInvalidStructure,
+            HLCryptoError::IOError(_) => ErrorCode::CommonIOError,
+            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
+            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
+            HLCryptoError::AnoncredsCredentialRevoked(_) => ErrorCode::AnoncredsCredentialRevoked,
+            HLCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
         }
     }
 }
 
-impl From<serde_json::Error> for IndyCryptoError {
-    fn from(err: serde_json::Error) -> IndyCryptoError {
-        IndyCryptoError::InvalidStructure(err.to_string())
+impl From<serde_json::Error> for HLCryptoError {
+    fn from(err: serde_json::Error) -> HLCryptoError {
+        HLCryptoError::InvalidStructure(err.to_string())
     }
 }
 
-impl From<log::SetLoggerError> for IndyCryptoError {
-    fn from(err: log::SetLoggerError) -> IndyCryptoError{
-        IndyCryptoError::InvalidState(err.description().to_owned())
+impl From<log::SetLoggerError> for HLCryptoError {
+    fn from(err: log::SetLoggerError) -> HLCryptoError{
+        HLCryptoError::InvalidState(err.description().to_owned())
     }
 }

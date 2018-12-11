@@ -9,7 +9,7 @@ extern crate log;
 
 use errors::ToErrorCode;
 
-use cl::logger::{EnabledCB, LogCB, FlushCB, IndyCryptoLogger, IndyCryptoDefaultLogger};
+use cl::logger::{EnabledCB, LogCB, FlushCB, HLCryptoLogger, HLCryptoDefaultLogger};
 use ffi::ctypes::CTypesUtils;
 
 /// Set custom logger implementation.
@@ -33,7 +33,7 @@ pub extern fn hl_crypto_set_logger(context: *const c_void,
 
     check_useful_c_callback!(log, ErrorCode::CommonInvalidParam3);
 
-    let res = match IndyCryptoLogger::init(context, enabled, log, flush) {
+    let res = match HLCryptoLogger::init(context, enabled, log, flush) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
@@ -63,7 +63,7 @@ pub extern fn hl_crypto_set_default_logger(pattern: *const c_char) -> ErrorCode 
 
     trace!("hl_crypto_set_default_logger: entities >>> pattern: {:?}", pattern);
 
-    let res = match IndyCryptoDefaultLogger::init(pattern) {
+    let res = match HLCryptoDefaultLogger::init(pattern) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
