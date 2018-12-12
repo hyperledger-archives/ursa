@@ -244,6 +244,15 @@ mod ecdsa_secp256k1sha256 {
         new_s
     }
 
+    fn get_u32(n: &[u8]) -> u32 {
+        let mut res = 0u32;
+        for i in 0..4 {
+            res <<= 8;
+            res |= n[i] as u32;
+        }
+        res
+    }
+
     /// Convert 8 32 bit numbers array to a little-endian byte array.
     fn get_b32(s: &[u32; 8]) -> [u8; 32] {
         let mut new_s = [0u8; 32];
