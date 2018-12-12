@@ -64,11 +64,4 @@ pub trait EcdsaPublicKeyHandler {
     fn public_key_uncompressed_size() -> usize;
 }
 
-//fn get_u32(n: &[u8]) -> u32 {
-//    let mut res = 0u32;
-//    for i in 0..4 {
-//        res <<= 8;
-//        res |= n[i] as u32;
-//    }
-//    res
-//}
+
