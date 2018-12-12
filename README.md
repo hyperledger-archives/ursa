@@ -20,7 +20,7 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
 
 ## Building Indy Crypto
 
-## Ubuntu 16.04
+## Ubuntu 16.04 LTS.
 
 1. Install Rust and rustup (https://www.rust-lang.org/install.html).
 1. Install pre-requirements:
@@ -28,12 +28,8 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
     *For Ubuntu 16.04*
 
     ```bash
-    apt-get update && \
-    apt-get install -y \
-    build-essential \
-    pkg-config \
-    cmake \
-    libssl-dev
+    sudo apt-get update &&
+    sudo apt-get install -y build-essential pkg-config cmake libssl-dev
     ```
 
     *For Windows*
