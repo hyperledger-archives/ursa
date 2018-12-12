@@ -63,5 +63,3 @@ pub trait EcdsaPublicKeyHandler {
     fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError>;
     fn public_key_uncompressed_size() -> usize;
 }
-
-
