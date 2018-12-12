@@ -1,4 +1,4 @@
-FROM centos:7
+FROM opensuse:leap
 
 LABEL maintainer="Michael Lodder <redmike7@gmail.com>"
 
@@ -8,11 +8,11 @@ ENV LD_LIBRARY_PATH /usr/local/lib
 
 WORKDIR /root
 
-RUN yum -y update && yum -y install sudo make autoconf libtool curl python3 pkg-config openssl-devel 2>&1 > /dev/null \
+RUN zypper --non-interactive update && zypper --non-interactive install sudo make gcc autoconf libtool curl python3 pkg-config openssl-devel 2>&1 > /dev/null \
     && curl -fsSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.14.tar.gz | tar -xz \
     && cd libsodium-1.0.14 \ 
     && ./autogen.sh \
-    && ./configure --disable-dependency-tracking \
+    && ./configure \
     && make \
     && make install \
     && cd .. \
