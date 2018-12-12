@@ -721,13 +721,13 @@ pub extern fn hl_crypto_bls_sign(message: *const u8,
 /// * `gen` - Generator instance pointer
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn hl_crypto_bsl_verify(signature: *const c_void,
+pub extern fn hl_crypto_bls_verify(signature: *const c_void,
                                      message: *const u8,
                                      message_len: usize,
                                      ver_key: *const c_void,
                                      gen: *const c_void,
                                      valid_p: *mut bool) -> ErrorCode {
-    trace!("hl_crypto_bsl_verify: >>> signature: {:?}, message: {:?}, message_len: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", signature, message, message_len, ver_key, gen, valid_p);
+    trace!("hl_crypto_bls_verify: >>> signature: {:?}, message: {:?}, message_len: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", signature, message, message_len, ver_key, gen, valid_p);
 
     check_useful_c_reference!(signature, Signature, ErrorCode::CommonInvalidParam1);
     check_useful_c_byte_array!(message, message_len,
@@ -736,18 +736,18 @@ pub extern fn hl_crypto_bsl_verify(signature: *const c_void,
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam5);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam6);
 
-    trace!("hl_crypto_bsl_verify: signature: {:?}, message: {:?}, ver_key: {:?}, gen: {:?}", signature, message, ver_key, gen);
+    trace!("hl_crypto_bls_verify: signature: {:?}, message: {:?}, ver_key: {:?}, gen: {:?}", signature, message, ver_key, gen);
 
     let res = match Bls::verify(signature, message, ver_key, gen) {
         Ok(valid) => {
-            trace!("hl_crypto_bsl_verify: valid: {:?}", valid);
+            trace!("hl_crypto_bls_verify: valid: {:?}", valid);
             unsafe { *valid_p = valid; }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("hl_crypto_bsl_verify: <<< res: {:?}", res);
+    trace!("hl_crypto_bls_verify: <<< res: {:?}", res);
     res
 }
 
@@ -802,29 +802,29 @@ pub extern fn hl_crypto_bls_verify_multi_sig(multi_sig: *const c_void,
 /// * `gen` - Generator instance pointer
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn hl_crypto_bsl_verify_pop(pop: *const c_void,
+pub extern fn hl_crypto_bls_verify_pop(pop: *const c_void,
                                          ver_key: *const c_void,
                                          gen: *const c_void,
                                          valid_p: *mut bool) -> ErrorCode {
-    trace!("hl_crypto_bsl_verify_pop: >>> pop: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", pop, ver_key, gen, valid_p);
+    trace!("hl_crypto_bls_verify_pop: >>> pop: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", pop, ver_key, gen, valid_p);
 
     check_useful_c_reference!(pop, ProofOfPossession, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam2);
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam4);
 
-    trace!("hl_crypto_bsl_verify_pop: pop: {:?}, ver_key: {:?}, gen: {:?}", pop, ver_key, gen);
+    trace!("hl_crypto_bls_verify_pop: pop: {:?}, ver_key: {:?}, gen: {:?}", pop, ver_key, gen);
 
     let res = match Bls::verify_proof_of_posession(pop, ver_key, gen) {
         Ok(valid) => {
-            trace!("hl_crypto_bsl_verify_pop: valid: {:?}", valid);
+            trace!("hl_crypto_bls_verify_pop: valid: {:?}", valid);
             unsafe { *valid_p = valid; }
             ErrorCode::Success
         }
         Err(err) => err.to_error_code()
     };
 
-    trace!("hl_crypto_bsl_verify_pop: <<< res: {:?}", res);
+    trace!("hl_crypto_bls_verify_pop: <<< res: {:?}", res);
     res
 }
 
@@ -1417,7 +1417,7 @@ mod tests {
 
 
     #[test]
-    fn hl_crypto_bsl_verify_works() {
+    fn hl_crypto_bls_verify_works() {
         let mut gen: *const c_void = ptr::null();
         let err_code = hl_crypto_bls_generator_new(&mut gen);
         assert_eq!(err_code, ErrorCode::Success);
@@ -1442,7 +1442,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = hl_crypto_bsl_verify(signature,
+        let err_code = hl_crypto_bls_verify(signature,
                                               message, message_len,
                                               ver_key,
                                               gen, &mut valid);
@@ -1463,7 +1463,7 @@ mod tests {
     }
 
     #[test]
-    fn hl_crypto_bsl_verify_works_for_invalid() {
+    fn hl_crypto_bls_verify_works_for_invalid() {
         let mut gen: *const c_void = ptr::null();
         let err_code = hl_crypto_bls_generator_new(&mut gen);
         assert_eq!(err_code, ErrorCode::Success);
@@ -1494,7 +1494,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = hl_crypto_bsl_verify(signature,
+        let err_code = hl_crypto_bls_verify(signature,
                                               message, message_len,
                                               ver_key,
                                               gen, &mut valid);
@@ -1673,7 +1673,7 @@ mod tests {
     }
 
     #[test]
-    fn hl_crypto_bsl_verify_pop_works() {
+    fn hl_crypto_bls_verify_pop_works() {
         let mut gen: *const c_void = ptr::null();
         let err_code = hl_crypto_bls_generator_new(&mut gen);
         assert_eq!(err_code, ErrorCode::Success);
@@ -1694,7 +1694,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = hl_crypto_bsl_verify_pop(pop,
+        let err_code = hl_crypto_bls_verify_pop(pop,
                                                   ver_key,
                                                   gen,
                                                   &mut valid);
