@@ -40,7 +40,7 @@ us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
 
     * Download the prebuilt dependencies [here](https://repo.sovrin.org/windows/libindy_crypto/deps/)
     * file: indy-crypto-deps.zip 
-    * hash: f2bcfe3523201d836e6c3cdaf8189aebf1a68a19
+    * hash: f2bcfe3523201d836e6c3cdaf8189aebf1a68a19 ( SHA1 )
     * Extract them into the folder _C:\BIN\x64_. Note it really doesn't matter where you put these as long as you
       remember where so you can set the environment variables to this path
     * Point path to this directory using environment variables:
