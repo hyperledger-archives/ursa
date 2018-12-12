@@ -18,9 +18,10 @@ Libursa is designed for cryptographic primitives like simple digital signatures,
 
 Z-Mix offers a generic way to create zero-knowledge proofs, proving statements about multiple cryptographic building blocks, containing signatures, commitments, and verifiable encryption. Z-Mix uses many of the building blocks found in Libursa.
 
-## Building Libursa from Source
+## Setup the build environment
+Libursa relies on libsodium for the default secure mode. The instructions below show the necessary steps to configure the environment to build all modes of libursa. There are convienance docker images in the **docker** folder that can be used.
 
-## Fedora, RedHat, CentOS
+### Fedora, RedHat, CentOS
 
 1. Install build tools
 ```bash
@@ -48,7 +49,35 @@ sudo make install
 export SODIUM_LIB_DIR=/usr/local/lib
 ```
 
-## Mac OS X
+### Debian, Ubuntu
+
+1. Install build tools
+```bash
+apt-get install -y cmake autoconf libtool curl python3 pkg-config libssl-dev
+```
+2. Install rust
+```bash
+curl -sSf https://sh.rustup.rs | sh -s -- -y
+```
+3. Initialize rust environment
+```bash
+source ~/.cargo/env
+```
+4. Compile and install libsodium 1.0.14
+```bash
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.14/libsodium-1.0.14.tar.gz | tar -xz
+cd libsodium-1.0.14
+./autogen.sh
+./configure --prefix=/usr/local
+make
+sudo make install
+```
+5. Add the libsodium environment variable
+```bash
+export SODIUM_LIB_DIR=/usr/local/lib
+```
+
+### Mac OS X
 
 1. Install xcode command line tools 
 ```bash
@@ -87,3 +116,19 @@ sudo make install
 ```bash
 export SODIUM_LIB_DIR=/usr/local/lib
 ```
+
+## Building Libursa from Source
+
+Libursa uses the rustc compiler with cargo. Go into the libursa folder where the *Cargo.toml* lives.
+Run the following commands to get the default secure mode:
+```bash
+cargo build --release
+```
+
+Libursa also supports portable mode where all code MUST be written in rust. This is very helpful for building web assemblies to eliminate external dependency issues. Run the following commands to build in portable mode:
+
+```bash
+cargo build --release --no-default-features --features=portable
+```
+
+The resulting artifact(s) can be found in the *target/release* folder.
