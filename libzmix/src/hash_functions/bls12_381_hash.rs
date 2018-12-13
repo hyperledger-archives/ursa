@@ -13,7 +13,7 @@ const GROUP1_DOMAIN_SEP: u8 = 1;
 const GROUP2_DOMAIN_SEP: u8 = 2;
 
 
-struct BLS12_381_SHA256_G1 {
+pub struct BLS12_381_SHA256_G1 {
     msg: Vec<u8>,
     digest: [u8; MODBYTES]
 }
@@ -53,7 +53,7 @@ impl BLS12_381_SHA256_G1 {
     }
 }
 
-struct BLS12_381_SHA256_G2 {
+pub struct BLS12_381_SHA256_G2 {
     msg: Vec<u8>,
     digest: [u8; MODBYTES]
 }

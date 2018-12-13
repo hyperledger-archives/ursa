@@ -7,7 +7,7 @@ use self::amcl::bls381::ecp::ECP;
 use self::amcl::bls381::big::{BIG, MODBYTES};
 
 use hash_functions::HashFunction;
-use hash_functions::bls12_381_hash::BLS12_381_SHA256;
+use hash_functions::bls12_381_hash::BLS12_381_SHA256_G1;
 
 use commitments::CommitmentScheme;
 use commitments::CommitmentError;
@@ -28,10 +28,10 @@ impl CommitmentScheme for PedersenCommitmentBLS12_381_SHA256_G1 {
             return Err(CommitmentError::ZeroCountInPedersenSetup(String::from("num_elements cannot be 0")))
         }
         let mut generators: Vec<ECP> = vec![];
-        let mut hf = BLS12_381_SHA256::new(None)?;
+        let mut hf = BLS12_381_SHA256_G1::new(None)?;
         hf.update(SETUP_SEED_G1.as_bytes());
         for _ in 0..num_elements+1 {
-            generators.push(hf.hash_on_group_g1()?);
+            generators.push(hf.hash_on_group());
             let m = hf.digest(None)?;
             hf.update(&m);
         }
@@ -119,7 +119,7 @@ impl PedersenCommitmentBLS12_381_SHA256_G1 {
         let mut commitment = ECP::new();
         for i in 0..messages.len() {
             let gen = Self::get_point_from_bytes(generators[i])?;
-            let mut hf = BLS12_381_SHA256::new(None)?;
+            let mut hf = BLS12_381_SHA256_G1::new(None)?;
             hf.update(messages[i]);
             let msg = hf.digest(None)?;
             let c = gen.mul(&BIG::frombytes(&msg));
@@ -129,6 +129,15 @@ impl PedersenCommitmentBLS12_381_SHA256_G1 {
     }
 }
 
+// Alternate implementation
+
+/*
+impl<Group> CommitmentScheme for PedersenCommitment {
+    fn setup(num_elements: u32) -> Vec<Group::Element> {
+        unimplemented!();
+    }
+}
+*/
 #[cfg(test)]
 mod tests {
     use super::*;
