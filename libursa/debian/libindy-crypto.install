@@ -1,1 +1,1 @@
-target/release/libhl_crypto.so usr/lib/
+target/release/libursa.so usr/lib/

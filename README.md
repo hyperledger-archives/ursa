@@ -32,7 +32,35 @@ Libursa also supports portable mode where all code MUST be written in rust. This
 cargo build --release --no-default-features --features=portable
 ```
 
-The resulting artifact(s) can be found in the *target/release* folder.
+The resulting artifact(s) can be found in the *target/release* folder. They include:
+
+    libursa.so (Linux)
+    libursa.dylib (Mac OS X)
+    libursa.a (Linux, Mac OS X)
+    libursa.dll (Windows)
+    libursa.lib (Windows)
+
+## Building Libzmix from Source
+
+Libzmix uses the rustc compiler with cargo. Go into the libzmix folder where the *Cargo.toml* lives.
+Run the following commands to get the default secure mode:
+```bash
+cargo build --release
+```
+
+Libzmix also supports portable mode where all code MUST be written in rust. This is very helpful for building web assemblies to eliminate external dependency issues. Run the following commands to build in portable mode:
+
+```bash
+cargo build --release --no-default-features --features=portable
+```
+
+The resulting artifact(s) can be found in the *target/release* folder. They include:
+
+    libzmix.so (Linux)
+    libzmix.dylib (Mac OS X)
+    libzmix.a (Linux, Mac OS X)
+    libzmix.dll (Windows)
+    libzmix.lib (Windows)
 
 ## Setup the build environment
 Libursa relies on libsodium for the default secure mode. The instructions below show the necessary steps to configure the environment to build all modes of libursa. There are convienance docker images in the **docker** folder that can be used.

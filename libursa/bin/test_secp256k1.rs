@@ -1,10 +1,10 @@
-extern crate hl_crypto;
+extern crate ursa;
 extern crate secp256k1;
 extern crate openssl;
 
-use hl_crypto::signatures::secp256k1::EcdsaSecp256k1Sha256;
-use hl_crypto::signatures::{SignatureScheme, EcdsaPublicKeyHandler};
-use hl_crypto::hash::{digest, DigestAlgorithm};
+use ursa::signatures::secp256k1::EcdsaSecp256k1Sha256;
+use ursa::signatures::{SignatureScheme, EcdsaPublicKeyHandler};
+use ursa::hash::{digest, DigestAlgorithm};
 use openssl::ecdsa::EcdsaSig;
 use openssl::ec::{EcGroup, EcPoint, EcKey};
 use openssl::nid::Nid;

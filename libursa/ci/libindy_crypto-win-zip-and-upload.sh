@@ -16,19 +16,19 @@ number="$4"
 [ -z $number ] && exit 4
 [ -z $prebuit_path ] && exit 5
 
-mkdir libhl_crypto-zip
-mkdir libhl_crypto-zip/lib
-cp -r ./include ./libhl_crypto-zip
-cp ./target/release/*.dll ./libhl_crypto-zip/lib/
-cp $prebuit_path/lib/*.dll ./libhl_crypto-zip/lib/
+mkdir libursa-zip
+mkdir libursa-zip/lib
+cp -r ./include ./libursa-zip
+cp ./target/release/*.dll ./libursa-zip/lib/
+cp $prebuit_path/lib/*.dll ./libursa-zip/lib/
 
-cd libhl_crypto-zip && zip -r libindy_crypto_${version}.zip ./* && mv libindy_crypto_${version}.zip .. && cd ..
+cd libursa-zip && zip -r libindy_crypto_${version}.zip ./* && mv libindy_crypto_${version}.zip .. && cd ..
 
-rm -rf libhl_crypto-zip
+rm -rf libursa-zip
 
 cat <<EOF | sftp -v -oStrictHostKeyChecking=no -i $key repo@192.168.11.115
-mkdir /var/repository/repos/windows/libhl_crypto/$type/$version-$number
-cd /var/repository/repos/windows/libhl_crypto/$type/$version-$number
-put -r libhl_crypto_"$version".zip
-ls -l /var/repository/repos/windows/libhl_crypto/$type/$version-$number
+mkdir /var/repository/repos/windows/libursa/$type/$version-$number
+cd /var/repository/repos/windows/libursa/$type/$version-$number
+put -r libursa_"$version".zip
+ls -l /var/repository/repos/windows/libursa/$type/$version-$number
 EOF

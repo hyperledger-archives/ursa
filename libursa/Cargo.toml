@@ -1,12 +1,12 @@
 [package]
-name = "crypto_lib"
+name = "ursa"
 version = "0.1.0"
 authors = ["Michael Lodder <redmike7@gmail.com>"]
 description = "This is the shared crypto library for Hyperledger components."
 license = "MIT/Apache-2.0"
 
 [lib]
-name = "hl_crypto"
+name = "ursa"
 path = "src/lib.rs"
 crate-type = ["staticlib", "rlib", "dylib", "cdylib"]
 

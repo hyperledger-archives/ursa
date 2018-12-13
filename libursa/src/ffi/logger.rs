@@ -25,11 +25,11 @@ use ffi::ctypes::CTypesUtils;
 /// #Returns
 /// Error code
 #[no_mangle]
-pub extern fn hl_crypto_set_logger(context: *const c_void,
+pub extern fn ursa_set_logger(context: *const c_void,
                                      enabled: Option<EnabledCB>,
                                      log: Option<LogCB>,
                                      flush: Option<FlushCB>) -> ErrorCode {
-    trace!("hl_crypto_set_logger >>> context: {:?}, enabled: {:?}, log: {:?}, flush: {:?}", context, log, enabled, flush);
+    trace!("ursa_set_logger >>> context: {:?}, enabled: {:?}, log: {:?}, flush: {:?}", context, log, enabled, flush);
 
     check_useful_c_callback!(log, ErrorCode::CommonInvalidParam3);
 
@@ -38,7 +38,7 @@ pub extern fn hl_crypto_set_logger(context: *const c_void,
         Err(err) => err.to_error_code()
     };
 
-    trace!("hl_crypto_set_logger: <<< res: {:?}", res);
+    trace!("ursa_set_logger: <<< res: {:?}", res);
 
     res
 }
@@ -56,19 +56,19 @@ pub extern fn hl_crypto_set_logger(context: *const c_void,
 /// #Returns
 /// Error code
 #[no_mangle]
-pub extern fn hl_crypto_set_default_logger(pattern: *const c_char) -> ErrorCode {
-    trace!("hl_crypto_set_default_logger >>> pattern: {:?}", pattern);
+pub extern fn ursa_set_default_logger(pattern: *const c_char) -> ErrorCode {
+    trace!("ursa_set_default_logger >>> pattern: {:?}", pattern);
 
     check_useful_opt_c_str!(pattern, ErrorCode::CommonInvalidParam1);
 
-    trace!("hl_crypto_set_default_logger: entities >>> pattern: {:?}", pattern);
+    trace!("ursa_set_default_logger: entities >>> pattern: {:?}", pattern);
 
     let res = match HLCryptoDefaultLogger::init(pattern) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.to_error_code()
     };
 
-    trace!("hl_crypto_set_default_logger: <<< res: {:?}", res);
+    trace!("ursa_set_default_logger: <<< res: {:?}", res);
 
     res
 }

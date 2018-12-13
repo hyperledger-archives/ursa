@@ -1,24 +1,24 @@
 use wasm_bindgen::prelude::*;
 
 use bls;
-use errors::HLCryptoError;
+use errors::UrsaCryptoError;
 use errors::ToErrorCode;
 use serde;
 
-impl From<HLCryptoError> for JsValue {
-    fn from(err: HLCryptoError) -> JsValue {
+impl From<UrsaCryptoError> for JsValue {
+    fn from(err: UrsaCryptoError) -> JsValue {
         let error_code = err.to_error_code();
         JsValue::from_serde(&error_code).unwrap()
     }
 }
 
-fn convert_from_js<T>(val: &JsValue) -> Result<T, HLCryptoError>
+fn convert_from_js<T>(val: &JsValue) -> Result<T, UrsaCryptoError>
 where
     for<'a> T: serde::Deserialize<'a>,
 {
     match val.into_serde() {
         Ok(unwrapped) => Ok(unwrapped),
-        Err(_) => Err(HLCryptoError::InvalidStructure(
+        Err(_) => Err(UrsaCryptoError::InvalidStructure(
             "Invalid argument".to_string(),
         )),
     }

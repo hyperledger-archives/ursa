@@ -8,7 +8,7 @@ use std::env;
 use std::io::Write;
 use log::{Record, Metadata};
 
-use errors::HLCryptoError;
+use errors::UrsaCryptoError;
 
 use self::libc::{c_void, c_char};
 use std::ffi::CString;
@@ -87,7 +87,7 @@ unsafe impl Sync for HLCryptoLogger {}
 unsafe impl Send for HLCryptoLogger {}
 
 impl HLCryptoLogger {
-    pub fn init(context: *const c_void, enabled: Option<EnabledCB>, log: LogCB, flush: Option<FlushCB>) -> Result<(), HLCryptoError> {
+    pub fn init(context: *const c_void, enabled: Option<EnabledCB>, log: LogCB, flush: Option<FlushCB>) -> Result<(), UrsaCryptoError> {
         let logger = HLCryptoLogger::new(context, enabled, log, flush);
 
         log::set_boxed_logger(Box::new(logger))?;
@@ -100,7 +100,7 @@ impl HLCryptoLogger {
 pub struct HLCryptoDefaultLogger;
 
 impl HLCryptoDefaultLogger {
-    pub fn init(pattern: Option<String>) -> Result<(), HLCryptoError> {
+    pub fn init(pattern: Option<String>) -> Result<(), UrsaCryptoError> {
         let pattern = pattern.or(env::var("RUST_LOG").ok());
 
         Builder::new()

@@ -51,7 +51,7 @@ typedef enum
 
     // IO Error
     CommonIOError = 114,
-} hl_crypto_error_t;
+} ursa_error_t;
 
 #endif
 

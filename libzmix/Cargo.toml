@@ -6,7 +6,7 @@ license = "Apache-2.0"
 
 [lib]
 name = "zmix"
-crate-type = ["rlib", "staticlib", "cdylib"]
+crate-type = ["rlib", "staticlib", "dylib", "cdylib"]
 
 [dependencies]
 amcl_3 = { path = "../amcl" }

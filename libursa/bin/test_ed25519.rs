@@ -1,8 +1,8 @@
-extern crate hl_crypto;
+extern crate ursa;
 extern crate libsodium_ffi as ffi;
 
-use hl_crypto::signatures::ed25519::Ed25519Sha512;
-use hl_crypto::signatures::SignatureScheme;
+use ursa::signatures::ed25519::Ed25519Sha512;
+use ursa::signatures::SignatureScheme;
 
 use std::io;
 use std::io::Write;

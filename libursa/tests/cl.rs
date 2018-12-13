@@ -2,24 +2,24 @@
 extern crate serde_derive;
 extern crate serde_json;
 #[cfg(feature = "cl")]
-extern crate hl_crypto;
+extern crate ursa;
 
 #[cfg(feature = "cl")]
 mod cl_tests {
-    use hl_crypto::cl::{new_nonce, Witness, RevocationRegistry, RevocationRegistryDelta, SimpleTailsAccessor};
-    use hl_crypto::cl::issuer::Issuer;
-    use hl_crypto::cl::prover::Prover;
-    use hl_crypto::cl::verifier::Verifier;
-    use hl_crypto::pair::PointG2;
-    use hl_crypto::cl::logger::HLCryptoDefaultLogger;
+    use ursa::cl::{new_nonce, Witness, RevocationRegistry, RevocationRegistryDelta, SimpleTailsAccessor};
+    use ursa::cl::issuer::Issuer;
+    use ursa::cl::prover::Prover;
+    use ursa::cl::verifier::Verifier;
+    use ursa::pair::PointG2;
+    use ursa::cl::logger::HLCryptoDefaultLogger;
     use std::collections::HashSet;
 
     pub const PROVER_ID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 
     mod test {
         use super::*;
-        use hl_crypto::errors::ErrorCode;
-        use hl_crypto::errors::ToErrorCode;
+        use ursa::errors::ErrorCode;
+        use ursa::errors::ToErrorCode;
 
         #[test]
         fn anoncreds_demo() {
@@ -3237,7 +3237,7 @@ mod cl_tests {
 
     mod helpers {
         use super::*;
-        use hl_crypto::cl::*;
+        use ursa::cl::*;
 
         pub fn gvt_credential_schema() -> CredentialSchema {
             let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();

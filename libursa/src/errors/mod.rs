@@ -76,7 +76,7 @@ pub trait ToErrorCode {
 }
 
 #[derive(Debug)]
-pub enum HLCryptoError {
+pub enum UrsaCryptoError {
     InvalidParam1(String),
     InvalidParam2(String),
     InvalidParam3(String),
@@ -95,104 +95,104 @@ pub enum HLCryptoError {
     AnoncredsProofRejected(String),
 }
 
-impl fmt::Display for HLCryptoError {
+impl fmt::Display for UrsaCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            HLCryptoError::InvalidParam1(ref description) => write!(f, "Invalid param 1: {}", description),
-            HLCryptoError::InvalidParam2(ref description) => write!(f, "Invalid param 2: {}", description),
-            HLCryptoError::InvalidParam3(ref description) => write!(f, "Invalid param 3: {}", description),
-            HLCryptoError::InvalidParam4(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidParam5(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidParam6(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidParam7(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidParam8(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidParam9(ref description) => write!(f, "Invalid param 4: {}", description),
-            HLCryptoError::InvalidState(ref description) => write!(f, "Invalid library state: {}", description),
-            HLCryptoError::InvalidStructure(ref description) => write!(f, "Invalid structure: {}", description),
-            HLCryptoError::IOError(ref err) => err.fmt(f),
-            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
-            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
-            HLCryptoError::AnoncredsCredentialRevoked(ref description) => write!(f, "Credential revoked: {}", description),
-            HLCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
+            UrsaCryptoError::InvalidParam1(ref description) => write!(f, "Invalid param 1: {}", description),
+            UrsaCryptoError::InvalidParam2(ref description) => write!(f, "Invalid param 2: {}", description),
+            UrsaCryptoError::InvalidParam3(ref description) => write!(f, "Invalid param 3: {}", description),
+            UrsaCryptoError::InvalidParam4(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidParam5(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidParam6(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidParam7(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidParam8(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidParam9(ref description) => write!(f, "Invalid param 4: {}", description),
+            UrsaCryptoError::InvalidState(ref description) => write!(f, "Invalid library state: {}", description),
+            UrsaCryptoError::InvalidStructure(ref description) => write!(f, "Invalid structure: {}", description),
+            UrsaCryptoError::IOError(ref err) => err.fmt(f),
+            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
+            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
+            UrsaCryptoError::AnoncredsCredentialRevoked(ref description) => write!(f, "Credential revoked: {}", description),
+            UrsaCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
         }
     }
 }
 
-impl Error for HLCryptoError {
+impl Error for UrsaCryptoError {
     fn description(&self) -> &str {
         match *self {
-            HLCryptoError::InvalidParam1(ref description) => description,
-            HLCryptoError::InvalidParam2(ref description) => description,
-            HLCryptoError::InvalidParam3(ref description) => description,
-            HLCryptoError::InvalidParam4(ref description) => description,
-            HLCryptoError::InvalidParam5(ref description) => description,
-            HLCryptoError::InvalidParam6(ref description) => description,
-            HLCryptoError::InvalidParam7(ref description) => description,
-            HLCryptoError::InvalidParam8(ref description) => description,
-            HLCryptoError::InvalidParam9(ref description) => description,
-            HLCryptoError::InvalidState(ref description) => description,
-            HLCryptoError::InvalidStructure(ref description) => description,
-            HLCryptoError::IOError(ref err) => err.description(),
-            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
-            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
-            HLCryptoError::AnoncredsCredentialRevoked(ref description) => description,
-            HLCryptoError::AnoncredsProofRejected(ref description) => description,
+            UrsaCryptoError::InvalidParam1(ref description) => description,
+            UrsaCryptoError::InvalidParam2(ref description) => description,
+            UrsaCryptoError::InvalidParam3(ref description) => description,
+            UrsaCryptoError::InvalidParam4(ref description) => description,
+            UrsaCryptoError::InvalidParam5(ref description) => description,
+            UrsaCryptoError::InvalidParam6(ref description) => description,
+            UrsaCryptoError::InvalidParam7(ref description) => description,
+            UrsaCryptoError::InvalidParam8(ref description) => description,
+            UrsaCryptoError::InvalidParam9(ref description) => description,
+            UrsaCryptoError::InvalidState(ref description) => description,
+            UrsaCryptoError::InvalidStructure(ref description) => description,
+            UrsaCryptoError::IOError(ref err) => err.description(),
+            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
+            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
+            UrsaCryptoError::AnoncredsCredentialRevoked(ref description) => description,
+            UrsaCryptoError::AnoncredsProofRejected(ref description) => description,
         }
     }
 
     fn cause(&self) -> Option<&Error> {
         match *self {
-            HLCryptoError::InvalidParam1(_) |
-            HLCryptoError::InvalidParam2(_) |
-            HLCryptoError::InvalidParam3(_) |
-            HLCryptoError::InvalidParam4(_) |
-            HLCryptoError::InvalidParam5(_) |
-            HLCryptoError::InvalidParam6(_) |
-            HLCryptoError::InvalidParam7(_) |
-            HLCryptoError::InvalidParam8(_) |
-            HLCryptoError::InvalidParam9(_) |
-            HLCryptoError::InvalidState(_) |
-            HLCryptoError::InvalidStructure(_) => None,
-            HLCryptoError::IOError(ref err) => Some(err),
-            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
-            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
-            HLCryptoError::AnoncredsCredentialRevoked(_) => None,
-            HLCryptoError::AnoncredsProofRejected(_) => None,
+            UrsaCryptoError::InvalidParam1(_) |
+            UrsaCryptoError::InvalidParam2(_) |
+            UrsaCryptoError::InvalidParam3(_) |
+            UrsaCryptoError::InvalidParam4(_) |
+            UrsaCryptoError::InvalidParam5(_) |
+            UrsaCryptoError::InvalidParam6(_) |
+            UrsaCryptoError::InvalidParam7(_) |
+            UrsaCryptoError::InvalidParam8(_) |
+            UrsaCryptoError::InvalidParam9(_) |
+            UrsaCryptoError::InvalidState(_) |
+            UrsaCryptoError::InvalidStructure(_) => None,
+            UrsaCryptoError::IOError(ref err) => Some(err),
+            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
+            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
+            UrsaCryptoError::AnoncredsCredentialRevoked(_) => None,
+            UrsaCryptoError::AnoncredsProofRejected(_) => None,
         }
     }
 }
 
-impl ToErrorCode for HLCryptoError {
+impl ToErrorCode for UrsaCryptoError {
     fn to_error_code(&self) -> ErrorCode {
         match *self {
-            HLCryptoError::InvalidParam1(_) => ErrorCode::CommonInvalidParam1,
-            HLCryptoError::InvalidParam2(_) => ErrorCode::CommonInvalidParam2,
-            HLCryptoError::InvalidParam3(_) => ErrorCode::CommonInvalidParam3,
-            HLCryptoError::InvalidParam4(_) => ErrorCode::CommonInvalidParam4,
-            HLCryptoError::InvalidParam5(_) => ErrorCode::CommonInvalidParam5,
-            HLCryptoError::InvalidParam6(_) => ErrorCode::CommonInvalidParam6,
-            HLCryptoError::InvalidParam7(_) => ErrorCode::CommonInvalidParam7,
-            HLCryptoError::InvalidParam8(_) => ErrorCode::CommonInvalidParam8,
-            HLCryptoError::InvalidParam9(_) => ErrorCode::CommonInvalidParam9,
-            HLCryptoError::InvalidState(_) => ErrorCode::CommonInvalidState,
-            HLCryptoError::InvalidStructure(_) => ErrorCode::CommonInvalidStructure,
-            HLCryptoError::IOError(_) => ErrorCode::CommonIOError,
-            HLCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
-            HLCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
-            HLCryptoError::AnoncredsCredentialRevoked(_) => ErrorCode::AnoncredsCredentialRevoked,
-            HLCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
+            UrsaCryptoError::InvalidParam1(_) => ErrorCode::CommonInvalidParam1,
+            UrsaCryptoError::InvalidParam2(_) => ErrorCode::CommonInvalidParam2,
+            UrsaCryptoError::InvalidParam3(_) => ErrorCode::CommonInvalidParam3,
+            UrsaCryptoError::InvalidParam4(_) => ErrorCode::CommonInvalidParam4,
+            UrsaCryptoError::InvalidParam5(_) => ErrorCode::CommonInvalidParam5,
+            UrsaCryptoError::InvalidParam6(_) => ErrorCode::CommonInvalidParam6,
+            UrsaCryptoError::InvalidParam7(_) => ErrorCode::CommonInvalidParam7,
+            UrsaCryptoError::InvalidParam8(_) => ErrorCode::CommonInvalidParam8,
+            UrsaCryptoError::InvalidParam9(_) => ErrorCode::CommonInvalidParam9,
+            UrsaCryptoError::InvalidState(_) => ErrorCode::CommonInvalidState,
+            UrsaCryptoError::InvalidStructure(_) => ErrorCode::CommonInvalidStructure,
+            UrsaCryptoError::IOError(_) => ErrorCode::CommonIOError,
+            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
+            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
+            UrsaCryptoError::AnoncredsCredentialRevoked(_) => ErrorCode::AnoncredsCredentialRevoked,
+            UrsaCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
         }
     }
 }
 
-impl From<serde_json::Error> for HLCryptoError {
-    fn from(err: serde_json::Error) -> HLCryptoError {
-        HLCryptoError::InvalidStructure(err.to_string())
+impl From<serde_json::Error> for UrsaCryptoError {
+    fn from(err: serde_json::Error) -> UrsaCryptoError {
+        UrsaCryptoError::InvalidStructure(err.to_string())
     }
 }
 
-impl From<log::SetLoggerError> for HLCryptoError {
-    fn from(err: log::SetLoggerError) -> HLCryptoError{
-        HLCryptoError::InvalidState(err.description().to_owned())
+impl From<log::SetLoggerError> for UrsaCryptoError {
+    fn from(err: log::SetLoggerError) -> UrsaCryptoError{
+        UrsaCryptoError::InvalidState(err.description().to_owned())
     }
 }

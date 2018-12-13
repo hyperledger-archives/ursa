@@ -38,7 +38,7 @@ Initial version of anoncreds protocol was implemented as part of Indy SDK (https
 * `RevocationRegistry` now will be created without full `Tails` in RAM as part of returned value.
 Instead of it, TailsGenerator will be returned to generate all tails one by one and store in application manner.
 * `Witness` now became in separate entity and should be updated out of call `ProofBuilder::add_sub_proof_request`
-* IndyCrypto defines `RevocationTailAccessor` trait. Application should implement this and handle calls from IndyCrypto such as `access_tail(id, hl_crypto_cb(tail))`
+* IndyCrypto defines `RevocationTailAccessor` trait. Application should implement this and handle calls from IndyCrypto such as `access_tail(id, ursa_cb(tail))`
 
 ### Credential and Proof attributes builders
 ```Rust
