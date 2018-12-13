@@ -160,3 +160,30 @@ sudo make install
 export SODIUM_LIB_DIR=/usr/local/lib
 ```
 
+## Windows 10
+
+1. Setup a windows virtual machine. Free images are available [here](https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/)
+1. Download Visual Studio Community Edition 2017 [here](https://visualstudio.microsoft.com/downloads/)
+1. Check the boxes for *Desktop development with C++* and *Linux Development with C++*
+1. In the summary portion on the right hand side also check *C++/CLI support*
+1. Click install
+1. Download git-scm for windows [here](https://git-scm.com/downloads/win)
+1. Install git for windows using:
+    - *Use Git from Git Bash Only* so it doesn't change any path settings of the command prompt
+    - *Checkout as is, commit Unix-style line endings*
+    - *Use MinTTY*
+    - Check all the boxes for:
+        1. Enable file system caching
+        1. Enable Git Credential Manager
+        1. Enable symbolic links
+1. Download rust for windows [here](https://win.rustup.rs)
+    - Choose option *1*
+1. Download openssl for windows [here](https://slproweb.com/download/Win64OpenSSL-1_1_0j.exe)
+    - Choose for Copy OpenSSL DLLs to: *The OpenSSL binaries (/bin) directory*
+1. Set the environment variables
+    - Windows command prompt:
+        1. set OPENSSL_DIR "C:\OpenSSL-Win64"
+        1. set SODIUM_BUILD_STATIC "1"
+    - Git Bash
+        1. export OPENSSL_DIR=/c/OpenSSL-Win64
+        1. export SODIUM_BUILD_STATIC=1
