@@ -1,12 +1,8 @@
-extern crate rand;
-extern crate amcl;
-
-use self::rand::RngCore;
-use self::rand::rngs::EntropyRng;
-
-use self::amcl::rand::{RAND};
-use self::amcl::arch::Chunk;
-use self::amcl::bls381::big::BIG;
+use rand::RngCore;
+use rand::rngs::EntropyRng;
+use amcl_3::rand::RAND;
+use amcl_3::arch::Chunk;
+use amcl_3::bls381::big::BIG;
 
 
 pub fn get_seeded_RNG(entropy_size: usize, rng: Option<EntropyRng>) -> RAND {

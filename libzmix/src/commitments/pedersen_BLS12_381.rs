@@ -1,10 +1,8 @@
-extern crate amcl;
-extern crate rand;
+use rand::rngs::EntropyRng;
 
-use self::rand::rngs::EntropyRng;
-
-use self::amcl::bls381::ecp::ECP;
-use self::amcl::bls381::big::{BIG, MODBYTES};
+use amcl_3::bls381::ecp::ECP;
+use amcl_3::bls381::big::{BIG, MODBYTES};
+use amcl_3::bls381::rom::CURVE_ORDER;
 
 use hash_functions::HashFunction;
 use hash_functions::bls12_381_hash::BLS12_381_SHA256_G1;
@@ -12,7 +10,6 @@ use hash_functions::bls12_381_hash::BLS12_381_SHA256_G1;
 use commitments::CommitmentScheme;
 use commitments::CommitmentError;
 use utils::random::random_big_number;
-use amcl::bls381::rom::CURVE_ORDER;
 
 const SETUP_SEED_G1: &'static str = "Hyperledger-Cryptolib-Pedersen-Commitment-BLS-12-381-G1";
 const GROUP_G1_SIZE: usize = 2 * MODBYTES + 1;

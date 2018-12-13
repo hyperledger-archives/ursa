@@ -1,11 +1,9 @@
-extern crate amcl;
-
 use std::collections::HashMap;
 
-use self::amcl::bls381::ecp::ECP;
-use self::amcl::bls381::ecp2::ECP2;
-use self::amcl::bls381::mpin::{SHA256, hash_id};
-use self::amcl::bls381::big::MODBYTES;
+use amcl_3::bls381::ecp::ECP;
+use amcl_3::bls381::ecp2::ECP2;
+use amcl_3::bls381::mpin::{SHA256, hash_id};
+use amcl_3::bls381::big::MODBYTES;
 
 use hash_functions::{HashFunction, HashError};
 

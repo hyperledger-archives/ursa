@@ -1,6 +1,3 @@
-extern crate amcl;
-extern crate rand;
-
 use hash_functions::HashError;
 
 #[derive(Debug)]
