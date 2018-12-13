@@ -18,6 +18,21 @@ Libursa is designed for cryptographic primitives like simple digital signatures,
 
 Z-Mix offers a generic way to create zero-knowledge proofs, proving statements about multiple cryptographic building blocks, containing signatures, commitments, and verifiable encryption. Z-Mix uses many of the building blocks found in Libursa.
 
+## Dependencies
+
+Ursa and Z-Mix use the following external dependencies:
+
+- libsodium 1.0.14 (Written in C)
+- openssl 1.1.0j or newer (Written in C)
+- libsecp256k1 (Written in C)
+
+These dependencies are used when building in the default secure mode. These libraries have been audited by external security firms.
+There is a goal to be able to compile Ursa from rust only code for portability reasons like generating web assemblies without
+the worry of compatibility issues from C code. For this reason, Ursa can be compiled with *portable* mode which replaces any external
+libraries with rust compatible code. Ursa developers take care when choosing suitable replacements that are cryptographically safe to use
+but may not have been audited and vetted in a similar manner to these external libraries. Ursa consumers should note this when using
+portable mode for their applications.
+
 ## Building Libursa from Source
 
 Libursa uses the rustc compiler with cargo. Go into the libursa folder where the *Cargo.toml* lives.
@@ -26,7 +41,7 @@ Run the following commands to get the default secure mode:
 cargo build --release
 ```
 
-Libursa also supports portable mode where all code MUST be written in rust. This is very helpful for building web assemblies to eliminate external dependency issues. Run the following commands to build in portable mode:
+Run the following commands to build in portable mode:
 
 ```bash
 cargo build --release --no-default-features --features=portable
@@ -48,7 +63,7 @@ Run the following commands to get the default secure mode:
 cargo build --release
 ```
 
-Libzmix also supports portable mode where all code MUST be written in rust. This is very helpful for building web assemblies to eliminate external dependency issues. Run the following commands to build in portable mode:
+Run the following commands to build in portable mode:
 
 ```bash
 cargo build --release --no-default-features --features=portable
