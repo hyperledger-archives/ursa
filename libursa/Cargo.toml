@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Michael Lodder <redmike7@gmail.com>"]
 description = "This is the shared crypto library for Hyperledger components."
 license = "MIT/Apache-2.0"
+readme =  "README.md"
 
 [lib]
 name = "ursa"
@@ -64,3 +65,30 @@ rustlibsecp256k1 = { path = "rustlibsecp256k1", optional = true }
 secp256k1 = "0.12.0"
 libsodium-ffi = "0.1.12"
 rustlibsecp256k1 = { path = "rustlibsecp256k1" }
+
+[package.metadata.deb]
+maintainer = "Hyperledger"
+license-file = ["../LICENSE", "0"]
+copyright = "2018, Hyperledger"
+depends = "$auto"
+extended-description = """\
+Rust written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
+section = "admin"
+revision = "1"
+priority = "optional"
+assets = [
+    ["target/release/libursa.a", "usr/lib", "644"],
+    ["target/release/libursa.so", "usr/lib", "644"],
+    ["include/ursa.h", "usr/include", "644"]
+]
+
+[package.metadata.rpm]
+maintainer = "Hyperledger"
+license-file = ["../LICENSE", "0"]
+copyright = "2018, Hyperledger"
+depends = "$auto"
+extended-description = """\
+Rust written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
+section = "admin"
+revision = "1"
+priority = "optional"
