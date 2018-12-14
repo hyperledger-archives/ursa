@@ -10,12 +10,6 @@ The purpose of this lab is to serve as an initial launching point for what will 
 See:  https://docs.google.com/document/d/1JtFT5L-82egj6shgGXzTsNAg6_UHuMheKfsst6NS_Xo/edit?usp=sharing
 for more details.
 
-# Initial Committers
-- hartm
-- mikelodder7
-- lovesh
-- vaporos
-
 # Sponsor
 Hart Montgomery
 
