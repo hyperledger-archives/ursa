@@ -140,7 +140,7 @@ mod ecdsa_secp256k1sha256 {
     use rand::{SeedableRng, RngCore};
     use rand_chacha::ChaChaRng;
 
-    use amcl_3::secp256k1::{ecp, ecdh};
+    use amcl::secp256k1::{ecp, ecdh};
 
     pub struct EcdsaSecp256k1Sha256Impl{}
 
@@ -190,9 +190,11 @@ mod ecdsa_secp256k1sha256 {
                         array_copy!(d.as_slice(), sk);
                     }
                 };
-            let mut pk = [0u8; PUBLIC_KEY_SIZE]; //Compressed
+            let mut pk = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
             ecdh::key_pair_generate(None, &mut sk, &mut pk);
-            Ok((PublicKey(pk.to_vec()), PrivateKey(sk.to_vec())))
+            let mut compressed = [0u8; PUBLIC_KEY_SIZE];
+            ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
+            Ok((PublicKey(compressed.to_vec()), PrivateKey(sk.to_vec())))
         }
         pub fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
             let h = digest(DigestAlgorithm::Sha2_256, message)?;

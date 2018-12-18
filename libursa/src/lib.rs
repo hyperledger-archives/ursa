@@ -10,7 +10,6 @@ extern crate console_error_panic_hook;
 /// Native uses external C libraries that have had a security audit performed
 #[cfg(feature = "pair_amcl")]
 extern crate amcl;
-extern crate amcl_3;
 #[macro_use]
 extern crate arrayref;
 extern crate env_logger;

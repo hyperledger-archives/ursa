@@ -1,9 +1,9 @@
 use super::Digest;
 use CryptoError;
 
-use amcl_3::hash256::HASH256;
-use amcl_3::hash384::HASH384;
-use amcl_3::hash512::HASH512;
+use amcl::hash256::HASH256;
+use amcl::hash384::HASH384;
+use amcl::hash512::HASH512;
 
 macro_rules! impl_hasher {
     ($thing:ident,$wrapped:ident) => {
