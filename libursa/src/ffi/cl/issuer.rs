@@ -4,10 +4,9 @@ use errors::ToErrorCode;
 use errors::ErrorCode;
 use ffi::cl::{FFITailTake, FFITailPut, FFITailsAccessor};
 use ffi::ctypes::CTypesUtils;
-use libc::c_char;
 
 use serde_json;
-use std::os::raw::c_void;
+use std::os::raw::{c_void, c_char};
 use std::ptr::null;
 use std::slice;
 use std::collections::HashSet;

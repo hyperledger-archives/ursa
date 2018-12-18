@@ -55,9 +55,6 @@ extern crate openssl;
 #[cfg(feature = "bn_openssl")]
 extern crate int_traits;
 
-#[cfg(feature = "ffi")]
-extern crate libc;
-
 extern crate time;
 
 extern crate blake2b_simd;

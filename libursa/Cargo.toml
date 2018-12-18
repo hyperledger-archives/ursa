@@ -38,7 +38,6 @@ benchmarked25519 = ["libsodium-ffi"]
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
 int_traits = { version = "0.1.1", optional = true }
 arrayref = "0.3.5"
-libc = "0.2.33"
 log = "0.4.1"
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "0.6", features = ["wasm-bindgen"] }

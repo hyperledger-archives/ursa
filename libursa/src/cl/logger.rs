@@ -1,6 +1,5 @@
 extern crate env_logger;
 extern crate log;
-extern crate libc;
 
 use self::env_logger::Builder;
 use self::log::LevelFilter;
@@ -10,7 +9,7 @@ use log::{Record, Metadata};
 
 use errors::UrsaCryptoError;
 
-use self::libc::{c_void, c_char};
+use std::os::raw::{c_void, c_char};
 use std::ffi::CString;
 use std::ptr;
 

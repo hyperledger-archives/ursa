@@ -1,6 +1,4 @@
-extern crate libc;
-
-use self::libc::{c_void, c_char};
+use std::os::raw::{c_void, c_char};
 
 use errors::ErrorCode;
 

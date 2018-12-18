@@ -5,8 +5,7 @@ use errors::ErrorCode;
 use ffi::ctypes::CTypesUtils;
 
 use serde_json;
-use std::os::raw::c_void;
-use libc::c_char;
+use std::os::raw::{c_void, c_char};
 
 /// Creates a master secret.
 ///
