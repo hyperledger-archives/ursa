@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde_json;
-extern crate amcl_3;
 extern crate rand;
+extern crate amcl;
 
 pub mod commitments;
 pub mod ffi;

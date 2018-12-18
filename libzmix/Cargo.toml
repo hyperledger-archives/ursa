@@ -9,6 +9,6 @@ name = "zmix"
 crate-type = ["rlib", "staticlib", "dylib", "cdylib"]
 
 [dependencies]
-amcl_3 = { path = "../amcl" }
+amcl = { version = "0.2.0", features = ["bls381"] }
 serde_json = "1.0.26"
 rand = "0.6"

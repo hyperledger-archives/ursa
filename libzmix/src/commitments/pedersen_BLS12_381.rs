@@ -1,8 +1,8 @@
 use rand::rngs::EntropyRng;
 
-use amcl_3::bls381::ecp::ECP;
-use amcl_3::bls381::big::{BIG, MODBYTES};
-use amcl_3::bls381::rom::CURVE_ORDER;
+use amcl::bls381::ecp::ECP;
+use amcl::bls381::big::{BIG, MODBYTES};
+use amcl::bls381::rom::CURVE_ORDER;
 
 use hash_functions::HashFunction;
 use hash_functions::bls12_381_hash::BLS12_381_SHA256_G1;

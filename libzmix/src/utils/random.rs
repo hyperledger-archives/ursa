@@ -1,8 +1,8 @@
 use rand::RngCore;
 use rand::rngs::EntropyRng;
-use amcl_3::rand::RAND;
-use amcl_3::arch::Chunk;
-use amcl_3::bls381::big::BIG;
+use amcl::rand::RAND;
+use amcl::arch::Chunk;
+use amcl::bls381::big::BIG;
 
 
 pub fn get_seeded_RNG(entropy_size: usize, rng: Option<EntropyRng>) -> RAND {
