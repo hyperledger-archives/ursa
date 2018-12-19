@@ -26,7 +26,7 @@ Ursa and Z-Mix use the following external dependencies:
 - openssl 1.1.0j or newer (Written in C)
 - libsecp256k1 (Written in C)
 
-These dependencies are used when building in the default secure mode. These libraries have been audited by external security firms.
+These dependencies are used when building in the default secure mode. These libraries are widely known.
 There is a goal to be able to compile Ursa from rust only code for portability reasons like generating web assemblies without
 the worry of compatibility issues from C code. For this reason, Ursa can be compiled with *portable* mode which replaces any external
 libraries with rust compatible code. Ursa developers take care when choosing suitable replacements that are cryptographically safe to use
