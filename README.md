@@ -12,15 +12,15 @@ All bugs, stories, and backlog for this project are managed through Hyperledger'
 
 Major modifications to ursa are submitted as RFCs to the [Ursa RFC repo](https://github.com/hyperledger/ursa-rfcs). 
 
-Ursa is divided into two sub libraries: Libursa and Z-Mix.
+Ursa is divided into two sub libraries: libursa and libzmix.
 
 Libursa is designed for cryptographic primitives like simple digital signatures, encryption schemes, and key exchange.
 
-Z-Mix offers a generic way to create zero-knowledge proofs, proving statements about multiple cryptographic building blocks, containing signatures, commitments, and verifiable encryption. Z-Mix uses many of the building blocks found in Libursa.
+Libzmix offers a generic way to create zero-knowledge proofs, proving statements about multiple cryptographic building blocks, containing signatures, commitments, and verifiable encryption. Libzmix uses many of the building blocks found in Libursa.
 
 ## Dependencies
 
-Ursa and Z-Mix use the following external dependencies:
+Ursa and zmix use the following external dependencies:
 
 - libsodium 1.0.14 (Written in C)
 - openssl 1.1.0j or newer (Written in C)
