@@ -21,7 +21,7 @@ def do_call(name: str, *args):
         raise IndyCryptoError(ErrorCode(err))
 
 
-def _cdll() -> CDLL:
+def _cdll():
     if not hasattr(_cdll, "cdll"):
         _cdll.cdll = _load_cdll()
         _set_logger()
@@ -29,24 +29,28 @@ def _cdll() -> CDLL:
     return _cdll.cdll
 
 
-def _load_cdll() -> CDLL:
+def _load_cdll():
     logger = logging.getLogger(__name__)
     logger.debug("_load_cdll: >>>")
 
-    lib_prefix_mapping = {"darwin": "lib", "linux": "lib", "linux2": "lib", "win32": ""}
-    lib_suffix_mapping = {"darwin": ".dylib", "linux": ".so", "linux2": ".so", "win32": ".dll"}
-
+    # lib_prefix_mapping = {"darwin": "lib", "linux": "lib", "linux2": "lib", "win32": ""}
+    # lib_suffix_mapping = {"darwin": ".dylib", "linux": ".so", "linux2": ".so", "win32": ".dll"}
+    lib_name_mapping = {
+        "darwin": ["lib", ".dylib"],
+        "linux": ["lib", ".so"],
+        "linux2": ["lib", ".so"],
+        "win32": ["", ".dll"]
+    }
     os_name = sys.platform
     logger.debug("_load_cdll: Detected OS name: %s", os_name)
 
     try:
-        libindy_prefix = lib_prefix_mapping[os_name]
-        libindy_suffix = lib_suffix_mapping[os_name]
+        libindy_naming = lib_name_mapping[os_name]
     except KeyError:
-        logger.error("_load_cdll: OS isn't supported: %s", os_name)
-        raise OSError("OS isn't supported: %s", os_name)
+        logger.error("_load_cdll: OS not found %s", os_name)
+        raise OSError("OS not found %s", os_name)
 
-    lib_name = "{0}indy_crypto{1}".format(libindy_prefix, libindy_suffix)
+    lib_name = "{0}indy_crypto{1}".format(libindy_naming[os_name][0], libindy_naming[os_name][1])
     logger.debug("_load_cdll: Resolved libindy name is: %s", lib_name)
 
     try:
