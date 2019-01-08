@@ -1,103 +1,232 @@
-## Before you Continue
+# Hyperledger Ursa
 
-If you haven't done so already, please visit the main resource for all things "Indy" to get acquainted with the code base, helpful resources, and up-to-date information: [Hyperledger Wiki-Indy](https://wiki.hyperledger.org/projects/indy).
+Ursa was created because people in the Hyperledger community realized that it would save time and effort and improve security if we all collaborated on our cryptographic code. Since cryptographic APIs are relatively straightforward to define, it would be possible for many different projects to utilize the same code without too much difficulty.
 
-# Indy Crypto
+First and foremost, we hope in the long run that Ursa provides open-source blockchain developers with reliable, secure, easy-to-use, and pluggable cryptographic implementations.
 
-This is the shared crypto library for [Hyperledger Indy](https://www.hyperledger.org/projects) components.
+The major artifacts of Ursa are:
+- C-callable library interface
+- Rust crate
 
-[Hyperledger Indy](https://www.hyperledger.org/projects) provides a distributed-ledger-based foundation for [self-sovereign identity](https://sovrin.org).
+All bugs, stories, and backlog for this project are managed through Hyperledger's Jira in project IS (note that regular Ursa tickets are in the URSA project). Also, join us on [Hyperledger Rocket.Chat](https://chat.hyperledger.org) at #ursa to discuss. The ursa group also meets biweekly on Wednesday's at 7 AM PST at https://zoom.us/my/hyperledger.community. The meeting notes are available [here](https://docs.google.com/document/d/1Z_8o8k_PFRM4XfZyv9jH1_-IyN0CsCMI2JlrGsCX378/edit).
 
-The major artifacts of the Indy Crypto are:
+Major modifications to ursa are submitted as RFCs to the [Ursa RFC repo](https://github.com/hyperledger/ursa-rfcs). 
 
-* С-callable library interface
-* Rust сrate
-* Python wrapper
+Ursa is divided into two sub libraries: libursa and libzmix.
 
-All bugs, stories, and backlog for this project are managed through [Hyperledger's Jira](https://jira.hyperledger.org)
-in project IS (note that regular Indy tickets are in the INDY project instead...). Also, join
-us on [Jira's Rocket.Chat](chat.hyperledger.org) at #indy-sdk to discuss.
+Libursa is designed for cryptographic primitives like simple digital signatures, encryption schemes, and key exchange.
 
-## Building Indy Crypto
+Libzmix offers a generic way to create zero-knowledge proofs, proving statements about multiple cryptographic building blocks, containing signatures, commitments, and verifiable encryption. Libzmix uses many of the building blocks found in Libursa.
 
-## Ubuntu 16.04
+## Dependencies
 
-1. Install Rust and rustup (https://www.rust-lang.org/install.html).
-1. Install pre-requirements:
+Ursa and zmix use the following external dependencies:
 
-    *For Ubuntu 16.04*
+- libsodium 1.0.14 (Written in C)
+- openssl 1.1.0j or newer (Written in C)
+- libsecp256k1 (Written in C)
 
-    ```bash
-    apt-get update && \
-    apt-get install -y \
-    build-essential \
-    pkg-config \
-    cmake \
-    libssl-dev
-    ```
+These dependencies are used when building in the default secure mode. These libraries are widely known.
+There is a goal to be able to compile Ursa from rust only code for portability reasons like generating web assemblies without
+the worry of compatibility issues from C code. For this reason, Ursa can be compiled with *portable* mode which replaces any external
+libraries with rust compatible code. Ursa developers take care when choosing suitable replacements that are cryptographically safe to use
+but may not have been audited and vetted in a similar manner to these external libraries. Ursa consumers should note this when using
+portable mode for their applications.
 
-    *For Windows*
+## Building Libursa from Source
 
-    * Download the prebuilt dependencies [here](https://repo.sovrin.org/windows/libindy_crypto/deps/)
-    * Extract them into the folder _C:\BIN\x64_. Note it really doesn't matter where you put these as long as you
-      remember where so you can set the environment variables to this path
-    * Point path to this directory using environment variables:
-      * set OPENSSL_DIR=C:\BIN\x64
-      * set PATH=C:\BIN\x64\lib;%PATH%
+Libursa uses the rustc compiler with cargo. Go into the libursa folder where the *Cargo.toml* lives.
+Run the following commands to get the default secure mode:
+```bash
+cargo build --release
+```
 
-1. Checkout and build the library:
-
-   ```bash
-   git clone https://github.com/hyperledger/indy-crypto.git
-   cd ./indy-crypto/libindy-crypto
-   cargo build
-   cd ..
-   ```
-
-1. Run tests
-
-   ```bash
-   cd libindy-crypto
-   cargo test
-   ```
-
-**Note:**
-By default `cargo build` produce debug artifacts with a large amount of run-time checks.
-It's good for development, but this build can be in 100+ times slower for some math calculation.
-If you would like to analyse CPU performance of libindy-crypto for your use case, you have to use release artifacts (`cargo build --release`).
-
-## API Documentation
-
-API documentation is now available as rust doc in code. See:
-
-* C API
-  * [BLS](libindy-crypto/src/ffi/bls.rs)
-  * [CL](libindy-crypto/src/ffi/cl)
-* Rust API
-  * [BLS](libindy-crypto/src/bls/mod.rs)
-  * [CL](libindy-crypto/src/cl)
-
-## Wrappers documentation
-
-* [Python](wrappers/python/README.md)
-* [JavaScript](wrappers/javascript/README.md)
-
-## Binaries
-
-Note: Binaries creation is in progress now!!!
-
-Builded binaries can be downloaded from [https://repo.sovrin.org](https://repo.sovrin.org):
-
-* sdk/lib/apt/xenial/{master,stable,rc} - Ubuntu deb packages
-* windows/libindy_crypto/{master,stable,rc} - Windows zip-archive with all required DLLs (include libindy itself) and headers
-* ios/libindy_crypto/stable/ - Pods for iOS
-* rhel/libindy_crypto/{master,stable,rc} - RHEL rpms
-
-Also Ubundu deb packages can be installed from APT repository:
+Run the following commands to build in portable mode:
 
 ```bash
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
-sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable"
-sudo apt-get update
-sudo apt-get install -y libindy-crypto
+cargo build --release --no-default-features --features=portable
 ```
+
+The resulting artifact(s) can be found in the *target/release* folder. They include:
+
+    libursa.so (Linux)
+    libursa.dylib (Mac OS X)
+    libursa.a (Linux, Mac OS X)
+    libursa.dll (Windows)
+    libursa.lib (Windows)
+
+## Building Libzmix from Source
+
+Libzmix uses the rustc compiler with cargo. Go into the libzmix folder where the *Cargo.toml* lives.
+Run the following commands to get the default secure mode:
+```bash
+cargo build --release
+```
+
+Run the following commands to build in portable mode:
+
+```bash
+cargo build --release --no-default-features --features=portable
+```
+
+The resulting artifact(s) can be found in the *target/release* folder. They include:
+
+    libzmix.so (Linux)
+    libzmix.dylib (Mac OS X)
+    libzmix.a (Linux, Mac OS X)
+    libzmix.dll (Windows)
+    libzmix.lib (Windows)
+
+## Setup the build environment
+Libursa relies on libsodium for the default secure mode. The instructions below show the necessary steps to configure the environment to build all modes of libursa. There are convienance docker images in the **docker** folder that can be used.
+
+### Fedora, RedHat, CentOS
+1. Install build tools
+```bash
+yum -y install make autoconf libtool curl python3 pkg-config openssl-devel
+```
+2. Install rust
+```bash
+curl -sSf https://sh.rustup.rs | sh -s -- -y
+```
+3. Initialize rust environment
+```bash
+source ~/.cargo/env
+```
+4. Compile and install libsodium 1.0.14
+```bash
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.14/libsodium-1.0.14.tar.gz | tar -xz
+cd libsodium-1.0.14
+./autogen.sh
+./configure --disable-dependency-tracking
+make
+sudo make install
+```
+5. Add the libsodium environment variable
+```bash
+export SODIUM_LIB_DIR=/usr/local/lib
+export LD_LIBRARY_PATH=/usr/local/lib
+```
+
+### OpenSUSE
+1. Install build tools
+```bash
+zypper --non-interactive install make gcc autoconf libtool curl python3 pkg-config openssl-devel
+```
+2. Install rust
+```bash
+curl -sSf https://sh.rustup.rs | sh -s -- -y
+```
+3. Initialize rust environment
+```bash
+source ~/.cargo/env
+```
+4. Compile and install libsodium 1.0.14
+```bash
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.14/libsodium-1.0.14.tar.gz | tar -xz
+cd libsodium-1.0.14
+./autogen.sh
+./configure
+make
+sudo make install
+```
+5. Add the libsodium environment variable
+```bash
+export SODIUM_LIB_DIR=/usr/local/lib
+export LD_LIBRARY_PATH=/usr/local/lib
+```
+
+### Debian, Ubuntu
+1. Install build tools
+```bash
+apt-get install -y cmake autoconf libtool curl python3 pkg-config libssl-dev
+```
+2. Install rust
+```bash
+curl -sSf https://sh.rustup.rs | sh -s -- -y
+```
+3. Initialize rust environment
+```bash
+source ~/.cargo/env
+```
+4. Compile and install libsodium 1.0.14
+```bash
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.14/libsodium-1.0.14.tar.gz | tar -xz
+cd libsodium-1.0.14
+./autogen.sh
+./configure
+make
+sudo make install
+```
+5. Add the libsodium environment variable
+```bash
+export SODIUM_LIB_DIR=/usr/local/lib
+export LD_LIBRARY_PATH=/usr/local/lib
+```
+
+### Mac OS X
+1. Install xcode command line tools 
+```bash
+xcode-select --install
+```
+2. Install rust
+```bash
+curl -sSf https://sh.rustup.rs | sh -s -- -y
+```
+3. Install brew
+```bash
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+4. Install build tools
+```bash
+brew install pkg-config
+brew install automake
+brew install autoconf
+brew install cmake
+brew install libtool
+```
+5. Initialize rust environment
+```bash
+source ~/.cargo/env
+```
+6. Compile and install libsodium 1.0.14
+```bash
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.14/libsodium-1.0.14.tar.gz | tar -xz
+cd libsodium-1.0.14
+./autogen.sh
+./configure --prefix=/usr/local
+make
+sudo make install
+```
+7. Add the libsodium environment variable
+```bash
+export SODIUM_LIB_DIR=/usr/local/lib
+```
+
+## Windows 10
+
+1. Setup a windows virtual machine. Free images are available [here](https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/)
+1. Download Visual Studio Community Edition 2017 [here](https://visualstudio.microsoft.com/downloads/)
+1. Check the boxes for *Desktop development with C++* and *Linux Development with C++*
+1. In the summary portion on the right hand side also check *C++/CLI support*
+1. Click install
+1. Download git-scm for windows [here](https://git-scm.com/downloads/win)
+1. Install git for windows using:
+    - *Use Git from Git Bash Only* so it doesn't change any path settings of the command prompt
+    - *Checkout as is, commit Unix-style line endings*
+    - *Use MinTTY*
+    - Check all the boxes for:
+        1. Enable file system caching
+        1. Enable Git Credential Manager
+        1. Enable symbolic links
+1. Download rust for windows [here](https://win.rustup.rs)
+    - Choose option *1*
+1. Download openssl for windows [here](https://slproweb.com/download/Win64OpenSSL-1_1_0j.exe)
+    - Choose for "Copy OpenSSL DLLs to:" *The OpenSSL binaries (/bin) directory*
+1. Set the environment variables
+    - Windows command prompt:
+        1. set OPENSSL_DIR "C:\OpenSSL-Win64"
+        1. set SODIUM_BUILD_STATIC "1"
+    - Git Bash
+        1. export OPENSSL_DIR=/c/OpenSSL-Win64
+        1. export SODIUM_BUILD_STATIC=1

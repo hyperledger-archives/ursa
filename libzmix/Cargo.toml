@@ -1,0 +1,14 @@
+[package]
+name = "z-mix"
+version = "0.1.0"
+authors = ["Michael Lodder <redmike7@gmail.com>"]
+license = "Apache-2.0"
+
+[lib]
+name = "zmix"
+crate-type = ["rlib", "staticlib", "dylib", "cdylib"]
+
+[dependencies]
+amcl = { version = "0.2.0", features = ["bls381"] }
+serde_json = "1.0.26"
+rand = "0.6"
