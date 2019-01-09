@@ -49,11 +49,20 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_json;
 
-#[cfg(feature = "bn_openssl")]
+#[cfg(any(test, feature = "bn_openssl"))]
 extern crate openssl;
 
-#[cfg(feature = "bn_openssl")]
+#[cfg(any(feature = "bn_openssl", feature = "bn_rust"))]
 extern crate int_traits;
+
+#[cfg(feature = "bn_rust")]
+extern crate num_bigint;
+#[cfg(feature = "bn_rust")]
+extern crate glass_pumpkin;
+#[cfg(feature = "bn_rust")]
+extern crate num_integer;
+#[cfg(feature = "bn_rust")]
+extern crate num_traits;
 
 extern crate time;
 
@@ -66,6 +75,10 @@ pub mod bls;
 
 #[cfg(feature = "bn_openssl")]
 #[path = "bn/openssl.rs"]
+pub mod bn;
+
+#[cfg(feature = "bn_rust")]
+#[path = "bn/rust.rs"]
 pub mod bn;
 
 pub mod errors;
