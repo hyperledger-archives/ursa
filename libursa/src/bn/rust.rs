@@ -21,7 +21,6 @@ use std::cmp::Ordering;
 
 pub struct BigNumberContext;
 
-#[derive(Debug)]
 pub struct BigNumber {
     bn: BigInt
 }
@@ -369,6 +368,12 @@ impl BigNumber {
         }
 
         Ok(hasher.result().to_vec())
+    }
+}
+
+impl fmt::Debug for BigNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BigNumber {{ bn: {} }}", self.bn.to_str_radix(10))
     }
 }
 
