@@ -368,6 +368,7 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 pub mod mocks {
     use super::*;
     use std::ptr;
