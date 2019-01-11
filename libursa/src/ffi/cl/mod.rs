@@ -1146,6 +1146,7 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 pub mod mocks {
     use super::*;
 
