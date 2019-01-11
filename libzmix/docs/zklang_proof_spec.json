@@ -1,0 +1,320 @@
+{
+  "id": "https://github.com/hyperledger-labs/zmix/docs/zklang_spec.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ZKLang Proof Specification",
+  "type": "object",
+  "required": ["attributeCount", "clauses"],
+  "properties": {
+    "attributeCount": {
+      "type": "integer",
+      "min": 1,
+      "description": "The number of attributes to be involved in the proof"
+    },
+    "disclosed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "value"],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "The attribute index that has this value"
+          },
+          "value": {
+            "type": "string",
+            "description": "The actual value of the attribute"
+          }
+        }
+      }
+    },
+    "clauses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "anyOf": [
+          { "$ref": "#/definitions/commitmentClause" },
+          { "$ref": "#/definitions/credentialClause" },
+          { "$ref": "#/definitions/intervalClause" },
+          { "$ref": "#/definitions/setClause" },
+          { "$ref": "#/definitions/verifiable_encClause" },
+          { "$ref": "#/definitions/nymClause" },
+          { "$ref": "#/definitions/scope_nymClause" }
+        ]
+      }
+    }
+  },
+  "definitions": {
+      "attrs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer" }
+        },
+      "pk": {
+        "type": "string"
+      },
+      "commitmentClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["commitment"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/commitment"
+          }
+        }
+      },
+      "credentialClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["credential"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/credential"
+          }
+        }
+      },
+      "intervalClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["interval"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/interval"
+          }
+        }
+      },
+      "setClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["set"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/set"
+          }
+        }
+      },
+      "verifiable_encClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["verifiable_enc"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/verifiable_enc"
+          }
+        }
+      },
+      "nymClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["nym"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/nym"
+          }
+        }
+      },
+      "scope_nymClause": {
+        "type": "object",
+        "required": ["type", "clauseData"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["scope_nym"]
+          },
+          "clauseData": {
+            "$ref": "#/definitions/scope_nym"
+          }
+        }
+      },
+      "commitment": {
+        "type": "object",
+        "allOf": [
+          {
+            "required": ["attrs"]
+          },
+          {
+            "oneOf": [
+              {
+                "required": ["generators", "modulus"],
+                "not": { "required": ["curve"] }
+              },
+              {
+                "required": ["curve"],
+                "not": { "required": ["generators", "modulus"]}
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "generators": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "modulus": {
+            "type": "string"
+          },
+          "curve": {
+            "type": "string",
+            "enum": ["x25519", "p256r1", "p384", "p512", "p256k1", "bls381", "bn254"]
+          }
+        }
+      },
+      "credential": {
+        "type": "object",
+        "required": ["attrs", "pk"],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "pk": {
+            "$ref": "#/definitions/pk"
+          }
+        }
+      },
+      "interval": {
+        "type": "object",
+        "allOf": [
+          {
+            "required": ["attrs"]
+          },
+          {
+            "oneOf": [
+              {
+                "required": ["pk", "min", "max"],
+                "not": { "required": ["sigs"] }
+              },
+              {
+                "required": ["sigs"],
+                "not": { "required": ["pk", "min", "max"] }
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "pk": {
+            "$ref": "#/definitions/pk"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "sigs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "set": {
+        "type": "object",
+        "allOf": [
+          {
+            "required": ["attrs", "pk", "type"]
+          },
+          {
+            "oneOf": [
+              {
+                "required": ["value"],
+                "not": { "required": ["circuit"] }
+              },
+              {
+                "required": ["circuit"],
+                "not": { "required": ["value"] }
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "pk": {
+            "$ref": "#/definitions/pk"
+          },
+          "value": {
+            "type": "integer"
+          },
+          "circuit": {
+            "type": "string"
+          }
+        }
+      },
+      "verifiable_enc": {
+        "type": "object",
+        "required": ["attrs", "pk", "crypto_val", "label"],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "pk": {
+            "$ref": "#/definitions/pk"
+          },
+          "crypto_val": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "description": "Decryption Policy"
+          }
+        }
+      },
+      "nym": {
+        "type": "object",
+        "required": ["attrs", "crypto_val"],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "crypto_val": {
+            "type": "string"
+          }
+        }
+      },
+      "scope_nym": {
+        "type": "object",
+        "required": ["attrs", "crypto_cal", "scope"],
+        "properties": {
+          "attrs": {
+            "$ref": "#/definitions/attrs"
+          },
+          "crypto_val": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          }
+        }
+      }
+    }
+}

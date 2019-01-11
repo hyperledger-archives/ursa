@@ -1,0 +1,36 @@
+@startuml
+
+actor Verifier as v
+box "Holder"
+participant agent as a
+participant wallet as w
+participant "crypto engine" as ce
+end box
+
+participant "public registry\n(Sovrin)" as reg
+
+v -\ a: Proof Request
+activate a
+
+a -\ w: credential match request
+a \- w: matches
+a -> a: generate <b>Proof Resolution</b> \n(from matches & Proof Request)
+
+a --\ reg: GET_CRED_DEF, GET_REVOC_REG request
+a \-- reg: CRED_DEF, REVOC_REG (issuer pubkey and revocation registry for cred)
+a -> a: generate <b>ZKL-ProofSpec</b> \n(from Proof Resolution & Public Keys)
+
+a -\ w: secrets request
+a \- w: secrets
+a <- a: generate <b>ZKL-Witness</b> \n(from secrets & ZKL-ProofSpec)
+|||
+a -\ ce: ZKL-ProofSpec & ZKL-Witness
+a \- ce: ZKL-Proof
+
+a -> a: generate <b>Proof</b>\n(from ZKL-Proof & \nProof Resolution & \nRevealed Attributes)
+
+a -\ v: Proof
+deactivate a
+
+
+@enduml

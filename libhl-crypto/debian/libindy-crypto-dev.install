@@ -1,2 +1,0 @@
-include/*.h usr/include/hl_crypto/
-target/release/libhl_crypto.a usr/lib/
