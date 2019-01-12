@@ -1,11 +1,11 @@
 use errors::UrsaCryptoError;
 
+use hash::{digest, DigestAlgorithm, Digest, sha2};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt, Sign};
 use num_integer::Integer;
 use num_traits::identities::{One, Zero};
 use num_traits::Num;
 use glass_pumpkin::{prime, safe_prime};
-use sha2::{Sha256, Digest};
 use rand::rngs::OsRng;
 
 #[cfg(feature = "serialization")]
@@ -63,12 +63,12 @@ impl BigNumber {
             None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'end': {:?}", end)))
         };
 
-        let bits = (end.clone() -  start.clone()).bits();
+        let bits = (&end -  &start).bits();
         let mask = (BigUint::from(3u8) << (bits - 2)) | BigUint::one();
 
         loop {
             res = rng.gen_biguint_range(&start, &end);
-            res |= mask.clone();
+            res |= &mask;
 
             if prime::check(&res) {
                 debug!("Found prime in {} iteration", iteration);
@@ -126,8 +126,8 @@ impl BigNumber {
 
     pub fn is_bit_set(&self, n: i32) -> Result<bool, UrsaCryptoError> {
         let bits = n as usize;
-        let res = (self.bn.clone() >> bits) & BigInt::one();
-        Ok(res.is_one())
+        let res = &self.bn >> bits;
+        Ok(res.is_odd())
     }
 
     pub fn set_bit(&mut self, n: i32) -> Result<&mut BigNumber, UrsaCryptoError> {
@@ -167,45 +167,42 @@ impl BigNumber {
     }
 
     pub fn hash(data: &[u8]) -> Result<Vec<u8>, UrsaCryptoError> {
-        let mut hasher = Sha256::default();
-        hasher.input(data);
-        let res = hasher.result();
-        Ok(res[..].to_vec())
+        digest(DigestAlgorithm::Sha2_256, data).map_err(|e| UrsaCryptoError::InvalidStructure(e.to_string()))
     }
 
     pub fn add(&self, a: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() + a.bn.clone();
+        let res = &self.bn + &a.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn sub(&self, a: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() - a.bn.clone();
+        let res = &self.bn - &a.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn sqr(&self, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() * self.bn.clone();
+        let res = &self.bn * &self.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn mul(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() * a.bn.clone();
+        let res = &self.bn * &a.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn mod_mul(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
         //TODO: Use montgomery reduction
-        let res = (self.bn.clone() * a.bn.clone()) % n.bn.clone();
+        let res = (&self.bn * &a.bn) % &n.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn mod_sub(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = (self.bn.clone() - a.bn.clone()) % n.bn.clone();
+        let res = (&self.bn - &a.bn) % &n.bn;
         Ok(BigNumber { bn: res })
     }
 
     pub fn div(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() / a.bn.clone();
+        let res = &self.bn / &a.bn;
         Ok(BigNumber { bn: res })
     }
 
@@ -241,7 +238,7 @@ impl BigNumber {
     }
 
     pub fn modulus(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = self.bn.clone() % a.bn.clone();
+        let res = &self.bn % &a.bn;
         Ok(BigNumber { bn: res })
     }
 
@@ -263,10 +260,10 @@ impl BigNumber {
         tmp.bn >>= 1;
 
         while !tmp.bn.is_zero() {
-            v *= v.clone();
+            v *= &v.clone();
 
             if tmp.bn.is_odd() {
-                rr *= v.clone();
+                rr *= &v;
             }
             tmp.bn >>= 1;
         }
@@ -284,12 +281,12 @@ impl BigNumber {
         let (mut r, mut new_r) = (n.bn.clone(), self.bn.clone());
 
         while !new_r.is_zero() {
-            let quotient = r.clone() / new_r.clone();
+            let quotient = &r / &new_r;
             let temp_t = t.clone();
             let temp_new_t = new_t.clone();
 
             t = temp_new_t.clone();
-            new_t = temp_t - quotient.clone() * temp_new_t;
+            new_t = temp_t - &quotient * temp_new_t;
 
             let temp_r = r.clone();
             let temp_new_r = new_r.clone();
@@ -320,29 +317,29 @@ impl BigNumber {
     }
 
     pub fn increment(&self) -> Result<BigNumber, UrsaCryptoError> {
-        Ok(BigNumber { bn: self.bn.clone() + 1 })
+        Ok(BigNumber { bn: &self.bn + 1 })
     }
 
     pub fn decrement(&self) -> Result<BigNumber, UrsaCryptoError> {
-        Ok(BigNumber { bn: self.bn.clone() - 1 })
+        Ok(BigNumber { bn: &self.bn - 1 })
     }
 
     pub fn lshift1(&self) -> Result<BigNumber, UrsaCryptoError> {
-        Ok(BigNumber { bn: self.bn.clone() << 1 })
+        Ok(BigNumber { bn: &self.bn << 1 })
     }
 
     pub fn rshift1(&self) -> Result<BigNumber, UrsaCryptoError> {
-        Ok(BigNumber { bn: self.bn.clone() >> 1 })
+        Ok(BigNumber { bn: &self.bn >> 1 })
     }
 
     pub fn rshift(&self, n: i32) -> Result<BigNumber, UrsaCryptoError> {
         let n = n as usize;
-        Ok(BigNumber { bn: self.bn.clone() >> n })
+        Ok(BigNumber { bn: &self.bn >> n })
     }
 
     pub fn mod_div(&self, b: &BigNumber, p: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
         //(a * (1/b mod p) mod p)
-        let res = (self.bn.clone() * b.inverse(p, _ctx)?.bn) % p.bn.clone();
+        let res = (&self.bn * b.inverse(p, _ctx)?.bn) % &p.bn;
         Ok(BigNumber { bn: res })
     }
 
@@ -361,17 +358,23 @@ impl BigNumber {
     }
 
     pub fn hash_array(nums: &Vec<Vec<u8>>) -> Result<Vec<u8>, UrsaCryptoError> {
-        let mut hasher = Sha256::default();
+        let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
-            hasher.input(&num);
+            hasher.update(&num);
         }
 
-        Ok(hasher.result().to_vec())
+        hasher.finalize().map_err(|e| UrsaCryptoError::InvalidStructure(e.to_string()))
     }
 }
 
 impl fmt::Debug for BigNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BigNumber {{ bn: {} }}", self.bn.to_str_radix(10))
+    }
+}
+
+impl fmt::Display for BigNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "BigNumber {{ bn: {} }}", self.bn.to_str_radix(10))
     }

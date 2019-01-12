@@ -96,6 +96,7 @@ pub mod hash;
 pub mod keys;
 pub mod signatures;
 pub mod encoding;
+
 #[derive(Debug)]
 pub enum CryptoError {
     /// Returned when trying to create an algorithm which does not exist.
@@ -109,6 +110,18 @@ pub enum CryptoError {
     KeyGenError(String),
     /// Returned when an error occurs during digest generation
     DigestGenError(String)
+}
+
+impl std::fmt::Display for CryptoError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            CryptoError::NoSuchAlgorithm(s) => write!(f, "NoSuchAlgorithm({})", s),
+            CryptoError::ParseError(s) => write!(f, "ParseError({})", s),
+            CryptoError::SigningError(s) => write!(f, "SigningError({})", s),
+            CryptoError::KeyGenError(s) => write!(f, "KeyGenError({})", s),
+            CryptoError::DigestGenError(s) => write!(f, "DigestGenError({})", s)
+        }
+    }
 }
 
 #[cfg(feature = "native")]
