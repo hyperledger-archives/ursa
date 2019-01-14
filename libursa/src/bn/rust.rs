@@ -277,6 +277,20 @@ impl BigNumber {
             return Err(UrsaCryptoError::InvalidStructure("Invalid modulus".to_string()))
         }
 
+        // Euclid's extended algorithm, Bèzout coefficient of `n` is not needed
+        //n is either prime or coprime
+        //
+        //function inverse(a, n)
+        //    t := 0;     newt := 1;
+        //    r := n;     newr := a;
+        //    while newr ≠ 0
+        //        quotient := r div newr
+        //        (t, newt) := (newt, t - quotient * newt)
+        //        (r, newr) := (newr, r - quotient * newr)
+        //    if r > 1 then return "a is not invertible"
+        //    if t < 0 then t := t + n
+        //    return t
+        //
         let (mut t, mut new_t) = (BigInt::zero(), BigInt::one());
         let (mut r, mut new_r) = (n.bn.clone(), self.bn.clone());
 
