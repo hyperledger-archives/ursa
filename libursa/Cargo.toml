@@ -23,7 +23,6 @@ required-features = ["benchmarked25519"]
 
 [features]
 default = ["bn_openssl", "pair_amcl", "serialization", "native", "ffi", "cl"]
-subdefault = ["bn_openssl", "pair_amcl", "serialization", "native", "cl"]
 portable = ["bn_rust", "pair_amcl", "serialization", "rust-crypto", "rustlibsecp256k1", "cl"]
 native = ["secp256k1", "libsodium-ffi"]
 bn_openssl = ["openssl", "int_traits"]
