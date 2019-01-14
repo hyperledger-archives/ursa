@@ -4,7 +4,7 @@ use hash::{digest, DigestAlgorithm, Digest, sha2};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt, Sign};
 use num_integer::Integer;
 use num_traits::identities::{One, Zero};
-use num_traits::Num;
+use num_traits::{Num, Signed};
 use glass_pumpkin::{prime, safe_prime};
 use rand::rngs::OsRng;
 
@@ -107,8 +107,8 @@ impl BigNumber {
 
     pub fn rand(size: usize) -> Result<BigNumber, UrsaCryptoError> {
         let mut rng = OsRng::new()?;
-        let res = rng.gen_bigint(size);
-        Ok(BigNumber { bn: res })
+        let res = rng.gen_biguint(size).to_bigint();
+        Ok(BigNumber { bn: res.unwrap() })
     }
 
     pub fn rand_range(&self) -> Result<BigNumber, UrsaCryptoError> {
@@ -313,7 +313,7 @@ impl BigNumber {
     }
 
     pub fn is_negative(&self) -> bool {
-        self.bn < BigInt::zero()
+        self.bn.is_negative()
     }
 
     pub fn increment(&self) -> Result<BigNumber, UrsaCryptoError> {
@@ -470,7 +470,7 @@ mod tests {
     const RANGE_RIGHT: usize = 592;
 
     #[test]
-    fn test_exp_works() {
+    fn exp_works() {
         let test = BigNumber::from_u32(3).unwrap().exp(&BigNumber::from_u32(2).unwrap(), None).unwrap();
         assert_eq!(BigNumber::from_u32(9).unwrap(), test);
 
@@ -483,6 +483,33 @@ mod tests {
         let answer = BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742929677132122730441323862712594345230336").unwrap();
         let test = BigNumber::from_u32(2).unwrap().exp(&BigNumber::from_u32(596).unwrap(), None).unwrap();
         assert_eq!(answer, test);
+    }
+
+    #[test]
+    fn inverse_works() {
+        let mut ctx = BigNumber::new_context().unwrap();
+        let mut bn = BigNumber::from_u32(3).unwrap();
+        assert_eq!(BigNumber::from_u32(16).unwrap(), bn.inverse(&BigNumber::from_u32(47).unwrap(), Some(&mut ctx)).unwrap());
+        bn = BigNumber::from_u32(9).unwrap();
+        assert_eq!(BigNumber::from_u32(3).unwrap(), bn.inverse(&BigNumber::from_u32(13).unwrap(), Some(&mut ctx)).unwrap());
+
+        let modulus = BigNumber::generate_prime(128).unwrap();
+        let one = BigNumber::from_u32(1).unwrap();
+        for _ in 0..25 {
+            let r = BigNumber::rand(128).unwrap();
+            let s = r.inverse(&modulus, Some(&mut ctx)).unwrap();
+
+            let res = r.mod_mul(&s, &modulus, Some(&mut ctx)).unwrap();
+            assert_eq!(res, one);
+        }
+        let modulus = BigNumber::generate_prime(128).unwrap().mul(&modulus, Some(&mut ctx)).unwrap();
+        for _ in 0..25 {
+            let r = BigNumber::rand(256).unwrap();
+            let s = r.inverse(&modulus, Some(&mut ctx)).unwrap();
+
+            let res = r.mod_mul(&s, &modulus, Some(&mut ctx)).unwrap();
+            assert_eq!(res, one);
+        }
     }
 
     #[test]
