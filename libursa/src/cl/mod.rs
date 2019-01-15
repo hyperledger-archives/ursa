@@ -97,20 +97,20 @@ pub enum CredentialValue {
 }
 
 impl CredentialValue {
-    pub fn clone(&self) -> Result<CredentialValue, UrsaCryptoError> {
+    pub fn try_clone(&self) -> Result<CredentialValue, UrsaCryptoError> {
         Ok(match *self {
             CredentialValue::Known { ref value } => CredentialValue::Known {
-                value: value.clone()?,
+                value: value.try_clone()?,
             },
             CredentialValue::Hidden { ref value } => CredentialValue::Hidden {
-                value: value.clone()?,
+                value: value.try_clone()?,
             },
             CredentialValue::Commitment {
                 ref value,
                 ref blinding_factor,
             } => CredentialValue::Commitment {
-                value: value.clone()?,
-                blinding_factor: blinding_factor.clone()?,
+                value: value.try_clone()?,
+                blinding_factor: blinding_factor.try_clone()?,
             },
         })
     }
@@ -152,7 +152,7 @@ pub struct CredentialValues {
 }
 
 impl CredentialValues {
-    pub fn clone(&self) -> Result<CredentialValues, UrsaCryptoError> {
+    pub fn try_clone(&self) -> Result<CredentialValues, UrsaCryptoError> {
         Ok(CredentialValues {
             attrs_values: clone_credential_value_map(&self.attrs_values)?
         })
@@ -209,7 +209,7 @@ impl CredentialValuesBuilder {
     ) -> Result<(), UrsaCryptoError> {
         self.attrs_values.insert(
             attr.to_owned(),
-            CredentialValue::Known { value: value.clone()? },
+            CredentialValue::Known { value: value.try_clone()? },
         );
         Ok(())
     }
@@ -221,7 +221,7 @@ impl CredentialValuesBuilder {
     ) -> Result<(), UrsaCryptoError> {
         self.attrs_values.insert(
             attr.to_owned(),
-            CredentialValue::Hidden { value: value.clone()? },
+            CredentialValue::Hidden { value: value.try_clone()? },
         );
         Ok(())
     }
@@ -235,8 +235,8 @@ impl CredentialValuesBuilder {
         self.attrs_values.insert(
             attr.to_owned(),
             CredentialValue::Commitment {
-                value: value.clone()?,
-                blinding_factor: blinding_factor.clone()?,
+                value: value.try_clone()?,
+                blinding_factor: blinding_factor.try_clone()?,
             },
         );
         Ok(())
@@ -258,15 +258,15 @@ pub struct CredentialPublicKey {
 }
 
 impl CredentialPublicKey {
-    pub fn clone(&self) -> Result<CredentialPublicKey, UrsaCryptoError> {
+    pub fn try_clone(&self) -> Result<CredentialPublicKey, UrsaCryptoError> {
         Ok(CredentialPublicKey {
-            p_key: self.p_key.clone()?,
+            p_key: self.p_key.try_clone()?,
             r_key: self.r_key.clone()
         })
     }
 
     pub fn get_primary_key(&self) -> Result<CredentialPrimaryPublicKey, UrsaCryptoError> {
-        Ok(self.p_key.clone()?)
+        Ok(self.p_key.try_clone()?)
     }
 
     pub fn get_revocation_key(&self) -> Result<Option<CredentialRevocationPublicKey>, UrsaCryptoError> {
@@ -275,8 +275,8 @@ impl CredentialPublicKey {
 
     pub fn build_from_parts(p_key: &CredentialPrimaryPublicKey, r_key: Option<&CredentialRevocationPublicKey>) -> Result<CredentialPublicKey, UrsaCryptoError> {
         Ok(CredentialPublicKey {
-            p_key: p_key.clone()?,
-            r_key: r_key.map(|key| key.clone())
+            p_key: p_key.try_clone()?,
+            r_key: r_key.cloned()
         })
     }
 }
@@ -300,13 +300,13 @@ pub struct CredentialPrimaryPublicKey {
 }
 
 impl CredentialPrimaryPublicKey {
-    pub fn clone(&self) -> Result<CredentialPrimaryPublicKey, UrsaCryptoError> {
+    pub fn try_clone(&self) -> Result<CredentialPrimaryPublicKey, UrsaCryptoError> {
         Ok(CredentialPrimaryPublicKey {
-            n: self.n.clone()?,
-            s: self.s.clone()?,
+            n: self.n.try_clone()?,
+            s: self.s.try_clone()?,
             r: clone_bignum_map(&self.r)?,
-            rctxt: self.rctxt.clone()?,
-            z: self.z.clone()?
+            rctxt: self.rctxt.try_clone()?,
+            z: self.z.try_clone()?
         })
     }
 }
@@ -422,7 +422,7 @@ impl RevocationRegistryDelta {
                       revoked: &HashSet<u32>) -> RevocationRegistryDelta {
         RevocationRegistryDelta {
             prev_accum: rev_reg_from.map(|rev_reg| rev_reg.accum),
-            accum: rev_reg_to.accum.clone(),
+            accum: rev_reg_to.accum,
             issued: issued.clone(),
             revoked: revoked.clone()
         }
@@ -430,7 +430,7 @@ impl RevocationRegistryDelta {
 
     pub fn merge(&mut self, other_delta: &RevocationRegistryDelta) -> Result<(), UrsaCryptoError> {
         if other_delta.prev_accum.is_none() || self.accum != other_delta.prev_accum.unwrap() {
-            return Err(UrsaCryptoError::InvalidStructure(format!("Deltas can not be merged.")));
+            return Err(UrsaCryptoError::InvalidStructure("Deltas can not be merged.".to_string()));
         }
 
         self.accum = other_delta.accum;
@@ -501,7 +501,7 @@ impl RevocationTailsGenerator {
         self.size - self.current_index
     }
 
-    pub fn next(&mut self) -> Result<Option<Tail>, UrsaCryptoError> {
+    pub fn try_next(&mut self) -> Result<Option<Tail>, UrsaCryptoError> {
         if self.current_index >= self.size {
             return Ok(None);
         }
@@ -526,14 +526,15 @@ pub struct SimpleTailsAccessor {
 
 impl RevocationTailsAccessor for SimpleTailsAccessor {
     fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), UrsaCryptoError> {
-        Ok(accessor(&self.tails[tail_id as usize]))
+        accessor(&self.tails[tail_id as usize]);
+        Ok(())
     }
 }
 
 impl SimpleTailsAccessor {
     pub fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, UrsaCryptoError> {
         let mut tails: Vec<Tail> = Vec::new();
-        while let Some(tail) = rev_tails_generator.next()? {
+        while let Some(tail) = rev_tails_generator.try_next()? {
             tails.push(tail);
         }
         Ok(SimpleTailsAccessor { tails })
@@ -598,7 +599,7 @@ impl Witness {
         let mut omega = PointG2::new_inf()?;
 
         let mut issued = if issuance_by_default {
-            (1..max_cred_num + 1).collect::<HashSet<u32>>()
+            (1..=max_cred_num).collect::<HashSet<u32>>()
                 .difference(&rev_reg_delta.revoked).cloned().collect::<HashSet<u32>>()
         } else {
             rev_reg_delta.issued.clone()
@@ -675,12 +676,8 @@ pub struct MasterSecret {
 }
 
 impl MasterSecret {
-    pub fn clone(&self) -> Result<MasterSecret, UrsaCryptoError> {
-        Ok(MasterSecret { ms: self.ms.clone()? })
-    }
-
     pub fn value(&self) -> Result<BigNumber, UrsaCryptoError> {
-        Ok(self.ms.clone()?)
+        Ok(self.ms.try_clone()?)
     }
 }
 
@@ -1155,11 +1152,11 @@ impl BytesView for Pair {
 }
 
 trait AppendByteArray {
-    fn append_vec<T: BytesView>(&mut self, other: &Vec<T>) -> Result<(), UrsaCryptoError>;
+    fn append_vec<T: BytesView>(&mut self, other: &[T]) -> Result<(), UrsaCryptoError>;
 }
 
 impl AppendByteArray for Vec<Vec<u8>> {
-    fn append_vec<T: BytesView>(&mut self, other: &Vec<T>) -> Result<(), UrsaCryptoError> {
+    fn append_vec<T: BytesView>(&mut self, other: &[T]) -> Result<(), UrsaCryptoError> {
         for el in other.iter() {
             self.push(el.to_bytes()?);
         }
@@ -1170,7 +1167,7 @@ impl AppendByteArray for Vec<Vec<u8>> {
 fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>) -> Result<HashMap<K, BigNumber>, UrsaCryptoError> {
     let mut res = HashMap::new();
     for (k, v) in other.iter() {
-        res.insert(k.clone(), v.clone()?);
+        res.insert(k.clone(), v.try_clone()?);
     }
     Ok(res)
 }
@@ -1179,7 +1176,7 @@ fn clone_bignum_map<K: Clone + Eq + Hash>(other: &HashMap<K, BigNumber>) -> Resu
 fn clone_credential_value_map<K: Clone + Eq + Ord>(other: &BTreeMap<K, CredentialValue>) -> Result<BTreeMap<K, CredentialValue>, UrsaCryptoError> {
     let mut res = BTreeMap::new();
     for (k, v) in other {
-        res.insert(k.clone(), v.clone()?);
+        res.insert(k.clone(), v.try_clone()?);
     }
     Ok(res)
 }

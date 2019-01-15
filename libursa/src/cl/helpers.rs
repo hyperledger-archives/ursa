@@ -265,7 +265,7 @@ pub fn transform_u32_to_array_of_u8(x: u32) -> Vec<u8> {
 
     let mut result: Vec<u8> = Vec::new();
     for i in (0..4).rev() {
-        result.push((x >> i * 8) as u8);
+        result.push((x >> (i * 8)) as u8);
     }
 
     trace!("Helpers::transform_u32_to_array_of_u8: <<< res: {:?}", result);
@@ -303,9 +303,9 @@ pub fn calc_teq(p_pub_key: &CredentialPrimaryPublicKey,
 
     for k in unrevealed_attrs.iter() {
         let cur_r = p_pub_key.r.get(k)
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", k)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", k)))?;
         let cur_m = m_tilde.get(k)
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in m_tilde", k)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in m_tilde", k)))?;
 
         result = cur_r
             .mod_exp(&cur_m, &p_pub_key.n, Some(&mut ctx))?
@@ -339,9 +339,9 @@ pub fn calc_tne(p_pub_key: &CredentialPrimaryPublicKey,
 
     for i in 0..ITERATION {
         let cur_u = u.get(&i.to_string())
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
         let cur_r = r.get(&i.to_string())
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", i)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", i)))?;
 
         let t_tau = p_pub_key.z
             .mod_exp(&cur_u, &p_pub_key.n, Some(&mut ctx))?
@@ -354,11 +354,11 @@ pub fn calc_tne(p_pub_key: &CredentialPrimaryPublicKey,
     }
 
     let delta = r.get("DELTA")
-        .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", "DELTA")))?;
+        .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in r", "DELTA")))?;
     let delta_predicate = if is_less {
         delta.set_negative(true)?
     } else {
-        delta.clone()?
+        delta.try_clone()?
     };
 
     let t_tau = p_pub_key.z
@@ -370,13 +370,13 @@ pub fn calc_tne(p_pub_key: &CredentialPrimaryPublicKey,
 
     tau_list.push(t_tau);
 
-    let mut q: BigNumber = BIGNUMBER_1.clone()?;
+    let mut q: BigNumber = BIGNUMBER_1.try_clone()?;
 
     for i in 0..ITERATION {
         let cur_t = t.get(&i.to_string())
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in t", i)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in t", i)))?;
         let cur_u = u.get(&i.to_string())
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in u", i)))?;
 
         q = cur_t
             .mod_exp(&cur_u, &p_pub_key.n, Some(&mut ctx))?
@@ -410,7 +410,7 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, UrsaCrypto
     let d = delta as usize;
     let mut roots: [usize; 4] = [largest_square_less_than(d), 0, 0, 0];
 
-    'outer: for i in (1..roots[0] + 1).rev() {
+    'outer: for i in (1..=roots[0]).rev() {
         roots[0] = i;
         if d == roots[0].pow(2) {
             roots[1] = 0;
@@ -419,7 +419,7 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, UrsaCrypto
             break 'outer;
         }
         roots[1] = largest_square_less_than(d - roots[0].pow(2));
-        for j in (1..roots[1] + 1).rev() {
+        for j in (1..=roots[1]).rev() {
             roots[1] = j;
             if d == roots[0].pow(2) + roots[1].pow(2) {
                 roots[2] = 0;
@@ -427,7 +427,7 @@ pub fn four_squares(delta: i32) -> Result<HashMap<String, BigNumber>, UrsaCrypto
                 break 'outer;
             }
             roots[2] = largest_square_less_than(d - roots[0].pow(2) - roots[1].pow(2));
-            for k in (1..roots[2] + 1).rev() {
+            for k in (1..=roots[2]).rev() {
                 roots[2] = k;
                 if d == roots[0].pow(2) + roots[1].pow(2) + roots[2].pow(2) {
                     roots[3] = 0;

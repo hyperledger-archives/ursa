@@ -106,7 +106,7 @@ impl ProofVerifier {
         ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, credential_schema)?;
 
         self.credentials.push(VerifiableCredential {
-            pub_key: credential_pub_key.clone()?,
+            pub_key: credential_pub_key.try_clone()?,
             sub_proof_request: sub_proof_request.clone(),
             credential_schema: credential_schema.clone(),
             non_credential_schema: non_credential_schema.clone(),
@@ -257,7 +257,7 @@ impl ProofVerifier {
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, cred_schema: {:?}", sub_proof_request, cred_schema);
 
         if sub_proof_request.revealed_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(UrsaCryptoError::InvalidStructure(format!("Credential doesn't contain requested attribute")));
+            return Err(UrsaCryptoError::InvalidStructure("Credential doesn't contain requested attribute".to_string()));
         }
 
         let predicates_attrs =
@@ -266,7 +266,7 @@ impl ProofVerifier {
                 .collect::<BTreeSet<String>>();
 
         if predicates_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(UrsaCryptoError::InvalidStructure(format!("Credential doesn't contain attribute requested in predicate")));
+            return Err(UrsaCryptoError::InvalidStructure("Credential doesn't contain attribute requested in predicate".to_string()));
         }
 
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
@@ -274,19 +274,17 @@ impl ProofVerifier {
         Ok(())
     }
 
-    fn _check_verify_params_consistency(credentials: &Vec<VerifiableCredential>,
+    fn _check_verify_params_consistency(credentials: &[VerifiableCredential],
                                         proof: &Proof) -> Result<(), UrsaCryptoError> {
         trace!("ProofVerifier::_check_verify_params_consistency: >>> credentials: {:?}, proof: {:?}", credentials, proof);
 
         assert_eq!(proof.proofs.len(), credentials.len()); //FIXME return error
-        for idx in 0..proof.proofs.len() {
-            let proof_for_credential = &proof.proofs[idx];
-            let credential = &credentials[idx];
+        for (proof_for_credential, credential) in proof.proofs.iter().zip(credentials) {
 
             let proof_revealed_attrs = BTreeSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
 
             if proof_revealed_attrs != credential.sub_proof_request.revealed_attrs {
-                return Err(UrsaCryptoError::AnoncredsProofRejected(format!("Proof revealed attributes not correspond to requested attributes")));
+                return Err(UrsaCryptoError::AnoncredsProofRejected("Proof revealed attributes not correspond to requested attributes".to_string()));
             }
 
             let proof_predicates =
@@ -295,7 +293,7 @@ impl ProofVerifier {
                     .collect::<BTreeSet<Predicate>>();
 
             if proof_predicates != credential.sub_proof_request.predicates {
-                return Err(UrsaCryptoError::AnoncredsProofRejected(format!("Proof predicates not correspond to requested predicates")));
+                return Err(UrsaCryptoError::AnoncredsProofRejected("Proof predicates not correspond to requested predicates".to_string()));
             }
         }
 
@@ -356,7 +354,7 @@ impl ProofVerifier {
 
         for (attr, encoded_value) in &proof.revealed_attrs {
             let cur_r = p_pub_key.r.get(attr)
-                .ok_or(UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in pk.r", attr)))?;
+                .ok_or_else(||UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in pk.r", attr)))?;
 
             rar = cur_r
                 .mod_exp(encoded_value, &p_pub_key.n, Some(&mut ctx))?
@@ -386,7 +384,7 @@ impl ProofVerifier {
 
         for i in 0..ITERATION {
             let cur_t = proof.t.get(&i.to_string())
-                .ok_or(UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", i)))?;
+                .ok_or_else(|| UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", i)))?;
 
             tau_list[i] = cur_t
                 .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
@@ -395,12 +393,12 @@ impl ProofVerifier {
         }
 
         let delta = proof.t.get("DELTA")
-            .ok_or(UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
+            .ok_or_else(||UrsaCryptoError::AnoncredsProofRejected(format!("Value by key '{}' not found in proof.t", "DELTA")))?;
 
         let delta_prime = if proof.predicate.is_less() {
             delta.inverse(&p_pub_key.n, Some(&mut ctx))?
         } else {
-            delta.clone()?
+            delta.try_clone()?
         };
 
         tau_list[ITERATION] = p_pub_key.z

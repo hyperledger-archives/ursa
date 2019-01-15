@@ -97,12 +97,12 @@ impl PointG1 {
         // generate random point from the group G1
         let point_x = BIG::new_ints(&CURVE_GX);
         let point_y = BIG::new_ints(&CURVE_GY);
-        let mut gen_g1 = ECP::new_bigs(&point_x, &point_y);
+        let gen_g1 = ECP::new_bigs(&point_x, &point_y);
 
-        let point = g1mul(&mut gen_g1, &mut random_mod_order()?);
+        let point = g1mul(&gen_g1, &mut random_mod_order()?);
 
         Ok(PointG1 {
-            point: point
+            point
         })
     }
 
@@ -122,18 +122,18 @@ impl PointG1 {
 
     /// PointG1 ^ GroupOrderElement
     pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG1, UrsaCryptoError> {
-        let mut r = self.point;
+        let r = self.point;
         let mut bn = e.bn;
         Ok(PointG1 {
-            point: g1mul(&mut r, &mut bn)
+            point: g1mul(&r, &mut bn)
         })
     }
 
     /// PointG1 * PointG1
     pub fn add(&self, q: &PointG1) -> Result<PointG1, UrsaCryptoError> {
         let mut r = self.point;
-        let mut point = q.point;
-        r.add(&mut point);
+        let point = q.point;
+        r.add(&point);
         Ok(PointG1 {
             point: r
         })
@@ -142,8 +142,8 @@ impl PointG1 {
     /// PointG1 / PointG1
     pub fn sub(&self, q: &PointG1) -> Result<PointG1, UrsaCryptoError> {
         let mut r = self.point;
-        let mut point = q.point;
-        r.sub(&mut point);
+        let point = q.point;
+        r.sub(&point);
         Ok(PointG1 {
             point: r
         })
@@ -196,7 +196,7 @@ impl PointG1 {
         }
 
         Ok(PointG1 {
-            point: point
+            point
         })
     }
 }
@@ -255,12 +255,12 @@ impl PointG2 {
         let point_x = FP2::new_bigs(&point_xa, &point_xb);
         let point_y = FP2::new_bigs(&point_ya, &point_yb);
 
-        let mut gen_g2 = ECP2::new_fp2s(&point_x, &point_y);
+        let gen_g2 = ECP2::new_fp2s(&point_x, &point_y);
 
-        let point = g2mul(&mut gen_g2, &mut random_mod_order()?);
+        let point = g2mul(&gen_g2, &random_mod_order()?);
 
         Ok(PointG2 {
-            point: point
+            point
         })
     }
 
@@ -270,15 +270,15 @@ impl PointG2 {
         point.inf();
 
         Ok(PointG2 {
-            point: point
+            point
         })
     }
 
     /// PointG2 * PointG2
     pub fn add(&self, q: &PointG2) -> Result<PointG2, UrsaCryptoError> {
         let mut r = self.point;
-        let mut point = q.point;
-        r.add(&mut point);
+        let point = q.point;
+        r.add(&point);
 
         Ok(PointG2 {
             point: r
@@ -288,8 +288,8 @@ impl PointG2 {
     /// PointG2 / PointG2
     pub fn sub(&self, q: &PointG2) -> Result<PointG2, UrsaCryptoError> {
         let mut r = self.point;
-        let mut point = q.point;
-        r.sub(&mut point);
+        let point = q.point;
+        r.sub(&point);
 
         Ok(PointG2 {
             point: r
@@ -298,10 +298,10 @@ impl PointG2 {
 
     /// PointG2 ^ GroupOrderElement
     pub fn mul(&self, e: &GroupOrderElement) -> Result<PointG2, UrsaCryptoError> {
-        let mut r = self.point;
-        let mut bn = e.bn;
+        let r = self.point;
+        let bn = e.bn;
         Ok(PointG2 {
-            point: g2mul(&mut r, &mut bn)
+            point: g2mul(&r, &bn)
         })
     }
 
@@ -403,9 +403,9 @@ impl GroupOrderElement {
     /// (GroupOrderElement ^ GroupOrderElement) mod GroupOrder
     pub fn pow_mod(&self, e: &GroupOrderElement) -> Result<GroupOrderElement, UrsaCryptoError> {
         let mut base = self.bn;
-        let mut pow = e.bn;
+        let pow = e.bn;
         Ok(GroupOrderElement {
-            bn: base.powmod(&mut pow, &BIG::new_ints(&CURVE_ORDER))
+            bn: base.powmod(&pow, &BIG::new_ints(&CURVE_ORDER))
         })
     }
 
@@ -429,7 +429,7 @@ impl GroupOrderElement {
 
         if diff < zero {
             return Ok(GroupOrderElement {
-                bn: BIG::modneg(&mut diff, &BIG::new_ints(&CURVE_ORDER))
+                bn: BIG::modneg(&diff, &BIG::new_ints(&CURVE_ORDER))
             });
         }
 
@@ -440,10 +440,10 @@ impl GroupOrderElement {
 
     /// (GroupOrderElement * GroupOrderElement) mod GroupOrder
     pub fn mul_mod(&self, r: &GroupOrderElement) -> Result<GroupOrderElement, UrsaCryptoError> {
-        let mut base = self.bn;
-        let mut r = r.bn;
+        let base = self.bn;
+        let r = r.bn;
         Ok(GroupOrderElement {
-            bn: BIG::modmul(&mut base, &mut r, &BIG::new_ints(&CURVE_ORDER))
+            bn: BIG::modmul(&base, &r, &BIG::new_ints(&CURVE_ORDER))
         })
     }
 
@@ -453,14 +453,14 @@ impl GroupOrderElement {
         bn.invmodp(&BIG::new_ints(&CURVE_ORDER));
 
         Ok(GroupOrderElement {
-            bn: bn
+            bn
         })
     }
 
     /// - GroupOrderElement mod GroupOrder
     pub fn mod_neg(&self) -> Result<GroupOrderElement, UrsaCryptoError> {
         let mut r = self.bn;
-        r = BIG::modneg(&mut r, &BIG::new_ints(&CURVE_ORDER));
+        r = BIG::modneg(&r, &BIG::new_ints(&CURVE_ORDER));
         Ok(GroupOrderElement {
             bn: r
         })
@@ -555,9 +555,7 @@ impl Pair {
     pub const BYTES_REPR_SIZE: usize = MODBYTES * 16;
     /// e(PointG1, PointG2)
     pub fn pair(p: &PointG1, q: &PointG2) -> Result<Pair, UrsaCryptoError> {
-        let mut p_new = *p;
-        let mut q_new = *q;
-        let mut result = fexp(&ate(&mut q_new.point, &mut p_new.point));
+        let mut result = fexp(&ate(&q.point, &p.point));
         result.reduce();
 
         Ok(Pair {
@@ -568,8 +566,7 @@ impl Pair {
     /// e() * e()
     pub fn mul(&self, b: &Pair) -> Result<Pair, UrsaCryptoError> {
         let mut base = self.pair;
-        let mut b = b.pair;
-        base.mul(&mut b);
+        base.mul(&b.pair);
         base.reduce();
         Ok(Pair {
             pair: base
@@ -578,11 +575,8 @@ impl Pair {
 
     /// e() ^ GroupOrderElement
     pub fn pow(&self, b: &GroupOrderElement) -> Result<Pair, UrsaCryptoError> {
-        let mut base = self.pair;
-        let mut b = b.bn;
-
         Ok(Pair {
-            pair: gtpow(&mut base, &mut b)
+            pair: gtpow(&self.pair, &b.bn)
         })
     }
 
