@@ -4,7 +4,7 @@ use hash::{digest, DigestAlgorithm, Digest, sha2};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt, Sign};
 use num_integer::Integer;
 use num_traits::identities::{One, Zero};
-use num_traits::{Num, Signed};
+use num_traits::{Num, Signed, ToPrimitive, Pow};
 use glass_pumpkin::{prime, safe_prime};
 use rand::rngs::OsRng;
 
@@ -249,26 +249,10 @@ impl BigNumber {
             return Ok(self.clone()?)
         }
 
-        let mut v = self.bn.clone();
-        let mut rr = if a.bn.is_odd() {
-            a.bn.clone()
-        } else {
-            BigInt::one()
-        };
-
-        let mut tmp = a.clone()?;
-        tmp.bn >>= 1;
-
-        while !tmp.bn.is_zero() {
-            v *= &v.clone();
-
-            if tmp.bn.is_odd() {
-                rr *= &v;
-            }
-            tmp.bn >>= 1;
+        match a.bn.to_u64() {
+            Some(num) => Ok(BigNumber { bn: self.bn.pow(num) }),
+            None => Err(UrsaCryptoError::InvalidStructure("'a' cannot be help in u64".to_string()))
         }
-
-        Ok(BigNumber { bn: rr })
     }
 
     pub fn inverse(&self, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
