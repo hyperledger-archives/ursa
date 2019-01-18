@@ -229,8 +229,12 @@ impl BigNumber {
     }
 
     pub fn div_word(&mut self, w: u32) -> Result<&mut BigNumber, UrsaCryptoError> {
-        self.bn /= w;
-        Ok(self)
+        if w == 0 {
+            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+        } else {
+            self.bn /= w;
+            Ok(self)
+        }
     }
 
     pub fn mod_exp(&self, a: &BigNumber, b: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
