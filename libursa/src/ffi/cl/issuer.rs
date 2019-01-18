@@ -158,7 +158,7 @@ pub extern fn ursa_cl_credential_public_key_free(credential_pub_key: *const c_vo
 
     check_useful_c_ptr!(credential_pub_key, ErrorCode::CommonInvalidParam1);
 
-    let credential_pub_key = unsafe { Box::from_raw(credential_pub_key as *mut CredentialPublicKey); };
+    let credential_pub_key = unsafe { Box::from_raw(credential_pub_key as *mut CredentialPublicKey) };
     trace!("ursa_cl_credential_public_key_free: entity: credential_pub_key: {:?}", credential_pub_key);
 
     let res = ErrorCode::Success;
@@ -243,7 +243,7 @@ pub extern fn ursa_cl_credential_private_key_free(credential_priv_key: *const c_
 
     check_useful_c_ptr!(credential_priv_key, ErrorCode::CommonInvalidParam1);
 
-    let _credential_priv_key = unsafe { Box::from_raw(credential_priv_key as *mut CredentialPrivateKey); };
+    let _credential_priv_key = unsafe { Box::from_raw(credential_priv_key as *mut CredentialPrivateKey) };
     trace!("ursa_cl_credential_private_key_free: entity: credential_priv_key: {:?}", secret!(_credential_priv_key));
 
     let res = ErrorCode::Success;
@@ -330,7 +330,7 @@ pub extern fn ursa_cl_credential_key_correctness_proof_free(credential_key_corre
 
     check_useful_c_ptr!(credential_key_correctness_proof, ErrorCode::CommonInvalidParam1);
 
-    let credential_key_correctness_proof = unsafe { Box::from_raw(credential_key_correctness_proof as *mut CredentialKeyCorrectnessProof); };
+    let credential_key_correctness_proof = unsafe { Box::from_raw(credential_key_correctness_proof as *mut CredentialKeyCorrectnessProof) };
     trace!("ursa_cl_credential_key_correctness_proof_free: entity: credential_key_correctness_proof: {:?}", credential_key_correctness_proof);
 
     let res = ErrorCode::Success;
@@ -478,7 +478,7 @@ pub extern fn ursa_cl_revocation_key_public_free(rev_key_pub: *const c_void) -> 
     trace!("ursa_cl_revocation_key_public_free: >>> rev_key_pub: {:?}", rev_key_pub);
 
     check_useful_c_ptr!(rev_key_pub, ErrorCode::CommonInvalidParam1);
-    let rev_key_pub = unsafe { Box::from_raw(rev_key_pub as *mut RevocationKeyPublic); };
+    let rev_key_pub = unsafe { Box::from_raw(rev_key_pub as *mut RevocationKeyPublic) };
     trace!("ursa_cl_revocation_key_public_free: entity: rev_key_pub: {:?}", rev_key_pub);
 
     let res = ErrorCode::Success;
@@ -565,7 +565,7 @@ pub extern fn ursa_cl_revocation_key_private_free(rev_key_priv: *const c_void) -
 
     check_useful_c_ptr!(rev_key_priv, ErrorCode::CommonInvalidParam1);
 
-    let _rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate); };
+    let _rev_key_priv = unsafe { Box::from_raw(rev_key_priv as *mut RevocationKeyPrivate) };
     trace!("ursa_cl_revocation_key_private_free: entity: rev_key_priv: {:?}", secret!(_rev_key_priv));
 
     let res = ErrorCode::Success;
@@ -652,7 +652,7 @@ pub extern fn ursa_cl_revocation_registry_free(rev_reg: *const c_void) -> ErrorC
 
     check_useful_c_ptr!(rev_reg, ErrorCode::CommonInvalidParam1);
 
-    let rev_reg = unsafe { Box::from_raw(rev_reg as *mut RevocationRegistry); };
+    let rev_reg = unsafe { Box::from_raw(rev_reg as *mut RevocationRegistry) };
     trace!("ursa_cl_revocation_registry_free: entity: rev_reg: {:?}", rev_reg);
 
     let res = ErrorCode::Success;
@@ -739,7 +739,7 @@ pub extern fn ursa_cl_revocation_tails_generator_free(rev_tails_generator: *cons
 
     check_useful_c_ptr!(rev_tails_generator, ErrorCode::CommonInvalidParam1);
 
-    let rev_tails_generator = unsafe { Box::from_raw(rev_tails_generator as *mut RevocationTailsGenerator); };
+    let rev_tails_generator = unsafe { Box::from_raw(rev_tails_generator as *mut RevocationTailsGenerator) };
     trace!("ursa_cl_revocation_tails_generator_free: entity: rev_tails_generator: {:?}", rev_tails_generator);
 
     let res = ErrorCode::Success;
@@ -1013,7 +1013,7 @@ pub extern fn ursa_cl_credential_signature_free(credential_signature: *const c_v
 
     check_useful_c_ptr!(credential_signature, ErrorCode::CommonInvalidParam1);
 
-    let _credential_signature = unsafe { Box::from_raw(credential_signature as *mut CredentialSignature); };
+    let _credential_signature = unsafe { Box::from_raw(credential_signature as *mut CredentialSignature) };
     trace!("ursa_cl_credential_signature_free: entity: credential_signature: {:?}", secret!(_credential_signature));
     let res = ErrorCode::Success;
 
@@ -1099,7 +1099,7 @@ pub extern fn ursa_cl_signature_correctness_proof_free(signature_correctness_pro
 
     check_useful_c_ptr!(signature_correctness_proof, ErrorCode::CommonInvalidParam1);
 
-    let signature_correctness_proof = unsafe { Box::from_raw(signature_correctness_proof as *mut SignatureCorrectnessProof); };
+    let signature_correctness_proof = unsafe { Box::from_raw(signature_correctness_proof as *mut SignatureCorrectnessProof) };
     trace!("ursa_cl_signature_correctness_proof_free: entity: signature_correctness_proof: {:?}", signature_correctness_proof);
     let res = ErrorCode::Success;
 
@@ -1185,7 +1185,7 @@ pub extern fn ursa_cl_revocation_registry_delta_free(revocation_registry_delta: 
 
     check_useful_c_ptr!(revocation_registry_delta, ErrorCode::CommonInvalidParam1);
 
-    let revocation_registry_delta = unsafe { Box::from_raw(revocation_registry_delta as *mut RevocationRegistryDelta); };
+    let revocation_registry_delta = unsafe { Box::from_raw(revocation_registry_delta as *mut RevocationRegistryDelta) };
     trace!("ursa_cl_revocation_registry_delta_free: entity: revocation_registry_delta: {:?}", revocation_registry_delta);
     let res = ErrorCode::Success;
 
@@ -1317,10 +1317,10 @@ pub extern fn ursa_cl_issuer_merge_revocation_registry_deltas(revoc_reg_delta: *
            revoc_reg_delta, other_revoc_reg_delta);
 
     let res = match revoc_reg_delta.merge(other_revoc_reg_delta) {
-        Ok(merged_revoc_reg_delta) => {
-            trace!("ursa_cl_issuer_merge_revocation_registry_deltas: merged_revoc_reg_delta: {:?}", merged_revoc_reg_delta);
+        Ok(_) => {
+            trace!("ursa_cl_issuer_merge_revocation_registry_deltas: merged_revoc_reg_delta: ()");
             unsafe {
-                *merged_revoc_reg_delta_p = Box::into_raw(Box::new(merged_revoc_reg_delta)) as *const c_void;
+                *merged_revoc_reg_delta_p = Box::into_raw(Box::new(())) as *const c_void;
                 trace!("ursa_cl_issuer_merge_revocation_registry_deltas: *merged_revoc_reg_delta_p: {:?}", *merged_revoc_reg_delta_p);
             }
             ErrorCode::Success

@@ -124,7 +124,7 @@ impl Issuer {
 
         let cred_rev_pub_key: &CredentialRevocationPublicKey = credential_pub_key.r_key
             .as_ref()
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("There are not revocation keys in the credential public key.")))?;
+            .ok_or_else(|| UrsaCryptoError::InvalidStructure("There are not revocation keys in the credential public key.".to_string()))?;
 
         let (rev_key_pub, rev_key_priv) = Issuer::_new_revocation_registry_keys(cred_rev_pub_key, max_cred_num)?;
 
@@ -135,8 +135,8 @@ impl Issuer {
 
         let rev_tails_generator = RevocationTailsGenerator::new(
             max_cred_num,
-            rev_key_priv.gamma.clone(),
-            cred_rev_pub_key.g_dash.clone());
+            rev_key_priv.gamma,
+            cred_rev_pub_key.g_dash);
 
         trace!("Issuer::new_revocation_registry_def: <<< rev_key_pub: {:?}, rev_key_priv: {:?}, rev_reg: {:?}, rev_tails_generator: {:?}",
                rev_key_pub, secret!(&rev_key_priv), rev_reg, rev_tails_generator);
@@ -214,6 +214,7 @@ impl Issuer {
     ///                             &credential_pub_key,
     ///                             &credential_priv_key).unwrap();
     /// ```
+    #[allow(clippy::too_many_arguments)]
     pub fn sign_credential(prover_id: &str,
                            blinded_credential_secrets: &BlindedCredentialSecrets,
                            blinded_credential_secrets_correctness_proof: &BlindedCredentialSecretsCorrectnessProof,
@@ -336,6 +337,7 @@ impl Issuer {
     ///                                        &rev_key_priv,
     ///                                        &simple_tail_accessor).unwrap();
     /// ```
+    #[allow(clippy::too_many_arguments)]
     pub fn sign_credential_with_revoc<RTA>(prover_id: &str,
                                            blinded_credential_secrets: &BlindedCredentialSecrets,
                                            blinded_credential_secrets_correctness_proof: &BlindedCredentialSecretsCorrectnessProof,
@@ -464,7 +466,7 @@ impl Issuer {
                                   rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, UrsaCryptoError> where RTA: RevocationTailsAccessor {
         trace!("Issuer::revoke_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, secret!(rev_idx));
 
-        let prev_accum = rev_reg.accum.clone();
+        let prev_accum = rev_reg.accum;
 
         let index = Issuer::_get_index(max_cred_num, rev_idx);
 
@@ -474,7 +476,7 @@ impl Issuer {
 
         let rev_reg_delta = RevocationRegistryDelta {
             prev_accum: Some(prev_accum),
-            accum: rev_reg.accum.clone(),
+            accum: rev_reg.accum,
             issued: HashSet::new(),
             revoked: hashset![rev_idx]
         };
@@ -552,7 +554,7 @@ impl Issuer {
                                     rev_tails_accessor: &RTA) -> Result<RevocationRegistryDelta, UrsaCryptoError> where RTA: RevocationTailsAccessor {
         trace!("Issuer::recovery_credential: >>> rev_reg: {:?}, max_cred_num: {:?}, rev_idx: {:?}", rev_reg, max_cred_num, secret!(rev_idx));
 
-        let prev_accum = rev_reg.accum.clone();
+        let prev_accum = rev_reg.accum;
 
         let index = Issuer::_get_index(max_cred_num, rev_idx);
 
@@ -562,7 +564,7 @@ impl Issuer {
 
         let rev_reg_delta = RevocationRegistryDelta {
             prev_accum: Some(prev_accum),
-            accum: rev_reg.accum.clone(),
+            accum: rev_reg.accum,
             issued: hashset![rev_idx],
             revoked: HashSet::new()
         };
@@ -572,6 +574,7 @@ impl Issuer {
         Ok(rev_reg_delta)
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn _new_credential_primary_keys(credential_schema: &CredentialSchema,
                                     non_credential_schema: &NonCredentialSchema) ->
                                                                           Result<(CredentialPrimaryPublicKey,
@@ -581,8 +584,8 @@ impl Issuer {
 
         let mut ctx = BigNumber::new_context()?;
 
-        if credential_schema.attrs.len() == 0 {
-            return Err(UrsaCryptoError::InvalidStructure(format!("List of attributes is empty")));
+        if credential_schema.attrs.is_empty() {
+            return Err(UrsaCryptoError::InvalidStructure("List of attributes is empty".to_string()));
         }
 
         let p_safe = generate_safe_prime(LARGE_PRIME)?;
@@ -623,6 +626,7 @@ impl Issuer {
         Ok((cred_pr_pub_key, cred_pr_priv_key, cred_pr_pub_key_metadata))
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn _new_credential_revocation_keys() -> Result<(CredentialRevocationPublicKey,
                                                     CredentialRevocationPrivateKey), UrsaCryptoError> {
         trace!("Issuer::_new_credential_revocation_keys: >>>");
@@ -687,7 +691,7 @@ impl Issuer {
             values.extend_from_slice(&val.to_bytes()?);
         }
 
-        let c = get_hash_as_int(&mut vec![values])?;
+        let c = get_hash_as_int(&[values])?;
 
         let xz_cap =
             c.mul(&cred_pr_pub_key_meta.xz, Some(&mut ctx))?
@@ -719,7 +723,7 @@ impl Issuer {
         let mut accum = Accumulator::new_inf()?;
 
         if issuance_by_default {
-            for i in 1..max_cred_num + 1 {
+            for i in 1..=max_cred_num {
                 let index = Issuer::_get_index(max_cred_num, i);
                 accum = accum.add(&Tail::new_tail(index, &cred_rev_pub_key.g_dash, &rev_key_priv.gamma)?)?;
             }
@@ -777,7 +781,7 @@ impl Issuer {
                                               |acc, attr| {
                                                   let pk_r = cred_pr_pub_key.r
                                                                     .get(&attr.clone())
-                                                                    .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_pr_pub_key.r", attr)))?;
+                                                                    .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in cred_pr_pub_key.r", attr)))?;
                                                   let m_cap = &blinded_cred_secrets_correctness_proof.m_caps[attr];
                                                   acc?.mod_mul(&pk_r.mod_exp(&m_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
                                                                &cred_pr_pub_key.n, Some(&mut ctx))
@@ -801,12 +805,12 @@ impl Issuer {
         values.extend_from_slice(&u_cap.to_bytes()?);
         values.extend_from_slice(&nonce.to_bytes()?);
 
-        let c = get_hash_as_int(&vec![values])?;
+        let c = get_hash_as_int(&[values])?;
 
         let valid = blinded_cred_secrets_correctness_proof.c.eq(&c);
 
         if !valid {
-            return Err(UrsaCryptoError::InvalidStructure(format!("Invalid BlindedCredentialSecrets correctness proof")));
+            return Err(UrsaCryptoError::InvalidStructure("Invalid BlindedCredentialSecrets correctness proof".to_string()));
         }
 
         trace!("Issuer::_check_blinded_credential_secrets_correctness_proof: <<<");
@@ -827,7 +831,7 @@ impl Issuer {
         values.extend_from_slice(&prover_id_bn.to_bytes()?);
         values.extend_from_slice(&rev_idx_bn.to_bytes()?);
 
-        let credential_context = get_hash_as_int(&vec![values])?;
+        let credential_context = get_hash_as_int(&[values])?;
 
         trace!("Issuer::_gen_credential_context: <<< credential_context: {:?}", secret!(&credential_context));
 
@@ -847,13 +851,14 @@ impl Issuer {
         let e = generate_prime_in_range(&LARGE_E_START_VALUE, &LARGE_E_END_RANGE_VALUE)?;
         let (a, q) = Issuer::_sign_primary_credential(cred_pub_key, cred_priv_key, &credential_context, &cred_values, &v, blinded_credential_secrets, &e)?;
 
-        let pr_cred_sig = PrimaryCredentialSignature { m_2: credential_context.clone()?, a, e, v };
+        let pr_cred_sig = PrimaryCredentialSignature { m_2: credential_context.try_clone()?, a, e, v };
 
         trace!("Issuer::_new_primary_credential: <<< pr_cred_sig: {:?}, q: {:?}", secret!(&pr_cred_sig), secret!(&q));
 
         Ok((pr_cred_sig, q))
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn _sign_primary_credential(cred_pub_key: &CredentialPublicKey,
                                 cred_priv_key: &CredentialPrivateKey,
                                 cred_context: &BigNumber,
@@ -886,7 +891,7 @@ impl Issuer {
         for (key, attr) in cred_values.attrs_values.iter().filter(|&(_, v)| v.is_known()) {
             let pk_r = p_pub_key.r
                 .get(key)
-                .ok_or(UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
+                .ok_or_else(||UrsaCryptoError::InvalidStructure(format!("Value by key '{}' not found in pk.r", key)))?;
 
             rx = pk_r.mod_exp(attr.value(), &p_pub_key.n, Some(&mut context))?
                      .mod_mul(&rx, &p_pub_key.n, Some(&mut context))?;
@@ -925,7 +930,7 @@ impl Issuer {
         values.extend_from_slice(&a_cap.to_bytes()?);
         values.extend_from_slice(&nonce.to_bytes()?);
 
-        let c = get_hash_as_int(&mut vec![values])?;
+        let c = get_hash_as_int(&[values])?;
 
         let se = r.mod_sub(
             &c.mod_mul(&p_cred_signature.e.inverse(&n, Some(&mut ctx))?, &n, Some(&mut ctx))?,
@@ -944,6 +949,7 @@ impl Issuer {
         max_cred_num + 1 - rev_idx
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn _new_non_revocation_credential(rev_idx: u32,
                                       cred_context: &BigNumber,
                                       blinded_credential_secrets: &BlindedCredentialSecrets,
@@ -961,15 +967,15 @@ impl Issuer {
                issuance_by_default, rev_reg, secret!(rev_key_priv));
 
         let ur = blinded_credential_secrets.ur
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("No revocation part present in blinded master secret.")))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure("No revocation part present in blinded master secret.".to_string()))?;
 
         let r_pub_key: &CredentialRevocationPublicKey = cred_pub_key.r_key
             .as_ref()
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("No revocation part present in credential revocation public key.")))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure("No revocation part present in credential revocation public key.".to_string()))?;
 
         let r_priv_key: &CredentialRevocationPrivateKey = cred_priv_key.r_key
             .as_ref()
-            .ok_or(UrsaCryptoError::InvalidStructure(format!("No revocation part present in credential revocation private key.")))?;
+            .ok_or_else(||UrsaCryptoError::InvalidStructure("No revocation part present in credential revocation private key.".to_string()))?;
 
         let vr_prime_prime = GroupOrderElement::new()?;
         let c = GroupOrderElement::new()?;
@@ -1004,7 +1010,7 @@ impl Issuer {
         let rev_reg_delta = if issuance_by_default {
             None
         } else {
-            let prev_acc = rev_reg.accum.clone();
+            let prev_acc = rev_reg.accum;
 
             rev_tails_accessor.access_tail(index, &mut |tail| {
                 rev_reg.accum = rev_reg.accum.add(tail).unwrap();
@@ -1012,7 +1018,7 @@ impl Issuer {
 
             Some(RevocationRegistryDelta {
                 prev_accum: Some(prev_acc),
-                accum: rev_reg.accum.clone(),
+                accum: rev_reg.accum,
                 issued: hashset![rev_idx],
                 revoked: HashSet::new()
             })
@@ -1021,7 +1027,7 @@ impl Issuer {
         let witness_signature = WitnessSignature {
             sigma_i,
             u_i,
-            g_i: g_i.clone(),
+            g_i,
         };
 
         let non_revocation_cred_sig = NonRevocationCredentialSignature {
@@ -1029,7 +1035,7 @@ impl Issuer {
             c,
             vr_prime_prime,
             witness_signature,
-            g_i: g_i.clone(),
+            g_i,
             i: rev_idx,
             m2
         };

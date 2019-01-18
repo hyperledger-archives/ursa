@@ -1,3 +1,9 @@
+#[deny(warnings,
+       unused_qualifications,
+       unused_import_braces,
+       trivial_casts,
+       trivial_numeric_casts)]
+
 #[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
 #[cfg(feature = "wasm")]
@@ -83,6 +89,7 @@ pub mod bn;
 
 pub mod errors;
 #[cfg(feature = "ffi")]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub mod ffi;
 
 #[cfg(feature = "pair_amcl")]

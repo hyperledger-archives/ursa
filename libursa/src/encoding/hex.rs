@@ -24,5 +24,5 @@ pub fn hex2bin(s: &str) -> Result<Vec<u8>, CryptoError> {
         (chunk[1].to_digit(16).unwrap())) as u8
     }).collect();
 
-    return Ok(decoded);
+    Ok(decoded)
 }

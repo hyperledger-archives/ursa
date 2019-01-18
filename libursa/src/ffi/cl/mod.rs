@@ -25,7 +25,7 @@ pub extern fn ursa_cl_tails_generator_next(rev_tails_generator: *const c_void,
     check_useful_mut_c_reference!(rev_tails_generator, RevocationTailsGenerator, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(tail_p, ErrorCode::CommonInvalidParam2);
 
-    let res = match rev_tails_generator.next() {
+    let res = match rev_tails_generator.try_next() {
         Ok(tail) => {
             unsafe {
                 if let Some(tail) = tail {
@@ -71,7 +71,7 @@ pub extern fn ursa_cl_tail_free(tail: *const c_void) -> ErrorCode {
 
     check_useful_c_ptr!(tail, ErrorCode::CommonInvalidParam1);
 
-    let tail = unsafe { Box::from_raw(tail as *mut Tail); };
+    let tail = unsafe { Box::from_raw(tail as *mut Tail) };
     trace!("ursa_cl_tail_free: entity: tail: {:?}", tail);
 
     let res = ErrorCode::Success;
@@ -140,7 +140,7 @@ pub extern fn ursa_cl_witness_free(witness: *const c_void) -> ErrorCode {
 
     check_useful_c_ptr!(witness, ErrorCode::CommonInvalidParam1);
 
-    let witness = unsafe { Box::from_raw(witness as *mut Witness); };
+    let witness = unsafe { Box::from_raw(witness as *mut Witness) };
     trace!("ursa_cl_witness_free: entity: witness: {:?}", witness);
 
     let res = ErrorCode::Success;
@@ -251,7 +251,7 @@ pub extern fn ursa_cl_credential_schema_free(credential_schema: *const c_void) -
 
     check_useful_c_ptr!(credential_schema, ErrorCode::CommonInvalidParam1);
 
-    let credential_schema = unsafe { Box::from_raw(credential_schema as *mut CredentialSchema); };
+    let credential_schema = unsafe { Box::from_raw(credential_schema as *mut CredentialSchema) };
     trace!("ursa_cl_credential_schema_free: entity: credential_schema: {:?}", credential_schema);
 
     let res = ErrorCode::Success;
@@ -362,7 +362,7 @@ pub extern fn ursa_cl_non_credential_schema_free(non_credential_schema: *const c
 
     check_useful_c_ptr!(non_credential_schema, ErrorCode::CommonInvalidParam1);
 
-    let non_credential_schema = unsafe { Box::from_raw(non_credential_schema as *mut NonCredentialSchema); };
+    let non_credential_schema = unsafe { Box::from_raw(non_credential_schema as *mut NonCredentialSchema) };
     trace!("ursa_cl_non_credential_schema_free: entity: credential_schema: {:?}", non_credential_schema);
 
     let res = ErrorCode::Success;
@@ -536,7 +536,7 @@ pub extern fn ursa_cl_credential_values_free(credential_values: *const c_void) -
 
     check_useful_c_ptr!(credential_values, ErrorCode::CommonInvalidParam1);
 
-    let credential_values = unsafe { Box::from_raw(credential_values as *mut CredentialValues); };
+    let credential_values = unsafe { Box::from_raw(credential_values as *mut CredentialValues) };
     trace!("ursa_cl_credential_values_free: entity: credential_values: {:?}", credential_values);
 
     let res = ErrorCode::Success;
@@ -681,7 +681,7 @@ pub extern fn ursa_cl_sub_proof_request_free(sub_proof_request: *const c_void) -
 
     check_useful_c_ptr!(sub_proof_request, ErrorCode::CommonInvalidParam1);
 
-    let sub_proof_request = unsafe { Box::from_raw(sub_proof_request as *mut SubProofRequest); };
+    let sub_proof_request = unsafe { Box::from_raw(sub_proof_request as *mut SubProofRequest) };
     trace!("ursa_cl_sub_proof_request_free: entity: sub_proof_request: {:?}", sub_proof_request);
 
     let res = ErrorCode::Success;
@@ -793,7 +793,7 @@ pub extern fn ursa_cl_nonce_free(nonce: *const c_void) -> ErrorCode {
 
     check_useful_c_ptr!(nonce, ErrorCode::CommonInvalidParam1);
 
-    let nonce = unsafe { Box::from_raw(nonce as *mut Nonce); };
+    let nonce = unsafe { Box::from_raw(nonce as *mut Nonce) };
     trace!("ursa_cl_nonce_free: entity: nonce: {:?}", nonce);
 
     let res = ErrorCode::Success;

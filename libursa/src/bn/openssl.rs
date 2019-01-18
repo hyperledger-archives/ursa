@@ -401,7 +401,7 @@ impl BigNumber {
         Ok(qr)
     }
 
-    pub fn clone(&self) -> Result<BigNumber, UrsaCryptoError> {;
+    pub fn try_clone(&self) -> Result<BigNumber, UrsaCryptoError> {
         let mut openssl_bn = BigNum::from_slice(&self.openssl_bn.to_vec()[..])?;
         openssl_bn.set_negative(self.is_negative());
         Ok(BigNumber {
@@ -409,7 +409,7 @@ impl BigNumber {
         })
     }
 
-    pub fn hash_array(nums: &Vec<Vec<u8>>) -> Result<Vec<u8>, UrsaCryptoError> {
+    pub fn hash_array(nums: &[Vec<u8>]) -> Result<Vec<u8>, UrsaCryptoError> {
         let mut sha256 = Hasher::new(MessageDigest::sha256())?;
 
         for num in nums.iter() {
