@@ -197,18 +197,20 @@ impl BigNumber {
 
     pub fn mod_mul(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
         //TODO: Use montgomery reduction
-        let res = (&self.bn * &a.bn) % &n.bn;
-        Ok(BigNumber { bn: res })
+        self.mul(&a, None)?.modulus(&n, None)
     }
 
     pub fn mod_sub(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = (&self.bn - &a.bn) % &n.bn;
-        Ok(BigNumber { bn: res })
+        self.sub(&a)?.modulus(&n, None)
     }
 
     pub fn div(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = &self.bn / &a.bn;
-        Ok(BigNumber { bn: res })
+        if a.bn.is_zero() {
+            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+        } else {
+            let res = &self.bn / &a.bn;
+            Ok(BigNumber { bn: res })
+        }
     }
 
     pub fn add_word(&mut self, w: u32) -> Result<&mut BigNumber, UrsaCryptoError> {
@@ -232,19 +234,34 @@ impl BigNumber {
     }
 
     pub fn mod_exp(&self, a: &BigNumber, b: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+        if b.bn.is_one() {
+            return BigNumber::new();
+        }
+
         if a.is_negative() {
             let res = self.inverse(&b, _ctx)?;
             let a = a.set_negative(false)?;
-            Ok(BigNumber{ bn: res.bn.modpow(&a.bn, &b.bn) })
+            Ok(BigNumber{ bn: res.bn.modpow(&a.bn, &BigNumber::_get_modulus(&b.bn)) })
         } else {
-            let res = self.bn.modpow(&a.bn, &b.bn);
+            let res = self.bn.modpow(&a.bn, &BigNumber::_get_modulus(&b.bn));
             Ok(BigNumber { bn: res })
         }
     }
 
     pub fn modulus(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
-        let res = &self.bn % &a.bn;
+        if a.bn == BigInt::zero() {
+            return Err(UrsaCryptoError::InvalidStructure("Cannot have modulus==0".to_string()))
+        }
+        let res = &self.bn % &BigNumber::_get_modulus(&a.bn);
         Ok(BigNumber { bn: res })
+    }
+
+    fn _get_modulus(bn: &BigInt) -> BigInt {
+        if bn.is_positive() {
+            bn.clone()
+        } else {
+            -bn.clone()
+        }
     }
 
     pub fn exp(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
@@ -256,7 +273,7 @@ impl BigNumber {
 
         match a.bn.to_u64() {
             Some(num) => Ok(BigNumber { bn: self.bn.pow(num) }),
-            None => Err(UrsaCryptoError::InvalidStructure("'a' cannot be help in u64".to_string()))
+            None => Err(UrsaCryptoError::InvalidStructure("'a' cannot be u64".to_string()))
         }
     }
 
@@ -265,6 +282,7 @@ impl BigNumber {
            n.bn.is_zero() {
             return Err(UrsaCryptoError::InvalidStructure("Invalid modulus".to_string()))
         }
+        let n = BigNumber::_get_modulus(&n.bn);
 
         // Euclid's extended algorithm, Bèzout coefficient of `n` is not needed
         //n is either prime or coprime
@@ -281,7 +299,7 @@ impl BigNumber {
         //    return t
         //
         let (mut t, mut new_t) = (BigInt::zero(), BigInt::one());
-        let (mut r, mut new_r) = (n.bn.clone(), self.bn.clone());
+        let (mut r, mut new_r) = (n.clone(), self.bn.clone());
 
         while !new_r.is_zero() {
             let quotient = &r / &new_r;
@@ -300,7 +318,7 @@ impl BigNumber {
         if r > BigInt::one() {
             return Err(UrsaCryptoError::InvalidStructure("Not invertible".to_string()));
         } else if t < BigInt::zero() {
-            t += n.bn.clone()
+            t += n.clone()
         }
 
         Ok(BigNumber { bn: t })
@@ -335,15 +353,15 @@ impl BigNumber {
         Ok(BigNumber { bn: &self.bn >> 1 })
     }
 
-    pub fn rshift(&self, n: i32) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn rshift(&self, n: u32) -> Result<BigNumber, UrsaCryptoError> {
         let n = n as usize;
         Ok(BigNumber { bn: &self.bn >> n })
     }
 
     pub fn mod_div(&self, b: &BigNumber, p: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
         //(a * (1/b mod p) mod p)
-        let res = (&self.bn * b.inverse(p, _ctx)?.bn) % &p.bn;
-        Ok(BigNumber { bn: res })
+        self.mul(&b.inverse(&p, None)?, None)?
+            .modulus(&p, None)
     }
 
     pub fn random_qr(n: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
@@ -562,6 +580,34 @@ mod tests {
         let exp = BigNumber::from_u32(5).unwrap().set_negative(true).unwrap();
         let modulus = BigNumber::from_u32(13).unwrap();
         assert_eq!(BigNumber::from_u32(7).unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+
+        let modulus = BigNumber::from_u32(1).unwrap();
+        assert_eq!(BigNumber::new().unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+
+        let modulus = BigNumber::from_u32(0).unwrap();
+        assert!(base.mod_exp(&exp, &modulus, None).is_err());
+
+        let modulus = BigNumber::from_u32(1).unwrap().set_negative(true).unwrap();
+        assert_eq!(BigNumber::new().unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+
+        let modulus = BigNumber::from_u32(5).unwrap().set_negative(true).unwrap();
+        assert_eq!(BigNumber::from_u32(1).unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+    }
+
+    #[test]
+    fn modulus_works() {
+        let base = BigNumber::from_u32(6).unwrap();
+        assert!(base.modulus(&BigNumber::new().unwrap(), None).is_err());
+
+        for (modulus, expected) in [
+            (BigNumber::from_u32(1).unwrap(), BigNumber::new().unwrap()),
+            (BigNumber::from_u32(1).unwrap().set_negative(true).unwrap(), BigNumber::new().unwrap()),
+            (BigNumber::from_u32(2).unwrap(), BigNumber::new().unwrap()),
+            (BigNumber::from_u32(2).unwrap().set_negative(true).unwrap(), BigNumber::new().unwrap()),
+            (BigNumber::from_u32(5).unwrap(), BigNumber::from_u32(1).unwrap()),
+            (BigNumber::from_u32(5).unwrap().set_negative(true).unwrap(), BigNumber::from_u32(1).unwrap())].iter() {
+            assert_eq!(*expected, base.modulus(&modulus, None).unwrap());
+        }
     }
 
     #[test]
