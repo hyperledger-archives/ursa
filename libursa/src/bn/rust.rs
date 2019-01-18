@@ -25,6 +25,15 @@ pub struct BigNumber {
     bn: BigInt
 }
 
+macro_rules! prime_generation {
+    ($f:ident, $size:ident, $msg:expr) => {
+        match $f::new($size)?.to_bigint() {
+            Some(bn) => Ok(BigNumber { bn }),
+            None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+        }
+    };
+}
+
 impl BigNumber {
     pub fn new_context() -> Result<BigNumberContext, UrsaCryptoError> {
         Ok(BigNumberContext{})
@@ -37,17 +46,11 @@ impl BigNumber {
     }
 
     pub fn generate_prime(size: usize) -> Result<BigNumber, UrsaCryptoError> {
-        match prime::new(size)?.to_bigint() {
-            Some(bn) => Ok(BigNumber { bn }),
-            None => Err(UrsaCryptoError::InvalidStructure("Unable to generate prime".to_string()))
-        }
+        prime_generation!(prime, size, "Unable to generate prime")
     }
 
     pub fn generate_safe_prime(size: usize) -> Result<BigNumber, UrsaCryptoError> {
-        match safe_prime::new(size)?.to_bigint() {
-            Some(bn) => Ok(BigNumber { bn }),
-            None => Err(UrsaCryptoError::InvalidStructure("Unable to generate safe prime".to_string()))
-        }
+        prime_generation!(safe_prime, size, "Unable to generate safe prime")
     }
 
     pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
@@ -246,7 +249,7 @@ impl BigNumber {
         if self.bn.bits() == 0 {
             return Ok(BigNumber::default())
         } else if a.bn.is_one() {
-            return Ok(self.clone()?)
+            return Ok(self.try_clone()?)
         }
 
         match a.bn.to_u64() {
@@ -349,13 +352,13 @@ impl BigNumber {
         Ok(qr)
     }
 
-    pub fn clone(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn try_clone(&self) -> Result<BigNumber, UrsaCryptoError> {
         Ok(BigNumber {
             bn: self.bn.clone()
         })
     }
 
-    pub fn hash_array(nums: &Vec<Vec<u8>>) -> Result<Vec<u8>, UrsaCryptoError> {
+    pub fn hash_array(nums: &[Vec<u8>]) -> Result<Vec<u8>, UrsaCryptoError> {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
