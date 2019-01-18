@@ -98,7 +98,7 @@ impl BigNumber {
     }
 
     pub fn is_safe_prime(&self, _ctx: Option<&mut BigNumberContext>) -> Result<bool, UrsaCryptoError> {
-        if self.bn < BigInt::zero() {
+        if self.is_negative() {
             Ok(false)
         } else {
             match self.bn.to_biguint() {
