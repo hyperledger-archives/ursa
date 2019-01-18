@@ -34,6 +34,19 @@ macro_rules! prime_generation {
     };
 }
 
+macro_rules! prime_check {
+    ($f:ident, $value:expr, $msg:expr) => {
+        if $value.is_negative() {
+            Ok(false)
+        } else {
+            match $value.bn.to_biguint() {
+                Some(bn) => Ok($f::check(&bn)),
+                None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+            }
+        }
+    };
+}
+
 impl BigNumber {
     pub fn new_context() -> Result<BigNumberContext, UrsaCryptoError> {
         Ok(BigNumberContext{})
@@ -57,21 +70,24 @@ impl BigNumber {
         let mut res;
         let mut iteration = 0;
         let mut rng = OsRng::new()?;
-        let start = match start.bn.to_biguint() {
+        let mut start = match start.bn.to_biguint() {
             Some(bn) => bn,
             None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'start': {:?}", start)))
         };
-        let end = match end.bn.to_biguint() {
+        let mut end = match end.bn.to_biguint() {
             Some(bn) => bn,
             None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'end': {:?}", end)))
         };
 
-        let bits = (&end -  &start).bits();
-        let mask = (BigUint::from(3u8) << (bits - 2)) | BigUint::one();
+        if start > end {
+            let temp = start;
+            start = end.clone();
+            end = temp;
+        }
 
         loop {
             res = rng.gen_biguint_range(&start, &end);
-            res |= &mask;
+            res |= BigUint::one();
 
             if prime::check(&res) {
                 debug!("Found prime in {} iteration", iteration);
@@ -87,25 +103,11 @@ impl BigNumber {
     }
 
     pub fn is_prime(&self, _ctx: Option<&mut BigNumberContext>) -> Result<bool, UrsaCryptoError> {
-        if self.is_negative() {
-            Ok(false)
-        } else {
-            match self.bn.to_biguint() {
-                Some(bn) => Ok(prime::check(&bn)),
-                None => Err(UrsaCryptoError::InvalidStructure("An error in is_prime".to_string()))
-            }
-        }
+        prime_check!(prime, self, "An error in is_prime")
     }
 
     pub fn is_safe_prime(&self, _ctx: Option<&mut BigNumberContext>) -> Result<bool, UrsaCryptoError> {
-        if self.is_negative() {
-            Ok(false)
-        } else {
-            match self.bn.to_biguint() {
-                Some(bn) => Ok(safe_prime::check(&bn)),
-                None => Err(UrsaCryptoError::InvalidStructure("An error in is_safe_prime".to_string()))
-            }
-        }
+        prime_check!(safe_prime, self, "An error in is_safe_prime")
     }
 
     pub fn rand(size: usize) -> Result<BigNumber, UrsaCryptoError> {
@@ -514,10 +516,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore] //TODO check
     fn generate_prime_in_range_works() {
-        let start = BigNumber::rand(RANGE_LEFT).unwrap();
-        let end = BigNumber::rand(RANGE_RIGHT).unwrap();
+        let mut start = BigNumber::rand(RANGE_LEFT).unwrap();
+        let mut end = BigNumber::rand(RANGE_RIGHT).unwrap();
+        if start > end {
+            let temp = start;
+            start = end.try_clone().unwrap();
+            end = temp;
+        }
         let random_prime = BigNumber::generate_prime_in_range(&start, &end).unwrap();
         assert!(start < random_prime);
         assert!(end > random_prime);
@@ -559,19 +565,24 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn is_safe_prime_works() {
-        let prime1 = BigNumber::generate_safe_prime(256).unwrap();
-        let prime2 = BigNumber::generate_safe_prime(1024).unwrap();
-        assert!(prime1.is_safe_prime(None).unwrap());
-        assert!(prime2.is_safe_prime(None).unwrap());
-    }
+        let tests =
+            [("18088387217903330459", 6),
+             ("33376463607021642560387296949", 6),
+             ("170141183460469231731687303717167733089", 6),
+             ("113910913923300788319699387848674650656041243163866388656000063249848353322899", 5),
+             ("1675975991242824637446753124775730765934920727574049172215445180465220503759193372100234287270862928461253982273310756356719235351493321243304213304923049", 5),
+             ("153739637779647327330155094463476939112913405723627932550795546376536722298275674187199768137486929460478138431076223176750734095693166283451594721829574797878338183845296809008576378039501400850628591798770214582527154641716248943964626446190042367043984306973709604255015629102866732543697075866901827761489", 4),
+             ("66295144163396665403376179086308918015255210762161712943347745256800426733181435998953954369657699924569095498869393378860769817738689910466139513014839505675023358799693196331874626976637176000078613744447569887988972970496824235261568439949705345174465781244618912962800788579976795988724553365066910412859", 4),
+             ("820487282547358769999412885360222660576380474310550379805815205126382064582513754977028835433175916179747652683836060304824653681337501863788890799590780972441917586297563543467703579662178567005653571376063099400019232223632330329795684409261771589617763237736441493626109590280374575246142877096898790823019919184975618595550451798334727636308466158736200343427240101972133364701056380402654685095871114841124384154429149515486150114363963276777169261541633795383304623350867534398592252716751849685025134858878838140569141018718631392957748884293332928915134136215143014948055229407749052752101848315855158944468016884298587263993258236848884932980148243876982276799403077114631798358541555605636220846630743269407933148520394657959774584499003246457264189421332913812855364345248054990102801114399784993674416044569272611209733832017619177693894139979496122025481552572188051013282143916147122297298055829333928425354847295988683286038218946776211988871738419664461787066106418386242958463113678229760398832001107060788455379133616893701874144525350368407189299943856497368730891887657349819575057553523442357336804219224754445704270452590146111445528895773014533306318524971435831504890959063653868338360441906137639730716820611", 2)];
 
-    #[test]
-    #[ignore] //TODO Expensive test, only run to generate public params
-    fn is_safe_prime_works_for_large_prime() {
-        let prime = BigNumber::generate_safe_prime(4096).unwrap();
-        assert!(prime.is_safe_prime(None).unwrap());
+        for (p, chain) in tests.iter() {
+            let mut prime = BigNumber::from_dec(*p).unwrap();
+            for _ in 1..*chain {
+                prime = prime.lshift1().unwrap().increment().unwrap();
+                assert!(prime.is_safe_prime(None).unwrap());
+            }
+        }
     }
 
     #[test]
