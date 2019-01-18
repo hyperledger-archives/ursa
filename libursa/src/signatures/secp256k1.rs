@@ -224,9 +224,9 @@ mod ecdsa_secp256k1sha256 {
         }
     }
 
-    const HALF_CURVE_ORDER: [u32; 8] = [0x681B20A0, 0xDFE92F46, 0x57A4501D, 0x5D576E73, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF];
+    const HALF_CURVE_ORDER: [u32; 8] = [0x681B_20A0, 0xDFE9_2F46, 0x57A4_501D, 0x5D57_6E73, 0xFFFF_FFFF, 0xFFFF_FFFF, 0xFFFF_FFFF, 0x7FFF_FFFF];
     const CURVE_C: [u32; 5] = [!HALF_CURVE_ORDER[0] + 1, !HALF_CURVE_ORDER[1], !HALF_CURVE_ORDER[2], !HALF_CURVE_ORDER[3], 1u32];
-    const CURVE_ORDER: [u32; 8] = [0xD0364141, 0xBFD25E8C, 0xAF48A03B, 0xBAAEDCE6, 0xFFFFFFFE, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF];
+    const CURVE_ORDER: [u32; 8] = [0xD036_4141, 0xBFD2_5E8C, 0xAF48_A03B, 0xBAAE_DCE6, 0xFFFF_FFFE, 0xFFFF_FFFF, 0xFFFF_FFFF, 0xFFFF_FFFF];
 
     /// Convert a little-endian byte array to 8 32 bit numbers
     fn set_b32(s: &[u8; 32]) -> [u32; 8] {
@@ -247,12 +247,10 @@ mod ecdsa_secp256k1sha256 {
     }
 
     fn get_u32(n: &[u8]) -> u32 {
-        let mut res = 0u32;
-        for i in 0..4 {
-            res <<= 8;
-            res |= n[i] as u32;
-        }
-        res
+        u32::from(n[0]) << 24 |
+        u32::from(n[1]) << 16 |
+        u32::from(n[2]) << 8  |
+        u32::from(n[3])
     }
 
     /// Convert 8 32 bit numbers array to a little-endian byte array.
@@ -291,13 +289,13 @@ mod ecdsa_secp256k1sha256 {
     }
 
     fn negate(s: &mut [u32; 8]) {
-        let nonzero = if is_zero(s) { 0u64 } else { 0xFFFFFFFFu64 };
-        let mut t = (!s[0]) as u64 + (CURVE_ORDER[0] + 1) as u64;
+        let nonzero = if is_zero(s) { 0u64 } else { 0xFFFF_FFFFu64 };
+        let mut t = u64::from(!s[0]) + u64::from(CURVE_ORDER[0] + 1);
 
         for i in 0..7 {
             s[i] = (t & nonzero) as u32;
             t >>= 32;
-            t += (!s[i + 1]) as u64 + CURVE_ORDER[i + 1] as u64;
+            t += u64::from(!s[i + 1]) + u64::from(CURVE_ORDER[i + 1]);
         }
         s[7] = (t & nonzero) as u32;
     }
@@ -325,19 +323,21 @@ mod ecdsa_secp256k1sha256 {
         let mut t = 0u64;
 
         for i in 0..5 {
-            t += (s[i] as u64) + o * (CURVE_C[i] as u64);
-            s[i] = (t & 0xFFFFFFFF) as u32;
+            t += u64::from(s[i]) + o * u64::from(CURVE_C[i]);
+            s[i] = (t & 0xFFFF_FFFF) as u32;
             t >>= 32;
         }
 
-        for i in 5..7 {
-            t += s[i] as u64;
-            s[i] = (t & 0xFFFFFFFF) as u32;
-            t >>= 32;
-        }
+        t += u64::from(s[5]);
+        s[5] = (t & 0xFFFF_FFFF) as u32;
+        t >>= 32;
 
-        t += s[7] as u64;
-        s[7] = (t & 0xFFFFFFFF) as u32;
+        t += u64::from(s[6]);
+        s[6] = (t & 0xFFFF_FFFF) as u32;
+        t >>= 32;
+
+        t += u64::from(s[7]);
+        s[7] = (t & 0xFFFF_FFFF) as u32;
     }
 }
 
