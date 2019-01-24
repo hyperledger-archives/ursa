@@ -1188,6 +1188,78 @@ mod test {
     use self::issuer::Issuer;
     use self::prover::Prover;
     use self::verifier::Verifier;
+
+    #[test]
+    fn credential_with_negative_attribute_and_empty_proof_works() {
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("height").unwrap();
+        let credential_schema = credential_schema_builder.finalize().unwrap();
+
+        let non_credential_schema_builder = NonCredentialSchemaBuilder::new().unwrap();
+        let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
+
+        let credential_nonce = new_nonce().unwrap();
+
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_dec_known("height", "-1").unwrap();
+        let cred_values = credential_values_builder.finalize().unwrap();
+
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&cred_pub_key,
+                                             &cred_key_correctness_proof,
+                                             &cred_values,
+                                             &credential_nonce).unwrap();
+
+
+
+        let cred_issuance_nonce = new_nonce().unwrap();
+
+        let (mut cred_signature, signature_correctness_proof) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                        &blinded_credential_secrets,
+                                                                                        &blinded_credential_secrets_correctness_proof,
+                                                                                        &credential_nonce,
+                                                                                        &cred_issuance_nonce,
+                                                                                        &cred_values,
+                                                                                        &cred_pub_key,
+                                                                                        &cred_priv_key).unwrap();
+
+        Prover::process_credential_signature(&mut cred_signature,
+                                             &cred_values,
+                                             &signature_correctness_proof,
+                                             &credential_secrets_blinding_factors,
+                                             &cred_pub_key,
+                                             &cred_issuance_nonce,
+                                             None,
+                                             None,
+                                             None).unwrap();
+
+        let sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request(&sub_proof_request,
+                                            &credential_schema,
+                                            &non_credential_schema,
+                                            &cred_signature,
+                                            &cred_values,
+                                            &cred_pub_key,
+                                            None,
+                                            None).unwrap();
+
+        let proof_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proof_request_nonce).unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
+                                             &credential_schema,
+                                             &non_credential_schema,
+                                             &cred_pub_key,
+                                             None,
+                                             None).unwrap();
+        assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
+    }
     
     #[test]
     fn multiple_predicates() {
