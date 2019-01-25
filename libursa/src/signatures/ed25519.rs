@@ -30,6 +30,7 @@ impl SignatureScheme for Ed25519Sha512 {
 mod ed25519_sha2_512 {
     use super::*;
     use libsodium_ffi as ffi;
+    use std::ptr;
 
     use rand_chacha::ChaChaRng;
     use rand::{RngCore, SeedableRng};
@@ -80,7 +81,7 @@ mod ed25519_sha2_512 {
             let mut signature = [0u8; ffi::crypto_sign_ed25519_BYTES];
             let res = unsafe {
                 ffi::crypto_sign_ed25519_detached(signature.as_mut_ptr() as *mut u8,
-                                                  0u64 as *mut u64,
+                                                  ptr::null_mut(),
                                                   message.as_ptr() as *const u8,
                                                   message.len() as u64,
                                                   sk.as_ptr() as *const u8)

@@ -25,7 +25,7 @@ impl Generator {
     pub fn new() -> Result<Generator, UrsaCryptoError> {
         let point = PointG2::new()?;
         Ok(Generator {
-            point: point,
+            point,
             bytes: point.to_bytes()?
         })
     }
@@ -87,7 +87,7 @@ impl SignKey {
         };
 
         Ok(SignKey {
-            group_order_element: group_order_element,
+            group_order_element,
             bytes: group_order_element.to_bytes()?
         })
     }
@@ -144,7 +144,7 @@ impl VerKey {
         let point = gen.point.mul(&sign_key.group_order_element)?;
 
         Ok(VerKey {
-            point: point,
+            point,
             bytes: point.to_bytes()?
         })
     }
@@ -207,7 +207,7 @@ impl ProofOfPossession {
         let point = Bls::_gen_signature(&ver_key.bytes, sign_key, Keccak256::default())?;
 
         Ok(ProofOfPossession {
-            point: point,
+            point,
             bytes: point.to_bytes()?
         })
     }
@@ -344,7 +344,7 @@ impl MultiSignature {
         let point = PointG1::from_bytes(bytes)?;
         Ok(
             MultiSignature {
-                point: point,
+                point,
                 bytes: bytes.to_vec()
             }
         )

@@ -112,7 +112,7 @@ pub extern fn ursa_cl_master_secret_free(master_secret: *const c_void) -> ErrorC
 
     check_useful_c_ptr!(master_secret, ErrorCode::CommonInvalidParam1);
 
-    let master_secret = unsafe { Box::from_raw(master_secret as *mut MasterSecret); };
+    let master_secret = unsafe { Box::from_raw(master_secret as *mut MasterSecret) };
     trace!("ursa_cl_master_secret_free: entity: master_secret: {:?}", master_secret);
 
     let res = ErrorCode::Success;
@@ -289,7 +289,7 @@ pub extern fn ursa_cl_blinded_credential_secrets_free(blinded_credential_secrets
 
     check_useful_c_ptr!(blinded_credential_secrets, ErrorCode::CommonInvalidParam1);
 
-    let blinded_credential_secrets = unsafe { Box::from_raw(blinded_credential_secrets as *mut BlindedCredentialSecrets); };
+    let blinded_credential_secrets = unsafe { Box::from_raw(blinded_credential_secrets as *mut BlindedCredentialSecrets) };
     trace!("ursa_cl_blinded_credential_secrets_free: entity: blinded_credential_secrets: {:?}", blinded_credential_secrets);
 
     let res = ErrorCode::Success;
@@ -376,7 +376,7 @@ pub extern fn ursa_cl_credential_secrets_blinding_factors_free(credential_secret
 
     check_useful_c_ptr!(credential_secrets_blinding_factors, ErrorCode::CommonInvalidParam1);
 
-    let credential_secrets_blinding_factors = unsafe { Box::from_raw(credential_secrets_blinding_factors as *mut CredentialSecretsBlindingFactors); };
+    let credential_secrets_blinding_factors = unsafe { Box::from_raw(credential_secrets_blinding_factors as *mut CredentialSecretsBlindingFactors) };
     trace!("ursa_cl_credential_secrets_blinding_factors_free: entity: credential_secrets_blinding_factors: {:?}", credential_secrets_blinding_factors);
 
     let res = ErrorCode::Success;
@@ -470,7 +470,7 @@ pub extern fn ursa_cl_blinded_credential_secrets_correctness_proof_free(blinded_
 
     check_useful_c_ptr!(blinded_credential_secrets_correctness_proof, ErrorCode::CommonInvalidParam1);
 
-    let blinded_credential_secrets_correctness_proof = unsafe { Box::from_raw(blinded_credential_secrets_correctness_proof as *mut BlindedCredentialSecretsCorrectnessProof); };
+    let blinded_credential_secrets_correctness_proof = unsafe { Box::from_raw(blinded_credential_secrets_correctness_proof as *mut BlindedCredentialSecretsCorrectnessProof) };
     trace!("ursa_cl_blinded_credential_secrets_correctness_proof_free: entity: blinded_credential_secrets_correctness_proof: {:?}", blinded_credential_secrets_correctness_proof);
 
     let res = ErrorCode::Success;
@@ -818,7 +818,7 @@ pub extern fn ursa_cl_proof_free(proof: *const c_void) -> ErrorCode {
 
     check_useful_c_ptr!(proof, ErrorCode::CommonInvalidParam1);
 
-    let proof = unsafe { Box::from_raw(proof as *mut Proof); };
+    let proof = unsafe { Box::from_raw(proof as *mut Proof) };
     trace!("ursa_cl_proof_free: entity: proof: {:?}", proof);
 
     let res = ErrorCode::Success;

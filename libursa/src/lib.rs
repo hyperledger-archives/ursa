@@ -1,3 +1,9 @@
+#[deny(warnings,
+       unused_qualifications,
+       unused_import_braces,
+       trivial_casts,
+       trivial_numeric_casts)]
+
 #[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
 #[cfg(feature = "wasm")]
@@ -49,11 +55,20 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_json;
 
-#[cfg(feature = "bn_openssl")]
+#[cfg(any(test, feature = "bn_openssl"))]
 extern crate openssl;
 
-#[cfg(feature = "bn_openssl")]
+#[cfg(any(feature = "bn_openssl", feature = "bn_rust"))]
 extern crate int_traits;
+
+#[cfg(feature = "bn_rust")]
+extern crate num_bigint;
+#[cfg(feature = "bn_rust")]
+extern crate glass_pumpkin;
+#[cfg(feature = "bn_rust")]
+extern crate num_integer;
+#[cfg(feature = "bn_rust")]
+extern crate num_traits;
 
 extern crate time;
 
@@ -68,8 +83,13 @@ pub mod bls;
 #[path = "bn/openssl.rs"]
 pub mod bn;
 
+#[cfg(feature = "bn_rust")]
+#[path = "bn/rust.rs"]
+pub mod bn;
+
 pub mod errors;
 #[cfg(feature = "ffi")]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub mod ffi;
 
 #[cfg(feature = "pair_amcl")]
@@ -83,6 +103,7 @@ pub mod hash;
 pub mod keys;
 pub mod signatures;
 pub mod encoding;
+
 #[derive(Debug)]
 pub enum CryptoError {
     /// Returned when trying to create an algorithm which does not exist.
@@ -96,6 +117,18 @@ pub enum CryptoError {
     KeyGenError(String),
     /// Returned when an error occurs during digest generation
     DigestGenError(String)
+}
+
+impl std::fmt::Display for CryptoError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            CryptoError::NoSuchAlgorithm(s) => write!(f, "NoSuchAlgorithm({})", s),
+            CryptoError::ParseError(s) => write!(f, "ParseError({})", s),
+            CryptoError::SigningError(s) => write!(f, "SigningError({})", s),
+            CryptoError::KeyGenError(s) => write!(f, "KeyGenError({})", s),
+            CryptoError::DigestGenError(s) => write!(f, "DigestGenError({})", s)
+        }
+    }
 }
 
 #[cfg(feature = "native")]
