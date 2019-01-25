@@ -12,9 +12,9 @@ use utils::random::random_big_number;
 const SETUP_SEED_G1: &'static str = "Hyperledger-Cryptolib-Pedersen-Commitment-BLS-12-381-G1";
 const GROUP_G1_SIZE: usize = 2 * MODBYTES + 1;
 
-struct Pedersencommitmentbls12_381Sha256G1 {}
+struct PedersenCommitmentBls12381Sha256G1 {}
 
-impl CommitmentScheme for PedersenCommitmentBLS12_381_SHA256_G1 {
+impl CommitmentScheme for PedersenCommitmentBls12381Sha256G1 {
     // Returns `num_elements` + 1 generators. This is useful when committing to several messages say
     // m_1, m_2, m_3, and so on. `setup` will this output g_1, g_2, g_3, g_4 and so on which can then be
     // used for commitment f(g_1, g_2, g_3, g_4, ..., m_1, m_2, m_3...)
@@ -82,7 +82,7 @@ impl CommitmentScheme for PedersenCommitmentBLS12_381_SHA256_G1 {
     }
 }
 
-impl PedersenCommitmentBLS12_381_SHA256_G1 {
+impl PedersenCommitmentBls12381Sha256G1 {
     // Check that there are enough generators for messages
     fn verify_generator_message_count(generators: &[&[u8]], messages: &[&[u8]]) -> Result<(), CommitmentError> {
         if messages.len() < 1 {
@@ -148,10 +148,10 @@ mod tests {
 
     #[test]
     fn test_setup() {
-        assert!(PedersenCommitmentBLS12_381_SHA256_G1::setup(0).is_err());
+        assert!(PedersenCommitmentBls12381Sha256G1::setup(0).is_err());
 
         for l in vec![1, 2, 3, 10, 100] {
-            let result = PedersenCommitmentBLS12_381_SHA256_G1::setup(l).unwrap();
+            let result = PedersenCommitmentBls12381Sha256G1::setup(l).unwrap();
             assert_eq!(result.len(), l+1);
 
             let mut gens: HashSet<Vec<u8>> = HashSet::new();
@@ -173,35 +173,35 @@ mod tests {
 
     #[test]
     fn test_commit() {
-        let gens_1 = PedersenCommitmentBLS12_381_SHA256_G1::setup(1).unwrap();
+        let gens_1 = PedersenCommitmentBls12381Sha256G1::setup(1).unwrap();
         let gens_1: Vec<&[u8]> = gens_1.iter().map(|g|g.as_slice()).collect();
         let msgs_1 = vec!["hello".as_bytes(), "world".as_bytes()];
 
         // No messages
-        assert!(PedersenCommitmentBLS12_381_SHA256_G1::commit(&gens_1,
-                                                              &vec![]).is_err());
+        assert!(PedersenCommitmentBls12381Sha256G1::commit(&gens_1,
+                                                           &vec![]).is_err());
         // Insufficient number of generators
-        assert!(PedersenCommitmentBLS12_381_SHA256_G1::commit(&gens_1,
-                                                              &msgs_1).is_err());
+        assert!(PedersenCommitmentBls12381Sha256G1::commit(&gens_1,
+                                                           &msgs_1).is_err());
 
         // Extra bytes in one of the generator
-        let mut gens_2 = PedersenCommitmentBLS12_381_SHA256_G1::setup(1).unwrap();
+        let mut gens_2 = PedersenCommitmentBls12381Sha256G1::setup(1).unwrap();
         let mut v = gens_2[1].clone();
         v.push(8);
         gens_2[1] = v;
         let msgs_2 = vec!["hello world".as_bytes()];
         let gens_2: Vec<&[u8]> = gens_2.iter().map(|g|g.as_slice()).collect();
-        assert!(PedersenCommitmentBLS12_381_SHA256_G1::commit(&gens_2,
-                                                              &msgs_2).is_err());
+        assert!(PedersenCommitmentBls12381Sha256G1::commit(&gens_2,
+                                                           &msgs_2).is_err());
 
         let msgs = vec!["hello world", "going to die now", "i am dead"];
 
         for i in 0..msgs.len() {
-            let gens = PedersenCommitmentBLS12_381_SHA256_G1::setup(i+1).unwrap();
+            let gens = PedersenCommitmentBls12381Sha256G1::setup(i+1).unwrap();
             let gens: Vec<&[u8]> = gens.iter().map(|g|g.as_slice()).collect();
             let m: Vec<&[u8]> = msgs.iter().take(i+1).map(|msg| msg.as_bytes()).collect();
-            let (c, b) = PedersenCommitmentBLS12_381_SHA256_G1::commit(&gens,
-                                                                       &m).unwrap();
+            let (c, b) = PedersenCommitmentBls12381Sha256G1::commit(&gens,
+                                                                    &m).unwrap();
             check_g1_elem_length(&c);
             check_bignum_elem_length(&b);
         }
@@ -218,35 +218,35 @@ mod tests {
         let m_err: Vec<&[u8]> = msg_list_producing_error.iter().map(|msg| msg.as_bytes()).collect();
 
         for i in 0..msgs.len() {
-            let gens_ = PedersenCommitmentBLS12_381_SHA256_G1::setup(i+1).unwrap();
+            let gens_ = PedersenCommitmentBls12381Sha256G1::setup(i+1).unwrap();
             let gens: Vec<&[u8]> = gens_.iter().map(|g|g.as_slice()).collect();
             let m: Vec<&[u8]> = msgs.iter().take(i+1).map(|msg| msg.as_bytes()).collect();
-            let (mut c, mut b) = PedersenCommitmentBLS12_381_SHA256_G1::commit(&gens,
-                                                                       &m).unwrap();
+            let (mut c, mut b) = PedersenCommitmentBls12381Sha256G1::commit(&gens,
+                                                                            &m).unwrap();
             check_g1_elem_length(&c);
             check_bignum_elem_length(&b);
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c, &b, &gens, &m).unwrap());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c, &b, &gens, &m).unwrap());
 
             // No messages
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c, &b, &gens, &vec![]).is_err());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c, &b, &gens, &vec![]).is_err());
 
             // Insufficient number of generators
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c, &b, &gens, &m_err).is_err());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c, &b, &gens, &m_err).is_err());
 
             // Extra bytes in one of the commitment
             let mut c_1 = c.clone();
             c_1.push(10);
 
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c_1, &b, &gens, &m).is_err());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c_1, &b, &gens, &m).is_err());
 
             // Extra bytes in one of the opening
             let mut b_1 = b.clone();
             b_1.push(11);
 
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c, &b_1, &gens, &m).is_err());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c, &b_1, &gens, &m).is_err());
 
             // Extra bytes in one of the commitment and opening
-            assert!(PedersenCommitmentBLS12_381_SHA256_G1::verify(&c_1, &b_1, &gens, &m).is_err());
+            assert!(PedersenCommitmentBls12381Sha256G1::verify(&c_1, &b_1, &gens, &m).is_err());
         }
     }
 }
