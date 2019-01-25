@@ -11,18 +11,18 @@ const GROUP1_DOMAIN_SEP: u8 = 1;
 const GROUP2_DOMAIN_SEP: u8 = 2;
 
 
-pub struct BLS12_381_SHA256_G1 {
+pub struct Bls12381Sha256G1 {
     msg: Vec<u8>,
     digest: [u8; MODBYTES]
 }
 
-impl HashFunction for BLS12_381_SHA256_G1 {
+impl HashFunction for Bls12381Sha256G1 {
     fn new(args: Option<HashMap<String, &[u8]>>) -> Result<Self, HashError> {
         if args.is_some() {
             return Err(HashError::InvalidArgs(String::from("Does not expect any args")))
         }
 
-        Ok(BLS12_381_SHA256_G1 {
+        Ok(Bls12381Sha256G1 {
             msg: vec![],
             digest: [0; MODBYTES],
         })
@@ -37,32 +37,32 @@ impl HashFunction for BLS12_381_SHA256_G1 {
     }
 
     fn digest(&self, length: Option<usize>) -> Result<Vec<u8>, HashError> {
-        let mut hash_point = self.hash_on_group();
+        let hash_point = self.hash_on_group();
         let mut digest_bytes: [u8; 2*MODBYTES+1] = [0; 2*MODBYTES+1];
         hash_point.tobytes(&mut digest_bytes, false);
         return_digest(&digest_bytes, length)
     }
 }
 
-impl BLS12_381_SHA256_G1 {
+impl Bls12381Sha256G1 {
     // Map the digest to group G1
     pub fn hash_on_group(&self) -> ECP {
         ECP::mapit(&self.digest)
     }
 }
 
-pub struct BLS12_381_SHA256_G2 {
+pub struct Bls12381Sha256G2 {
     msg: Vec<u8>,
     digest: [u8; MODBYTES]
 }
 
-impl HashFunction for BLS12_381_SHA256_G2 {
+impl HashFunction for Bls12381Sha256G2 {
     fn new(args: Option<HashMap<String, &[u8]>>) -> Result<Self, HashError> {
         if args.is_some() {
             return Err(HashError::InvalidArgs(String::from("Does not expect any args")))
         }
 
-        Ok(BLS12_381_SHA256_G2 {
+        Ok(Bls12381Sha256G2 {
             msg: vec![],
             digest: [0; MODBYTES],
         })
@@ -77,14 +77,14 @@ impl HashFunction for BLS12_381_SHA256_G2 {
     }
 
     fn digest(&self, length: Option<usize>) -> Result<Vec<u8>, HashError> {
-        let mut hash_point = self.hash_on_group();
+        let hash_point = self.hash_on_group();
         let mut digest_bytes: [u8; 4*MODBYTES] = [0; 4*MODBYTES];
         hash_point.tobytes(&mut digest_bytes);
         return_digest(&digest_bytes, length)
     }
 }
 
-impl BLS12_381_SHA256_G2 {
+impl Bls12381Sha256G2 {
     // Map the digest to group G2
     pub fn hash_on_group(&self) -> ECP2 {
         ECP2::mapit(&self.digest)
@@ -175,7 +175,7 @@ mod test {
     #[test]
     fn test_msg_digest() {
         let hm: HashMap<String, &[u8]> = HashMap::new();
-        let hf = BLS12_381_SHA256_G1::new(Some(hm));
+        let hf = Bls12381Sha256G1::new(Some(hm));
         assert!(hf.is_err());
 
         digest_test!(BLS12_381_SHA256_G1, 2*MODBYTES+1);

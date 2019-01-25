@@ -1,5 +1,3 @@
-use rand::rngs::EntropyRng;
-
 use amcl::bls381::ecp::ECP;
 use amcl::bls381::big::{BIG, MODBYTES};
 use amcl::bls381::rom::CURVE_ORDER;
@@ -14,7 +12,7 @@ use utils::random::random_big_number;
 const SETUP_SEED_G1: &'static str = "Hyperledger-Cryptolib-Pedersen-Commitment-BLS-12-381-G1";
 const GROUP_G1_SIZE: usize = 2 * MODBYTES + 1;
 
-struct PedersenCommitmentBLS12_381_SHA256_G1 {}
+struct Pedersencommitmentbls12_381Sha256G1 {}
 
 impl CommitmentScheme for PedersenCommitmentBLS12_381_SHA256_G1 {
     // Returns `num_elements` + 1 generators. This is useful when committing to several messages say

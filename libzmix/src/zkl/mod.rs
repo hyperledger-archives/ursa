@@ -3,7 +3,7 @@ pub mod spec;
 pub struct Parser {}
 
 impl Parser {
-    pub fn parse(proof_spec: &spec::ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
+    pub fn parse(_proof_spec: &spec::ProofSpec, _witness: &Witness) -> Result<Proof, ZKLError> {
         unimplemented!();
     }
 }
@@ -21,7 +21,7 @@ impl WitnessBuilder {
 pub struct Proof {}
 
 impl Proof {
-    pub fn verify(&self, proof_spec: &spec::ProofSpec) -> Result<bool, ZKLError> {
+    pub fn verify(&self, _proof_spec: &spec::ProofSpec) -> Result<bool, ZKLError> {
         unimplemented!();
     }
 }
