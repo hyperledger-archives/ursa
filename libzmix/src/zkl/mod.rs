@@ -4,7 +4,7 @@ pub struct Parser {}
 
 #[allow(unused_variables)]
 impl Parser {
-    pub fn parse(proof_spec: &spec::ProofSpec, _witness: &Witness) -> Result<Proof, ZKLError> {
+    pub fn parse(proof_spec: &spec::ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
         unimplemented!();
     }
 }
