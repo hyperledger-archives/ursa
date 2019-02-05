@@ -25,6 +25,7 @@ extern crate rand;
 extern crate rand_chacha;
 extern crate sha2;
 extern crate sha3;
+extern crate zeroize;
 #[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
 extern crate libsodium_ffi;
 #[cfg(all(feature = "portable", not(feature = "native")))]
@@ -103,6 +104,9 @@ pub mod hash;
 pub mod keys;
 pub mod signatures;
 pub mod encoding;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 #[derive(Debug)]
 pub enum CryptoError {

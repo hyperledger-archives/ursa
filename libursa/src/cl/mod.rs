@@ -1038,7 +1038,7 @@ impl NonRevocProofXList {
         ])
     }
 
-    pub fn from_list(seq: Vec<GroupOrderElement>) -> NonRevocProofXList {
+    pub fn from_list(seq: &[GroupOrderElement]) -> NonRevocProofXList {
         NonRevocProofXList {
             rho: seq[0],
             r: seq[10],

@@ -49,7 +49,8 @@ impl<'a, 'b, T: 'a + SignatureScheme> Signer<'a, 'b, T> {
     ///
     /// * `public_key` - the public key instance
     pub fn get_public_key(&self) -> Result<PublicKey, CryptoError> {
-        let (pubk, _) = self.scheme.keypair(Some(KeyPairOption::FromSecretKey(self.key))).unwrap();
+        let sk = PrivateKey(self.key[..].to_vec());
+        let (pubk, _) = self.scheme.keypair(Some(KeyPairOption::FromSecretKey(sk))).unwrap();
         Ok(pubk)
     }
 }

@@ -1570,7 +1570,7 @@ impl ProofBuilder {
         }
 
         let non_revoc_proof = NonRevocProof {
-            x_list: NonRevocProofXList::from_list(x_list),
+            x_list: NonRevocProofXList::from_list(x_list.as_slice()),
             c_list: init_proof.c_list.clone()
         };
 

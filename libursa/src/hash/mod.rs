@@ -1,6 +1,6 @@
 use CryptoError;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum DigestAlgorithm {
     Sha2_256,
     Sha2_384,
