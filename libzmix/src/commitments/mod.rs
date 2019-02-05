@@ -32,4 +32,3 @@ trait CommitmentScheme {
     fn verify(commitment: &[u8], opening: &[u8], generators: &[&[u8]], messages: &[&[u8]]) -> Result<bool, CommitmentError>;
 }
 
-pub mod pedersen_BLS12_381;

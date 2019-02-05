@@ -2,6 +2,7 @@ pub mod spec;
 
 pub struct Parser {}
 
+#[allow(unused_variables)]
 impl Parser {
     pub fn parse(proof_spec: &spec::ProofSpec, witness: &Witness) -> Result<Proof, ZKLError> {
         unimplemented!();
@@ -20,6 +21,7 @@ impl WitnessBuilder {
 
 pub struct Proof {}
 
+#[allow(unused_variables)]
 impl Proof {
     pub fn verify(&self, proof_spec: &spec::ProofSpec) -> Result<bool, ZKLError> {
         unimplemented!();
