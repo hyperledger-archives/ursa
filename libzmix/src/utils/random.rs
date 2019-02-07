@@ -5,7 +5,7 @@ use amcl::arch::Chunk;
 use amcl::bls381::big::BIG;
 
 
-pub fn get_seeded_RNG(entropy_size: usize, rng: Option<EntropyRng>) -> RAND {
+pub fn get_seeded_rng(entropy_size: usize, rng: Option<EntropyRng>) -> RAND {
     // initialise from at least 128 byte string of raw random entropy
     let mut entropy = vec![0; entropy_size];
     match rng {
@@ -24,6 +24,6 @@ pub fn get_seeded_RNG(entropy_size: usize, rng: Option<EntropyRng>) -> RAND {
 pub fn random_big_number(order: &[Chunk], rng: Option<EntropyRng>) -> BIG {
     // initialise from at least 128 byte string of raw random entropy
     let entropy_size = 256;
-    let mut r = get_seeded_RNG(entropy_size, rng);
+    let mut r = get_seeded_rng(entropy_size, rng);
     BIG::randomnum(&BIG::new_ints(&order), &mut r)
 }
