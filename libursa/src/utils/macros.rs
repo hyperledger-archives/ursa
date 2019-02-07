@@ -35,6 +35,9 @@ macro_rules! impl_bytearray {
             #[inline]
             /// Returns the length of the object as an array
             pub fn len(&self) -> usize { self.0.len() }
+
+            #[inline]
+            pub fn is_empty(&self) -> bool { self.0.is_empty() }
         }
 
         impl PartialEq for $thing {
