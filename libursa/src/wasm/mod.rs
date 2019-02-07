@@ -1,9 +1,19 @@
 pub mod bls;
 pub mod secp256k1;
+pub mod ed25519;
+
+use keys::{PublicKey, PrivateKey};
 
 use wasm_bindgen::prelude::*;
 use errors::{UrsaCryptoError, ToErrorCode};
 use serde;
+
+#[wasm_bindgen]
+#[derive(Serialize, Deserialize)]
+pub struct KeyPair {
+    pk: PublicKey,
+    sk: PrivateKey
+}
 
 impl From<UrsaCryptoError> for JsValue {
     fn from(err: UrsaCryptoError) -> JsValue {

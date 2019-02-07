@@ -6,6 +6,10 @@ pub const PUBLIC_KEY_SIZE: usize = 32;
 pub const SIGNATURE_SIZE: usize = 64;
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(feature = "wasm", derive(Serialize, Deserialize))]
 pub struct Ed25519Sha512(ed25519_sha2_512::Ed25519Sha512Impl);
 
@@ -13,7 +17,7 @@ impl SignatureScheme for Ed25519Sha512 {
     fn new() -> Self {
         Ed25519Sha512(ed25519_sha2_512::Ed25519Sha512Impl::new())
     }
-    fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+    fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
         self.0.keypair(option)
     }
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
@@ -46,13 +50,13 @@ mod ed25519_sha2_512 {
             };
             Ed25519Sha512Impl{}
         }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+        pub fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
             let mut sk = [0u8; ffi::crypto_sign_ed25519_SECRETKEYBYTES];
             let mut pk = [0u8; ffi::crypto_sign_ed25519_PUBLICKEYBYTES];
             let res = match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(ref s) => {
+                            KeyGenOption::UseSeed(ref s) => {
                                 let mut seed = [0u8; ffi::crypto_sign_ed25519_SECRETKEYBYTES];
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(s.as_slice(), 0, 32));
                                 rng.fill_bytes(&mut seed);
@@ -62,7 +66,7 @@ mod ed25519_sha2_512 {
                                                                   seed.as_ptr() as *const u8)
                                 }
                             },
-                            KeyPairOption::FromSecretKey(ref secret) => {
+                            KeyGenOption::FromSecretKey(ref secret) => {
                                 array_copy!(secret, sk);
                                 array_copy!(secret, ffi::crypto_sign_ed25519_PUBLICKEYBYTES, pk, 0, ffi::crypto_sign_ed25519_PUBLICKEYBYTES);
                                 0
@@ -123,18 +127,18 @@ mod ed25519_sha2_512 {
 
     impl Ed25519Sha512Impl {
         pub fn new() -> Self { Ed25519Sha512Impl{} }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+        pub fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
             let (sk, pk): ([u8; PRIVATE_KEY_SIZE], [u8; PUBLIC_KEY_SIZE]) = match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(ref s) => {
+                            KeyGenOption::UseSeed(ref s) => {
                                 let mut seed = [0u8; PRIVATE_KEY_SIZE];
                                 let hash = digest(DigestAlgorithm::Sha2_256, &s.as_slice())?;
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(hash, 0, 32));
                                 rng.fill_bytes(&mut seed);
                                 rcrypto::ed25519::keypair(&seed)
                             },
-                            KeyPairOption::FromSecretKey(ref s) => (*array_ref!(s, 0, 64), *array_ref!(s, 32, 32))
+                            KeyGenOption::FromSecretKey(ref s) => (*array_ref!(s, 0, 64), *array_ref!(s, 32, 32))
                         }
                     },
                     None => {
@@ -183,7 +187,7 @@ mod test {
     fn ed25519_load_keys() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let sres = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret)));
+        let sres = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
         assert!(sres.is_ok());
         let (p1, s1) = sres.unwrap();
         assert_eq!(s1, PrivateKey(hex2bin(PRIVATE_KEY).unwrap()));
@@ -194,7 +198,7 @@ mod test {
     fn ed25519_verify() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let (p, _) = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret))).unwrap();
+        let (p, _) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         let result = scheme.verify(&MESSAGE_1, hex2bin(SIGNATURE_1).unwrap().as_slice(), &p);
         assert!(result.is_ok());
@@ -215,7 +219,7 @@ mod test {
     fn ed25519_sign() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         match scheme.sign(&MESSAGE_1, &s) {
             Ok(sig) => {

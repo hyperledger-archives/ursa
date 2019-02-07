@@ -32,7 +32,7 @@ impl SignatureScheme for EcdsaSecp256k1Sha256 {
     fn new() -> Self {
         EcdsaSecp256k1Sha256(ecdsa_secp256k1sha256::EcdsaSecp256k1Sha256Impl::new())
     }
-    fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+    fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
         self.0.keypair(option)
     }
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
@@ -119,17 +119,17 @@ mod ecdsa_secp256k1sha256 {
         pub fn new() -> Self {
             EcdsaSecp256k1Sha256Impl(libsecp256k1::Secp256k1::new())
         }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+        pub fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
             let sk = match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(ref seed) => {
+                            KeyGenOption::UseSeed(ref seed) => {
                                 let mut s = [0u8; PRIVATE_KEY_SIZE];
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, 32));
                                 rng.fill_bytes(&mut s);
                                 libsecp256k1::key::SecretKey::from_slice(&s[..])?
                             },
-                            KeyPairOption::FromSecretKey(ref s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                            KeyGenOption::FromSecretKey(ref s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
                         }
                     },
                     None => {
@@ -209,18 +209,18 @@ mod ecdsa_secp256k1sha256 {
         pub fn new() -> Self {
             EcdsaSecp256k1Sha256Impl{}
         }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+        pub fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
             let mut sk = [0u8; PRIVATE_KEY_SIZE];
             match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(ref seed) => {
+                            KeyGenOption::UseSeed(ref seed) => {
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
                                 rng.fill_bytes(&mut sk);
                                 let d = digest(DigestAlgorithm::Sha2_256, &sk[..])?;
                                 array_copy!(d.as_slice(), sk)
                             },
-                            KeyPairOption::FromSecretKey(ref s) => array_copy!(s, sk)
+                            KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk)
                         }
                     },
                     None => {
@@ -410,7 +410,7 @@ mod test {
     fn secp256k1_load_keys() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let sres = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret)));
+        let sres = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
         assert!(sres.is_ok());
         let pres = scheme.parse(hex::hex2bin(PUBLIC_KEY).unwrap().as_slice());
         assert!(pres.is_ok());
@@ -422,7 +422,7 @@ mod test {
     fn secp256k1_compatibility() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         let p_u = scheme.parse(&scheme.serialize_uncompressed(&p));
         assert!(p_u.is_ok());
@@ -482,7 +482,7 @@ mod test {
     fn secp256k1_sign() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         match scheme.sign(MESSAGE_1, &s) {
             Ok(sig) => {
