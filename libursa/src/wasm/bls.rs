@@ -4,155 +4,133 @@ use bls;
 use super::convert_from_js;
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsGenerator() -> Result<bls::Generator, JsValue> {
-    Ok(bls::Generator::new().map_err(|e|e.to_string())?)
+pub struct Generator(bls::Generator);
+
+#[wasm_bindgen]
+impl Generator {
+    pub fn new() -> Result<Generator, JsValue> {
+        Ok(Generator(bls::Generator::new().map_err(|e|e.to_string())?))
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Generator, JsValue>  {
+        Ok(Generator(bls::Generator::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
 }
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsGeneratorAsBytes(generator: &bls::Generator) -> Result<Vec<u8>, JsValue> {
-    Ok(generator.as_bytes().to_vec())
+pub struct SignKey(bls::SignKey);
+
+#[wasm_bindgen]
+impl SignKey {
+    pub fn new() -> Result<SignKey, JsValue>  {
+        Ok(SignKey(bls::SignKey::new(None).map_err(|e|e.to_string())?))
+    }
+
+    pub fn from_seed(seed: &[u8]) -> Result<SignKey, JsValue>  {
+        Ok(SignKey(bls::SignKey::new(Some(seed)).map_err(|e|e.to_string())?))
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<SignKey, JsValue> {
+        Ok(SignKey(bls::SignKey::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        Ok(self.0.as_bytes().to_vec())
+    }
 }
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsGeneratorFromBytes(bytes: &[u8]) -> Result<bls::Generator, JsValue> {
-    let gen = bls::Generator::from_bytes(bytes).map_err(|e|e.to_string())?;
-    Ok(gen)
+pub struct VerKey(bls::VerKey);
+
+#[wasm_bindgen]
+impl VerKey {
+    pub fn new(generator: Generator, sign_key: SignKey) -> Result<VerKey, JsValue> {
+        Ok(VerKey(bls::VerKey::new(&generator.0, &sign_key.0).map_err(|e|e.to_string())?))
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<VerKey, JsValue> {
+        Ok(VerKey(bls::VerKey::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        Ok(self.0.as_bytes().to_vec())
+    }
 }
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsSignKey(seed: Option<Vec<u8>>) -> Result<bls::SignKey, JsValue> {
-    let seedOption = seed.as_ref().map(|v| v.as_slice());
-    Ok(bls::SignKey::new(seedOption)?)
+pub struct ProofOfPossession(bls::ProofOfPossession);
+
+#[wasm_bindgen]
+impl ProofOfPossession {
+    pub fn new(ver_key: &VerKey, sign_key: &SignKey) -> Result<ProofOfPossession, JsValue> {
+        Ok(ProofOfPossession(bls::ProofOfPossession::new(&ver_key.0, &sign_key.0).map_err(|e|e.to_string())?))
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<ProofOfPossession, JsValue> {
+        Ok(ProofOfPossession(bls::ProofOfPossession::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
+
+    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        Ok(self.0.as_bytes().to_vec())
+    }
 }
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsSignKeyAsBytes(signKey: &bls::SignKey) -> Result<Vec<u8>, JsValue> {
-    Ok(signKey.as_bytes().to_vec())
+pub struct Signature(bls::Signature);
+
+#[wasm_bindgen]
+impl Signature {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Signature, JsValue> {
+        Ok(Signature(bls::Signature::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
+    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        Ok(self.0.as_bytes().to_vec())
+    }
 }
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsSignKeyFromBytes(bytes: &[u8]) -> Result<bls::SignKey, JsValue> {
-    Ok(bls::SignKey::from_bytes(bytes)?)
+pub struct MultiSignature(bls::MultiSignature);
+
+#[wasm_bindgen]
+impl MultiSignature {
+    pub fn new(signatures: Vec<JsValue>) -> Result<MultiSignature, JsValue> {
+        let sigs: Vec<bls::Signature> = signatures.iter().map(|x| x.into_serde().unwrap()).collect();
+        Ok(MultiSignature(bls::MultiSignature::new(sigs.iter().collect::<Vec<_>>().as_slice())?))
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<MultiSignature, JsValue> {
+        Ok(MultiSignature(bls::MultiSignature::from_bytes(bytes).map_err(|e|e.to_string())?))
+    }
+
+    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        Ok(self.0.as_bytes().to_vec())
+    }
 }
+
+
+pub struct Bls;
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn blsSign(message: &[u8], signKey: &bls::SignKey) -> Result<bls::Signature, JsValue> {
-    Ok(bls::Bls::sign(message, &signKey)?)
-}
+impl Bls {
+    pub fn sign(message: &[u8], sign_key: &SignKey) -> Result<Signature, JsValue> {
+        Ok(Signature(bls::Bls::sign(message, &sign_key.0).map_err(|e|e.to_string())?))
+    }
 
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerKey(generator: &bls::Generator, signKey: &bls::SignKey) -> Result<bls::VerKey, JsValue> {
-    Ok(bls::VerKey::new(&generator, &signKey)?)
-}
+    pub fn verify(message: &[u8], signature: &Signature, ver_key: &VerKey, generator: &Generator) -> Result<bool, JsValue> {
+        Ok(bls::Bls::verify(&signature.0, message, &ver_key.0, &generator.0).map_err(|e|e.to_string())?)
+    }
 
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerKeyAsBytes(verKey: &bls::VerKey) -> Result<Vec<u8>, JsValue> {
-    Ok(verKey.as_bytes().to_vec())
-}
+    pub fn verifyProofOfPosession(pop: &ProofOfPossession, ver_key: &VerKey, generator: &Generator) -> Result<bool, JsValue> {
+        Ok(bls::Bls::verify_proof_of_posession(&pop.0, &ver_key.0, &generator.0).map_err(|e|e.to_string())?)
+    }
 
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerKeyFromBytes(bytes: &[u8]) -> Result<bls::VerKey, JsValue> {
-    Ok(bls::VerKey::from_bytes(bytes)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsProofOfPossession(vk: &bls::VerKey, sk: &bls::SignKey) -> Result<bls::ProofOfPossession, JsValue> {
-    Ok(bls::ProofOfPossession::new(&vk, &sk)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsProofOfPossessionAsBytes(proofOfPossession: &bls::ProofOfPossession) -> Result<Vec<u8>, JsValue> {
-    Ok(proofOfPossession.as_bytes().to_vec())
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsProofOfPossessionFromBytes(bytes: &[u8]) -> Result<bls::ProofOfPossession, JsValue> {
-    Ok(bls::ProofOfPossession::from_bytes(bytes)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsMultiSignature(signatures: Vec<JsValue>) -> Result<bls::MultiSignature, JsValue> {
-    let sigs: Vec<bls::Signature> = signatures.iter().map(|x| x.into_serde().unwrap()).collect();
-    Ok(bls::MultiSignature::new(sigs.iter().collect::<Vec<_>>().as_slice())?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsMultiSignatureAsBytes(multiSignature: &bls::MultiSignature) -> Result<Vec<u8>, JsValue> {
-    Ok(multiSignature.as_bytes().to_vec())
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsMultiSignatureFromBytes(bytes: &[u8]) -> Result<bls::MultiSignature, JsValue> {
-    Ok(bls::MultiSignature::from_bytes(bytes)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerify(
-    sig: &bls::Signature,
-    message: &[u8],
-    vk: &bls::VerKey,
-    gen: &bls::Generator,
-) -> Result<bool, JsValue> {
-    Ok(bls::Bls::verify(&sig, message, &vk, &gen)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerifyProofOfPossession(
-    pop: &bls::ProofOfPossession,
-    vk: &bls::VerKey,
-    gen: &bls::Generator,
-) -> Result<bool, JsValue> {
-    Ok(bls::Bls::verify_proof_of_posession(&pop, &vk, &gen)?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsVerifyMultiSig(
-    ms: &bls::MultiSignature,
-    message: &[u8],
-    verKeys: Vec<JsValue>,
-    gen: &bls::Generator,
-) -> Result<bool, JsValue> {
-    let vks: Vec<bls::VerKey> = verKeys
-        .iter()
-        .map(|x| {
-            // TODO: Handle error case
-            convert_from_js(x).unwrap()
-        }).collect();
-    Ok(bls::Bls::verify_multi_sig(
-        &ms,
-        message,
-        vks.iter().collect::<Vec<_>>().as_slice(),
-        &gen,
-    )?)
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsSignatureAsBytes(sig: &bls::Signature) -> Result<Vec<u8>, JsValue> {
-    Ok(sig.as_bytes().to_vec())
-}
-
-#[wasm_bindgen]
-#[allow(non_snake_case)]
-pub fn blsSignatureFromBytes(bytes: &[u8]) -> Result<bls::Signature, JsValue> {
-    Ok(bls::Signature::from_bytes(bytes)?)
+    pub fn verifyMultiSignature(multi_sig: &MultiSignature, message: &[u8], ver_keys: Vec<JsValue>, gen: &Generator) -> Result<bool, JsValue> {
+        let vks: Vec<bls::VerKey> = ver_keys.iter().map(|x| convert_from_js(x).unwrap()).collect();
+        Ok(bls::Bls::verify_multi_sig(&multi_sig.0, message, vks.iter().collect::<Vec<_>>().as_slice(), &gen.0).map_err(|e|e.to_string())?)
+    }
 }

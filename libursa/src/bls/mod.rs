@@ -4,14 +4,9 @@ use pair::{GroupOrderElement, PointG2, PointG1, Pair};
 use sha2::{Sha256, Digest};
 use sha3::Keccak256;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
 /// The most of BLS methods require generator to be provided.
-
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Generator {
     point: PointG2,
@@ -70,7 +65,6 @@ impl Generator {
 }
 
 /// BLS sign key.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignKey {
     group_order_element: GroupOrderElement,
@@ -127,7 +121,6 @@ impl SignKey {
 }
 
 /// BLS verification key.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerKey {
     point: PointG2,
@@ -185,9 +178,7 @@ impl VerKey {
     }
 }
 
-
 /// Proof of possession for BLS verification key.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfPossession {
     point: PointG1,
@@ -248,7 +239,6 @@ impl ProofOfPossession {
 }
 
 /// BLS signature.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Signature {
     point: PointG1,
@@ -286,7 +276,6 @@ impl Signature {
 }
 
 /// BLS multi signature.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MultiSignature {
     point: PointG1,
