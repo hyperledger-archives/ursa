@@ -4,9 +4,6 @@ use CryptoError;
 
 use rand::rngs::OsRng;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 #[cfg(feature = "portable")]
 use serde::ser::{Serialize, Serializer};
 #[cfg(feature = "portable")]
@@ -19,7 +16,6 @@ pub const SIGNATURE_POINT_SIZE: usize = 32;
 pub const SIGNATURE_SIZE: usize = 64;
 pub const ALGORITHM_NAME: &str = "ECDSA_SECP256K1_SHA256";
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct EcdsaSecp256k1Sha256(ecdsa_secp256k1sha256::EcdsaSecp256k1Sha256Impl);
 
 impl EcdsaSecp256k1Sha256 {

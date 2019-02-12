@@ -6,10 +6,6 @@ pub const PUBLIC_KEY_SIZE: usize = 32;
 pub const SIGNATURE_SIZE: usize = 64;
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(feature = "wasm", derive(Serialize, Deserialize))]
 pub struct Ed25519Sha512(ed25519_sha2_512::Ed25519Sha512Impl);
 
