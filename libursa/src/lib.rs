@@ -78,6 +78,7 @@ extern crate blake2b_simd;
 #[cfg(feature = "cl")]
 #[macro_use]
 pub mod cl;
+#[cfg(feature = "bls")]
 pub mod bls;
 
 #[cfg(feature = "bn_openssl")]

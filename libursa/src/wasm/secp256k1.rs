@@ -17,31 +17,31 @@ impl EcdsaSecp256k1Sha256 {
     }
 
      pub fn keypair(&self) -> Result<KeyPair, JsValue> {
-        let (pk, sk) = self.0.keypair(None).map_err(|e|e.to_string())?;
+        let (pk, sk) = maperr!(self.0.keypair(None));
         Ok(KeyPair { pk, sk })
     }
 
     pub fn keyPairFromSeed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
-        let (pk, sk) = self.0.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))).map_err(|e|e.to_string())?;
+        let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))));
         Ok(KeyPair { pk, sk })
     }
 
     pub fn keyPairFromPrivateKey(&self, sk: &PrivateKey) -> Result<KeyPair, JsValue> {
-        let (pk, sk) = self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))).map_err(|e|e.to_string())?;
+        let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
         Ok(KeyPair { pk, sk })
     }
 
     pub fn sign(&self, message: &[u8], sk: &PrivateKey)-> Result<Vec<u8>, JsValue> {
-        let sig = self.0.sign(message, sk).map_err(|e|e.to_string())?;
+        let sig = maperr!(self.0.sign(message, sk));
         Ok(sig)
     }
 
     pub fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, JsValue> {
-        Ok(self.0.verify(message, signature, pk).map_err(|e|e.to_string())?)
+        Ok(maperr!(self.0.verify(message, signature, pk)))
     }
 
     pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), JsValue>  {
-        self.0.normalize_s(signature).map_err(|e|e.to_string())?;
+        maperr!(self.0.normalize_s(signature));
         Ok(())
     }
 }

@@ -1,6 +1,13 @@
+#[macro_use]
+mod macros;
+#[cfg(feature = "bls")]
 pub mod bls;
+
 pub mod secp256k1;
 pub mod ed25519;
+
+#[cfg(feature = "cl")]
+pub mod cl;
 
 use keys::{PublicKey, PrivateKey};
 
