@@ -1,8 +1,10 @@
 use wasm_bindgen::prelude::*;
+use js_sys::Function;
 
 use std::collections::HashSet;
 
 use cl;
+use cl::RevocationTailsAccessor;
 
 use super::convert_from_js;
 
@@ -241,6 +243,13 @@ impl SimpleTailsAccessor {
     pub fn new(rev_tails_generator: &mut RevocationTailsGenerator) -> Result<SimpleTailsAccessor, JsValue> {
         let sta = maperr!(cl::SimpleTailsAccessor::new(&mut rev_tails_generator.0));
         Ok(SimpleTailsAccessor(sta))
+    }
+
+    pub fn access_tail(&self, tail_id: u32, accessor: &Function) {
+        let context = JsValue::NULL;
+        self.0.access_tail(tail_id, &mut |tail| {
+            accessor.call1(&context, &JsValue::from_serde(tail).unwrap()).unwrap();
+        }).unwrap();
     }
 }
 

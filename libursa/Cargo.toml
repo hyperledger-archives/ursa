@@ -32,7 +32,7 @@ bn_openssl = ["openssl", "int_traits"]
 bn_rust = ["num-bigint", "glass_pumpkin", "int_traits", "num-integer", "num-traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
-wasm = ["wasm-bindgen", "console_error_panic_hook", "portable"]
+wasm = ["wasm-bindgen", "console_error_panic_hook", "portable", "js-sys"]
 ffi = []
 cl = []
 bls = []
@@ -59,6 +59,7 @@ serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 lazy_static = "1.0"
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
+js-sys = { version = "0.3.13", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
 secp256k1 = { version = "0.12.0", optional = true, features = ["rand", "serde"]}
 libsodium-ffi = { version = "0.1.12", optional = true }

@@ -8,6 +8,8 @@
 extern crate wasm_bindgen;
 #[cfg(feature = "wasm")]
 extern crate console_error_panic_hook;
+#[cfg(feature = "wasm")]
+extern crate js_sys;
 
 /// Portable try to solely use Rust and no external C libraries.
 /// This is considered less secure only because the Rust code may not have had a
