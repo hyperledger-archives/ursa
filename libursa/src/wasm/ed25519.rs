@@ -26,9 +26,9 @@ impl Ed25519Sha512 {
         Ok(KeyPair { pk, sk })
     }
 
-    pub fn keyPairFromPrivateKey(&self, sk: &PrivateKey) -> Result<KeyPair, JsValue> {
-        let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
-        Ok(KeyPair { pk, sk })
+    pub fn getPublicKey(&self, sk: &PrivateKey) -> Result<PublicKey, JsValue> {
+        let (pk, _) = maperr!(self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
+        Ok(pk)
     }
 
     pub fn sign(&self, message: &[u8], sk: &PrivateKey)-> Result<Vec<u8>, JsValue> {
