@@ -162,6 +162,7 @@ mod ed25519_sha2_512 {
 mod test {
     use super::*;
     use encoding::hex::{bin2hex, hex2bin};
+    #[cfg(not(feature = "wasm"))]
     use libsodium_ffi as ffi;
 
     const MESSAGE_1: &[u8] = b"This is a dummy message for use with tests";
@@ -190,6 +191,7 @@ mod test {
         assert_eq!(p1, PublicKey(hex2bin(PUBLIC_KEY).unwrap()));
     }
 
+    #[cfg(not(feature = "wasm"))]
     #[test]
     fn ed25519_verify() {
         let scheme = Ed25519Sha512::new();
@@ -211,6 +213,7 @@ mod test {
         assert_eq!(res, 0);
     }
 
+    #[cfg(not(feature = "wasm"))]
     #[test]
     fn ed25519_sign() {
         let scheme = Ed25519Sha512::new();

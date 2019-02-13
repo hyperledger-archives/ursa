@@ -14,6 +14,9 @@ name = "ursa"
 path = "src/lib.rs"
 crate-type = ["staticlib", "rlib", "cdylib"]
 
+[profile.release]
+lto = true
+
 [[bin]]
 name = "test_secp256k1"
 path = "bin/test_secp256k1.rs"
@@ -71,8 +74,6 @@ num-integer = { version = "0.1", optional = true }
 num-traits = { version = "0.2", optional = true }
 
 [dev-dependencies]
-secp256k1 = "0.12.0"
-libsodium-ffi = "0.1.12"
 rustlibsecp256k1 = { version = "0.1.0", path = "rustlibsecp256k1" }
 
 [package.metadata.deb]

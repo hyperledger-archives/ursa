@@ -16,7 +16,7 @@ use errors::{UrsaCryptoError, ToErrorCode};
 use serde;
 
 #[wasm_bindgen]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct KeyPair {
     pk: PublicKey,
     sk: PrivateKey

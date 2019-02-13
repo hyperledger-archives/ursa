@@ -381,10 +381,15 @@ mod ecdsa_secp256k1sha256 {
 mod test {
     use super::*;
     use encoding::hex;
+    #[cfg(not(feature = "wasm"))]
     use libsecp256k1;
+    #[cfg(not(feature = "wasm"))]
     use openssl::ecdsa::EcdsaSig;
+    #[cfg(not(feature = "wasm"))]
     use openssl::ec::{EcGroup, EcPoint, EcKey};
+    #[cfg(not(feature = "wasm"))]
     use openssl::nid::Nid;
+    #[cfg(not(feature = "wasm"))]
     use openssl::bn::{BigNum, BigNumContext};
 
     const MESSAGE_1: &[u8] = b"This is a dummy message for use with tests";
@@ -414,6 +419,7 @@ mod test {
         assert_eq!(p1, pres.unwrap());
     }
 
+    #[cfg(not(feature = "wasm"))]
     #[test]
     fn secp256k1_compatibility() {
         let scheme = EcdsaSecp256k1Sha256::new();
@@ -438,6 +444,7 @@ mod test {
         assert!(openssl_point.is_ok());
     }
 
+    #[cfg(not(feature = "wasm"))]
     #[test]
     fn secp256k1_verify() {
         let scheme = EcdsaSecp256k1Sha256::new();
@@ -474,6 +481,7 @@ mod test {
         assert!(openssl_result.unwrap());
     }
 
+    #[cfg(not(feature = "wasm"))]
     #[test]
     fn secp256k1_sign() {
         let scheme = EcdsaSecp256k1Sha256::new();
