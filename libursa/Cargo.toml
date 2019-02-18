@@ -80,6 +80,11 @@ openssl = "0.10"
 rustlibsecp256k1 = { version = "0.2.2", package = "libsecp256k1" }
 libsodium-ffi = "0.1.13"
 secp256k1 = "0.12.2"
+criterion = "0.2"
+
+[[bench]]
+name = "cks_revok"
+harness = false
 
 [package.metadata.deb]
 maintainer = "Hyperledger"
