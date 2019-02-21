@@ -57,9 +57,9 @@ impl<'a, 'b, T: 'a + SignatureScheme> Signer<'a, 'b, T> {
 
 pub trait EcdsaPublicKeyHandler {
     /// Returns the compressed bytes
-    fn serialize(&self, pk: &PublicKey) -> Vec<u8>;
+    fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8>;
     /// Returns the uncompressed bytes
-    fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8>;
+    fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8>;
     /// Read raw bytes into key struct. Can be either compressed or uncompressed
     fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError>;
     fn public_key_uncompressed_size() -> usize;

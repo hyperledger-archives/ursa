@@ -44,12 +44,12 @@ impl SignatureScheme for EcdsaSecp256k1Sha256 {
 
 impl EcdsaPublicKeyHandler for EcdsaSecp256k1Sha256 {
     /// Returns the compressed bytes
-    fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
-        self.0.serialize(pk)
+    fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
+        self.0.public_key_compressed(pk)
     }
     /// Returns the uncompressed bytes
-    fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
-        self.0.serialize_uncompressed(pk)
+    fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        self.0.public_key_uncompressed(pk)
     }
     /// Read raw bytes into key struct. Can be either compressed or uncompressed
     fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError> {
@@ -99,11 +99,11 @@ mod ecdsa_secp256k1sha256 {
     pub struct EcdsaSecp256k1Sha256Impl(libsecp256k1::Secp256k1<libsecp256k1::All>);
 
     impl EcdsaSecp256k1Sha256Impl {
-        pub fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
             let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize().to_vec()
         }
-        pub fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
             let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize_uncompressed().to_vec()
         }
@@ -181,12 +181,12 @@ mod ecdsa_secp256k1sha256 {
     pub struct EcdsaSecp256k1Sha256Impl{}
 
     impl EcdsaSecp256k1Sha256Impl {
-        pub fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut compressed = [0u8; PUBLIC_KEY_SIZE];
             ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
             compressed.to_vec()
         }
-        pub fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut uncompressed = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
             ecp::ECP::frombytes(&pk[..]).tobytes(&mut uncompressed, false);
             uncompressed.to_vec()
@@ -214,7 +214,7 @@ mod ecdsa_secp256k1sha256 {
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
                                 rng.fill_bytes(&mut sk);
                                 let d = digest(DigestAlgorithm::Sha2_256, &sk[..])?;
-                                array_copy!(d.as_slice(), sk)
+                                sk.clone_from_slice(d.as_slice());
                             },
                             KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk)
                         }
@@ -223,7 +223,7 @@ mod ecdsa_secp256k1sha256 {
                         let mut rng = OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
                         rng.fill_bytes(&mut sk);
                         let d = digest(DigestAlgorithm::Sha2_256, &sk[..])?;
-                        array_copy!(d.as_slice(), sk);
+                        sk.clone_from_slice(d.as_slice());
                     }
                 };
             let mut pk = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
@@ -241,7 +241,7 @@ mod ecdsa_secp256k1sha256 {
         }
         pub fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> {
             let h = digest(DigestAlgorithm::Sha2_256, message)?;
-            let uncompressed_pk = self.serialize_uncompressed(&pk);
+            let uncompressed_pk = self.public_key_uncompressed(&pk);
             match rustlibsecp256k1::verify(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE),
                                            array_ref!(signature, 0, SIGNATURE_SIZE),
                                            array_ref!(uncompressed_pk.as_slice(), 0, PUBLIC_UNCOMPRESSED_KEY_SIZE)) {
@@ -380,6 +380,7 @@ mod ecdsa_secp256k1sha256 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::EcdsaPublicKeyHandler;
     use encoding::hex;
     #[cfg(not(feature = "wasm"))]
     use libsecp256k1;
@@ -426,7 +427,7 @@ mod test {
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
         let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
-        let p_u = scheme.parse(&scheme.serialize_uncompressed(&p));
+        let p_u = scheme.parse(&scheme.public_key_uncompressed(&p));
         assert!(p_u.is_ok());
         let p_u = p_u.unwrap();
         assert_eq!(p_u, p);
@@ -435,12 +436,12 @@ mod test {
         assert!(sk.is_ok());
         let pk = libsecp256k1::key::PublicKey::from_slice(&p[..]);
         assert!(pk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.serialize_uncompressed(&p)[..]);
+        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
         assert!(pk.is_ok());
 
         let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.serialize_uncompressed(&p)[..], &mut ctx);
+        let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.public_key_uncompressed(&p)[..], &mut ctx);
         assert!(openssl_point.is_ok());
     }
 
@@ -504,7 +505,7 @@ mod test {
                 let h = digest(DigestAlgorithm::Sha2_256, &MESSAGE_1).unwrap();
 
                 let msg = libsecp256k1::Message::from_slice(h.as_slice()).unwrap();
-                let sig_1 = context.sign(&msg, &sk).serialize_compact();
+                let sig_1: [u8; SIGNATURE_SIZE] = context.sign(&msg, &sk).serialize_compact();
 
                 let result = scheme.verify(&MESSAGE_1, &sig_1, &p);
 
@@ -513,7 +514,7 @@ mod test {
 
                 let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
                 let mut ctx = BigNumContext::new().unwrap();
-                let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.serialize_uncompressed(&p)[..], &mut ctx).unwrap();
+                let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.public_key_uncompressed(&p)[..], &mut ctx).unwrap();
                 let openssl_pkey = EcKey::from_public_key(&openssl_group, &openssl_point).unwrap();
                 let openssl_skey = EcKey::from_private_components(&openssl_group, &BigNum::from_hex_str(PRIVATE_KEY).unwrap(), &openssl_point).unwrap();
 
@@ -553,5 +554,21 @@ mod test {
             },
             Err(e) => assert!(false, e)
         }
+    }
+
+    #[test]
+    fn secp256k1_publickey_compression() {
+        let scheme = EcdsaSecp256k1Sha256::new();
+
+        let pk = PublicKey(hex::hex2bin(PUBLIC_KEY).unwrap());
+
+        let res = scheme.public_key_compressed(&pk);
+        assert_eq!(res[..], pk[..]);
+
+        let res = scheme.public_key_uncompressed(&pk);
+        let pk = PublicKey(res);
+
+        let res = scheme.public_key_uncompressed(&pk);
+        assert_eq!(res[..], pk[..]);
     }
 }

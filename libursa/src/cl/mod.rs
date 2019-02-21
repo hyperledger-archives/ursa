@@ -559,7 +559,7 @@ impl CredentialSignature {
     pub fn try_clone(&self) -> Result<CredentialSignature, UrsaCryptoError> {
         Ok(CredentialSignature {
             p_credential: self.p_credential.try_clone()?,
-            r_credential: self.r_credential.as_ref().map(|r|r.clone())
+            r_credential: self.r_credential.as_ref().cloned()
         })
     }
 }

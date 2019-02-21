@@ -29,13 +29,11 @@ extern crate sha2;
 extern crate sha3;
 extern crate zeroize;
 
-#[cfg(any(all(feature = "native", not(feature = "portable")),
-          all(test, not(feature = "wasm"))))]
+#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
 extern crate libsodium_ffi;
 #[cfg(all(feature = "portable", not(feature = "native")))]
 extern crate crypto as rcrypto;
-#[cfg(any(all(test, not(feature = "wasm")),
-          all(feature = "native", not(feature = "portable"))))]
+#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
 extern crate secp256k1 as libsecp256k1;
 #[cfg(all(feature = "portable", not(feature = "native")))]
 extern crate rustlibsecp256k1;
@@ -61,8 +59,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_json;
 
-#[cfg(any(all(test, not(feature = "wasm")),
-          feature = "bn_openssl"))]
+#[cfg(any(test, feature = "bn_openssl"))]
 extern crate openssl;
 
 #[cfg(any(feature = "bn_openssl", feature = "bn_rust"))]
