@@ -9,7 +9,7 @@ ENV LD_LIBRARY_PATH /usr/local/lib
 WORKDIR /root
 
 RUN zypper --non-interactive update && zypper --non-interactive install sudo make gcc autoconf libtool curl python3 pkg-config openssl-devel 2>&1 > /dev/null \
-    && curl -fsSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.14.tar.gz | tar -xz \
+    && curl -fsSL https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.14.tar.gz | tar -xz \
     && cd libsodium-1.0.14 \ 
     && ./autogen.sh \
     && ./configure \

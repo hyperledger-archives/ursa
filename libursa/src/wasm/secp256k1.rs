@@ -55,6 +55,6 @@ impl EcdsaSecp256k1Sha256 {
     }
 
     pub fn parseToPublicKey(&self, bytes: &[u8]) -> Result<PublicKey, JsValue> {
-        Ok(PublicKey(maperr!(self.0.parse(bytes))?))
+        Ok(maperr!(self.0.parse(bytes)))
     }
 }

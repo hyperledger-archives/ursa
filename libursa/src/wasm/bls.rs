@@ -111,12 +111,18 @@ impl MultiSignature {
     }
 }
 
-
-pub struct Bls;
+#[wasm_bindgen]
+pub struct Bls(bls::Generator);
 
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 impl Bls {
+    pub fn new() -> Bls {
+        Bls(bls::Generator::new().unwrap())
+    }
+
+//    pub fn keypair() ->
+
     pub fn sign(message: &[u8], sign_key: &SignKey) -> Result<Signature, JsValue> {
         Ok(Signature(maperr!(bls::Bls::sign(message, &sign_key.0))))
     }
