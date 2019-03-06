@@ -53,7 +53,7 @@ mod cl_tests {
 
             let gvt_simple_tail_accessor = SimpleTailsAccessor::new(&mut gvt_rev_tails_generator).unwrap();
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let gvt_credential_nonce = new_nonce().unwrap();
 
             // 6. Issuer creates GVT credential values
@@ -72,7 +72,7 @@ mod cl_tests {
                                                  &gvt_credential_values,
                                                  &gvt_credential_nonce).unwrap();
 
-            // 8. Prover creates nonce used Issuer to credential issue
+            // 8. Prover creates nonce used by Issuer to create correctness proof for signature
             let gvt_credential_issuance_nonce = new_nonce().unwrap();
 
             // 9. Issuer signs GVT credential values
@@ -130,7 +130,7 @@ mod cl_tests {
 
             let xyz_simple_tail_accessor = SimpleTailsAccessor::new(&mut xyz_rev_tails_generator).unwrap();
 
-            // 15. Issuer creates nonce used Prover to blind master secret
+            // 15. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let xyz_credential_nonce = new_nonce().unwrap();
 
             // 16. Issuer creates XYZ credential values
@@ -147,7 +147,7 @@ mod cl_tests {
                                                  &xyz_credential_values,
                                                  &xyz_credential_nonce).unwrap();
 
-            // 18. Prover creates nonce used Issuer to credential issue
+            // 18. Prover creates nonce used by Issuer to create correctness proof for signature
             let xyz_credential_issuance_nonce = new_nonce().unwrap();
 
             // 19. Issuer signs XYZ credential values
@@ -261,7 +261,7 @@ mod cl_tests {
             // 3. Issuer creates credential values
             let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds hidden attributes
@@ -271,7 +271,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
 
@@ -346,7 +346,7 @@ mod cl_tests {
             // 4. Issuer creates and sign credential values
             let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds hidden attributes
@@ -356,7 +356,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
 
@@ -448,7 +448,7 @@ mod cl_tests {
             // 4. Prover creates master secret with credential values
             let credential_values = helpers::gvt_credential_values(&Prover::new_master_secret().unwrap());
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -458,7 +458,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 8. Issuer creates and sign credential values
@@ -1586,7 +1586,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -1596,7 +1596,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             let rev_idx = 1;
@@ -1690,7 +1690,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -1700,7 +1700,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             let rev_idx = 1;
@@ -1794,7 +1794,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -1804,7 +1804,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             let rev_idx = 1;
@@ -1923,7 +1923,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -1933,7 +1933,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             Issuer::sign_credential_with_revoc(PROVER_ID,
@@ -1995,7 +1995,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 5. Issuer creates nonce used Prover to blind master secret
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 6. Prover blinds master secret
@@ -2005,7 +2005,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 8. Issuer creates and signs credential values
@@ -2091,7 +2091,7 @@ mod cl_tests {
 
             // Reissue credential with different values but same rev_index
 
-            // 16. Issuer creates nonce used Prover to blind master secret
+            // 16. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let new_credential_nonce = new_nonce().unwrap();
 
             // 17. Prover blinds master secret
@@ -2196,7 +2196,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2206,7 +2206,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2260,7 +2260,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2270,7 +2270,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values wrong keys
@@ -2339,7 +2339,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2349,7 +2349,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values wrong keys
@@ -2417,7 +2417,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2427,7 +2427,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2551,7 +2551,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::xyz_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2561,7 +2561,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates credential values not correspondent to issuer keys
@@ -2594,7 +2594,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2604,7 +2604,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2660,7 +2660,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2670,7 +2670,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2724,7 +2724,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2734,7 +2734,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2790,7 +2790,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -2800,7 +2800,7 @@ mod cl_tests {
                                                  &credential_values,
                                                  &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates and signs credential values
@@ -2886,7 +2886,7 @@ mod cl_tests {
             let (_, _, xyz_credential_key_correctness_proof) =
                 Issuer::new_credential_def(&xyz_credential_schema, &non_credential_schema, false).unwrap();
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let gvt_credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blind master secret by gvt_public_key and xyz_key_correctness_proof
@@ -2913,7 +2913,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             let other_nonce = new_nonce().unwrap();
@@ -2922,7 +2922,7 @@ mod cl_tests {
             let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &other_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates credential values
@@ -2956,14 +2956,14 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let gvt_credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret by GVT key
             let (blinded_credential_secrets, _, blinded_credential_secrets_correctness_proof) =
                 Prover::blind_credential_secrets(&gvt_credential_pub_key, &gvt_credential_key_correctness_proof, &gvt_credential_values, &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates credential values
@@ -2994,7 +2994,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 3. Issuer creates nonce used Prover to blind master secret
+            // 3. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 4. Prover blinds master secret
@@ -3005,7 +3005,7 @@ mod cl_tests {
             let (blinded_credential_secrets, _, _) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates credential values
@@ -3037,14 +3037,14 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
             let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             let different_nonce = new_nonce().unwrap();
@@ -3087,14 +3087,14 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
             let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             let different_nonce = new_nonce().unwrap();
@@ -3147,7 +3147,7 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
@@ -3158,7 +3158,7 @@ mod cl_tests {
             let (_, credential_secrets_blinding_factors, _) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
-            // 7. Prover creates nonce used Issuer to credential issue
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 8. Issuer creates credential values
@@ -3199,14 +3199,14 @@ mod cl_tests {
             let master_secret = Prover::new_master_secret().unwrap();
             let credential_values = helpers::gvt_credential_values(&master_secret);
 
-            // 4. Issuer creates nonce used Prover to blind master secret
+            // 4. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
             let credential_nonce = new_nonce().unwrap();
 
             // 5. Prover blinds master secret
             let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
                 Prover::blind_credential_secrets(&credential_pub_key, &credential_key_correctness_proof, &credential_values, &credential_nonce).unwrap();
 
-            // 6. Prover creates nonce used Issuer to credential issue
+            // 6. Prover creates nonce used by Issuer to create correctness proof for signature
             let credential_issuance_nonce = new_nonce().unwrap();
 
             // 7. Issuer creates credential values
