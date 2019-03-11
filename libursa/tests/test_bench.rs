@@ -1,13 +1,14 @@
-#[macro_use]
-extern crate criterion;
 #[cfg(feature = "cl")]
 extern crate ursa;
 
-use criterion::Criterion;
 use ursa::cl::*;
 use ursa::cl::issuer::Issuer;
 use ursa::cl::prover::Prover;
 use ursa::cl::verifier::Verifier;
+
+use std::time::{Duration, Instant};
+use ursa::cl::prover::ProofBuilder;
+use ursa::errors::UrsaCryptoError;
 
 
 pub fn get_credential_schema() -> CredentialSchema {
@@ -41,12 +42,16 @@ fn get_sub_proof_request() -> SubProofRequest {
     sub_proof_request_builder.finalize().unwrap()
 }
 
+type ProverData = (u32, CredentialValues, CredentialSignature, Witness);
+
 fn setup_cred_and_issue(max_cred_num: u32, issuance_by_default: bool) -> (CredentialSchema,
                                                                           NonCredentialSchema,
                                                                           CredentialPublicKey,
                                                                           RevocationKeyPublic,
                                                                           RevocationRegistry,
-                                                                          Vec<(CredentialValues, CredentialSignature, Witness)>) {
+                                                                          RevocationRegistryDelta,
+                                                                          SimpleTailsAccessor,
+                                                                          Vec<ProverData>) {
     let credential_schema = get_credential_schema();
     let non_credential_schema = get_non_credential_schema();
 
@@ -59,10 +64,11 @@ fn setup_cred_and_issue(max_cred_num: u32, issuance_by_default: bool) -> (Creden
 
     let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
-    let mut _prover_data: Vec<(CredentialValues, CredentialSignature, Witness)> = vec![];
+    let mut prover_data: Vec<ProverData> = vec![];
 
     let mut rev_reg_delta: Option<RevocationRegistryDelta> = None;
 
+    let start = Instant::now();
     for i in 0..max_cred_num {
         let credential_values = get_credential_values(&Prover::new_master_secret().unwrap());
 
@@ -126,36 +132,37 @@ fn setup_cred_and_issue(max_cred_num: u32, issuance_by_default: bool) -> (Creden
                                              Some(&rev_reg),
                                              Some(&witness)).unwrap();
 
-        _prover_data.push((credential_values, credential_signature, witness))
+        prover_data.push((rev_idx, credential_values, credential_signature, witness))
     }
 
-    let final_delta = rev_reg_delta.unwrap();
-    let mut prover_data: Vec<(CredentialValues, CredentialSignature, Witness)> = vec![];
-    let mut i = 0;
-    for (v, s, mut w) in _prover_data.drain(..) {
-        let w = Witness::new(i+1,
-                             max_cred_num,
-                             issuance_by_default,
-                             &final_delta,
-                             &simple_tail_accessor).unwrap();
-//        w.update(i+1, max_cred_num, &final_delta, &simple_tail_accessor).unwrap();
-        prover_data.push((v, s, w));
-        i += 1;
-    }
+    println!("Issuance time for {} is {:?}", max_cred_num, start.elapsed());
 
-    (credential_schema, non_credential_schema, credential_pub_key, rev_key_pub, rev_reg, prover_data)
+    (credential_schema, non_credential_schema, credential_pub_key, rev_key_pub, rev_reg, rev_reg_delta.unwrap(), simple_tail_accessor, prover_data)
 }
 
-fn gen_proofs(credential_schema: &CredentialSchema, non_credential_schema: &NonCredentialSchema,
+fn gen_proofs(max_cred_num: u32, issuance_by_default: bool, credential_schema: &CredentialSchema, non_credential_schema: &NonCredentialSchema,
               credential_pub_key: &CredentialPublicKey, sub_proof_request: &SubProofRequest,
-              nonces: &[Nonce], rev_reg: &RevocationRegistry,
-              prover_data: &[(CredentialValues, CredentialSignature, Witness)]) -> Vec<Proof>{
+              nonces: &[Nonce], rev_reg: &RevocationRegistry, rev_reg_delta: &RevocationRegistryDelta,
+              simple_tail_accessor: &SimpleTailsAccessor, prover_data: &mut [ProverData]) -> Vec<Proof>{
     let mut proofs = Vec::with_capacity(nonces.len());
+    let mut total_witness_gen = Duration::new(0, 0);
+    let mut total_proving = Duration::new(0, 0);
     for i in 0..nonces.len() {
-        let (ref credential_values, ref credential_signature, ref witness) = prover_data[i as usize];
+        let (rev_idx, ref credential_values, ref credential_signature, ref mut witness) = prover_data[i as usize];
+
+        let mut start = Instant::now();
+        let witness = Witness::new(rev_idx,
+                             max_cred_num,
+                             issuance_by_default,
+                             rev_reg_delta,
+                             simple_tail_accessor).unwrap();
+        //witness.update(rev_idx, max_cred_num, rev_reg_delta, simple_tail_accessor).unwrap();
+        total_witness_gen += start.elapsed();
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_common_attribute("master_secret").unwrap();
+
+        start = Instant::now();
         proof_builder.add_sub_proof_request(sub_proof_request,
                                             credential_schema,
                                             non_credential_schema,
@@ -163,96 +170,50 @@ fn gen_proofs(credential_schema: &CredentialSchema, non_credential_schema: &NonC
                                             credential_values,
                                             credential_pub_key,
                                             Some(rev_reg),
-                                            Some(witness)).unwrap();
+                                            Some(&witness)).unwrap();
         proofs.push(proof_builder.finalize(&nonces[i as usize]).unwrap());
+        total_proving += start.elapsed();
     }
+
+    println!("Total witness gen time for {} is {:?}", nonces.len(), total_witness_gen);
+    println!("Total proving time for {} is {:?}", nonces.len(), total_proving);
+
     proofs
 }
-
-fn bench_cks_prove_revok_on_demand_issuance(c: &mut Criterion) {
-    c.bench_function_over_inputs(
-        "cks revocation proof generation with on demand issuance",
-        move |b, (max_cred_num, num_proofs_to_do)| {
-            let max_cred_num = *max_cred_num as u32;
-            let num_proofs_to_do = *num_proofs_to_do as u32;
-            let issuance_by_default = false;
-
-            let sub_proof_request = get_sub_proof_request();
-            let (credential_schema, non_credential_schema,
-                credential_pub_key, _, rev_reg,
-                prover_data) = setup_cred_and_issue(max_cred_num, issuance_by_default);
-
-            let nonces:Vec<_> = (0..num_proofs_to_do).map(| _ | new_nonce().unwrap()).collect();
-
-            b.iter( || {
-                gen_proofs(&credential_schema, &non_credential_schema, &credential_pub_key, &sub_proof_request, &nonces, &rev_reg, &prover_data);
-            });
-        },
-        //vec![(100, 10), (10000, 10)],
-        vec![(10, 2), (100, 2)],
-    );
-}
-
-fn bench_cks_verify_revok_on_demand_issuance(c: &mut Criterion) {
-    c.bench_function_over_inputs(
-        "cks revocation verify proof with on demand issuance",
-        move |b, (max_cred_num, num_proofs_to_do)| {
-            let max_cred_num = *max_cred_num as u32;
-            let num_proofs_to_do = *num_proofs_to_do as u32;
-            let issuance_by_default = false;
-
-            let sub_proof_request = get_sub_proof_request();
-            let (credential_schema, non_credential_schema,
-                credential_pub_key, rev_key_pub, rev_reg,
-                prover_data) = setup_cred_and_issue(max_cred_num, issuance_by_default);
-
-            let nonces:Vec<_> = (0..num_proofs_to_do).map(| _ | new_nonce().unwrap()).collect();
-            let proofs = gen_proofs(&credential_schema, &non_credential_schema, &credential_pub_key, &sub_proof_request, &nonces, &rev_reg, &prover_data);
-
-            b.iter(|| {
-                for i in 0..num_proofs_to_do {
-                    let idx = i as usize;
-                    let mut verifier = Verifier::new_proof_verifier().unwrap();
-                    verifier.add_sub_proof_request(&sub_proof_request,
-                                                         &credential_schema,
-                                                         &non_credential_schema,
-                                                         &credential_pub_key,
-                                                         Some(&rev_key_pub),
-                                                         Some(&rev_reg)).unwrap();
-                    assert!(verifier.verify(&proofs[idx], &nonces[idx]).unwrap());
-                }
-            });
-        },
-        //vec![(100, 10), (10000, 10)],
-        vec![(10, 2), (100, 2)],
-    );
-}
-
-criterion_group! {
-    name = cks_prove_revok_on_demand;
-    config = Criterion::default().sample_size(3);
-    //config = Criterion::default();
-    targets =
-    bench_cks_prove_revok_on_demand_issuance,
-}
-
-criterion_group! {
-    name = cks_verify_revok_on_demand;
-    config = Criterion::default().sample_size(3);
-    //config = Criterion::default();
-    targets =
-    bench_cks_verify_revok_on_demand_issuance,
-}
-
-criterion_main!(cks_prove_revok_on_demand, cks_verify_revok_on_demand);
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn hello_world() {
-        println!("111")
+    fn bench() {
+        let max_cred_num = 10;
+        let num_proofs_to_do = 1;
+        let issuance_by_default = false;
+
+        let sub_proof_request = get_sub_proof_request();
+        let (credential_schema, non_credential_schema,
+            credential_pub_key, rev_key_pub, rev_reg,
+            rev_reg_delta, simple_tail_accessor, mut prover_data) = setup_cred_and_issue(max_cred_num, issuance_by_default);
+
+        let nonces:Vec<_> = (0..num_proofs_to_do).map(| _ | new_nonce().unwrap()).collect();
+
+        let mut start = Instant::now();
+        let proofs = gen_proofs(max_cred_num, issuance_by_default, &credential_schema, &non_credential_schema, &credential_pub_key, &sub_proof_request, &nonces, &rev_reg, &rev_reg_delta, &simple_tail_accessor, &mut prover_data);
+        println!("Proof gen time for {} is {:?}", num_proofs_to_do, start.elapsed());
+
+        start = Instant::now();
+        for i in 0..num_proofs_to_do {
+            let idx = i as usize;
+            let mut verifier = Verifier::new_proof_verifier().unwrap();
+            verifier.add_sub_proof_request(&sub_proof_request,
+                                           &credential_schema,
+                                           &non_credential_schema,
+                                           &credential_pub_key,
+                                           Some(&rev_key_pub),
+                                           Some(&rev_reg)).unwrap();
+            assert!(verifier.verify(&proofs[idx], &nonces[idx]).unwrap());
+        }
+        println!("Verif time for {} is {:?}", num_proofs_to_do, start.elapsed());
     }
 }
