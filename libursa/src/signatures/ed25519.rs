@@ -1,163 +1,58 @@
-use super::*;
+use super::{SignatureScheme, KeyPairOption, PublicKey, PrivateKey};
 use CryptoError;
+pub use ed25519_dalek::{PUBLIC_KEY_LENGTH as PUBLIC_KEY_SIZE, EXPANDED_SECRET_KEY_LENGTH as PRIVATE_KEY_SIZE, SIGNATURE_LENGTH as SIGNATURE_SIZE};
+use ed25519_dalek::{Signature, Keypair, PublicKey as PK};
+use rand_chacha::ChaChaRng;
+use rand::rngs::OsRng;
+use rand::SeedableRng;
+use sha2::Digest;
 
-pub const PRIVATE_KEY_SIZE: usize = 64;
-pub const PUBLIC_KEY_SIZE: usize = 32;
-pub const SIGNATURE_SIZE: usize = 64;
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
-pub struct Ed25519Sha512(ed25519_sha2_512::Ed25519Sha512Impl);
+pub struct Ed25519Sha512;
 
 impl SignatureScheme for Ed25519Sha512 {
-    fn new() -> Ed25519Sha512 {
-        Ed25519Sha512(ed25519_sha2_512::Ed25519Sha512Impl::new())
+    fn new() -> Self {
+        Self
     }
     fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
-        self.0.keypair(option)
+        let kp = match option {
+            Some(o) => match o {
+                KeyPairOption::UseSeed(s) => {
+                    let hash = sha2::Sha256::digest(s.as_slice());
+                    let mut rng = ChaChaRng::from_seed( *array_ref!(hash.as_slice(), 0, 32));
+                    Keypair::generate::<sha2::Sha512, _>(&mut rng)
+                },
+                KeyPairOption::FromSecretKey(s) => {
+                    Keypair::from_bytes(&s[..]).map_err(|e|CryptoError::KeyGenError(e.to_string()))?
+                }
+            },
+            None => {
+                let mut rng = OsRng::new().map_err(|e|CryptoError::KeyGenError(e.msg.to_string()))?;
+                Keypair::generate::<sha2::Sha512, _>(&mut rng)
+            }
+        };
+        Ok((PublicKey(kp.public.to_bytes().to_vec()), PrivateKey(kp.to_bytes().to_vec())))
     }
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
-        self.0.sign(message, sk)
+        let kp = Keypair::from_bytes(&sk[..]).map_err(|e| CryptoError::KeyGenError(e.to_string()))?;
+        Ok(kp.sign::<sha2::Sha512>(message).to_bytes().to_vec())
     }
     fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> {
-        self.0.verify(message, signature, pk)
+        let p = PK::from_bytes(&pk[..]).map_err(|e|CryptoError::ParseError(e.to_string()))?;
+        let s = Signature::from_bytes(signature).map_err(|e|CryptoError::ParseError(e.to_string()))?;
+        p.verify::<sha2::Sha512>(message, &s).map_err(|e|CryptoError::SigningError(e.to_string()))?;
+        Ok(true)
     }
     fn signature_size() -> usize { SIGNATURE_SIZE }
     fn private_key_size() -> usize { PRIVATE_KEY_SIZE }
     fn public_key_size() -> usize { PUBLIC_KEY_SIZE }
 }
 
-#[cfg(all(feature = "native", not(feature = "portable")))]
-mod ed25519_sha2_512 {
-    use super::*;
-    use libsodium_ffi as ffi;
-    use std::ptr;
-
-    use rand_chacha::ChaChaRng;
-    use rand::{RngCore, SeedableRng};
-
-    pub struct Ed25519Sha512Impl{}
-
-    impl Ed25519Sha512Impl {
-        pub fn new() -> Ed25519Sha512Impl {
-            unsafe {
-                ffi::sodium_init()
-            };
-            Ed25519Sha512Impl{}
-        }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
-            let mut sk = [0u8; ffi::crypto_sign_ed25519_SECRETKEYBYTES];
-            let mut pk = [0u8; ffi::crypto_sign_ed25519_PUBLICKEYBYTES];
-            let res = match option {
-                    Some(o) => {
-                        match o {
-                            KeyPairOption::UseSeed(s) => {
-                                let mut seed = [0u8; ffi::crypto_sign_ed25519_SECRETKEYBYTES];
-                                let mut rng = ChaChaRng::from_seed(*array_ref!(s.as_slice(), 0, 32));
-                                rng.fill_bytes(&mut seed);
-                                unsafe {
-                                    ffi::crypto_sign_seed_keypair(pk.as_mut_ptr() as *mut u8,
-                                                                  sk.as_mut_ptr() as *mut u8,
-                                                                  seed.as_ptr() as *const u8)
-                                }
-                            },
-                            KeyPairOption::FromSecretKey(secret) => {
-                                array_copy!(secret, sk);
-                                array_copy!(secret, ffi::crypto_sign_ed25519_PUBLICKEYBYTES, pk, 0, ffi::crypto_sign_ed25519_PUBLICKEYBYTES);
-                                0
-                            }
-                        }
-                    },
-                    None => unsafe {
-                        ffi::crypto_sign_keypair(pk.as_mut_ptr() as *mut u8, sk.as_mut_ptr() as *mut u8)
-                    }
-                };
-            if res == 0 {
-                Ok((PublicKey(pk.to_vec()), PrivateKey(sk.to_vec())))
-            } else {
-                Err(CryptoError::KeyGenError("Unable to generate new keys".to_string()))
-            }
-        }
-        pub fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
-            let mut signature = [0u8; ffi::crypto_sign_ed25519_BYTES];
-            let res = unsafe {
-                ffi::crypto_sign_ed25519_detached(signature.as_mut_ptr() as *mut u8,
-                                                  ptr::null_mut(),
-                                                  message.as_ptr() as *const u8,
-                                                  message.len() as u64,
-                                                  sk.as_ptr() as *const u8)
-            };
-            if res == 0 {
-                let mut sig = Vec::new();
-                sig.extend_from_slice(&signature);
-                Ok(sig)
-            } else {
-                Err(CryptoError::SigningError("An error occurred while signing".to_string()))
-            }
-        }
-        pub fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> {
-            let res = unsafe {
-                ffi::crypto_sign_ed25519_verify_detached(signature.as_ptr() as *const u8,
-                                                         message.as_ptr() as *const u8,
-                                                         message.len() as u64,
-                                                         pk.as_ptr() as *const u8)
-            };
-            Ok(res == 0)
-        }
-    }
-}
-
-#[cfg(all(feature = "portable", not(feature = "native")))]
-mod ed25519_sha2_512 {
-    use super::*;
-    use rcrypto;
-
-    use hash::{digest, DigestAlgorithm};
-    use rand::{RngCore, SeedableRng};
-    use rand_chacha::ChaChaRng;
-    use rand::rngs::OsRng;
-
-    pub struct Ed25519Sha512Impl{}
-
-    impl Ed25519Sha512Impl {
-        pub fn new() -> Ed25519Sha512Impl { Ed25519Sha512Impl{} }
-        pub fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
-            let (sk, pk): ([u8; PRIVATE_KEY_SIZE], [u8; PUBLIC_KEY_SIZE]) = match option {
-                    Some(o) => {
-                        match o {
-                            KeyPairOption::UseSeed(s) => {
-                                let mut seed = [0u8; PRIVATE_KEY_SIZE];
-                                let hash = digest(DigestAlgorithm::Sha2_256, &s.as_slice())?;
-                                let mut rng = ChaChaRng::from_seed(*array_ref!(hash, 0, 32));
-                                rng.fill_bytes(&mut seed);
-                                rcrypto::ed25519::keypair(&seed)
-                            },
-                            KeyPairOption::FromSecretKey(s) => (*array_ref!(s, 0, 64), *array_ref!(s, 32, 32))
-                        }
-                    },
-                    None => {
-                        let mut rng = OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
-                        let mut seed = [0u8; 32];
-                        rng.fill_bytes(&mut seed);
-                        rcrypto::ed25519::keypair(&seed)
-                    }
-                };
-            Ok((PublicKey(pk.to_vec()), PrivateKey(sk.to_vec())))
-        }
-        pub fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
-            Ok(rcrypto::ed25519::signature(message, &sk[..]).to_vec())
-        }
-        pub fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> {
-            if signature.len() != SIGNATURE_SIZE {
-                Err(CryptoError::ParseError("Invalid signature length".to_string()))?
-            }
-            Ok(rcrypto::ed25519::verify(message, &pk[..], signature))
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::Signer;
     use encoding::hex::{bin2hex, hex2bin};
     use libsodium_ffi as ffi;
 

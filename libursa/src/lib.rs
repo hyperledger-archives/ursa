@@ -23,12 +23,12 @@ extern crate env_logger;
 extern crate log;
 extern crate rand;
 extern crate rand_chacha;
-extern crate sha2;
-extern crate sha3;
-#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
+pub extern crate sha2;
+pub extern crate sha3;
+pub extern crate blake2;
+extern crate generic_array;
+#[cfg(test)]
 extern crate libsodium_ffi;
-#[cfg(all(feature = "portable", not(feature = "native")))]
-extern crate crypto as rcrypto;
 #[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
 extern crate secp256k1 as libsecp256k1;
 #[cfg(all(feature = "portable", not(feature = "native")))]
@@ -72,7 +72,7 @@ extern crate num_traits;
 
 extern crate time;
 
-extern crate blake2b_simd;
+extern crate ed25519_dalek;
 
 #[cfg(feature = "cl")]
 #[macro_use]
