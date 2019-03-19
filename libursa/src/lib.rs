@@ -27,6 +27,7 @@ pub extern crate sha2;
 pub extern crate sha3;
 pub extern crate blake2;
 extern crate generic_array;
+extern crate zeroize;
 #[cfg(test)]
 extern crate libsodium_ffi;
 #[cfg(any(test, all(feature = "native", not(feature = "portable"))))]

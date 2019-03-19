@@ -6,6 +6,7 @@ use rand_chacha::ChaChaRng;
 use rand::rngs::OsRng;
 use rand::SeedableRng;
 use sha2::Digest;
+use zeroize::Zeroize;
 
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
@@ -18,8 +19,9 @@ impl SignatureScheme for Ed25519Sha512 {
     fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
         let kp = match option {
             Some(o) => match o {
-                KeyPairOption::UseSeed(s) => {
+                KeyPairOption::UseSeed(mut s) => {
                     let hash = sha2::Sha256::digest(s.as_slice());
+                    s.zeroize();
                     let mut rng = ChaChaRng::from_seed( *array_ref!(hash.as_slice(), 0, 32));
                     Keypair::generate::<sha2::Sha512, _>(&mut rng)
                 },

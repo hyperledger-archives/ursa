@@ -59,6 +59,7 @@ mod ecdsa_secp256k1 {
     use super::*;
     use libsecp256k1;
     use sha2::Digest;
+    use zeroize::Zeroize;
 
     use rand_chacha::ChaChaRng;
     use rand::{RngCore, SeedableRng};
@@ -86,12 +87,14 @@ mod ecdsa_secp256k1 {
             let sk = match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(seed) => {
+                            KeyPairOption::UseSeed(mut seed) => {
                                 let mut s = [0u8; PRIVATE_KEY_SIZE];
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, 32));
+                                seed.zeroize();
                                 rng.fill_bytes(&mut s);
-                                let s = D::digest(&s);
-                                libsecp256k1::key::SecretKey::from_slice(s.as_slice())?
+                                let k = D::digest(&s);
+                                s.zeroize();
+                                libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                             },
                             KeyPairOption::FromSecretKey(s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
                         }
@@ -100,8 +103,9 @@ mod ecdsa_secp256k1 {
                         let mut rng = OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
                         let mut s = [0u8; PRIVATE_KEY_SIZE];
                         rng.fill_bytes(&mut s);
-                        let s = D::digest(&s);
-                        libsecp256k1::key::SecretKey::from_slice(s.as_slice())?
+                        let k = D::digest(&s);
+                        s.zeroize();
+                        libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                     }
                 };
             let pk = libsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
@@ -144,6 +148,7 @@ mod ecdsa_secp256k1 {
 
     use rand::{SeedableRng, RngCore};
     use rand_chacha::ChaChaRng;
+    use zeroize::Zeroize;
 
     use amcl::secp256k1::{ecp, ecdh};
 
@@ -179,8 +184,9 @@ mod ecdsa_secp256k1 {
             match option {
                     Some(o) => {
                         match o {
-                            KeyPairOption::UseSeed(seed) => {
+                            KeyPairOption::UseSeed(mut seed) => {
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
+                                seed.zeroize();
                                 rng.fill_bytes(&mut sk);
 
                                 let d = D::digest(&sk[..]);
