@@ -1,6 +1,6 @@
 use errors::UrsaCryptoError;
 
-use hash::{digest, DigestAlgorithm, Digest, sha2};
+use hash::{Digest, sha2};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt, Sign};
 use num_integer::Integer;
 use num_traits::identities::{One, Zero};
@@ -172,7 +172,7 @@ impl BigNumber {
     }
 
     pub fn hash(data: &[u8]) -> Result<Vec<u8>, UrsaCryptoError> {
-        digest(DigestAlgorithm::Sha2_256, data).map_err(|e| UrsaCryptoError::InvalidStructure(e.to_string()))
+        Ok(sha2::Sha256::digest(data).as_slice().to_vec())
     }
 
     pub fn add(&self, a: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
@@ -386,10 +386,10 @@ impl BigNumber {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
-            hasher.update(&num);
+            hasher.input(&num);
         }
 
-        hasher.finalize().map_err(|e| UrsaCryptoError::InvalidStructure(e.to_string()))
+        Ok(hasher.result().as_slice().to_vec())
     }
 }
 
