@@ -25,11 +25,12 @@ extern crate env_logger;
 extern crate log;
 extern crate rand;
 extern crate rand_chacha;
-extern crate sha2;
-extern crate sha3;
+pub extern crate sha2;
+pub extern crate sha3;
+pub extern crate blake2;
+extern crate generic_array;
 extern crate zeroize;
-
-#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
+#[cfg(test)]
 extern crate libsodium_ffi;
 #[cfg(all(feature = "portable", not(feature = "native")))]
 extern crate crypto as rcrypto;

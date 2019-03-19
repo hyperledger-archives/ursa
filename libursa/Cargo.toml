@@ -61,6 +61,7 @@ serde = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 lazy_static = "1.0"
+zeroize = "0.5.2"
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
 js-sys = { version = "0.3.13", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }

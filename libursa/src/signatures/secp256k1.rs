@@ -92,6 +92,8 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
 mod ecdsa_secp256k1sha256 {
     use super::*;
     use libsecp256k1;
+    use sha2::Digest;
+    use zeroize::Zeroize;
 
     use rand_chacha::ChaChaRng;
     use rand::{RngCore, SeedableRng};
@@ -122,8 +124,11 @@ mod ecdsa_secp256k1sha256 {
                             KeyGenOption::UseSeed(ref seed) => {
                                 let mut s = [0u8; PRIVATE_KEY_SIZE];
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, 32));
+                                seed.zeroize();
                                 rng.fill_bytes(&mut s);
-                                libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                                let s = D::digest(&s);
+                                s.zeroize();
+                                libsecp256k1::key::SecretKey::from_slice(s.as_slice())?
                             },
                             KeyGenOption::FromSecretKey(ref s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
                         }
@@ -132,7 +137,9 @@ mod ecdsa_secp256k1sha256 {
                         let mut rng = OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
                         let mut s = [0u8; PRIVATE_KEY_SIZE];
                         rng.fill_bytes(&mut s);
-                        libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                        let s = D::digest(&s);
+                        s.zeroize();
+                        libsecp256k1::key::SecretKey::from_slice(s.as_slice())?
                     }
                 };
             let pk = libsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
@@ -174,6 +181,7 @@ mod ecdsa_secp256k1sha256 {
 
     use rand::{SeedableRng, RngCore};
     use rand_chacha::ChaChaRng;
+    use zeroize::Zeroize;
 
     use amcl::secp256k1::{ecp, ecdh};
 
@@ -212,6 +220,7 @@ mod ecdsa_secp256k1sha256 {
                         match o {
                             KeyGenOption::UseSeed(ref seed) => {
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
+				seed.zeroize();
                                 rng.fill_bytes(&mut sk);
                                 let d = digest(DigestAlgorithm::Sha2_256, &sk[..])?;
                                 sk.clone_from_slice(d.as_slice());
