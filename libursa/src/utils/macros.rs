@@ -1,21 +1,3 @@
-macro_rules! array_copy {
-    ($src:expr, $dst:expr) => {
-        for i in 0..$dst.len() {
-            $dst[i] = $src[i];
-        }
-    };
-    ($src:expr, $dst:expr, $offset:expr, $length:expr) => {
-        for i in 0..$length {
-            $dst[i + $offset] = $src[i]
-        }
-    };
-    ($src:expr, $src_offset:expr, $dst:expr, $dst_offset:expr, $length:expr) => {
-        for i in 0..$length {
-            $dst[i + $dst_offset] = $src[i + $src_offset]
-        }
-    }
-}
-
 macro_rules! impl_bytearray {
     ($thing:ident) => {
         #[cfg_attr(feature = "wasm", wasm_bindgen)]
