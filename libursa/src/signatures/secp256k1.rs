@@ -263,146 +263,28 @@ mod ecdsa_secp256k1 {
         }
         pub fn sign<D>(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> where D: Digest<OutputSize = U32> {
             let h = D::digest(message);
-            match rustlibsecp256k1::sign(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE), array_ref!(sk[..], 0, PRIVATE_KEY_SIZE)) {
-                Ok(sig) => Ok(sig.to_vec()),
+            let msg = rustlibsecp256k1::Message::parse(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE));
+            let secret = rustlibsecp256k1::SecretKey::parse(array_ref!(sk[..], 0, PRIVATE_KEY_SIZE)).map_err(|e|CryptoError::SigningError(format!("{:?}", e)))?;
+            match rustlibsecp256k1::sign(&msg, &secret) {
+                Ok((sig, _)) => Ok(sig.serialize().to_vec()),
                 Err(_) => Err(CryptoError::SigningError("".to_string()))
             }
         }
         pub fn verify<D>(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> where D: Digest<OutputSize = U32> {
             let h = D::digest(message);
             let uncompressed_pk = self.public_key_uncompressed(&pk);
-            match rustlibsecp256k1::verify(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE),
-                                           array_ref!(signature, 0, SIGNATURE_SIZE),
-                                           array_ref!(uncompressed_pk.as_slice(), 0, PUBLIC_UNCOMPRESSED_KEY_SIZE)) {
-                Ok(b) => Ok(b),
-                Err(_) => Err(CryptoError::SigningError("Incorrect signature".to_string()))
-            }
+
+            let msg = rustlibsecp256k1::Message::parse(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE));
+            let sig = rustlibsecp256k1::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
+            let pk = rustlibsecp256k1::PublicKey::parse(array_ref!(uncompressed_pk.as_slice(), 0, PUBLIC_UNCOMPRESSED_KEY_SIZE)).map_err(|e|CryptoError::SigningError(format!("{:?}", e)))?;
+            Ok(rustlibsecp256k1::verify(&msg, &sig, &pk))
         }
         pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), CryptoError> {
-            let mut new_s = set_b32(array_ref!(signature, 32, 32));
-            if is_high(&new_s) {
-                negate(&mut new_s);
-                let s_tmp = get_b32(&new_s);
-                array_copy!(s_tmp, 0, signature, 32, 32);
-            }
+            let mut sig = rustlibsecp256k1::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
+            sig.normalize_s();
+            array_copy!(sig.serialize(), signature, 0, SIGNATURE_SIZE);
             Ok(())
         }
-    }
-
-    const HALF_CURVE_ORDER: [u32; 8] = [0x681B_20A0, 0xDFE9_2F46, 0x57A4_501D, 0x5D57_6E73, 0xFFFF_FFFF, 0xFFFF_FFFF, 0xFFFF_FFFF, 0x7FFF_FFFF];
-    const CURVE_C: [u32; 5] = [!HALF_CURVE_ORDER[0] + 1, !HALF_CURVE_ORDER[1], !HALF_CURVE_ORDER[2], !HALF_CURVE_ORDER[3], 1u32];
-    const CURVE_ORDER: [u32; 8] = [0xD036_4141, 0xBFD2_5E8C, 0xAF48_A03B, 0xBAAE_DCE6, 0xFFFF_FFFE, 0xFFFF_FFFF, 0xFFFF_FFFF, 0xFFFF_FFFF];
-
-    /// Convert a little-endian byte array to 8 32 bit numbers
-    fn set_b32(s: &[u8; 32]) -> [u32; 8] {
-        let mut new_s = [0u32; 8];
-
-        new_s[0] = get_u32(&s[28..32]);
-        new_s[1] = get_u32(&s[24..28]);
-        new_s[2] = get_u32(&s[20..24]);
-        new_s[3] = get_u32(&s[16..20]);
-        new_s[4] = get_u32(&s[12..16]);
-        new_s[5] = get_u32(&s[8..12]);
-        new_s[6] = get_u32(&s[4..8]);
-        new_s[7] = get_u32(&s[0..4]);
-
-        let overflow = check_overflow(&new_s);
-        reduce(&mut new_s, overflow);
-        new_s
-    }
-
-    fn get_u32(n: &[u8]) -> u32 {
-        u32::from(n[0]) << 24 |
-        u32::from(n[1]) << 16 |
-        u32::from(n[2]) << 8  |
-        u32::from(n[3])
-    }
-
-    /// Convert 8 32 bit numbers array to a little-endian byte array.
-    fn get_b32(s: &[u32; 8]) -> [u8; 32] {
-        let mut new_s = [0u8; 32];
-        let mut index = 0;
-        for i in 0..8 {
-            let mut shift = 24;
-            for _ in 0..4 {
-                new_s[index] = (s[7 - i] >> shift) as u8;
-                index += 1;
-                shift -= 8;
-            }
-        }
-        new_s
-    }
-
-    /// Check whether a scalar is higher than the group order divided
-    /// by 2.
-    fn is_high(s: &[u32; 8]) -> bool {
-        let mut yes: bool = false;
-        let mut no: bool = false;
-        no = no || (s[7] < HALF_CURVE_ORDER[7]);
-        yes = yes || ((s[7] > HALF_CURVE_ORDER[7]) & !no);
-        no = no || ((s[6] < HALF_CURVE_ORDER[6]) & !yes); /* No need for a > check. */
-        no = no || ((s[5] < HALF_CURVE_ORDER[5]) & !yes); /* No need for a > check. */
-        no = no || ((s[4] < HALF_CURVE_ORDER[4]) & !yes); /* No need for a > check. */
-        no = no || ((s[3] < HALF_CURVE_ORDER[3]) & !yes);
-        yes = yes || ((s[3] > HALF_CURVE_ORDER[3]) && !no);
-        no = no || ((s[2] < HALF_CURVE_ORDER[2]) && !yes);
-        yes = yes || ((s[2] > HALF_CURVE_ORDER[2]) && !no);
-        no = no || ((s[1] < HALF_CURVE_ORDER[1]) && !yes);
-        yes = yes || ((s[1] > HALF_CURVE_ORDER[1]) && !no);
-        yes = yes || ((s[0] >= HALF_CURVE_ORDER[0]) && !no);
-        yes
-    }
-
-    fn negate(s: &mut [u32; 8]) {
-        let nonzero = if is_zero(s) { 0u64 } else { 0xFFFF_FFFFu64 };
-        let mut t = u64::from(!s[0]) + u64::from(CURVE_ORDER[0] + 1);
-
-        for i in 0..7 {
-            s[i] = (t & nonzero) as u32;
-            t >>= 32;
-            t += u64::from(!s[i + 1]) + u64::from(CURVE_ORDER[i + 1]);
-        }
-        s[7] = (t & nonzero) as u32;
-    }
-
-    fn is_zero(s: &[u32; 8]) -> bool {
-        s.iter().all(|b| *b == 0)
-    }
-
-    fn check_overflow(s: &[u32; 8]) -> bool {
-        let mut yes: bool = false;
-        let mut no: bool = false;
-        for i in 0..3 {
-            no = no || (s[7 - i] < CURVE_ORDER[7 - i])
-        }
-        for i in 0..4 {
-            no = no || (s[4 - i] < CURVE_ORDER[4 - i]);
-            yes = yes || ((s[4 - i] > CURVE_ORDER[4 - i]) && !no);
-        }
-        yes = yes || ((s[0] >= CURVE_ORDER[0]) && !no);
-        yes
-    }
-
-    fn reduce(s: &mut [u32; 8], overflow: bool) {
-        let o = if overflow { 1u64 } else { 0u64 };
-        let mut t = 0u64;
-
-        for i in 0..5 {
-            t += u64::from(s[i]) + o * u64::from(CURVE_C[i]);
-            s[i] = (t & 0xFFFF_FFFF) as u32;
-            t >>= 32;
-        }
-
-        t += u64::from(s[5]);
-        s[5] = (t & 0xFFFF_FFFF) as u32;
-        t >>= 32;
-
-        t += u64::from(s[6]);
-        s[6] = (t & 0xFFFF_FFFF) as u32;
-        t >>= 32;
-
-        t += u64::from(s[7]);
-        s[7] = (t & 0xFFFF_FFFF) as u32;
     }
 }
 
