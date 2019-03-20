@@ -1,9 +1,13 @@
 use super::*;
 use CryptoError;
+use generic_array::typenum::U32;
 
 use rand::rngs::OsRng;
 
-use generic_array::typenum::U32;
+#[cfg(feature = "portable")]
+use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "portable")]
+use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
 
 pub const PRIVATE_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 33;
@@ -21,10 +25,10 @@ impl EcdsaSecp256k1Sha256 {
 }
 
 impl SignatureScheme for EcdsaSecp256k1Sha256 {
-    fn new() -> EcdsaSecp256k1Sha256 {
+    fn new() -> Self {
         EcdsaSecp256k1Sha256(ecdsa_secp256k1::EcdsaSecp256k1Impl::new())
     }
-    fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+    fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
         self.0.keypair::<sha2::Sha256>(option)
     }
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
@@ -40,18 +44,48 @@ impl SignatureScheme for EcdsaSecp256k1Sha256 {
 
 impl EcdsaPublicKeyHandler for EcdsaSecp256k1Sha256 {
     /// Returns the compressed bytes
-    fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
-        self.0.serialize(pk)
+    fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
+        self.0.public_key_compressed(pk)
     }
     /// Returns the uncompressed bytes
-    fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
-        self.0.serialize_uncompressed(pk)
+    fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        self.0.public_key_uncompressed(pk)
     }
     /// Read raw bytes into key struct. Can be either compressed or uncompressed
     fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError> {
         self.0.parse(data)
     }
     fn public_key_uncompressed_size() -> usize { PUBLIC_UNCOMPRESSED_KEY_SIZE }
+}
+
+#[cfg(feature = "portable")]
+impl Serialize for EcdsaSecp256k1Sha256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_newtype_struct("EcdsaSecp256k1Sha256", &self)
+    }
+}
+
+#[cfg(feature = "portable")]
+impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+        struct EcdsaSecp256k1Sha256Visitor;
+
+        impl<'a> Visitor<'a> for EcdsaSecp256k1Sha256Visitor {
+            type Value = EcdsaSecp256k1Sha256;
+
+            fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                formatter.write_str("expected EcdsaSecp256k1Sha256")
+            }
+
+            fn visit_str<E>(self, _: &str) -> Result<EcdsaSecp256k1Sha256, E>
+                where E: DError
+            {
+                Ok(EcdsaSecp256k1Sha256::new())
+            }
+        }
+
+        deserializer.deserialize_str(EcdsaSecp256k1Sha256Visitor)
+    }
 }
 
 #[cfg(all(feature = "native", not(feature = "portable")))]
@@ -67,11 +101,11 @@ mod ecdsa_secp256k1 {
     pub struct EcdsaSecp256k1Impl(libsecp256k1::Secp256k1<libsecp256k1::All>);
 
     impl EcdsaSecp256k1Impl {
-        pub fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
             let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize().to_vec()
         }
-        pub fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
             let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize_uncompressed().to_vec()
         }
@@ -83,11 +117,11 @@ mod ecdsa_secp256k1 {
         pub fn new() -> Self {
             Self(libsecp256k1::Secp256k1::new())
         }
-        pub fn keypair<D>(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> where D: Digest<OutputSize = U32> {
+        pub fn keypair<D>(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> where D: Digest<OutputSize = U32> {
             let sk = match option {
-                    Some(o) => {
+                    Some(mut o) => {
                         match o {
-                            KeyPairOption::UseSeed(mut seed) => {
+                            KeyGenOption::UseSeed(ref mut seed) => {
                                 let mut s = [0u8; PRIVATE_KEY_SIZE];
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, 32));
                                 seed.zeroize();
@@ -96,7 +130,7 @@ mod ecdsa_secp256k1 {
                                 s.zeroize();
                                 libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                             },
-                            KeyPairOption::FromSecretKey(s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                            KeyGenOption::FromSecretKey(ref s) => libsecp256k1::key::SecretKey::from_slice(&s[..])?
                         }
                     },
                     None => {
@@ -134,7 +168,7 @@ mod ecdsa_secp256k1 {
             let mut sig = libsecp256k1::Signature::from_compact(signature)?;
             sig.normalize_s();
             let compact = sig.serialize_compact();
-            array_copy!(compact, signature);
+            signature.clone_from_slice(&compact[..]);
             Ok(())
         }
     }
@@ -152,15 +186,34 @@ mod ecdsa_secp256k1 {
 
     use amcl::secp256k1::{ecp, ecdh};
 
+    macro_rules! array_copy {
+        ($src:expr, $dst:expr) => {
+            for i in 0..$dst.len() {
+                $dst[i] = $src[i];
+            }
+        };
+        ($src:expr, $dst:expr, $offset:expr, $length:expr) => {
+            for i in 0..$length {
+                $dst[i + $offset] = $src[i]
+            }
+        };
+        ($src:expr, $src_offset:expr, $dst:expr, $dst_offset:expr, $length:expr) => {
+            for i in 0..$length {
+                $dst[i + $dst_offset] = $src[i + $src_offset]
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
     pub struct EcdsaSecp256k1Impl{}
 
     impl EcdsaSecp256k1Impl {
-        pub fn serialize(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut compressed = [0u8; PUBLIC_KEY_SIZE];
             ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
             compressed.to_vec()
         }
-        pub fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
+        pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut uncompressed = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
             ecp::ECP::frombytes(&pk[..]).tobytes(&mut uncompressed, false);
             uncompressed.to_vec()
@@ -179,12 +232,12 @@ mod ecdsa_secp256k1 {
         pub fn new() -> Self {
             Self{}
         }
-        pub fn keypair<D>(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> where D: Digest<OutputSize = U32> {
+        pub fn keypair<D>(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> where D: Digest<OutputSize = U32> {
             let mut sk = [0u8; PRIVATE_KEY_SIZE];
             match option {
-                    Some(o) => {
+                    Some(mut o) => {
                         match o {
-                            KeyPairOption::UseSeed(mut seed) => {
+                            KeyGenOption::UseSeed(ref mut seed) => {
                                 let mut rng = ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
                                 seed.zeroize();
                                 rng.fill_bytes(&mut sk);
@@ -192,14 +245,14 @@ mod ecdsa_secp256k1 {
                                 let d = D::digest(&sk[..]);
                                 array_copy!(d.as_slice(), sk)
                             },
-                            KeyPairOption::FromSecretKey(s) => array_copy!(s, sk)
+                            KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk)
                         }
                     },
                     None => {
                         let mut rng = OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
                         rng.fill_bytes(&mut sk);
                         let d = D::digest(&sk[..]);
-                        array_copy!(d.as_slice(), sk);
+                        sk.clone_from_slice(d.as_slice());
                     }
                 };
             let mut pk = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
@@ -217,7 +270,7 @@ mod ecdsa_secp256k1 {
         }
         pub fn verify<D>(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> where D: Digest<OutputSize = U32> {
             let h = D::digest(message);
-            let uncompressed_pk = self.serialize_uncompressed(&pk);
+            let uncompressed_pk = self.public_key_uncompressed(&pk);
             match rustlibsecp256k1::verify(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE),
                                            array_ref!(signature, 0, SIGNATURE_SIZE),
                                            array_ref!(uncompressed_pk.as_slice(), 0, PUBLIC_UNCOMPRESSED_KEY_SIZE)) {
@@ -356,6 +409,7 @@ mod ecdsa_secp256k1 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::EcdsaPublicKeyHandler;
     use encoding::hex;
     use libsecp256k1;
     use sha2::Digest;
@@ -383,7 +437,7 @@ mod test {
     fn secp256k1_load_keys() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let sres = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret)));
+        let sres = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
         assert!(sres.is_ok());
         let pres = scheme.parse(hex::hex2bin(PUBLIC_KEY).unwrap().as_slice());
         assert!(pres.is_ok());
@@ -395,9 +449,9 @@ mod test {
     fn secp256k1_compatibility() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
-        let p_u = scheme.parse(&scheme.serialize_uncompressed(&p));
+        let p_u = scheme.parse(&scheme.public_key_uncompressed(&p));
         assert!(p_u.is_ok());
         let p_u = p_u.unwrap();
         assert_eq!(p_u, p);
@@ -406,12 +460,12 @@ mod test {
         assert!(sk.is_ok());
         let pk = libsecp256k1::key::PublicKey::from_slice(&p[..]);
         assert!(pk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.serialize_uncompressed(&p)[..]);
+        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
         assert!(pk.is_ok());
 
         let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
         let mut ctx = BigNumContext::new().unwrap();
-        let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.serialize_uncompressed(&p)[..], &mut ctx);
+        let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.public_key_uncompressed(&p)[..], &mut ctx);
         assert!(openssl_point.is_ok());
     }
 
@@ -455,7 +509,7 @@ mod test {
     fn secp256k1_sign() {
         let scheme = EcdsaSecp256k1Sha256::new();
         let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         match scheme.sign(MESSAGE_1, &s) {
             Ok(sig) => {
@@ -482,7 +536,7 @@ mod test {
 
                 let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
                 let mut ctx = BigNumContext::new().unwrap();
-                let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.serialize_uncompressed(&p)[..], &mut ctx).unwrap();
+                let openssl_point = EcPoint::from_bytes(&openssl_group, &scheme.public_key_uncompressed(&p)[..], &mut ctx).unwrap();
                 let openssl_pkey = EcKey::from_public_key(&openssl_group, &openssl_point).unwrap();
                 let openssl_skey = EcKey::from_private_components(&openssl_group, &BigNum::from_hex_str(PRIVATE_KEY).unwrap(), &openssl_point).unwrap();
 
@@ -522,5 +576,21 @@ mod test {
             },
             Err(e) => assert!(false, e)
         }
+    }
+
+    #[test]
+    fn secp256k1_publickey_compression() {
+        let scheme = EcdsaSecp256k1Sha256::new();
+
+        let pk = PublicKey(hex::hex2bin(PUBLIC_KEY).unwrap());
+
+        let res = scheme.public_key_compressed(&pk);
+        assert_eq!(res[..], pk[..]);
+
+        let res = scheme.public_key_uncompressed(&pk);
+        let pk = PublicKey(res);
+
+        let res = scheme.public_key_uncompressed(&pk);
+        assert_eq!(res[..], pk[..]);
     }
 }

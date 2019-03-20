@@ -1,4 +1,4 @@
-use super::{SignatureScheme, KeyPairOption, PublicKey, PrivateKey};
+use super::{SignatureScheme, KeyGenOption, PublicKey, PrivateKey};
 use CryptoError;
 pub use ed25519_dalek::{PUBLIC_KEY_LENGTH as PUBLIC_KEY_SIZE, EXPANDED_SECRET_KEY_LENGTH as PRIVATE_KEY_SIZE, SIGNATURE_LENGTH as SIGNATURE_SIZE};
 use ed25519_dalek::{Signature, Keypair, PublicKey as PK};
@@ -10,40 +10,41 @@ use zeroize::Zeroize;
 
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
+#[cfg_attr(feature = "wasm", derive(Serialize, Deserialize))]
 pub struct Ed25519Sha512;
 
 impl SignatureScheme for Ed25519Sha512 {
     fn new() -> Self {
         Self
     }
-    fn keypair(&self, option: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
+    fn keypair(&self, option: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError> {
         let kp = match option {
-            Some(o) => match o {
-                KeyPairOption::UseSeed(mut s) => {
+            Some(mut o) => match o {
+                KeyGenOption::UseSeed(ref mut s) => {
                     let hash = sha2::Sha256::digest(s.as_slice());
                     s.zeroize();
                     let mut rng = ChaChaRng::from_seed( *array_ref!(hash.as_slice(), 0, 32));
-                    Keypair::generate::<sha2::Sha512, _>(&mut rng)
+                    Keypair::generate(&mut rng)
                 },
-                KeyPairOption::FromSecretKey(s) => {
+                KeyGenOption::FromSecretKey(ref s) => {
                     Keypair::from_bytes(&s[..]).map_err(|e|CryptoError::KeyGenError(e.to_string()))?
                 }
             },
             None => {
                 let mut rng = OsRng::new().map_err(|e|CryptoError::KeyGenError(e.msg.to_string()))?;
-                Keypair::generate::<sha2::Sha512, _>(&mut rng)
+                Keypair::generate(&mut rng)
             }
         };
         Ok((PublicKey(kp.public.to_bytes().to_vec()), PrivateKey(kp.to_bytes().to_vec())))
     }
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
         let kp = Keypair::from_bytes(&sk[..]).map_err(|e| CryptoError::KeyGenError(e.to_string()))?;
-        Ok(kp.sign::<sha2::Sha512>(message).to_bytes().to_vec())
+        Ok(kp.sign(message).to_bytes().to_vec())
     }
     fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError> {
         let p = PK::from_bytes(&pk[..]).map_err(|e|CryptoError::ParseError(e.to_string()))?;
         let s = Signature::from_bytes(signature).map_err(|e|CryptoError::ParseError(e.to_string()))?;
-        p.verify::<sha2::Sha512>(message, &s).map_err(|e|CryptoError::SigningError(e.to_string()))?;
+        p.verify(message, &s).map_err(|e|CryptoError::SigningError(e.to_string()))?;
         Ok(true)
     }
     fn signature_size() -> usize { SIGNATURE_SIZE }
@@ -77,7 +78,7 @@ mod test {
     fn ed25519_load_keys() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let sres = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret)));
+        let sres = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
         assert!(sres.is_ok());
         let (p1, s1) = sres.unwrap();
         assert_eq!(s1, PrivateKey(hex2bin(PRIVATE_KEY).unwrap()));
@@ -88,7 +89,7 @@ mod test {
     fn ed25519_verify() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let (p, _) = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret))).unwrap();
+        let (p, _) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         let result = scheme.verify(&MESSAGE_1, hex2bin(SIGNATURE_1).unwrap().as_slice(), &p);
         assert!(result.is_ok());
@@ -109,7 +110,7 @@ mod test {
     fn ed25519_sign() {
         let scheme = Ed25519Sha512::new();
         let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let (p, s) = scheme.keypair(Some(KeyPairOption::FromSecretKey(&secret))).unwrap();
+        let (p, s) = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret))).unwrap();
 
         match scheme.sign(&MESSAGE_1, &s) {
             Ok(sig) => {

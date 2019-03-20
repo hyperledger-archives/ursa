@@ -2,11 +2,11 @@ pub mod secp256k1;
 pub mod ed25519;
 
 use CryptoError;
-use keys::{PrivateKey, PublicKey, KeyPairOption};
+use keys::{PrivateKey, PublicKey, KeyGenOption};
 
 pub trait SignatureScheme {
     fn new() -> Self;
-    fn keypair(&self, options: Option<KeyPairOption>) -> Result<(PublicKey, PrivateKey), CryptoError>;
+    fn keypair(&self, options: Option<KeyGenOption>) -> Result<(PublicKey, PrivateKey), CryptoError>;
     fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError>;
     fn verify(&self, message: &[u8], signature: &[u8], pk: &PublicKey) -> Result<bool, CryptoError>;
     fn signature_size() -> usize;
@@ -49,16 +49,17 @@ impl<'a, 'b, T: 'a + SignatureScheme> Signer<'a, 'b, T> {
     ///
     /// * `public_key` - the public key instance
     pub fn get_public_key(&self) -> Result<PublicKey, CryptoError> {
-        let (pubk, _) = self.scheme.keypair(Some(KeyPairOption::FromSecretKey(self.key))).unwrap();
+        let sk = PrivateKey(self.key[..].to_vec());
+        let (pubk, _) = self.scheme.keypair(Some(KeyGenOption::FromSecretKey(sk))).unwrap();
         Ok(pubk)
     }
 }
 
 pub trait EcdsaPublicKeyHandler {
     /// Returns the compressed bytes
-    fn serialize(&self, pk: &PublicKey) -> Vec<u8>;
+    fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8>;
     /// Returns the uncompressed bytes
-    fn serialize_uncompressed(&self, pk: &PublicKey) -> Vec<u8>;
+    fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8>;
     /// Read raw bytes into key struct. Can be either compressed or uncompressed
     fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError>;
     fn public_key_uncompressed_size() -> usize;

@@ -8,6 +8,8 @@
 extern crate wasm_bindgen;
 #[cfg(feature = "wasm")]
 extern crate console_error_panic_hook;
+#[cfg(feature = "wasm")]
+extern crate js_sys;
 
 /// Portable try to solely use Rust and no external C libraries.
 /// This is considered less secure only because the Rust code may not have had a
@@ -26,8 +28,8 @@ extern crate rand_chacha;
 pub extern crate sha2;
 pub extern crate sha3;
 pub extern crate blake2;
-extern crate generic_array;
 extern crate zeroize;
+extern crate generic_array;
 #[cfg(test)]
 extern crate libsodium_ffi;
 #[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
@@ -78,6 +80,7 @@ extern crate ed25519_dalek;
 #[cfg(feature = "cl")]
 #[macro_use]
 pub mod cl;
+#[cfg(feature = "bls")]
 pub mod bls;
 
 #[cfg(feature = "bn_openssl")]
@@ -104,6 +107,9 @@ pub mod hash;
 pub mod keys;
 pub mod signatures;
 pub mod encoding;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 #[derive(Debug)]
 pub enum CryptoError {

@@ -505,6 +505,7 @@ mod tests {
         assert_eq!(answer, test);
     }
 
+    #[ignore]
     #[test]
     fn generate_prime_in_range_works() {
         let start = BigNumber::rand(RANGE_LEFT).unwrap();

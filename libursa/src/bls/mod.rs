@@ -178,7 +178,6 @@ impl VerKey {
     }
 }
 
-
 /// Proof of possession for BLS verification key.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfPossession {

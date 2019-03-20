@@ -31,13 +31,13 @@ pub fn new_nonce() -> Result<Nonce, UrsaCryptoError> {
 }
 
 /// A list of attributes a Credential is based on.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CredentialSchema {
     attrs: BTreeSet<String>, /* attr names */
 }
 
 /// A Builder of `Credential Schema`.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CredentialSchemaBuilder {
     attrs: BTreeSet<String>, /* attr names */
 }
@@ -57,12 +57,12 @@ impl CredentialSchemaBuilder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NonCredentialSchema {
     attrs: BTreeSet<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NonCredentialSchemaBuilder {
     attrs: BTreeSet<String>,
 }
@@ -160,7 +160,7 @@ impl CredentialValues {
 }
 
 /// A Builder of `Credential Values`.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CredentialValuesBuilder {
     attrs_values: BTreeMap<String, CredentialValue>, /* attr_name -> int representation of value */
 }
@@ -555,6 +555,13 @@ impl CredentialSignature {
             .as_ref()
             .map(|r_credential| r_credential.i)
     }
+
+    pub fn try_clone(&self) -> Result<CredentialSignature, UrsaCryptoError> {
+        Ok(CredentialSignature {
+            p_credential: self.p_credential.try_clone()?,
+            r_credential: self.r_credential.as_ref().cloned()
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -563,6 +570,17 @@ pub struct PrimaryCredentialSignature {
     a: BigNumber,
     e: BigNumber,
     v: BigNumber
+}
+
+impl PrimaryCredentialSignature {
+    pub fn try_clone(&self) -> Result<PrimaryCredentialSignature, UrsaCryptoError> {
+        Ok(PrimaryCredentialSignature {
+            m_2: self.m_2.try_clone()?,
+            a: self.a.try_clone()?,
+            e: self.e.try_clone()?,
+            v: self.v.try_clone()?
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1038,7 +1056,7 @@ impl NonRevocProofXList {
         ])
     }
 
-    pub fn from_list(seq: Vec<GroupOrderElement>) -> NonRevocProofXList {
+    pub fn from_list(seq: &[GroupOrderElement]) -> NonRevocProofXList {
         NonRevocProofXList {
             rho: seq[0],
             r: seq[10],

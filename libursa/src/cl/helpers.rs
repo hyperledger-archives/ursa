@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 #[cfg(test)]
 use std::cell::RefCell;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[allow(dead_code)] //FIXME
 pub enum ByteOrder {
     Big,
