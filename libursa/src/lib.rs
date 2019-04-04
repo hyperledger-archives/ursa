@@ -52,7 +52,6 @@ extern crate serde_derive;
 
 #[cfg(not(test))]
 #[cfg(feature = "serialization")]
-#[macro_use]
 extern crate serde_json;
 
 #[cfg(test)]

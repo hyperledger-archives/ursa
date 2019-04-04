@@ -2,20 +2,30 @@
 extern crate serde_json;
 extern crate log;
 
+#[cfg(feature = "ffi")]
 use ffi::ErrorCode;
 
 use std::fmt;
 use std::cell::RefCell;
+#[cfg(feature = "ffi")]
 use std::ptr;
 use std::ffi::CString;
+#[cfg(feature = "ffi")]
 use std::os::raw::c_char;
 
 use failure::{Backtrace, Context, Fail};
 
+#[cfg(feature = "ffi")]
 use utils::ctypes;
 
+#[cfg(feature = "ffi")]
 pub mod prelude {
     pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult, set_current_error, get_current_error_c_json};
+}
+
+#[cfg(not(feature = "ffi"))]
+pub mod prelude {
+    pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult};
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
@@ -100,6 +110,7 @@ impl From<log::SetLoggerError> for UrsaCryptoError {
     }
 }
 
+#[cfg(feature = "ffi")]
 impl From<UrsaCryptoErrorKind> for ErrorCode {
     fn from(code: UrsaCryptoErrorKind) -> ErrorCode {
         match code {
@@ -130,6 +141,7 @@ impl From<UrsaCryptoErrorKind> for ErrorCode {
     }
 }
 
+#[cfg(feature = "ffi")]
 impl From<ErrorCode> for UrsaCryptoErrorKind {
     fn from(err: ErrorCode) -> UrsaCryptoErrorKind {
         match err {
@@ -157,6 +169,7 @@ impl From<ErrorCode> for UrsaCryptoErrorKind {
     }
 }
 
+#[cfg(feature = "ffi")]
 impl From<UrsaCryptoError> for ErrorCode {
     fn from(err: UrsaCryptoError) -> ErrorCode {
         set_current_error(&err);
@@ -182,6 +195,7 @@ thread_local! {
     pub static CURRENT_ERROR_C_JSON: RefCell<Option<CString>> = RefCell::new(None);
 }
 
+#[cfg(feature = "ffi")]
 pub fn set_current_error(err: &UrsaCryptoError) {
     CURRENT_ERROR_C_JSON.with(|error| {
         let error_json = json!({
@@ -192,6 +206,7 @@ pub fn set_current_error(err: &UrsaCryptoError) {
     });
 }
 
+#[cfg(feature = "ffi")]
 pub fn get_current_error_c_json() -> *const c_char {
     let mut value = ptr::null();
 

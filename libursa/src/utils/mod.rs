@@ -1,3 +1,4 @@
+#[cfg(feature = "ffi")]
 #[macro_use]
 pub mod ctypes;
 #[macro_use]

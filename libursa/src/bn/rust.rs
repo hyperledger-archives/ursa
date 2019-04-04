@@ -14,6 +14,7 @@ use serde::ser::{Serialize, Serializer, Error as SError};
 #[cfg(feature = "serialization")]
 use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
 
+#[cfg(feature = "ffi")]
 use std::error::Error;
 use std::fmt;
 use std::cmp::Ord;
@@ -29,7 +30,7 @@ macro_rules! prime_generation {
     ($f:ident, $size:ident, $msg:expr) => {
         match $f::new($size)?.to_bigint() {
             Some(bn) => Ok(BigNumber { bn }),
-            None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, $msg.to_string()))
         }
     };
 }
@@ -41,7 +42,7 @@ macro_rules! prime_check {
         } else {
             match $value.bn.to_biguint() {
                 Some(bn) => Ok($f::check(&bn)),
-                None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+                None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, $msg.to_string()))
             }
         }
     };
@@ -72,11 +73,11 @@ impl BigNumber {
         let mut rng = OsRng::new()?;
         let mut start = match start.bn.to_biguint() {
             Some(bn) => bn,
-            None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'start': {:?}", start)))
+            None => return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Invalid number for 'start': {:?}", start)))
         };
         let mut end = match end.bn.to_biguint() {
             Some(bn) => bn,
-            None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'end': {:?}", end)))
+            None => return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Invalid number for 'end': {:?}", end)))
         };
 
         if start > end {
@@ -98,7 +99,7 @@ impl BigNumber {
 
         match res.to_bigint() {
             Some(bn) => Ok(BigNumber{bn}),
-            None => Err(UrsaCryptoError::InvalidStructure("Unable to generate prime in range".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Unable to generate prime in range".to_string()))
         }
     }
 
@@ -121,7 +122,7 @@ impl BigNumber {
         let res = rng.gen_bigint_range(&BigInt::zero(), &self.bn);
         match res.to_bigint() {
             Some(bn) => Ok(BigNumber{bn}),
-            None => Err(UrsaCryptoError::InvalidStructure("An error in rand_range".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "An error in rand_range".to_string()))
         }
     }
 
@@ -206,7 +207,7 @@ impl BigNumber {
 
     pub fn div(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if a.bn.is_zero() {
-            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+            Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "a cannot be zero".to_string()))
         } else {
             let res = &self.bn / &a.bn;
             Ok(BigNumber { bn: res })
@@ -230,7 +231,7 @@ impl BigNumber {
 
     pub fn div_word(&mut self, w: u32) -> Result<&mut BigNumber, UrsaCryptoError> {
         if w == 0 {
-            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+            Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "a cannot be zero".to_string()))
         } else {
             self.bn /= w;
             Ok(self)
@@ -254,7 +255,7 @@ impl BigNumber {
 
     pub fn modulus(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if a.bn == BigInt::zero() {
-            return Err(UrsaCryptoError::InvalidStructure("Cannot have modulus==0".to_string()))
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Cannot have modulus==0".to_string()))
         }
         let res = &self.bn % &BigNumber::_get_modulus(&a.bn);
         Ok(BigNumber { bn: res })
@@ -277,14 +278,14 @@ impl BigNumber {
 
         match a.bn.to_u64() {
             Some(num) => Ok(BigNumber { bn: self.bn.pow(num) }),
-            None => Err(UrsaCryptoError::InvalidStructure("'a' cannot be u64".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "'a' cannot be u64".to_string()))
         }
     }
 
     pub fn inverse(&self, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if n.bn.is_one() ||
            n.bn.is_zero() {
-            return Err(UrsaCryptoError::InvalidStructure("Invalid modulus".to_string()))
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Invalid modulus".to_string()))
         }
         let n = BigNumber::_get_modulus(&n.bn);
 
@@ -320,7 +321,7 @@ impl BigNumber {
             new_r = temp_r - quotient * temp_new_r;
         }
         if r > BigInt::one() {
-            return Err(UrsaCryptoError::InvalidStructure("Not invertible".to_string()));
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Not invertible".to_string()));
         } else if t < BigInt::zero() {
             t += n.clone()
         }
@@ -382,7 +383,7 @@ impl BigNumber {
         })
     }
 
-    pub fn hash_array(nums: &[Vec<u8>]) -> UrsaCryptoResult<Vec<u8> {
+    pub fn hash_array(nums: &[Vec<u8>]) -> UrsaCryptoResult<Vec<u8>> {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
@@ -457,19 +458,19 @@ impl<'a> Deserialize<'a> for BigNumber {
 
 impl From<glass_pumpkin::error::Error> for UrsaCryptoError {
     fn from(err: glass_pumpkin::error::Error) -> UrsaCryptoError {
-        err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Internal Prime Generation error")
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Prime Generation error: {}", err.to_string()))
     }
 }
 
 impl From<rand::Error> for UrsaCryptoError {
     fn from(err: rand::Error) -> UrsaCryptoError {
-        err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Internal Random Number error")
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Random Number error: {}", err.to_string()))
     }
 }
 
 impl From<num_bigint::ParseBigIntError> for UrsaCryptoError {
     fn from(err: num_bigint::ParseBigIntError) -> UrsaCryptoError {
-        err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Internal Parse BigInt error")
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Parse BigInt error: {}", err.to_string()))
     }
 }
 
