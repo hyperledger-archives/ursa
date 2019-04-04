@@ -51,12 +51,12 @@ extern crate serde;
 extern crate serde_derive;
 
 #[cfg(not(test))]
-#[cfg(feature = "serialization")]
+#[cfg(all(feature = "serialization", feature = "native"))]
+#[macro_use]
 extern crate serde_json;
 
 #[cfg(test)]
-#[cfg(feature = "serialization")]
-#[macro_use]
+#[cfg(all(feature = "serialization", feature = "portable"))]
 extern crate serde_json;
 
 #[cfg(any(test, feature = "bn_openssl"))]
