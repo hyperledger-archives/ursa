@@ -1,7 +1,7 @@
 use bls::*;
+use errors::prelude::*;
 
-use errors::ErrorCode;
-use errors::ToErrorCode;
+use ffi::ErrorCode;
 use std::os::raw::c_void;
 use std::slice;
 
@@ -29,7 +29,7 @@ pub extern fn ursa_bls_generator_new(gen_p: *mut *const c_void) -> ErrorCode {
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_generator_new: <<< res: {:?}", res);
@@ -64,7 +64,7 @@ pub extern fn ursa_bls_generator_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_generator_from_bytes: <<< res: {:?}", res);
@@ -146,7 +146,7 @@ pub extern fn ursa_bls_sign_key_new(seed: *const u8,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_sign_key_new: <<< res: {:?}", res);
@@ -181,7 +181,7 @@ pub extern fn ursa_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_sign_key_from_bytes: <<< res: {:?}", res);
@@ -263,7 +263,7 @@ pub extern fn ursa_bls_ver_key_new(gen: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_sign_key_new: <<< res: {:?}", res);
@@ -298,7 +298,7 @@ pub extern fn ursa_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_ver_key_from_bytes: <<< res: {:?}", res);
@@ -380,7 +380,7 @@ pub extern fn ursa_bls_pop_new(ver_key: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_pop_new: <<< res: {:?}", res);
@@ -415,7 +415,7 @@ pub extern fn ursa_bls_pop_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_pop_from_bytes: <<< res: {:?}", res);
@@ -497,7 +497,7 @@ pub extern fn ursa_bls_signature_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_signature_from_bytes: <<< res: {:?}", res);
@@ -579,7 +579,7 @@ pub extern fn ursa_bls_multi_signature_new(signatures: *const *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_multi_signature_new: <<< res: {:?}", res);
@@ -614,7 +614,7 @@ pub extern fn ursa_bls_multi_signature_from_bytes(bytes: *const u8, bytes_len: u
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_multi_signature_from_bytes: <<< res: {:?}", res);
@@ -703,7 +703,7 @@ pub extern fn ursa_bls_sign(message: *const u8,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_sign: <<< res: {:?}", res);
@@ -744,7 +744,7 @@ pub extern fn ursa_bls_verify(signature: *const c_void,
             unsafe { *valid_p = valid; }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_verify: <<< res: {:?}", res);
@@ -786,7 +786,7 @@ pub extern fn ursa_bls_verify_multi_sig(multi_sig: *const c_void,
             unsafe { *valid_p = valid; }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_verify_multi_sig: <<< res: {:?}", res);
@@ -821,7 +821,7 @@ pub extern fn ursa_bls_verify_pop(pop: *const c_void,
             unsafe { *valid_p = valid; }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_bls_verify_pop: <<< res: {:?}", res);

@@ -1,7 +1,7 @@
 use cl::verifier::*;
 use cl::*;
-use errors::ToErrorCode;
-use errors::ErrorCode;
+use ffi::ErrorCode;
+use errors::prelude::*;
 
 use std::os::raw::c_void;
 
@@ -27,7 +27,7 @@ pub extern fn ursa_cl_verifier_new_proof_verifier(proof_verifier_p: *mut *const 
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_verifier_new_proof_verifier: <<< res: {:?}", res);
@@ -70,7 +70,7 @@ pub extern fn ursa_cl_proof_verifier_add_sub_proof_request(proof_verifier: *cons
                                                          rev_key_pub,
                                                          rev_reg) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_proof_verifier_add_sub_proof_request: <<< res: {:?}", res);
@@ -110,7 +110,7 @@ pub extern fn ursa_cl_proof_verifier_verify(proof_verifier: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_proof_verifier_verify: <<< res: {:?}", res);
