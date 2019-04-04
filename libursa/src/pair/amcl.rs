@@ -646,7 +646,7 @@ mod tests {
     #[test]
     fn group_order_element_new_from_seed_works_for_invalid_seed_len() {
         let err = GroupOrderElement::new_from_seed(&[0, 1, 2]).unwrap_err();
-        assert_eq!(err.kind(), IndyCryptoErrorKind::InvalidStructure);
+        assert_eq!(err.kind(), UrsaCryptoErrorKind::InvalidStructure);
     }
 
     #[test]

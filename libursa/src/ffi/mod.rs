@@ -86,13 +86,13 @@ pub enum ErrorCode
 /// }
 ///
 #[no_mangle]
-pub extern fn indy_crypto_get_current_error(error_json_p: *mut *const c_char) {
-    trace!("indy_crypto_get_current_error >>> error_json_p: {:?}", error_json_p);
+pub extern fn ursa_get_current_error(error_json_p: *mut *const c_char) {
+    trace!("ursa_get_current_error >>> error_json_p: {:?}", error_json_p);
 
     let error = get_current_error_c_json();
     unsafe { *error_json_p = error };
 
-    trace!("indy_crypto_get_current_error: <<<");
+    trace!("ursa_get_current_error: <<<");
 }
 
 #[cfg(test)]
@@ -100,24 +100,24 @@ mod tests {
     use super::*;
 
     use std::ptr;
-    use ffi::cl::issuer::indy_crypto_cl_credential_private_key_from_json;
+    use ffi::cl::issuer::ursa_cl_credential_private_key_from_json;
     use utils::ctypes::*;
 
     #[test]
-    fn indy_crypto_get_current_error_works() {
+    fn ursa_get_current_error_works() {
 
-        indy_crypto_cl_credential_private_key_from_json(ptr::null(), &mut ptr::null());
+        ursa_cl_credential_private_key_from_json(ptr::null(), &mut ptr::null());
 
         let mut error_json_p: *const c_char = ptr::null();
-        indy_crypto_get_current_error(&mut error_json_p);
+        ursa_get_current_error(&mut error_json_p);
 
         let error_json_1 = c_str_to_string(error_json_p).unwrap();
         assert!(error_json_1.is_some());
 
         let credential_priv_key = string_to_cstring("some wrong data".to_string());
-        indy_crypto_cl_credential_private_key_from_json(credential_priv_key.as_ptr(), &mut ptr::null());
+        ursa_cl_credential_private_key_from_json(credential_priv_key.as_ptr(), &mut ptr::null());
 
-        indy_crypto_get_current_error(&mut error_json_p);
+        ursa_get_current_error(&mut error_json_p);
 
         let error_json_2 = c_str_to_string(error_json_p).unwrap();
         assert!(error_json_2.is_some());

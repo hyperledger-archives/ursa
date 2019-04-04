@@ -641,7 +641,7 @@ mod tests {
     #[test]
     fn clone_negative_works() {
         let num = BigNumber::from_dec("-1").unwrap();
-        let num_cloned = num.clone().unwrap();
+        let num_cloned = num.try_clone().unwrap();
         assert_eq!(num, num_cloned);
     }
 
