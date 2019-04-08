@@ -856,6 +856,7 @@ pub struct AggregatedProof {
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct PrimaryProof {
     eq_proof: PrimaryEqualProof,
+    #[serde(rename = "ge_proofs")]
     ne_proofs: Vec<PrimaryPredicateInequalityProof>
 }
 
