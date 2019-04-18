@@ -21,6 +21,7 @@ extern crate amcl;
 #[macro_use]
 extern crate arrayref;
 extern crate env_logger;
+extern crate failure;
 #[macro_use]
 extern crate log;
 extern crate rand;
@@ -49,11 +50,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-#[cfg(not(test))]
-#[cfg(feature = "serialization")]
-extern crate serde_json;
-
-#[cfg(test)]
 #[cfg(feature = "serialization")]
 #[macro_use]
 extern crate serde_json;

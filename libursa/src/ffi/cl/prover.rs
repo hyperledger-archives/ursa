@@ -1,8 +1,8 @@
 use cl::prover::*;
 use cl::*;
-use errors::ToErrorCode;
-use errors::ErrorCode;
-use ffi::ctypes::CTypesUtils;
+use ffi::ErrorCode;
+use utils::ctypes::*;
+use errors::prelude::*;
 
 use serde_json;
 use std::os::raw::{c_void, c_char};
@@ -29,7 +29,7 @@ pub extern fn ursa_cl_prover_new_master_secret(master_secret_p: *mut *const c_vo
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_prover_new_master_secret: <<< res: {:?}", res);
@@ -55,13 +55,15 @@ pub extern fn ursa_cl_master_secret_to_json(master_secret: *const c_void,
         Ok(master_secret_json) => {
             trace!("ursa_cl_master_secret_to_json: master_secret_json: {:?}", master_secret_json);
             unsafe {
-                let master_secret_json = CTypesUtils::string_to_cstring(master_secret_json);
+                let master_secret_json = string_to_cstring(master_secret_json);
                 *master_secret_json_p = master_secret_json.into_raw();
                 trace!("ursa_cl_master_secret_to_json: master_secret_json_p: {:?}", *master_secret_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize master secret as json").into()
+        }
     };
 
     trace!("ursa_cl_master_secret_to_json: <<< res: {:?}", res);
@@ -95,7 +97,9 @@ pub extern fn ursa_cl_master_secret_from_json(master_secret_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize master secret from json").into()
+        }
     };
 
     trace!("ursa_cl_master_secret_from_json: <<< res: {:?}", res);
@@ -204,7 +208,7 @@ pub extern fn ursa_cl_prover_blind_credential_secrets(credential_pub_key: *const
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_prover_blind_credential_secrets: <<< res: {:?}", res);
@@ -231,14 +235,16 @@ pub extern fn ursa_cl_blinded_credential_secrets_to_json(blinded_credential_secr
         Ok(blinded_credential_secrets_json) => {
             trace!("ursa_cl_blinded_credential_secrets_to_json: blinded_credential_secrets_json: {:?}", blinded_credential_secrets_json);
             unsafe {
-                let blinded_credential_secrets_json = CTypesUtils::string_to_cstring(blinded_credential_secrets_json);
+                let blinded_credential_secrets_json = string_to_cstring(blinded_credential_secrets_json);
                 *blinded_credential_secrets_json_p = blinded_credential_secrets_json.into_raw();
 
                 trace!("ursa_cl_blinded_credential_secrets_to_json: blinded_credential_secrets_json_p: {:?}", *blinded_credential_secrets_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize blinded credential secret as json").into()
+        }
     };
 
     trace!("ursa_cl_blinded_credential_secrets_to_json: <<< res: {:?}", res);
@@ -272,7 +278,9 @@ pub extern fn ursa_cl_blinded_credential_secrets_from_json(blinded_credential_se
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize blinded credential secret from json").into()
+        }
     };
 
     trace!("ursa_cl_blinded_credential_secrets_from_json: <<< res: {:?}", res);
@@ -318,13 +326,15 @@ pub extern fn ursa_cl_credential_secrets_blinding_factors_to_json(credential_sec
         Ok(credential_secrets_blinding_factors_json) => {
             trace!("ursa_cl_credential_secret_blinding_factors_to_json: credential_secrets_blinding_factors_json: {:?}", credential_secrets_blinding_factors_json);
             unsafe {
-                let credential_secrets_blinding_factors_json = CTypesUtils::string_to_cstring(credential_secrets_blinding_factors_json);
+                let credential_secrets_blinding_factors_json = string_to_cstring(credential_secrets_blinding_factors_json);
                 *credential_secrets_blinding_factors_json_p = credential_secrets_blinding_factors_json.into_raw();
                 trace!("ursa_cl_credential_secret_blinding_factors_to_json: credential_secrets_blinding_factors_json_p: {:?}", *credential_secrets_blinding_factors_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize blinded credential secret factors as json").into()
+        }
     };
 
     trace!("ursa_cl_credential_secret_blinding_factors_to_json: <<< res: {:?}", res);
@@ -359,7 +369,9 @@ pub extern fn ursa_cl_credential_secrets_blinding_factors_from_json(credential_s
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize blinded credential secret factors from json").into()
+        }
     };
 
     trace!("ursa_cl_credential_secrets_blinding_factors_from_json: <<< res: {:?}", res);
@@ -407,14 +419,16 @@ pub extern fn ursa_cl_blinded_credential_secrets_correctness_proof_to_json(blind
             trace!("ursa_cl_blinded_credential_secrets_correctness_proof_to_json: blinded_credential_secrets_correctness_proof: {:?}",
                    blinded_credential_secrets_correctness_proof_json);
             unsafe {
-                let blinded_credential_secrets_correctness_proof_json = CTypesUtils::string_to_cstring(blinded_credential_secrets_correctness_proof_json);
+                let blinded_credential_secrets_correctness_proof_json = string_to_cstring(blinded_credential_secrets_correctness_proof_json);
                 *blinded_credential_secrets_correctness_proof_json_p = blinded_credential_secrets_correctness_proof_json.into_raw();
                 trace!("ursa_cl_blinded_credential_secrets_correctness_proof_to_json: blinded_credential_secrets_correctness_proof_json_p: {:?}",
                        *blinded_credential_secrets_correctness_proof_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize blinded credential secrets correctness proof as json").into()
+        }
     };
 
     trace!("ursa_cl_blinded_credential_secrets_correctness_proof_to_json: <<< res: {:?}", res);
@@ -452,7 +466,9 @@ pub extern fn ursa_cl_blinded_credential_secrets_correctness_proof_from_json(bli
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize blinded credential secret correctness proof from json").into()
+        }
     };
 
     trace!("ursa_cl_blinded_credential_secrets_correctness_proof_from_json: <<< res: {:?}", res);
@@ -550,7 +566,7 @@ pub extern fn ursa_cl_prover_process_credential_signature(credential_signature: 
                                                          rev_reg,
                                                          witness) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_prover_process_credential_signature: <<< res: {:?}", res);
@@ -577,7 +593,9 @@ pub extern fn ursa_cl_prover_get_credential_revocation_index(credential_signatur
             trace!("ursa_cl_prover_get_credential_revocation_index: *cred_rev_indx: {:?}", cred_rev_indx);
             ErrorCode::Success
         }
-        None => ErrorCode::CommonInvalidState
+        None => {
+            err_msg(UrsaCryptoErrorKind::InvalidState, "Unable to extract credential revocation index").into()
+        }
     };
 
     trace!("ursa_cl_prover_get_credential_revocation_index: <<< res: {:?}", res);
@@ -608,7 +626,7 @@ pub extern fn ursa_cl_prover_new_proof_builder(proof_builder_p: *mut *const c_vo
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_prover_new_proof_builder: <<< res: {:?}", res);
@@ -694,7 +712,7 @@ pub extern fn ursa_cl_proof_builder_add_sub_proof_request(proof_builder: *const 
                                                         rev_reg,
                                                         witness) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_proof_builder_add_sub_proof_request: <<< res: {:?}", res);
@@ -736,7 +754,7 @@ pub extern fn ursa_cl_proof_builder_finalize(proof_builder: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_proof_builder_finalize: <<< res: {:?}", res);
@@ -762,13 +780,15 @@ pub extern fn ursa_cl_proof_to_json(proof: *const c_void,
         Ok(proof_json) => {
             trace!("ursa_cl_proof_to_json: proof_json: {:?}", proof_json);
             unsafe {
-                let proof_json = CTypesUtils::string_to_cstring(proof_json);
+                let proof_json = string_to_cstring(proof_json);
                 *proof_json_p = proof_json.into_raw();
                 trace!("ursa_cl_proof_to_json: proof_json_p: {:?}", *proof_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize proof as json").into()
+        }
     };
 
     trace!("ursa_cl_proof_to_json: <<< res: {:?}", res);
@@ -801,7 +821,9 @@ pub extern fn ursa_cl_proof_from_json(proof_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize proof from json").into()
+        }
     };
 
     trace!("ursa_cl_proof_from_json: <<< res: {:?}", res);

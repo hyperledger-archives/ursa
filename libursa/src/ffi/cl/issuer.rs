@@ -1,9 +1,9 @@
 use cl::issuer::*;
 use cl::*;
-use errors::ToErrorCode;
-use errors::ErrorCode;
+use ffi::ErrorCode;
 use ffi::cl::{FFITailTake, FFITailPut, FFITailsAccessor};
-use ffi::ctypes::CTypesUtils;
+use utils::ctypes::*;
+use errors::prelude::*;
 
 use serde_json;
 use std::os::raw::{c_void, c_char};
@@ -75,7 +75,7 @@ pub extern fn ursa_cl_issuer_new_credential_def(credential_schema: *const c_void
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_new_credential_def: <<< res: {:?}", res);
@@ -101,13 +101,15 @@ pub extern fn ursa_cl_credential_public_key_to_json(credential_pub_key: *const c
         Ok(credential_pub_key_json) => {
             trace!("ursa_cl_credential_public_key_to_json: credential_pub_key_json: {:?}", credential_pub_key_json);
             unsafe {
-                let issuer_pub_key_json = CTypesUtils::string_to_cstring(credential_pub_key_json);
+                let issuer_pub_key_json = string_to_cstring(credential_pub_key_json);
                 *credential_pub_key_json_p = issuer_pub_key_json.into_raw();
                 trace!("ursa_cl_credential_private_key_to_json: credential_pub_key_json_p: {:?}", *credential_pub_key_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize credential public key as json").into()
+        }
     };
 
     trace!("ursa_cl_credential_public_key_to_json: <<< res: {:?}", res);
@@ -141,7 +143,9 @@ pub extern fn ursa_cl_credential_public_key_from_json(credential_pub_key_json: *
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize credential public key from json").into()
+        }
     };
 
     trace!("ursa_cl_credential_public_key_from_json: <<< res: {:?}", res);
@@ -186,13 +190,15 @@ pub extern fn ursa_cl_credential_private_key_to_json(credential_priv_key: *const
         Ok(credential_priv_key_json) => {
             trace!("ursa_cl_credential_private_key_to_json: credential_priv_key_json: {:?}", secret!(&credential_priv_key_json));
             unsafe {
-                let credential_priv_key_json = CTypesUtils::string_to_cstring(credential_priv_key_json);
+                let credential_priv_key_json = string_to_cstring(credential_priv_key_json);
                 *credential_priv_key_json_p = credential_priv_key_json.into_raw();
                 trace!("ursa_cl_credential_private_key_to_json: credential_priv_key_json_p: {:?}", *credential_priv_key_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize credential private key as json").into()
+        }
     };
 
     trace!("ursa_cl_credential_private_key_to_json: <<< res: {:?}", res);
@@ -226,7 +232,9 @@ pub extern fn ursa_cl_credential_private_key_from_json(credential_priv_key_json:
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize credential private key from json").into()
+        }
     };
 
     trace!("ursa_cl_credential_private_key_from_json: <<< res: {:?}", res);
@@ -272,13 +280,15 @@ pub extern fn ursa_cl_credential_key_correctness_proof_to_json(credential_key_co
         Ok(credential_key_correctness_proof_json) => {
             trace!("ursa_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json: {:?}", credential_key_correctness_proof_json);
             unsafe {
-                let credential_key_correctness_proof_json = CTypesUtils::string_to_cstring(credential_key_correctness_proof_json);
+                let credential_key_correctness_proof_json = string_to_cstring(credential_key_correctness_proof_json);
                 *credential_key_correctness_proof_json_p = credential_key_correctness_proof_json.into_raw();
                 trace!("ursa_cl_credential_key_correctness_proof_to_json: credential_key_correctness_proof_json_p: {:?}", *credential_key_correctness_proof_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize credential key correctness proof as json").into()
+        }
     };
 
     trace!("ursa_cl_credential_key_correctness_proof_to_json: <<< res: {:?}", res);
@@ -313,7 +323,9 @@ pub extern fn ursa_cl_credential_key_correctness_proof_from_json(credential_key_
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize credential key correctness proof from json").into()
+        }
     };
 
     trace!("ursa_cl_credential_key_correctness_proof_from_json: <<< res: {:?}", res);
@@ -395,7 +407,7 @@ pub extern fn ursa_cl_issuer_new_revocation_registry_def(credential_pub_key: *co
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_new_revocation_registry_def: <<< res: {:?}", res);
@@ -422,13 +434,15 @@ pub extern fn ursa_cl_revocation_key_public_to_json(rev_key_pub: *const c_void,
         Ok(rev_key_pub_json) => {
             trace!("ursa_cl_revocation_key_public_to_json: rev_key_pub_json: {:?}", rev_key_pub_json);
             unsafe {
-                let rev_reg_def_pub_json = CTypesUtils::string_to_cstring(rev_key_pub_json);
+                let rev_reg_def_pub_json = string_to_cstring(rev_key_pub_json);
                 *rev_key_pub_json_p = rev_reg_def_pub_json.into_raw();
                 trace!("ursa_cl_revocation_key_public_to_json: rev_key_pub_json_p: {:?}", *rev_key_pub_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize revocation key public as json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_key_public_to_json: <<< res: {:?}", res);
@@ -462,7 +476,9 @@ pub extern fn ursa_cl_revocation_key_public_from_json(rev_key_pub_json: *const c
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize revocation key public from json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_key_public_from_json: <<< res: {:?}", res);
@@ -507,13 +523,15 @@ pub extern fn ursa_cl_revocation_key_private_to_json(rev_key_priv: *const c_void
         Ok(rev_key_priv_json) => {
             trace!("ursa_cl_revocation_key_private_to_json: rev_key_priv_json: {:?}", secret!(&rev_key_priv_json));
             unsafe {
-                let rev_reg_def_priv_json = CTypesUtils::string_to_cstring(rev_key_priv_json);
+                let rev_reg_def_priv_json = string_to_cstring(rev_key_priv_json);
                 *rev_key_priv_json_p = rev_reg_def_priv_json.into_raw();
                 trace!("ursa_cl_revocation_key_private_to_json: rev_key_priv_json_p: {:?}", *rev_key_priv_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize revocation key private as json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_key_private_to_json: <<< res: {:?}", res);
@@ -548,7 +566,9 @@ pub extern fn ursa_cl_revocation_key_private_from_json(rev_key_priv_json: *const
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize revocation key private from json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_key_private_from_json: <<< res: {:?}", res);
@@ -594,13 +614,15 @@ pub extern fn ursa_cl_revocation_registry_to_json(rev_reg: *const c_void,
         Ok(rev_reg_json) => {
             trace!("ursa_cl_revocation_registry_to_json: rev_reg_json: {:?}", rev_reg_json);
             unsafe {
-                let rev_reg_json = CTypesUtils::string_to_cstring(rev_reg_json);
+                let rev_reg_json = string_to_cstring(rev_reg_json);
                 *rev_reg_json_p = rev_reg_json.into_raw();
                 trace!("ursa_cl_revocation_registry_to_json: rev_reg_json_p: {:?}", *rev_reg_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize revocation registry as json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_registry_to_json: <<< res: {:?}", res);
@@ -635,7 +657,9 @@ pub extern fn ursa_cl_revocation_registry_from_json(rev_reg_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize revocation registry from json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_registry_from_json: <<< res: {:?}", res);
@@ -681,13 +705,15 @@ pub extern fn ursa_cl_revocation_tails_generator_to_json(rev_tails_generator: *c
         Ok(rev_tails_generator_json) => {
             trace!("ursa_cl_revocation_tails_generator_to_json: rev_tails_generator_json: {:?}", rev_tails_generator_json);
             unsafe {
-                let rev_tails_generator_json = CTypesUtils::string_to_cstring(rev_tails_generator_json);
+                let rev_tails_generator_json = string_to_cstring(rev_tails_generator_json);
                 *rev_tails_generator_json_p = rev_tails_generator_json.into_raw();
                 trace!("ursa_cl_revocation_tails_generator_to_json: rev_tails_generator_json_p: {:?}", *rev_tails_generator_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize revocation tails generator as json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_tails_generator_to_json: <<< res: {:?}", res);
@@ -722,7 +748,9 @@ pub extern fn ursa_cl_revocation_tails_generator_from_json(rev_tails_generator_j
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize revocation tails generator from json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_tails_generator_from_json: <<< res: {:?}", res);
@@ -820,7 +848,7 @@ pub extern fn ursa_cl_issuer_sign_credential(prover_id: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_sign_credential: <<< res: {:?}", res);
@@ -928,7 +956,7 @@ pub extern fn ursa_cl_issuer_sign_credential_with_revoc(prover_id: *const c_char
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_sign_credential: <<< res: {:?}", res);
@@ -955,13 +983,15 @@ pub extern fn ursa_cl_credential_signature_to_json(credential_signature: *const 
         Ok(credential_signature_json) => {
             trace!("ursa_cl_credential_signature_to_json: credential_signature_json: {:?}", secret!(&credential_signature_json));
             unsafe {
-                let credential_signature_json = CTypesUtils::string_to_cstring(credential_signature_json);
+                let credential_signature_json = string_to_cstring(credential_signature_json);
                 *credential_signature_json_p = credential_signature_json.into_raw();
                 trace!("ursa_cl_credential_signature_to_json: credential_signature_json_p: {:?}", *credential_signature_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize credential signature as json").into()
+        }
     };
 
     trace!("ursa_cl_credential_signature_to_json: <<< res: {:?}", res);
@@ -996,7 +1026,9 @@ pub extern fn ursa_cl_credential_signature_from_json(credential_signature_json: 
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize credential signature from json").into()
+        }
     };
 
     trace!("ursa_cl_credential_signature_from_json: <<< res: {:?}", res);
@@ -1041,13 +1073,15 @@ pub extern fn ursa_cl_signature_correctness_proof_to_json(signature_correctness_
         Ok(signature_correctness_proof_json) => {
             trace!("ursa_cl_signature_correctness_proof_to_json: signature_correctness_proof_json: {:?}", signature_correctness_proof_json);
             unsafe {
-                let signature_correctness_proof_json = CTypesUtils::string_to_cstring(signature_correctness_proof_json);
+                let signature_correctness_proof_json = string_to_cstring(signature_correctness_proof_json);
                 *signature_correctness_proof_json_p = signature_correctness_proof_json.into_raw();
                 trace!("ursa_cl_signature_correctness_proof_to_json: signature_correctness_proof_json_p: {:?}", *signature_correctness_proof_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize signature correctness proof as json").into()
+        }
     };
 
     trace!("ursa_cl_signature_correctness_proof_to_json: <<< res: {:?}", res);
@@ -1082,7 +1116,9 @@ pub extern fn ursa_cl_signature_correctness_proof_from_json(signature_correctnes
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize signature correctness proof from json").into()
+        }
     };
 
     trace!("ursa_cl_signature_correctness_proof_from_json: <<< res: {:?}", res);
@@ -1127,13 +1163,15 @@ pub extern fn ursa_cl_revocation_registry_delta_to_json(revocation_registry_delt
         Ok(revocation_registry_delta_json) => {
             trace!("ursa_cl_revocation_registry_delta_to_json: revocation_registry_delta_json: {:?}", revocation_registry_delta_json);
             unsafe {
-                let revocation_registry_delta_json = CTypesUtils::string_to_cstring(revocation_registry_delta_json);
+                let revocation_registry_delta_json = string_to_cstring(revocation_registry_delta_json);
                 *revocation_registry_delta_json_p = revocation_registry_delta_json.into_raw();
                 trace!("ursa_cl_revocation_registry_delta_to_json: revocation_registry_delta_json_p: {:?}", *revocation_registry_delta_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize revocation registry delta as json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_registry_delta_to_json: <<< res: {:?}", res);
@@ -1168,7 +1206,9 @@ pub extern fn ursa_cl_revocation_registry_delta_from_json(revocation_registry_de
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize revocation registry delta from json").into()
+        }
     };
 
     trace!("ursa_cl_revocation_registry_delta_from_json: <<< res: {:?}", res);
@@ -1258,7 +1298,7 @@ pub extern fn ursa_cl_issuer_revoke_credential(rev_reg: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_revoke_credential: <<< res: {:?}", res);
@@ -1296,7 +1336,7 @@ pub extern fn ursa_cl_issuer_recovery_credential(rev_reg: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_recovery_credential: <<< res: {:?}", res);
@@ -1325,7 +1365,7 @@ pub extern fn ursa_cl_issuer_merge_revocation_registry_deltas(revoc_reg_delta: *
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_issuer_merge_revocation_registry_deltas: <<< res: {:?}", res);

@@ -1,7 +1,7 @@
 use bn::BigNumber;
-use errors::UrsaCryptoError;
+use errors::prelude::*;
 
-pub fn get_hash_as_int(nums: &[Vec<u8>]) -> Result<BigNumber, UrsaCryptoError> {
+pub fn get_hash_as_int(nums: &[Vec<u8>]) -> UrsaCryptoResult<BigNumber> {
     trace!("Helpers::get_hash_as_int: >>> nums: {:?}", nums);
 
     let hash = BigNumber::from_bytes(&BigNumber::hash_array(&nums)?);

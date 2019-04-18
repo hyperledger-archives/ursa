@@ -1,4 +1,4 @@
-use errors::UrsaCryptoError;
+use errors::prelude::*;
 
 use hash::{Digest, sha2};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt, Sign};
@@ -14,6 +14,7 @@ use serde::ser::{Serialize, Serializer, Error as SError};
 #[cfg(feature = "serialization")]
 use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
 
+#[cfg(feature = "ffi")]
 use std::error::Error;
 use std::fmt;
 use std::cmp::Ord;
@@ -29,7 +30,7 @@ macro_rules! prime_generation {
     ($f:ident, $size:ident, $msg:expr) => {
         match $f::new($size)?.to_bigint() {
             Some(bn) => Ok(BigNumber { bn }),
-            None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, $msg.to_string()))
         }
     };
 }
@@ -41,42 +42,42 @@ macro_rules! prime_check {
         } else {
             match $value.bn.to_biguint() {
                 Some(bn) => Ok($f::check(&bn)),
-                None => Err(UrsaCryptoError::InvalidStructure($msg.to_string()))
+                None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, $msg.to_string()))
             }
         }
     };
 }
 
 impl BigNumber {
-    pub fn new_context() -> Result<BigNumberContext, UrsaCryptoError> {
+    pub fn new_context() -> UrsaCryptoResult<BigNumberContext> {
         Ok(BigNumberContext{})
     }
 
-    pub fn new() -> Result<BigNumber, UrsaCryptoError> {
+    pub fn new() -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber {
             bn: BigInt::zero()
         })
     }
 
-    pub fn generate_prime(size: usize) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn generate_prime(size: usize) -> UrsaCryptoResult<BigNumber> {
         prime_generation!(prime, size, "Unable to generate prime")
     }
 
-    pub fn generate_safe_prime(size: usize) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn generate_safe_prime(size: usize) -> UrsaCryptoResult<BigNumber> {
         prime_generation!(safe_prime, size, "Unable to generate safe prime")
     }
 
-    pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> UrsaCryptoResult<BigNumber> {
         let mut res;
         let mut iteration = 0;
         let mut rng = OsRng::new()?;
         let mut start = match start.bn.to_biguint() {
             Some(bn) => bn,
-            None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'start': {:?}", start)))
+            None => return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Invalid number for 'start': {:?}", start)))
         };
         let mut end = match end.bn.to_biguint() {
             Some(bn) => bn,
-            None => return Err(UrsaCryptoError::InvalidStructure(format!("Invalid number for 'end': {:?}", end)))
+            None => return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Invalid number for 'end': {:?}", end)))
         };
 
         if start > end {
@@ -98,38 +99,38 @@ impl BigNumber {
 
         match res.to_bigint() {
             Some(bn) => Ok(BigNumber{bn}),
-            None => Err(UrsaCryptoError::InvalidStructure("Unable to generate prime in range".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Unable to generate prime in range".to_string()))
         }
     }
 
-    pub fn is_prime(&self, _ctx: Option<&mut BigNumberContext>) -> Result<bool, UrsaCryptoError> {
+    pub fn is_prime(&self, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<bool> {
         prime_check!(prime, self, "An error in is_prime")
     }
 
-    pub fn is_safe_prime(&self, _ctx: Option<&mut BigNumberContext>) -> Result<bool, UrsaCryptoError> {
+    pub fn is_safe_prime(&self, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<bool> {
         prime_check!(safe_prime, self, "An error in is_safe_prime")
     }
 
-    pub fn rand(size: usize) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn rand(size: usize) -> UrsaCryptoResult<BigNumber> {
         let mut rng = OsRng::new()?;
         let res = rng.gen_biguint(size).to_bigint();
         Ok(BigNumber { bn: res.unwrap() })
     }
 
-    pub fn rand_range(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn rand_range(&self) -> UrsaCryptoResult<BigNumber> {
         let mut rng = OsRng::new()?;
         let res = rng.gen_bigint_range(&BigInt::zero(), &self.bn);
         match res.to_bigint() {
             Some(bn) => Ok(BigNumber{bn}),
-            None => Err(UrsaCryptoError::InvalidStructure("An error in rand_range".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "An error in rand_range".to_string()))
         }
     }
 
-    pub fn num_bits(&self) -> Result<i32, UrsaCryptoError> {
+    pub fn num_bits(&self) -> UrsaCryptoResult<i32> {
         Ok(self.bn.bits() as i32)
     }
 
-    pub fn is_bit_set(&self, n: i32) -> Result<bool, UrsaCryptoError> {
+    pub fn is_bit_set(&self, n: i32) -> UrsaCryptoResult<bool> {
         let bits = n as usize;
         let res = &self.bn >> bits;
         Ok(res.is_odd())
@@ -142,71 +143,71 @@ impl BigNumber {
         Ok(self)
     }
 
-    pub fn from_u32(n: usize) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn from_u32(n: usize) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: BigInt::from(n) })
     }
 
-    pub fn from_dec(dec: &str) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn from_dec(dec: &str) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber{ bn: BigInt::from_str_radix(dec, 10)? })
     }
 
-    pub fn from_hex(hex: &str) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn from_hex(hex: &str) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber{ bn: BigInt::from_str_radix(hex, 16)? })
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: BigInt::from_bytes_be(Sign::Plus, bytes) })
     }
 
-    pub fn to_dec(&self) -> Result<String, UrsaCryptoError> {
+    pub fn to_dec(&self) -> UrsaCryptoResult<String> {
         Ok(self.bn.to_str_radix(10))
     }
 
-    pub fn to_hex(&self) -> Result<String, UrsaCryptoError> {
+    pub fn to_hex(&self) -> UrsaCryptoResult<String> {
         Ok(self.bn.to_str_radix(16).to_uppercase())
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, UrsaCryptoError> {
+    pub fn to_bytes(&self) -> UrsaCryptoResult<Vec<u8>> {
         let (_, res) = self.bn.to_bytes_be();
         Ok(res)
     }
 
-    pub fn hash(data: &[u8]) -> Result<Vec<u8>, UrsaCryptoError> {
+    pub fn hash(data: &[u8]) -> UrsaCryptoResult<Vec<u8>> {
         Ok(sha2::Sha256::digest(data).as_slice().to_vec())
     }
 
-    pub fn add(&self, a: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn add(&self, a: &BigNumber) -> UrsaCryptoResult<BigNumber> {
         let res = &self.bn + &a.bn;
         Ok(BigNumber { bn: res })
     }
 
-    pub fn sub(&self, a: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn sub(&self, a: &BigNumber) -> UrsaCryptoResult<BigNumber> {
         let res = &self.bn - &a.bn;
         Ok(BigNumber { bn: res })
     }
 
-    pub fn sqr(&self, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn sqr(&self, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         let res = &self.bn * &self.bn;
         Ok(BigNumber { bn: res })
     }
 
-    pub fn mul(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn mul(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         let res = &self.bn * &a.bn;
         Ok(BigNumber { bn: res })
     }
 
-    pub fn mod_mul(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn mod_mul(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         //TODO: Use montgomery reduction
         self.mul(&a, None)?.modulus(&n, None)
     }
 
-    pub fn mod_sub(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn mod_sub(&self, a: &BigNumber, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         self.sub(&a)?.modulus(&n, None)
     }
 
-    pub fn div(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn div(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if a.bn.is_zero() {
-            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+            Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "a cannot be zero".to_string()))
         } else {
             let res = &self.bn / &a.bn;
             Ok(BigNumber { bn: res })
@@ -230,14 +231,14 @@ impl BigNumber {
 
     pub fn div_word(&mut self, w: u32) -> Result<&mut BigNumber, UrsaCryptoError> {
         if w == 0 {
-            Err(UrsaCryptoError::InvalidStructure("a cannot be zero".to_string()))
+            Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "a cannot be zero".to_string()))
         } else {
             self.bn /= w;
             Ok(self)
         }
     }
 
-    pub fn mod_exp(&self, a: &BigNumber, b: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn mod_exp(&self, a: &BigNumber, b: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if b.bn.is_one() {
             return BigNumber::new();
         }
@@ -252,9 +253,9 @@ impl BigNumber {
         }
     }
 
-    pub fn modulus(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn modulus(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if a.bn == BigInt::zero() {
-            return Err(UrsaCryptoError::InvalidStructure("Cannot have modulus==0".to_string()))
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Cannot have modulus==0".to_string()))
         }
         let res = &self.bn % &BigNumber::_get_modulus(&a.bn);
         Ok(BigNumber { bn: res })
@@ -268,7 +269,7 @@ impl BigNumber {
         }
     }
 
-    pub fn exp(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn exp(&self, a: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if self.bn.bits() == 0 {
             return Ok(BigNumber::default())
         } else if a.bn.is_one() {
@@ -277,14 +278,14 @@ impl BigNumber {
 
         match a.bn.to_u64() {
             Some(num) => Ok(BigNumber { bn: self.bn.pow(num) }),
-            None => Err(UrsaCryptoError::InvalidStructure("'a' cannot be u64".to_string()))
+            None => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "'a' cannot be u64".to_string()))
         }
     }
 
-    pub fn inverse(&self, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn inverse(&self, n: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         if n.bn.is_one() ||
            n.bn.is_zero() {
-            return Err(UrsaCryptoError::InvalidStructure("Invalid modulus".to_string()))
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Invalid modulus".to_string()))
         }
         let n = BigNumber::_get_modulus(&n.bn);
 
@@ -320,7 +321,7 @@ impl BigNumber {
             new_r = temp_r - quotient * temp_new_r;
         }
         if r > BigInt::one() {
-            return Err(UrsaCryptoError::InvalidStructure("Not invertible".to_string()));
+            return Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, "Not invertible".to_string()));
         } else if t < BigInt::zero() {
             t += n.clone()
         }
@@ -328,7 +329,7 @@ impl BigNumber {
         Ok(BigNumber { bn: t })
     }
 
-    pub fn set_negative(&self, negative: bool) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn set_negative(&self, negative: bool) -> UrsaCryptoResult<BigNumber> {
         match (self.bn < BigInt::zero(), negative) {
             (true, true) => Ok(BigNumber { bn: self.bn.clone() }),
             (false, false) => Ok(BigNumber { bn: self.bn.clone() }),
@@ -341,34 +342,34 @@ impl BigNumber {
         self.bn.is_negative()
     }
 
-    pub fn increment(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn increment(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: &self.bn + 1 })
     }
 
-    pub fn decrement(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn decrement(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: &self.bn - 1 })
     }
 
-    pub fn lshift1(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn lshift1(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: &self.bn << 1 })
     }
 
-    pub fn rshift1(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn rshift1(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber { bn: &self.bn >> 1 })
     }
 
-    pub fn rshift(&self, n: u32) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn rshift(&self, n: u32) -> UrsaCryptoResult<BigNumber> {
         let n = n as usize;
         Ok(BigNumber { bn: &self.bn >> n })
     }
 
-    pub fn mod_div(&self, b: &BigNumber, p: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn mod_div(&self, b: &BigNumber, p: &BigNumber, _ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         //(a * (1/b mod p) mod p)
         self.mul(&b.inverse(&p, None)?, None)?
             .modulus(&p, None)
     }
 
-    pub fn random_qr(n: &BigNumber) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn random_qr(n: &BigNumber) -> UrsaCryptoResult<BigNumber> {
         let qr = n
             .rand_range()?
             .sqr(None)?
@@ -376,13 +377,13 @@ impl BigNumber {
         Ok(qr)
     }
 
-    pub fn try_clone(&self) -> Result<BigNumber, UrsaCryptoError> {
+    pub fn try_clone(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(BigNumber {
             bn: self.bn.clone()
         })
     }
 
-    pub fn hash_array(nums: &[Vec<u8>]) -> Result<Vec<u8>, UrsaCryptoError> {
+    pub fn hash_array(nums: &[Vec<u8>]) -> UrsaCryptoResult<Vec<u8>> {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
@@ -457,19 +458,19 @@ impl<'a> Deserialize<'a> for BigNumber {
 
 impl From<glass_pumpkin::error::Error> for UrsaCryptoError {
     fn from(err: glass_pumpkin::error::Error) -> UrsaCryptoError {
-        UrsaCryptoError::InvalidStructure(err.description().to_string())
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Prime Generation error: {}", err.to_string()))
     }
 }
 
 impl From<rand::Error> for UrsaCryptoError {
     fn from(err: rand::Error) -> UrsaCryptoError {
-        UrsaCryptoError::InvalidStructure(err.description().to_string())
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Random Number error: {}", err.to_string()))
     }
 }
 
 impl From<num_bigint::ParseBigIntError> for UrsaCryptoError {
     fn from(err: num_bigint::ParseBigIntError) -> UrsaCryptoError {
-        UrsaCryptoError::InvalidStructure(err.description().to_string())
+        UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidState, format!("Internal Parse BigInt error: {}", err.to_string()))
     }
 }
 

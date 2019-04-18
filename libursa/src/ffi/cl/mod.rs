@@ -1,9 +1,9 @@
 use cl::*;
 use cl::issuer::Issuer;
 use cl::verifier::Verifier;
-use errors::{UrsaCryptoError, ToErrorCode};
-use errors::ErrorCode;
-use ffi::ctypes::CTypesUtils;
+use errors::prelude::*;
+use ffi::ErrorCode;
+use utils::ctypes::*;
 
 use serde_json;
 use std::ptr;
@@ -37,7 +37,7 @@ pub extern fn ursa_cl_tails_generator_next(rev_tails_generator: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code(),
+        Err(err) => err.into(),
     };
 
     trace!("ursa_cl_tails_generator_next: <<< {:?}", res);
@@ -103,7 +103,7 @@ pub extern fn ursa_cl_witness_new(rev_idx: u32,
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_witness_new: <<< res: {:?}", res);
@@ -127,7 +127,7 @@ pub extern fn ursa_cl_witness_update(rev_idx: u32,
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match witness.update(rev_idx, max_cred_num, rev_reg_delta, &rta) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_witness_update: <<< res: {:?}", res);
@@ -174,7 +174,7 @@ pub extern fn ursa_cl_credential_schema_builder_new(credential_schema_builder_p:
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_schema_builder_new: <<< res: {:?}", res);
@@ -198,7 +198,7 @@ pub extern fn ursa_cl_credential_schema_builder_add_attr(credential_schema_build
 
     let res = match credential_schema_builder.add_attr(&attr) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_schema_builder_add_attr: <<< res: {:?}", res);
@@ -234,7 +234,7 @@ pub extern fn ursa_cl_credential_schema_builder_finalize(credential_schema_build
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_schema_builder_finalize: <<< res: {:?}", res);
@@ -285,7 +285,7 @@ pub extern fn ursa_cl_non_credential_schema_builder_new(non_credential_schema_bu
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_non_credential_schema_builder_new: <<< res: {:?}", res);
@@ -309,7 +309,7 @@ pub extern fn ursa_cl_non_credential_schema_builder_add_attr(non_credential_sche
 
     let res = match non_credential_schema_builder.add_attr(&attr) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_non_credential_schema_builder_add_attr: <<< res: {:?}", res);
@@ -345,7 +345,7 @@ pub extern fn ursa_cl_non_credential_schema_builder_finalize(non_credential_sche
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_non_credential_schema_builder_finalize: <<< res: {:?}", res);
@@ -396,7 +396,7 @@ pub extern fn ursa_cl_credential_values_builder_new(credential_values_builder_p:
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_values_builder_new: <<< res: {:?}", res);
@@ -424,7 +424,7 @@ pub extern fn ursa_cl_credential_values_builder_add_dec_known(credential_values_
 
     let res = match credential_values_builder.add_dec_known(&attr, &dec_value) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_values_builder_add_dec_known: <<< res: {:?}", res);
@@ -452,7 +452,7 @@ pub extern fn ursa_cl_credential_values_builder_add_dec_hidden(credential_values
 
     let res = match credential_values_builder.add_dec_hidden(&attr, &dec_value) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_values_builder_add_dec_hidden: <<< res: {:?}", res);
@@ -483,7 +483,7 @@ pub extern fn ursa_cl_credential_values_builder_add_dec_commitment(credential_va
 
     let res = match credential_values_builder.add_dec_commitment(&attr, &dec_value, &dec_blinding_factor) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_values_builder_add_dec_commitment: <<< res: {:?}", res);
@@ -519,7 +519,7 @@ pub extern fn ursa_cl_credential_values_builder_finalize(credential_values_build
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_credential_values_builder_finalize: <<< res: {:?}", res);
@@ -570,7 +570,7 @@ pub extern fn ursa_cl_sub_proof_request_builder_new(sub_proof_request_builder_p:
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_sub_proof_request_builder_new: <<< res: {:?}", res);
@@ -596,7 +596,7 @@ pub extern fn ursa_cl_sub_proof_request_builder_add_revealed_attr(sub_proof_requ
 
     let res = match sub_proof_request_builder.add_revealed_attr(&attr) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_sub_proof_request_builder_add_revealed_attr: <<< res: {:?}", res);
@@ -627,7 +627,7 @@ pub extern fn ursa_cl_sub_proof_request_builder_add_predicate(sub_proof_request_
 
     let res = match sub_proof_request_builder.add_predicate(&attr_name, &p_type, value) {
         Ok(_) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_sub_proof_request_builder_add_predicate: <<< res: {:?}", res);
@@ -664,7 +664,7 @@ pub extern fn ursa_cl_sub_proof_request_builder_finalize(sub_proof_request_build
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_sub_proof_request_builder_finalize: <<< res: {:?}", res);
@@ -711,7 +711,7 @@ pub extern fn ursa_cl_new_nonce(nonce_p: *mut *const c_void) -> ErrorCode {
             }
             ErrorCode::Success
         }
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_cl_new_nonce: <<< res: {:?}", res);
@@ -737,13 +737,15 @@ pub extern fn ursa_cl_nonce_to_json(nonce: *const c_void,
         Ok(nonce_json) => {
             trace!("ursa_cl_nonce_to_json: nonce_json: {:?}", nonce_json);
             unsafe {
-                let nonce_json = CTypesUtils::string_to_cstring(nonce_json);
+                let nonce_json = string_to_cstring(nonce_json);
                 *nonce_json_p = nonce_json.into_raw();
                 trace!("ursa_cl_nonce_to_json: nonce_json_p: {:?}", *nonce_json_p);
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidState
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Unable to serialize nonce as json").into()
+        }
     };
 
     trace!("ursa_cl_nonce_to_json: <<< res: {:?}", res);
@@ -776,7 +778,9 @@ pub extern fn ursa_cl_nonce_from_json(nonce_json: *const c_char,
             }
             ErrorCode::Success
         }
-        Err(_) => ErrorCode::CommonInvalidStructure
+        Err(err) => {
+            err.to_ursa(UrsaCryptoErrorKind::InvalidStructure, "Unable to deserialize nonce from json").into()
+        }
     };
 
     trace!("ursa_cl_nonce_from_json: <<< res: {:?}", res);
@@ -816,14 +820,14 @@ impl FFITailsAccessor {
 }
 
 impl RevocationTailsAccessor for FFITailsAccessor {
-    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> Result<(), UrsaCryptoError> {
+    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> UrsaCryptoResult<()> {
         let mut tail_p = ptr::null();
 
         let res = (self.take)(self.ctx, tail_id, &mut tail_p);
         if res != ErrorCode::Success || tail_p.is_null() {
-            return Err(UrsaCryptoError::InvalidState(
-                format!("FFI call take_tail {:?} (ctx {:?}, id {}) failed: tail_p {:?}, returned error code {:?}",
-                        self.take, self.ctx, tail_id, tail_p, res)));
+            return Err(err_msg(UrsaCryptoErrorKind::InvalidState,
+                               format!("FFI call take_tail {:?} (ctx {:?}, id {}) failed: tail_p {:?}, returned error code {:?}",
+                                       self.take, self.ctx, tail_id, tail_p, res)));
         }
         let tail: *const Tail = tail_p as *const Tail;
 
@@ -831,9 +835,9 @@ impl RevocationTailsAccessor for FFITailsAccessor {
 
         let res = (self.put)(self.ctx, tail_p);
         if res != ErrorCode::Success {
-            return Err(UrsaCryptoError::InvalidState(
-                format!("FFI call put_tail {:?} (ctx {:?}, tail_p {:?}) failed: returned error code {:?}",
-                        self.take, self.ctx, tail_p, res)));
+            return Err(err_msg(UrsaCryptoErrorKind::InvalidState,
+                               format!("FFI call put_tail {:?} (ctx {:?}, tail_p {:?}) failed: returned error code {:?}",
+                                       self.take, self.ctx, tail_p, res)));
         }
 
         Ok(())

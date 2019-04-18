@@ -11,15 +11,15 @@ mod cl_tests {
     use ursa::cl::prover::Prover;
     use ursa::cl::verifier::Verifier;
     use ursa::pair::PointG2;
-    use ursa::cl::logger::HLCryptoDefaultLogger;
+    use ursa::utils::logger::HLCryptoDefaultLogger;
     use std::collections::HashSet;
 
     pub const PROVER_ID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 
     mod test {
         use super::*;
-        use ursa::errors::ErrorCode;
-        use ursa::errors::ToErrorCode;
+        use ursa::errors::prelude::*;
+        use ursa::cl::NonCredentialSchemaBuilder;
 
         #[test]
         fn anoncreds_demo() {
@@ -246,7 +246,80 @@ mod cl_tests {
             assert!(proof_verifier.verify(&proof, &nonce).unwrap());
         }
 
-        #[test]
+    #[test]
+    fn credential_with_negative_attribute_and_empty_proof_works() {
+        let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+        credential_schema_builder.add_attr("height").unwrap();
+        let credential_schema = credential_schema_builder.finalize().unwrap();
+
+        let non_credential_schema_builder = NonCredentialSchemaBuilder::new().unwrap();
+        let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
+
+        let credential_nonce = new_nonce().unwrap();
+
+        let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+        credential_values_builder.add_dec_known("height", "-1").unwrap();
+        let cred_values = credential_values_builder.finalize().unwrap();
+
+        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+            Prover::blind_credential_secrets(&cred_pub_key,
+                                             &cred_key_correctness_proof,
+                                             &cred_values,
+                                             &credential_nonce).unwrap();
+
+
+
+        let cred_issuance_nonce = new_nonce().unwrap();
+
+        let (mut cred_signature, signature_correctness_proof) = Issuer::sign_credential("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                                                                                        &blinded_credential_secrets,
+                                                                                        &blinded_credential_secrets_correctness_proof,
+                                                                                        &credential_nonce,
+                                                                                        &cred_issuance_nonce,
+                                                                                        &cred_values,
+                                                                                        &cred_pub_key,
+                                                                                        &cred_priv_key).unwrap();
+
+        Prover::process_credential_signature(&mut cred_signature,
+                                             &cred_values,
+                                             &signature_correctness_proof,
+                                             &credential_secrets_blinding_factors,
+                                             &cred_pub_key,
+                                             &cred_issuance_nonce,
+                                             None,
+                                             None,
+                                             None).unwrap();
+
+        let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
+        sub_proof_request_builder.add_predicate("height", "GE", -2).unwrap();
+        let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
+
+        let mut proof_builder = Prover::new_proof_builder().unwrap();
+        proof_builder.add_sub_proof_request(&sub_proof_request,
+                                            &credential_schema,
+                                            &non_credential_schema,
+                                            &cred_signature,
+                                            &cred_values,
+                                            &cred_pub_key,
+                                            None,
+                                            None).unwrap();
+
+        let proof_request_nonce = new_nonce().unwrap();
+        let proof = proof_builder.finalize(&proof_request_nonce).unwrap();
+
+        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        proof_verifier.add_sub_proof_request(&sub_proof_request,
+                                             &credential_schema,
+                                             &non_credential_schema,
+                                             &cred_pub_key,
+                                             None,
+                                             None).unwrap();
+        assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
+    }
+
+    #[test]
         fn anoncreds_works_for_primary_proof_only() {
             HLCryptoDefaultLogger::init(None).ok();
 
@@ -1966,7 +2039,7 @@ mod cl_tests {
                                                          &mut rev_reg,
                                                          &rev_key_priv,
                                                          &simple_tail_accessor);
-            assert_eq!(ErrorCode::AnoncredsRevocationAccumulatorIsFull, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::RevocationAccumulatorIsFull, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2477,7 +2550,7 @@ mod cl_tests {
                                                  &xyz_credential_pub_key,
                                                  None, None).unwrap();
             let res = proof_verifier.verify(&proof, &nonce);
-            assert_eq!(ErrorCode::AnoncredsProofRejected, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::ProofRejected, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2491,7 +2564,7 @@ mod cl_tests {
 
             // 2. Issuer creates credential definition(with revocation keys)
             let res = Issuer::new_credential_def(&credential_schema, &non_credential_schema, false);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2508,7 +2581,7 @@ mod cl_tests {
             // 3. Issuer creates revocation registry
             let res =
                 Issuer::new_revocation_registry_def(&credential_pub_key, 5, false);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2533,7 +2606,7 @@ mod cl_tests {
             // 4. Issuer tries revoke not not added index
             let rev_idx = 1;
             let res = Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor);
-            assert_eq!(ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2576,7 +2649,7 @@ mod cl_tests {
                                               &credential_pub_key,
                                               &credential_priv_key);
 
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+             assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2642,7 +2715,7 @@ mod cl_tests {
                                                           &credential_pub_key,
                                                           None, None);
 
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2706,7 +2779,7 @@ mod cl_tests {
                                                           &credential_values,
                                                           &credential_pub_key,
                                                           None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2772,7 +2845,7 @@ mod cl_tests {
                                                           &credential_values,
                                                           &credential_pub_key,
                                                           None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2839,7 +2912,7 @@ mod cl_tests {
                                                           &credential_values,
                                                           &credential_pub_key,
                                                           None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2864,7 +2937,7 @@ mod cl_tests {
                                                            &non_credential_schema,
                                                            &credential_pub_key,
                                                            None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2895,7 +2968,7 @@ mod cl_tests {
                                                  &xyz_credential_key_correctness_proof,
                                                  &credential_values,
                                                  &gvt_credential_nonce);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2936,7 +3009,7 @@ mod cl_tests {
                                               &credential_values,
                                               &credential_pub_key,
                                               &credential_priv_key);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -2978,7 +3051,7 @@ mod cl_tests {
                                               &xyz_credential_values,
                                               &xyz_credential_pub_key,
                                               &xyz_credential_priv_key);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -3019,7 +3092,7 @@ mod cl_tests {
                                               &credential_values,
                                               &credential_pub_key,
                                               &credential_priv_key);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -3069,7 +3142,7 @@ mod cl_tests {
                                                            &credential_pub_key,
                                                            &credential_issuance_nonce,
                                                            None, None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -3129,7 +3202,7 @@ mod cl_tests {
                                                            &credential_pub_key,
                                                            &credential_issuance_nonce,
                                                            None, None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -3181,7 +3254,7 @@ mod cl_tests {
                                                            &credential_pub_key,
                                                            &credential_issuance_nonce,
                                                            None, None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
 
         #[test]
@@ -3231,7 +3304,7 @@ mod cl_tests {
                                                            &credential_pub_key,
                                                            &other_nonce,
                                                            None, None, None);
-            assert_eq!(ErrorCode::CommonInvalidStructure, res.unwrap_err().to_error_code());
+            assert_eq!(UrsaCryptoErrorKind::InvalidStructure, res.unwrap_err().kind());
         }
     }
 

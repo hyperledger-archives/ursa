@@ -1,14 +1,13 @@
 use std::os::raw::{c_void, c_char};
 
-use errors::ErrorCode;
+use ffi::ErrorCode;
+use errors::prelude::*;
 
 extern crate time;
 extern crate log;
 
-use errors::ToErrorCode;
-
-use cl::logger::{EnabledCB, LogCB, FlushCB, HLCryptoLogger, HLCryptoDefaultLogger};
-use ffi::ctypes::CTypesUtils;
+use utils::logger::{EnabledCB, LogCB, FlushCB, HLCryptoLogger, HLCryptoDefaultLogger};
+use utils::ctypes::*;
 
 /// Set custom logger implementation.
 ///
@@ -33,7 +32,7 @@ pub extern fn ursa_set_logger(context: *const c_void,
 
     let res = match HLCryptoLogger::init(context, enabled, log, flush) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_set_logger: <<< res: {:?}", res);
@@ -63,7 +62,7 @@ pub extern fn ursa_set_default_logger(pattern: *const c_char) -> ErrorCode {
 
     let res = match HLCryptoDefaultLogger::init(pattern) {
         Ok(()) => ErrorCode::Success,
-        Err(err) => err.to_error_code()
+        Err(err) => err.into()
     };
 
     trace!("ursa_set_default_logger: <<< res: {:?}", res);

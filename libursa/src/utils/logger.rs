@@ -7,7 +7,7 @@ use std::env;
 use std::io::Write;
 use log::{Record, Metadata};
 
-use errors::UrsaCryptoError;
+use errors::prelude::*;
 
 use std::os::raw::{c_void, c_char};
 use std::ffi::CString;
@@ -100,7 +100,7 @@ pub struct HLCryptoDefaultLogger;
 
 impl HLCryptoDefaultLogger {
     pub fn init(pattern: Option<String>) -> Result<(), UrsaCryptoError> {
-        let pattern = pattern.or_else(|| env::var("RUST_LOG").ok());
+        let pattern = pattern.or(env::var("RUST_LOG").ok());
 
         Builder::new()
             .format(|buf, record| writeln!(buf, "{:>5}|{:<30}|{:>35}:{:<4}| {}", record.level(), record.target(), record.file().get_or_insert(""), record.line().get_or_insert(0), record.args()))

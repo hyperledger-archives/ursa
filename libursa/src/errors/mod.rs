@@ -2,197 +2,217 @@
 extern crate serde_json;
 extern crate log;
 
-use std::error::Error;
-use std::{fmt, io};
+#[cfg(feature = "ffi")]
+use ffi::ErrorCode;
 
-#[derive(Debug, PartialEq, Copy, Clone, Serialize)]
-#[repr(usize)]
-pub enum ErrorCode
-{
-    Success = 0,
+use std::fmt;
+use std::cell::RefCell;
+#[cfg(feature = "ffi")]
+use std::ptr;
+use std::ffi::CString;
+#[cfg(feature = "ffi")]
+use std::os::raw::c_char;
 
-    // Common errors
+use failure::{Backtrace, Context, Fail};
 
-    // Caller passed invalid value as param 1 (null, invalid json and etc..)
-    CommonInvalidParam1 = 100,
+#[cfg(feature = "ffi")]
+use utils::ctypes;
 
-    // Caller passed invalid value as param 2 (null, invalid json and etc..)
-    CommonInvalidParam2 = 101,
-
-    // Caller passed invalid value as param 3 (null, invalid json and etc..)
-    CommonInvalidParam3 = 102,
-
-    // Caller passed invalid value as param 4 (null, invalid json and etc..)
-    CommonInvalidParam4 = 103,
-
-    // Caller passed invalid value as param 5 (null, invalid json and etc..)
-    CommonInvalidParam5 = 104,
-
-    // Caller passed invalid value as param 6 (null, invalid json and etc..)
-    CommonInvalidParam6 = 105,
-
-    // Caller passed invalid value as param 7 (null, invalid json and etc..)
-    CommonInvalidParam7 = 106,
-
-    // Caller passed invalid value as param 8 (null, invalid json and etc..)
-    CommonInvalidParam8 = 107,
-
-    // Caller passed invalid value as param 9 (null, invalid json and etc..)
-    CommonInvalidParam9 = 108,
-
-    // Caller passed invalid value as param 10 (null, invalid json and etc..)
-    CommonInvalidParam10 = 109,
-
-    // Caller passed invalid value as param 11 (null, invalid json and etc..)
-    CommonInvalidParam11 = 110,
-
-    // Caller passed invalid value as param 11 (null, invalid json and etc..)
-    CommonInvalidParam12 = 111,
-
-    // Invalid library state was detected in runtime. It signals library bug
-    CommonInvalidState = 112,
-
-    // Object (json, config, key, credential and etc...) passed by library caller has invalid structure
-    CommonInvalidStructure = 113,
-
-    // IO Error
-    CommonIOError = 114,
-
-    // Trying to issue non-revocation credential with full anoncreds revocation accumulator
-    AnoncredsRevocationAccumulatorIsFull = 115,
-
-    // Invalid revocation accumulator index
-    AnoncredsInvalidRevocationAccumulatorIndex = 116,
-
-    // Credential revoked
-    AnoncredsCredentialRevoked = 117,
-
-    // Proof rejected
-    AnoncredsProofRejected = 118,
+#[cfg(feature = "ffi")]
+pub mod prelude {
+    pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult, set_current_error, get_current_error_c_json};
 }
 
-pub trait ToErrorCode {
-    fn to_error_code(&self) -> ErrorCode;
+#[cfg(not(feature = "ffi"))]
+pub mod prelude {
+    pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult};
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+pub enum UrsaCryptoErrorKind {
+    // Common errors
+    #[fail(display = "Invalid library state")]
+    InvalidState,
+    #[fail(display = "Invalid structure")]
+    InvalidStructure,
+    #[fail(display = "Invalid parameter {}", 0)]
+    InvalidParam(u32),
+    #[fail(display = "IO error")]
+    IOError,
+    // CL errors
+    #[fail(display = "Proof rejected")]
+    ProofRejected,
+    #[fail(display = "Revocation accumulator is full")]
+    RevocationAccumulatorIsFull,
+    #[fail(display = "Invalid revocation id")]
+    InvalidRevocationAccumulatorIndex,
+    #[fail(display = "Credential revoked")]
+    CredentialRevoked,
 }
 
 #[derive(Debug)]
-pub enum UrsaCryptoError {
-    InvalidParam1(String),
-    InvalidParam2(String),
-    InvalidParam3(String),
-    InvalidParam4(String),
-    InvalidParam5(String),
-    InvalidParam6(String),
-    InvalidParam7(String),
-    InvalidParam8(String),
-    InvalidParam9(String),
-    InvalidState(String),
-    InvalidStructure(String),
-    IOError(io::Error),
-    AnoncredsRevocationAccumulatorIsFull(String),
-    AnoncredsInvalidRevocationAccumulatorIndex(String),
-    AnoncredsCredentialRevoked(String),
-    AnoncredsProofRejected(String),
+pub struct UrsaCryptoError {
+    inner: Context<UrsaCryptoErrorKind>
+}
+
+impl Fail for UrsaCryptoError {
+    fn cause(&self) -> Option<&Fail> {
+        self.inner.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.inner.backtrace()
+    }
+}
+
+impl UrsaCryptoError {
+    pub fn from_msg<D>(kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
+        where D: fmt::Display + fmt::Debug + Send + Sync + 'static {
+        UrsaCryptoError { inner: Context::new(msg).context(kind) }
+    }
+
+    pub fn kind(&self) -> UrsaCryptoErrorKind {
+        *self.inner.get_context()
+    }
 }
 
 impl fmt::Display for UrsaCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            UrsaCryptoError::InvalidParam1(ref description) => write!(f, "Invalid param 1: {}", description),
-            UrsaCryptoError::InvalidParam2(ref description) => write!(f, "Invalid param 2: {}", description),
-            UrsaCryptoError::InvalidParam3(ref description) => write!(f, "Invalid param 3: {}", description),
-            UrsaCryptoError::InvalidParam4(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidParam5(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidParam6(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidParam7(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidParam8(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidParam9(ref description) => write!(f, "Invalid param 4: {}", description),
-            UrsaCryptoError::InvalidState(ref description) => write!(f, "Invalid library state: {}", description),
-            UrsaCryptoError::InvalidStructure(ref description) => write!(f, "Invalid structure: {}", description),
-            UrsaCryptoError::IOError(ref err) => err.fmt(f),
-            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => write!(f, "Revocation accumulator is full: {}", description),
-            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => write!(f, "Invalid revocation accumulator index: {}", description),
-            UrsaCryptoError::AnoncredsCredentialRevoked(ref description) => write!(f, "Credential revoked: {}", description),
-            UrsaCryptoError::AnoncredsProofRejected(ref description) => write!(f, "Proof rejected: {}", description),
+        let mut first = true;
+
+        for cause in Fail::iter_chain(&self.inner) {
+            if first {
+                first = false;
+                writeln!(f, "Error: {}", cause)?;
+            } else {
+                writeln!(f, "Caused by: {}", cause)?;
+            }
         }
+
+        Ok(())
     }
 }
 
-impl Error for UrsaCryptoError {
-    fn description(&self) -> &str {
-        match *self {
-            UrsaCryptoError::InvalidParam1(ref description) => description,
-            UrsaCryptoError::InvalidParam2(ref description) => description,
-            UrsaCryptoError::InvalidParam3(ref description) => description,
-            UrsaCryptoError::InvalidParam4(ref description) => description,
-            UrsaCryptoError::InvalidParam5(ref description) => description,
-            UrsaCryptoError::InvalidParam6(ref description) => description,
-            UrsaCryptoError::InvalidParam7(ref description) => description,
-            UrsaCryptoError::InvalidParam8(ref description) => description,
-            UrsaCryptoError::InvalidParam9(ref description) => description,
-            UrsaCryptoError::InvalidState(ref description) => description,
-            UrsaCryptoError::InvalidStructure(ref description) => description,
-            UrsaCryptoError::IOError(ref err) => err.description(),
-            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(ref description) => description,
-            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(ref description) => description,
-            UrsaCryptoError::AnoncredsCredentialRevoked(ref description) => description,
-            UrsaCryptoError::AnoncredsProofRejected(ref description) => description,
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        match *self {
-            UrsaCryptoError::InvalidParam1(_) |
-            UrsaCryptoError::InvalidParam2(_) |
-            UrsaCryptoError::InvalidParam3(_) |
-            UrsaCryptoError::InvalidParam4(_) |
-            UrsaCryptoError::InvalidParam5(_) |
-            UrsaCryptoError::InvalidParam6(_) |
-            UrsaCryptoError::InvalidParam7(_) |
-            UrsaCryptoError::InvalidParam8(_) |
-            UrsaCryptoError::InvalidParam9(_) |
-            UrsaCryptoError::InvalidState(_) |
-            UrsaCryptoError::InvalidStructure(_) => None,
-            UrsaCryptoError::IOError(ref err) => Some(err),
-            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => None,
-            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => None,
-            UrsaCryptoError::AnoncredsCredentialRevoked(_) => None,
-            UrsaCryptoError::AnoncredsProofRejected(_) => None,
-        }
-    }
+pub fn err_msg<D>(kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
+    where D: fmt::Display + fmt::Debug + Send + Sync + 'static {
+    UrsaCryptoError::from_msg(kind, msg)
 }
 
-impl ToErrorCode for UrsaCryptoError {
-    fn to_error_code(&self) -> ErrorCode {
-        match *self {
-            UrsaCryptoError::InvalidParam1(_) => ErrorCode::CommonInvalidParam1,
-            UrsaCryptoError::InvalidParam2(_) => ErrorCode::CommonInvalidParam2,
-            UrsaCryptoError::InvalidParam3(_) => ErrorCode::CommonInvalidParam3,
-            UrsaCryptoError::InvalidParam4(_) => ErrorCode::CommonInvalidParam4,
-            UrsaCryptoError::InvalidParam5(_) => ErrorCode::CommonInvalidParam5,
-            UrsaCryptoError::InvalidParam6(_) => ErrorCode::CommonInvalidParam6,
-            UrsaCryptoError::InvalidParam7(_) => ErrorCode::CommonInvalidParam7,
-            UrsaCryptoError::InvalidParam8(_) => ErrorCode::CommonInvalidParam8,
-            UrsaCryptoError::InvalidParam9(_) => ErrorCode::CommonInvalidParam9,
-            UrsaCryptoError::InvalidState(_) => ErrorCode::CommonInvalidState,
-            UrsaCryptoError::InvalidStructure(_) => ErrorCode::CommonInvalidStructure,
-            UrsaCryptoError::IOError(_) => ErrorCode::CommonIOError,
-            UrsaCryptoError::AnoncredsRevocationAccumulatorIsFull(_) => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
-            UrsaCryptoError::AnoncredsInvalidRevocationAccumulatorIndex(_) => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
-            UrsaCryptoError::AnoncredsCredentialRevoked(_) => ErrorCode::AnoncredsCredentialRevoked,
-            UrsaCryptoError::AnoncredsProofRejected(_) => ErrorCode::AnoncredsProofRejected,
-        }
-    }
-}
-
-impl From<serde_json::Error> for UrsaCryptoError {
-    fn from(err: serde_json::Error) -> UrsaCryptoError {
-        UrsaCryptoError::InvalidStructure(err.to_string())
+impl From<Context<UrsaCryptoErrorKind>> for UrsaCryptoError {
+    fn from(inner: Context<UrsaCryptoErrorKind>) -> UrsaCryptoError {
+        UrsaCryptoError { inner }
     }
 }
 
 impl From<log::SetLoggerError> for UrsaCryptoError {
-    fn from(err: log::SetLoggerError) -> UrsaCryptoError{
-        UrsaCryptoError::InvalidState(err.description().to_owned())
+    fn from(err: log::SetLoggerError) -> UrsaCryptoError {
+        err.context(UrsaCryptoErrorKind::InvalidState).into()
     }
+}
+
+#[cfg(feature = "ffi")]
+impl From<UrsaCryptoErrorKind> for ErrorCode {
+    fn from(code: UrsaCryptoErrorKind) -> ErrorCode {
+        match code {
+            UrsaCryptoErrorKind::InvalidState => ErrorCode::CommonInvalidState,
+            UrsaCryptoErrorKind::InvalidStructure => ErrorCode::CommonInvalidStructure,
+            UrsaCryptoErrorKind::InvalidParam(num) =>
+                match num {
+                    1 => ErrorCode::CommonInvalidParam1,
+                    2 => ErrorCode::CommonInvalidParam2,
+                    3 => ErrorCode::CommonInvalidParam3,
+                    4 => ErrorCode::CommonInvalidParam4,
+                    5 => ErrorCode::CommonInvalidParam5,
+                    6 => ErrorCode::CommonInvalidParam6,
+                    7 => ErrorCode::CommonInvalidParam7,
+                    8 => ErrorCode::CommonInvalidParam8,
+                    9 => ErrorCode::CommonInvalidParam9,
+                    10 => ErrorCode::CommonInvalidParam10,
+                    11 => ErrorCode::CommonInvalidParam11,
+                    12 => ErrorCode::CommonInvalidParam12,
+                    _ => ErrorCode::CommonInvalidState
+                },
+            UrsaCryptoErrorKind::IOError => ErrorCode::CommonIOError,
+            UrsaCryptoErrorKind::ProofRejected => ErrorCode::AnoncredsProofRejected,
+            UrsaCryptoErrorKind::RevocationAccumulatorIsFull => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
+            UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
+            UrsaCryptoErrorKind::CredentialRevoked => ErrorCode::AnoncredsCredentialRevoked,
+        }
+    }
+}
+
+#[cfg(feature = "ffi")]
+impl From<ErrorCode> for UrsaCryptoErrorKind {
+    fn from(err: ErrorCode) -> UrsaCryptoErrorKind {
+        match err {
+            ErrorCode::CommonInvalidState => UrsaCryptoErrorKind::InvalidState,
+            ErrorCode::CommonInvalidStructure => UrsaCryptoErrorKind::InvalidStructure,
+            ErrorCode::CommonInvalidParam1 => UrsaCryptoErrorKind::InvalidParam(1),
+            ErrorCode::CommonInvalidParam2 => UrsaCryptoErrorKind::InvalidParam(2),
+            ErrorCode::CommonInvalidParam3 => UrsaCryptoErrorKind::InvalidParam(3),
+            ErrorCode::CommonInvalidParam4 => UrsaCryptoErrorKind::InvalidParam(4),
+            ErrorCode::CommonInvalidParam5 => UrsaCryptoErrorKind::InvalidParam(5),
+            ErrorCode::CommonInvalidParam6 => UrsaCryptoErrorKind::InvalidParam(6),
+            ErrorCode::CommonInvalidParam7 => UrsaCryptoErrorKind::InvalidParam(7),
+            ErrorCode::CommonInvalidParam8 => UrsaCryptoErrorKind::InvalidParam(8),
+            ErrorCode::CommonInvalidParam9 => UrsaCryptoErrorKind::InvalidParam(9),
+            ErrorCode::CommonInvalidParam10 => UrsaCryptoErrorKind::InvalidParam(10),
+            ErrorCode::CommonInvalidParam11 => UrsaCryptoErrorKind::InvalidParam(11),
+            ErrorCode::CommonInvalidParam12 => UrsaCryptoErrorKind::InvalidParam(12),
+            ErrorCode::CommonIOError => UrsaCryptoErrorKind::IOError,
+            ErrorCode::AnoncredsProofRejected => UrsaCryptoErrorKind::ProofRejected,
+            ErrorCode::AnoncredsRevocationAccumulatorIsFull => UrsaCryptoErrorKind::RevocationAccumulatorIsFull,
+            ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex => UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex,
+            ErrorCode::AnoncredsCredentialRevoked => UrsaCryptoErrorKind::CredentialRevoked,
+            _code => UrsaCryptoErrorKind::InvalidState
+        }
+    }
+}
+
+#[cfg(feature = "ffi")]
+impl From<UrsaCryptoError> for ErrorCode {
+    fn from(err: UrsaCryptoError) -> ErrorCode {
+        set_current_error(&err);
+        err.kind().into()
+    }
+}
+
+pub type UrsaCryptoResult<T> = Result<T, UrsaCryptoError>;
+
+/// Extension methods for `Error`.
+pub trait UrsaCryptoErrorExt {
+    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError where D: fmt::Display + Send + Sync + 'static;
+}
+
+impl<E> UrsaCryptoErrorExt for E where E: Fail
+{
+    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError where D: fmt::Display + Send + Sync + 'static {
+        self.context(msg).context(kind).into()
+    }
+}
+
+thread_local! {
+    pub static CURRENT_ERROR_C_JSON: RefCell<Option<CString>> = RefCell::new(None);
+}
+
+#[cfg(feature = "ffi")]
+pub fn set_current_error(err: &UrsaCryptoError) {
+    CURRENT_ERROR_C_JSON.with(|error| {
+        let error_json = json!({
+            "message": err.to_string(),
+            "backtrace": err.backtrace().map(|bt| bt.to_string())
+        }).to_string();
+        error.replace(Some(ctypes::string_to_cstring(error_json)));
+    });
+}
+
+#[cfg(feature = "ffi")]
+pub fn get_current_error_c_json() -> *const c_char {
+    let mut value = ptr::null();
+
+    CURRENT_ERROR_C_JSON.with(|err|
+        err.borrow().as_ref().map(|err| value = err.as_ptr())
+    );
+
+    value
 }

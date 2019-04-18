@@ -142,7 +142,7 @@ export SODIUM_LIB_DIR=/usr/local/lib
         1. Enable symbolic links
 1. Download rust for windows [here](https://win.rustup.rs)
     - Choose option *1*
-1. Download openssl for windows [here](https://slproweb.com/download/Win64OpenSSL-1_1_0j.exe)
+1. Download openssl for windows [here](https://slproweb.com/download/Win64OpenSSL-1_1_1b.exe)
     - Choose for "Copy OpenSSL DLLs to:" *The OpenSSL binaries (/bin) directory*
 1. Set the environment variables
     - Windows command prompt:
