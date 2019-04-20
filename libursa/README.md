@@ -103,11 +103,11 @@ make html
 
 API documentation is now available as rust doc in code. See:
 * C API
-    - [BLS](libhl-crypto/src/ffi/bls.rs)
-    - [CL](libhl-crypto/src/ffi/cl)
+    - [BLS](./src/ffi/bls.rs)
+    - [CL](./src/ffi/cl/)
 * Rust API
-    - [BLS](libhl-crypto/src/bls/mod.rs)
-    - [CL](libhl-crypto/src/cl)
+    - [BLS](./src/bls/mod.rs)
+    - [CL](./src/cl)
 
 ## Binaries
 
