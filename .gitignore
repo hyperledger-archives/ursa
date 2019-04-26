@@ -9,3 +9,4 @@ build
 **/*.rs.bk
 Cargo.lock
 Podfile.lock
+.vscode
