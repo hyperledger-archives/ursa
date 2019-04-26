@@ -80,6 +80,7 @@ openssl = "0.10"
 rustlibsecp256k1 = { version = "0.2.2", package = "libsecp256k1" }
 libsodium-ffi = "0.1.13"
 secp256k1 = "0.12.2"
+criterion = "0.2"
 
 [package.metadata.deb]
 maintainer = "Hyperledger"
@@ -107,3 +108,7 @@ Rust written reliable, secure, easy-to-use, and pluggable cryptographic implemen
 section = "admin"
 revision = "1"
 priority = "optional"
+
+[[bench]]
+name = "ed25519"
+harness = false
