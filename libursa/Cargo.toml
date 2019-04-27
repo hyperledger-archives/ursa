@@ -8,6 +8,7 @@ readme =  "../README.md"
 repository = "https://github.com/hyperledger/ursa"
 documentation = "https://docs.rs/ursa"
 homepage = "https://crates.io/crates/ursa"
+autobenches = false
 
 [lib]
 name = "ursa"
@@ -110,5 +111,5 @@ revision = "1"
 priority = "optional"
 
 [[bench]]
-name = "ed25519"
+name = "bench"
 harness = false
