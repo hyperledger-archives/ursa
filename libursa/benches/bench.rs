@@ -7,6 +7,7 @@ extern crate secp256k1 as libsecp256k1;
 extern crate openssl;
 extern crate ursa;
 
+// Signatures
 mod signatures;
 use signatures::{ed25519, secp256k1};
 
@@ -29,5 +30,16 @@ criterion_group!{
         secp256k1::verify_openssl_benchmark
 }
 
+// BLS
+mod bls;
+criterion_group!{
+    name = bench_bls;
+    config = Criterion::default();
+    targets = bls::create_generator_benchmark, bls::create_sign_key_none_benchmark,
+        bls::create_sign_key_seed_benchmark, bls::create_ver_key_benchmark,
+        bls::create_pop_benchmark, bls::sign_benchmark, bls::create_multi_sig_benchmark,
+        bls::verify_benchmark, bls::verify_pop_benchmark
+}
+
 // run benchmarks
-criterion_main!(bench_ed25519, bench_secp256k1);
+criterion_main!(bench_ed25519, bench_secp256k1, bench_bls);

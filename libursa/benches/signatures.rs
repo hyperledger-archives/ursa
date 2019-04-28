@@ -25,8 +25,8 @@ pub mod ed25519 {
 
     fn load_keys() {
         let scheme = Ed25519Sha512::new();
-        let secret = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
-        let result = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
+        let s = PrivateKey(hex2bin(PRIVATE_KEY).unwrap());
+        let result = scheme.keypair(Some(KeyGenOption::FromSecretKey(s)));
         assert!(result.is_ok());
     }
 
@@ -126,7 +126,6 @@ pub mod secp256k1 {
     }
 
     fn sign_openssl() {
-
         let pk = hex::hex2bin(PUBLIC_KEY).unwrap();
         let h = sha2::Sha256::digest(&MESSAGE_1);
 
