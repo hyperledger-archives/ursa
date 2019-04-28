@@ -3,10 +3,12 @@
 
 All benchmarks were performed on a commodity machine running macOS.
 
+Run benchmarks on your system using: `cargo bench -p ursa`
+
 ## Signatures
 
 Ed25519 is fastest and therefore used as the baseline. All its operations were on
-the order of 10<sup>1</sup>µs.
+the order of 10<sup>1</sup> µs.
 
 Numbers in the table reflect how long an operation took relative to the baseline.
 For instance, 10<sup>2</sup> means that the operation took approximately 100 times
