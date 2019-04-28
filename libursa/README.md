@@ -109,6 +109,10 @@ API documentation is now available as rust doc in code. See:
     - [BLS](./src/bls/mod.rs)
     - [CL](./src/cl)
 
+### Performance Benchmarks
+
+Performance benchmarking is underway. See [libursa/benches](/benches/).
+
 ## Binaries
 
 Note: Binaries creation is in progress now!!!
