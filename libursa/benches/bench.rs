@@ -7,9 +7,11 @@ extern crate secp256k1 as libsecp256k1;
 extern crate openssl;
 extern crate ursa;
 
+// benchmark functions defined in benches/bench_wrappers
+mod bench_wrappers;
+
 // Signatures
-mod signatures;
-use signatures::{ed25519, secp256k1};
+use bench_wrappers::signatures::{ed25519, secp256k1};
 
 // ed25519
 criterion_group!{
@@ -31,7 +33,8 @@ criterion_group!{
 }
 
 // BLS
-mod bls;
+use bench_wrappers::bls;
+
 criterion_group!{
     name = bench_bls;
     config = Criterion::default();
