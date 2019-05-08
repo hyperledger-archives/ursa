@@ -1,4 +1,4 @@
-<p align="center"><h1>Hyperledger URSA</h1></p><br> ---
+<p align="center"><h1>Hyperledger URSA</h1></p><br> 
 
 - [Introduction](#introduction)
 - [Features](#features)
@@ -92,6 +92,16 @@ include:
     libursa.dll (Windows)
     libursa.lib (Windows)
 
+### Libursa Documentation
+
+Libursa API documentation is now available as rust doc in code. See:
+* C API
+    - [BLS](./libursa/src/ffi/bls.rs)
+    - [CL](./libursa/src/ffi/cl/)
+* Rust API
+    - [BLS](./libursa/src/bls/mod.rs)
+    - [CL](./libursa/src/cl)
+
 ## Libzmix
 
 Libzmix uses the rustc compiler with cargo. Go into the libzmix folder where the
@@ -128,3 +138,14 @@ https://zoom.us/my/hyperledger.community. The meeting notes are available
 Major modifications to ursa are submitted as RFCs to the [Ursa RFC
 repo](https://github.com/hyperledger/ursa-rfcs). 
 
+For more details on contributing see the Community section of the Ursa project docs:
+
+Install sphinx:
+```
+pip3 install -U Sphinx
+```
+Build the project docs:
+```
+cd docs/
+make html
+```
