@@ -129,11 +129,13 @@ include:
 
 All bugs, stories, and backlog for this project are managed through
 Hyperledger's Jira in project IS (note that regular Ursa tickets are in the URSA
-project). Also, join us on [Hyperledger
-Rocket.Chat](https://chat.hyperledger.org) at #ursa to discuss. The ursa group
-also meets biweekly on Wednesday's at 7 AM PST at
+project).
+
+Also, join us on [Hyperledger Rocket.Chat](https://chat.hyperledger.org) at #ursa to discuss.
+
+The ursa group also meets biweekly on Wednesday's at 7 AM PST at
 https://zoom.us/my/hyperledger.community. The meeting notes are available
-[here](https://docs.google.com/document/d/1Z_8o8k_PFRM4XfZyv9jH1_-IyN0CsCMI2JlrGsCX378/edit).
+[here](https://wiki.hyperledger.org/display/ursa/Meeting+Agendas+and+Notes).
 
 Major modifications to ursa are submitted as RFCs to the [Ursa RFC
 repo](https://github.com/hyperledger/ursa-rfcs). 
