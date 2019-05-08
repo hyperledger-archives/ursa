@@ -15,10 +15,11 @@ Get the Ursa Software
 
 The Ursa software is distributed as source code with an Apache 2.0 license.
 
-  * `ursa <https://github.com/hyperledger-labs/crypto-lib>`_:
+`ursa <https://github.com/hyperledger/ursa>`_:
+  * libursa:
     Contains the main interface and wrappers for the selected libraries.
 
-  * `zmix <https://github.com/hyperledger-labs/z-mix>`_:
+  * zmix:
     Contains interfaces for zero-knowledge proofs.
 
 

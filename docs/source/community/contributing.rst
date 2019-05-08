@@ -26,7 +26,7 @@ The Commit Process
 ==================
 
 Hyperledger Ursa is Apache 2.0 licensed and accepts contributions
-via `GitHub <https://github.com/hyperledger-labs/crypto-lib>`_
+via `GitHub <https://github.com/hyperledger/ursa>`_
 pull requests. When contributing code, please follow these guidelines:
 
 * Fork the repository and make your changes in a feature branch
