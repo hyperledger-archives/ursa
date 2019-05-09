@@ -1,4 +1,4 @@
-<p align="center"><h1>Hyperledger URSA</h1></p><br> 
+# HYPERLEDGER URSA
 
 - [Introduction](#introduction)
 - [Features](#features)
