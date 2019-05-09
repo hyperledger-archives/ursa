@@ -6,7 +6,7 @@ Chat
 ====
 
 Hyperledger's RocketChat server is the place to go for real-time chat about everything from quick
-help to involved discussions. Be mindful that chat can sometimes disclude participants who are not
+help to involved discussions. Be mindful that chat can sometimes exclude participants who are not
 available at that time. Discussions with broad impact to the community should take place on the
 mail list. 
 
@@ -17,7 +17,7 @@ mail list.
 Mailing Lists
 =============
 
-The Hyperledger Ursa mailing list is the prefered place for discussions about decisional matters
+The Hyperledger Ursa mailing list is the preferred place for discussions about decisional matters
 for the project:
 
   `Hyperledger Ursa Mailing List <https://lists.hyperledger.org/g/ursa>`_
