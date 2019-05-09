@@ -66,7 +66,7 @@ when using portable mode for their applications.
 
 Libursa and Libzmix rely on libsodium for the default
 secure mode. Please see the following document for specific platform
-installations [here](docs/build-enviroment.md).
+installations [here](docs/build-environment.md).
 
 ## Libursa
 
