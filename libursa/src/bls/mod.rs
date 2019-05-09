@@ -97,7 +97,9 @@ impl SignKey {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::SignKey;
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let bytes = sign_key.as_bytes();
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
@@ -514,6 +516,13 @@ mod tests {
     fn sign_key_new_works_for_seed() {
         let seed = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31, 32];
         SignKey::new(Some(&seed)).unwrap();
+    }
+
+    #[test]
+    fn sign_key_as_bytes_works(){
+        let sign_key = SignKey::new(None).unwrap();
+        let bytes = sign_key.as_bytes();
+        assert!(bytes.len() > 0);
     }
 
     #[test]
