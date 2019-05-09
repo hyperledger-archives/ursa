@@ -110,7 +110,10 @@ impl SignKey {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::SignKey;
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let bytes = sign_key.as_bytes();
+    /// let sign_key = SignKey::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<SignKey> {
         Ok(
@@ -523,6 +526,13 @@ mod tests {
         let sign_key = SignKey::new(None).unwrap();
         let bytes = sign_key.as_bytes();
         assert!(bytes.len() > 0);
+    }
+
+    #[test]
+    fn sign_key_from_bytes_works(){
+        let sign_key = SignKey::new(None).unwrap();
+        let bytes = sign_key.as_bytes();
+        SignKey::from_bytes(bytes).unwrap();
     }
 
     #[test]
