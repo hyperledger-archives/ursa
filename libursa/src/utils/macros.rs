@@ -1,6 +1,5 @@
 macro_rules! impl_bytearray {
     ($thing:ident) => {
-        #[cfg_attr(feature = "wasm", wasm_bindgen)]
         impl $thing {
             #[inline]
             /// Converts the object to a raw pointer for FFI interfacing

@@ -2,28 +2,20 @@ use zeroize::Zeroize;
 use encoding::hex::{bin2hex, hex2bin};
 use std::ops::Drop;
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 // A private key instance.
 /// The underlying content is dependent on implementation.
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct PrivateKey(pub Vec<u8>);
 impl_bytearray!(PrivateKey);
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct PublicKey(pub Vec<u8>);
 impl_bytearray!(PublicKey);
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct SessionKey(pub Vec<u8>);
 impl_bytearray!(SessionKey);
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct MacKey(pub Vec<u8>);
 impl_bytearray!(MacKey);
 
-//#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum KeyGenOption {
     UseSeed(Vec<u8>),

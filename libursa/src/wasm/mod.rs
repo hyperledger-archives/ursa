@@ -10,22 +10,60 @@ pub mod ed25519;
 pub mod cl;
 
 use keys::{PublicKey, PrivateKey};
+use encoding::hex::{bin2hex, hex2bin};
 
 use wasm_bindgen::prelude::*;
-use errors::{UrsaCryptoError, ToErrorCode};
+use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
 use serde;
 
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
+pub struct WasmPrivateKey(String);
+#[wasm_bindgen]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WasmPublicKey(String);
+
+#[wasm_bindgen]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct KeyPair {
-    pk: PublicKey,
-    sk: PrivateKey
+    pk: WasmPublicKey,
+    sk: WasmPrivateKey
+}
+
+impl From<&PublicKey> for WasmPublicKey {
+    fn from(pk: &PublicKey) -> WasmPublicKey {
+        WasmPublicKey(bin2hex(&pk[..]))
+    }
+}
+
+impl From<Vec<u8>> for WasmPublicKey {
+    fn from(value: Vec<u8>) -> WasmPublicKey {
+        WasmPublicKey(bin2hex(value.as_slice()))
+    }
+}
+
+impl From<&WasmPublicKey> for PublicKey {
+    fn from(pk: &WasmPublicKey) -> PublicKey {
+        PublicKey(hex2bin(&pk.0).unwrap().to_vec())
+    }
+}
+
+impl From<&PrivateKey> for WasmPrivateKey {
+    fn from(sk: &PrivateKey) -> WasmPrivateKey {
+        WasmPrivateKey(bin2hex(&sk[..]))
+    }
+}
+
+impl From<&WasmPrivateKey> for PrivateKey {
+    fn from(pk: &WasmPrivateKey) -> PrivateKey {
+        PrivateKey(hex2bin(&pk.0).unwrap().to_vec())
+    }
 }
 
 impl From<UrsaCryptoError> for JsValue {
     fn from(err: UrsaCryptoError) -> JsValue {
-        let error_code = err.to_error_code();
-        JsValue::from_serde(&error_code).unwrap()
+        let error = format!("{:?}", err);
+        JsValue::from_serde(&error).unwrap()
     }
 }
 
@@ -35,8 +73,8 @@ where
 {
     match val.into_serde() {
         Ok(unwrapped) => Ok(unwrapped),
-        Err(_) => Err(UrsaCryptoError::InvalidStructure(
-            "Invalid argument".to_string(),
+        Err(_) => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidStructure,
+            "Invalid argument".to_string()
         )),
     }
 }
