@@ -1,8 +1,5 @@
 language: rust
-cache:
-  directories:
-    - $HOME/.cargo
-    - $HOME/libsodium
+cache: cargo
 
 branches:
   only:
@@ -10,7 +7,6 @@ branches:
     - travis-ci
 
 rust:
-  - 1.34.1
   - stable
 
 os:
@@ -31,14 +27,9 @@ addons:
 before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update ; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew link --force openssl  ; fi
-  - if [ ! -d "$HOME/.libsodium/lib" ]; then curl -fsSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.16.tar.gz | tar xz ; fi
-  - if [ ! -d "$HOME/.libsodium/lib" ]; then cd libsodium-1.0.16 ; fi
-  - if [ ! -d "$HOME/.libsodium/lib" ]; then ./autogen.sh ; fi
-  - if [ ! -d "$HOME/.libsodium/lib" ]; then ./configure --prefix=$HOME/.libsodium ; fi
-  - if [ ! -d "$HOME/.libsodium/lib" ]; then make && make install ; fi
 
 env:
-  - SODIUM_LIB_DIR=$HOME/.libsodium/lib LD_LIBRARY_PATH=$HOME/.libsodium/lib
+  - SODIUM_BUILD_STATIC=1
 
 install:
   - rustup component add rustfmt
@@ -49,9 +40,8 @@ install:
 script:
   - cargo fmt --all -- --check
   - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
-  - cargo check
-  - cargo audit
+  - cargo check && cargo audit
   - cargo build
-  - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=portable
+  - cargo build --no-default-features --features=portable
   - cargo test
   - cargo doc --no-deps

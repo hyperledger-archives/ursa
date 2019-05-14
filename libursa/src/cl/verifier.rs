@@ -423,10 +423,12 @@ impl ProofVerifier {
             .mod_exp(&LARGE_E_START_VALUE, &p_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
-            let cur_r = p_pub_key.r.get(attr).ok_or_else(|| err_msg(
-                UrsaCryptoErrorKind::ProofRejected,
-                format!("Value by key '{}' not found in pk.r", attr),
-            ))?;
+            let cur_r = p_pub_key.r.get(attr).ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::ProofRejected,
+                    format!("Value by key '{}' not found in pk.r", attr),
+                )
+            })?;
 
             rar = cur_r
                 .mod_exp(encoded_value, &p_pub_key.n, Some(&mut ctx))?
@@ -470,10 +472,12 @@ impl ProofVerifier {
         )?;
 
         for i in 0..ITERATION {
-            let cur_t = proof.t.get(&i.to_string()).ok_or_else(|| err_msg(
-                UrsaCryptoErrorKind::ProofRejected,
-                format!("Value by key '{}' not found in proof.t", i),
-            ))?;
+            let cur_t = proof.t.get(&i.to_string()).ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::ProofRejected,
+                    format!("Value by key '{}' not found in proof.t", i),
+                )
+            })?;
 
             tau_list[i] = cur_t
                 .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
@@ -481,10 +485,12 @@ impl ProofVerifier {
                 .mod_mul(&tau_list[i], &p_pub_key.n, Some(&mut ctx))?;
         }
 
-        let delta = proof.t.get("DELTA").ok_or_else(|| err_msg(
-            UrsaCryptoErrorKind::ProofRejected,
-            format!("Value by key '{}' not found in proof.t", "DELTA"),
-        ))?;
+        let delta = proof.t.get("DELTA").ok_or_else(|| {
+            err_msg(
+                UrsaCryptoErrorKind::ProofRejected,
+                format!("Value by key '{}' not found in proof.t", "DELTA"),
+            )
+        })?;
 
         let delta_prime = if proof.predicate.is_less() {
             delta.inverse(&p_pub_key.n, Some(&mut ctx))?
