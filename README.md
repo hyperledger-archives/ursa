@@ -1,6 +1,6 @@
 # HYPERLEDGER URSA
 
-[![Build Status](https://travis-ci.org/mikelodder7/ursa.svg?branch=travis-ci)](https://travis-ci.org/mikelodder7/ursa)
+[![Build Status](https://travis-ci.org/hyperledger/ursa.svg?branch=travis-ci)](https://travis-ci.org/hyperledger/ursa)
 
 - [Introduction](#introduction)
 - [Features](#features)
@@ -48,7 +48,7 @@ found in Libursa.
 Ursa and zmix use the following external dependencies:
 
 - [libsodium
-  1.0.14](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.14.tar.gz)
+  1.0.14](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
   (Written in C)
 - [openssl 1.1.0j](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
   newer (Written in C)

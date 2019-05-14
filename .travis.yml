@@ -4,7 +4,6 @@ cache: cargo
 branches:
   only:
     - master
-    - travis-ci
 
 rust:
   - stable
@@ -12,11 +11,6 @@ rust:
 os:
   - linux
   - osx
-
-matrix:
-  include:
-    - os: linux
-      dist: xenial
 
 addons:
   apt:
