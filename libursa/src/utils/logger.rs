@@ -119,7 +119,7 @@ pub struct HLCryptoDefaultLogger;
 
 impl HLCryptoDefaultLogger {
     pub fn init(pattern: Option<String>) -> Result<(), UrsaCryptoError> {
-        let pattern = pattern.or_else(||env::var("RUST_LOG").ok());
+        let pattern = pattern.or_else(|| env::var("RUST_LOG").ok());
 
         Builder::new()
             .format(|buf, record| {

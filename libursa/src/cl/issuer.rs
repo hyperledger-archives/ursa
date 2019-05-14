@@ -142,10 +142,12 @@ impl Issuer {
                credential_pub_key, max_cred_num, issuance_by_default);
 
         let cred_rev_pub_key: &CredentialRevocationPublicKey =
-            credential_pub_key.r_key.as_ref().ok_or_else(||err_msg(
-                UrsaCryptoErrorKind::InvalidStructure,
-                "There are not revocation keys in the credential public key.",
-            ))?;
+            credential_pub_key.r_key.as_ref().ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    "There are not revocation keys in the credential public key.",
+                )
+            })?;
 
         let (rev_key_pub, rev_key_priv) =
             Issuer::_new_revocation_registry_keys(cred_rev_pub_key, max_cred_num)?;
@@ -924,10 +926,12 @@ impl Issuer {
                     Some(&mut ctx),
                 ),
             |acc, attr| {
-                let pk_r = cred_pr_pub_key.r.get(&attr.clone()).ok_or_else(||err_msg(
-                    UrsaCryptoErrorKind::InvalidStructure,
-                    format!("Value by key '{}' not found in cred_pr_pub_key.r", attr),
-                ))?;
+                let pk_r = cred_pr_pub_key.r.get(&attr.clone()).ok_or_else(|| {
+                    err_msg(
+                        UrsaCryptoErrorKind::InvalidStructure,
+                        format!("Value by key '{}' not found in cred_pr_pub_key.r", attr),
+                    )
+                })?;
                 let m_cap = &blinded_cred_secrets_correctness_proof.m_caps[attr];
                 acc?.mod_mul(
                     &pk_r.mod_exp(&m_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
@@ -1102,10 +1106,12 @@ impl Issuer {
             .iter()
             .filter(|&(_, v)| v.is_known())
         {
-            let pk_r = p_pub_key.r.get(key).ok_or_else(||err_msg(
-                UrsaCryptoErrorKind::InvalidStructure,
-                format!("Value by key '{}' not found in pk.r", key),
-            ))?;
+            let pk_r = p_pub_key.r.get(key).ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    format!("Value by key '{}' not found in pk.r", key),
+                )
+            })?;
 
             rx = pk_r
                 .mod_exp(attr.value(), &p_pub_key.n, Some(&mut context))?
@@ -1197,22 +1203,28 @@ impl Issuer {
                secret!(rev_idx), secret!(cred_context), blinded_credential_secrets, cred_pub_key, secret!(cred_priv_key), max_cred_num,
                issuance_by_default, rev_reg, secret!(rev_key_priv));
 
-        let ur = blinded_credential_secrets.ur.ok_or_else(||err_msg(
-            UrsaCryptoErrorKind::InvalidStructure,
-            "No revocation part present in blinded master secret.",
-        ))?;
+        let ur = blinded_credential_secrets.ur.ok_or_else(|| {
+            err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "No revocation part present in blinded master secret.",
+            )
+        })?;
 
         let r_pub_key: &CredentialRevocationPublicKey =
-            cred_pub_key.r_key.as_ref().ok_or_else(||err_msg(
-                UrsaCryptoErrorKind::InvalidStructure,
-                "No revocation part present in credential revocation public key.er secret.",
-            ))?;
+            cred_pub_key.r_key.as_ref().ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    "No revocation part present in credential revocation public key.er secret.",
+                )
+            })?;
 
         let r_priv_key: &CredentialRevocationPrivateKey =
-            cred_priv_key.r_key.as_ref().ok_or_else(||err_msg(
-                UrsaCryptoErrorKind::InvalidStructure,
-                "No revocation part present in credential revocation private key.",
-            ))?;
+            cred_priv_key.r_key.as_ref().ok_or_else(|| {
+                err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    "No revocation part present in credential revocation private key.",
+                )
+            })?;
 
         let vr_prime_prime = GroupOrderElement::new()?;
         let c = GroupOrderElement::new()?;
