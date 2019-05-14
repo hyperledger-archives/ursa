@@ -1,5 +1,4 @@
 [workspace]
 members = [
-  "libursa",
-  "libzmix"
+  "libursa"
 ]
