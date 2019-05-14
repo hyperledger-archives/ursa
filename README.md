@@ -1,5 +1,7 @@
 # HYPERLEDGER URSA
 
+[![Build Status](https://travis-ci.org/mikelodder7/ursa.svg?branch=travis-ci)](https://travis-ci.org/mikelodder7/ursa)
+
 - [Introduction](#introduction)
 - [Features](#features)
     - [Libursa](#Libursa)
