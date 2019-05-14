@@ -1,13 +1,13 @@
+use super::helpers::*;
 use bn::BigNumber;
-use cl::*;
 use cl::constants::*;
+use cl::hash::get_hash_as_int;
+use cl::*;
 use errors::prelude::*;
 use pair::*;
-use super::helpers::*;
 use utils::commitment::get_pedersen_commitment;
-use cl::hash::get_hash_as_int;
 
-use std::collections::{HashSet, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use std::iter::FromIterator;
 
@@ -24,7 +24,9 @@ impl Prover {
     /// let _master_secret = Prover::new_master_secret().unwrap();
     /// ```
     pub fn new_master_secret() -> UrsaCryptoResult<MasterSecret> {
-        Ok(MasterSecret { ms: bn_rand(LARGE_MASTER_SECRET)? })
+        Ok(MasterSecret {
+            ms: bn_rand(LARGE_MASTER_SECRET)?,
+        })
     }
 
     /// Creates blinded master secret for given issuer key and master secret.
@@ -64,36 +66,54 @@ impl Prover {
     ///                                 &cred_values,
     ///                                 &credential_nonce).unwrap();
     /// ```
-    pub fn blind_credential_secrets(credential_pub_key: &CredentialPublicKey,
-                                    credential_key_correctness_proof: &CredentialKeyCorrectnessProof,
-                                    credential_values: &CredentialValues,
-                                    credential_nonce: &Nonce) -> Result<(BlindedCredentialSecrets,
-                                                                         CredentialSecretsBlindingFactors,
-                                                                         BlindedCredentialSecretsCorrectnessProof), UrsaCryptoError> {
-        trace!("Prover::blind_credential_secrets: >>> credential_pub_key: {:?}, \
-                                                      credential_key_correctness_proof: {:?}, \
-                                                      credential_values: {:?}, \
-                                                      credential_nonce: {:?}",
-               credential_pub_key,
-               credential_key_correctness_proof,
-               credential_values,
-               credential_nonce
+    pub fn blind_credential_secrets(
+        credential_pub_key: &CredentialPublicKey,
+        credential_key_correctness_proof: &CredentialKeyCorrectnessProof,
+        credential_values: &CredentialValues,
+        credential_nonce: &Nonce,
+    ) -> Result<
+        (
+            BlindedCredentialSecrets,
+            CredentialSecretsBlindingFactors,
+            BlindedCredentialSecretsCorrectnessProof,
+        ),
+        UrsaCryptoError,
+    > {
+        trace!(
+            "Prover::blind_credential_secrets: >>> credential_pub_key: {:?}, \
+             credential_key_correctness_proof: {:?}, \
+             credential_values: {:?}, \
+             credential_nonce: {:?}",
+            credential_pub_key,
+            credential_key_correctness_proof,
+            credential_values,
+            credential_nonce
         );
-        Prover::_check_credential_key_correctness_proof(&credential_pub_key.p_key, credential_key_correctness_proof)?;
+        Prover::_check_credential_key_correctness_proof(
+            &credential_pub_key.p_key,
+            credential_key_correctness_proof,
+        )?;
 
         let blinded_primary_credential_secrets =
-            Prover::_generate_blinded_primary_credential_secrets_factors(&credential_pub_key.p_key, &credential_values)?;
+            Prover::_generate_blinded_primary_credential_secrets_factors(
+                &credential_pub_key.p_key,
+                &credential_values,
+            )?;
 
         let blinded_revocation_credential_secrets = match credential_pub_key.r_key {
-            Some(ref r_pk) => Some(Prover::_generate_blinded_revocation_credential_secrets(r_pk)?),
-            _ => None
+            Some(ref r_pk) => Some(Prover::_generate_blinded_revocation_credential_secrets(
+                r_pk,
+            )?),
+            _ => None,
         };
 
         let blinded_credential_secrets_correctness_proof =
-            Prover::_new_blinded_credential_secrets_correctness_proof(&credential_pub_key.p_key,
-                                                                      &blinded_primary_credential_secrets,
-                                                                      &credential_nonce,
-                                                                      &credential_values)?;
+            Prover::_new_blinded_credential_secrets_correctness_proof(
+                &credential_pub_key.p_key,
+                &blinded_primary_credential_secrets,
+                &credential_nonce,
+                &credential_values,
+            )?;
 
         let blinded_credential_secrets = BlindedCredentialSecrets {
             u: blinded_primary_credential_secrets.u,
@@ -104,15 +124,16 @@ impl Prover {
 
         let credential_secrets_blinding_factors = CredentialSecretsBlindingFactors {
             v_prime: blinded_primary_credential_secrets.v_prime,
-            vr_prime: blinded_revocation_credential_secrets.map(|d| d.vr_prime)
+            vr_prime: blinded_revocation_credential_secrets.map(|d| d.vr_prime),
         };
 
-        trace!("Prover::blind_credential_secrets: <<< blinded_credential_secrets: {:?}, \
-                                                      credential_secrets_blinding_factors: {:?}, \
-                                                      blinded_credential_secrets_correctness_proof: {:?},",
-               blinded_credential_secrets,
-               credential_secrets_blinding_factors,
-               blinded_credential_secrets_correctness_proof
+        trace!(
+            "Prover::blind_credential_secrets: <<< blinded_credential_secrets: {:?}, \
+             credential_secrets_blinding_factors: {:?}, \
+             blinded_credential_secrets_correctness_proof: {:?},",
+            blinded_credential_secrets,
+            credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof
         );
 
         Ok((
@@ -182,56 +203,74 @@ impl Prover {
     ///                                      &credential_issuance_nonce,
     ///                                      None, None, None).unwrap();
     /// ```
-    pub fn process_credential_signature(credential_signature: &mut CredentialSignature,
-                                        credential_values: &CredentialValues,
-                                        signature_correctness_proof: &SignatureCorrectnessProof,
-                                        credential_secrets_blinding_factors: &CredentialSecretsBlindingFactors,
-                                        credential_pub_key: &CredentialPublicKey,
-                                        nonce: &Nonce,
-                                        rev_key_pub: Option<&RevocationKeyPublic>,
-                                        rev_reg: Option<&RevocationRegistry>,
-                                        witness: Option<&Witness>) -> UrsaCryptoResult<()> {
-        trace!("Prover::process_credential_signature: >>> credential_signature: {:?}, \
-                                                          credential_values: {:?}, \
-                                                          signature_correctness_proof: {:?}, \
-                                                          credential_secrets_blinding_factors: {:?}, \
-                                                          credential_pub_key: {:?}, \
-                                                          nonce: {:?}, \
-                                                          rev_key_pub: {:?}, \
-                                                          rev_reg: {:?}, \
-                                                          witness: {:?}",
-               credential_signature,
-               credential_values,
-               signature_correctness_proof,
-               credential_secrets_blinding_factors,
-               credential_pub_key,
-               nonce,
-               rev_key_pub,
-               rev_reg,
-               witness
+    pub fn process_credential_signature(
+        credential_signature: &mut CredentialSignature,
+        credential_values: &CredentialValues,
+        signature_correctness_proof: &SignatureCorrectnessProof,
+        credential_secrets_blinding_factors: &CredentialSecretsBlindingFactors,
+        credential_pub_key: &CredentialPublicKey,
+        nonce: &Nonce,
+        rev_key_pub: Option<&RevocationKeyPublic>,
+        rev_reg: Option<&RevocationRegistry>,
+        witness: Option<&Witness>,
+    ) -> UrsaCryptoResult<()> {
+        trace!(
+            "Prover::process_credential_signature: >>> credential_signature: {:?}, \
+             credential_values: {:?}, \
+             signature_correctness_proof: {:?}, \
+             credential_secrets_blinding_factors: {:?}, \
+             credential_pub_key: {:?}, \
+             nonce: {:?}, \
+             rev_key_pub: {:?}, \
+             rev_reg: {:?}, \
+             witness: {:?}",
+            credential_signature,
+            credential_values,
+            signature_correctness_proof,
+            credential_secrets_blinding_factors,
+            credential_pub_key,
+            nonce,
+            rev_key_pub,
+            rev_reg,
+            witness
         );
 
-        Prover::_process_primary_credential(&mut credential_signature.p_credential, &credential_secrets_blinding_factors.v_prime)?;
+        Prover::_process_primary_credential(
+            &mut credential_signature.p_credential,
+            &credential_secrets_blinding_factors.v_prime,
+        )?;
 
-        Prover::_check_signature_correctness_proof(&credential_signature.p_credential,
-                                                   credential_values,
-                                                   signature_correctness_proof,
-                                                   &credential_pub_key.p_key,
-                                                   nonce)?;
+        Prover::_check_signature_correctness_proof(
+            &credential_signature.p_credential,
+            credential_values,
+            signature_correctness_proof,
+            &credential_pub_key.p_key,
+            nonce,
+        )?;
 
-        if let (&mut Some(ref mut non_revocation_cred), Some(ref vr_prime), &Some(ref r_key),
-            Some(ref r_key_pub), Some(ref r_reg), Some(ref witness)) = (&mut credential_signature.r_credential,
-                                                                        credential_secrets_blinding_factors.vr_prime,
-                                                                        &credential_pub_key.r_key,
-                                                                        rev_key_pub,
-                                                                        rev_reg,
-                                                                        witness) {
-            Prover::_process_non_revocation_credential(non_revocation_cred,
-                                                       vr_prime,
-                                                       &r_key,
-                                                       r_key_pub,
-                                                       r_reg,
-                                                       witness)?;
+        if let (
+            &mut Some(ref mut non_revocation_cred),
+            Some(ref vr_prime),
+            &Some(ref r_key),
+            Some(ref r_key_pub),
+            Some(ref r_reg),
+            Some(ref witness),
+        ) = (
+            &mut credential_signature.r_credential,
+            credential_secrets_blinding_factors.vr_prime,
+            &credential_pub_key.r_key,
+            rev_key_pub,
+            rev_reg,
+            witness,
+        ) {
+            Prover::_process_non_revocation_credential(
+                non_revocation_cred,
+                vr_prime,
+                &r_key,
+                r_key_pub,
+                r_reg,
+                witness,
+            )?;
         }
 
         trace!("Prover::process_credential_signature: <<<");
@@ -252,31 +291,46 @@ impl Prover {
             common_attributes: HashMap::new(),
             init_proofs: Vec::new(),
             c_list: Vec::new(),
-            tau_list: Vec::new()
+            tau_list: Vec::new(),
         })
     }
 
     #[cfg(test)]
-    pub fn check_credential_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey,
-                                                  key_correctness_proof: &CredentialKeyCorrectnessProof) -> UrsaCryptoResult<()> {
+    pub fn check_credential_key_correctness_proof(
+        pr_pub_key: &CredentialPrimaryPublicKey,
+        key_correctness_proof: &CredentialKeyCorrectnessProof,
+    ) -> UrsaCryptoResult<()> {
         Prover::_check_credential_key_correctness_proof(pr_pub_key, key_correctness_proof)
     }
 
-    fn _check_credential_key_correctness_proof(pr_pub_key: &CredentialPrimaryPublicKey,
-                                               key_correctness_proof: &CredentialKeyCorrectnessProof) -> UrsaCryptoResult<()> {
+    fn _check_credential_key_correctness_proof(
+        pr_pub_key: &CredentialPrimaryPublicKey,
+        key_correctness_proof: &CredentialKeyCorrectnessProof,
+    ) -> UrsaCryptoResult<()> {
         trace!("Prover::_check_credential_key_correctness_proof: >>> pr_pub_key: {:?}, key_correctness_proof: {:?}",
                pr_pub_key,
                key_correctness_proof
         );
 
-        let correctness_names: HashSet<&String> = HashSet::from_iter(key_correctness_proof.xr_cap.iter().map(|&(ref key, ref _v)| key));
+        let correctness_names: HashSet<&String> = HashSet::from_iter(
+            key_correctness_proof
+                .xr_cap
+                .iter()
+                .map(|&(ref key, ref _v)| key),
+        );
         for r_key in pr_pub_key.r.keys() {
             if !correctness_names.contains(r_key) {
                 //V1 didn't include "master_secret" in the correctness proof
                 //so for now if this is the only missing key, its okay
                 //In the future this "if" statement should be removed
                 if r_key != "master_secret" {
-                    return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in key_correctness_proof.xr_cap", r_key)));
+                    return Err(err_msg(
+                        UrsaCryptoErrorKind::InvalidStructure,
+                        format!(
+                            "Value by key '{}' not found in key_correctness_proof.xr_cap",
+                            r_key
+                        ),
+                    ));
                 }
             }
         }
@@ -306,8 +360,14 @@ impl Prover {
             ordered_r_values.push(r_value.try_clone()?);
 
             let r_inverse = r_value.inverse(&pr_pub_key.n, Some(&mut ctx))?;
-            let val = get_pedersen_commitment(&r_inverse, &key_correctness_proof.c,
-                                              &pr_pub_key.s, &xr_cap_value, &pr_pub_key.n, &mut ctx)?;
+            let val = get_pedersen_commitment(
+                &r_inverse,
+                &key_correctness_proof.c,
+                &pr_pub_key.s,
+                &xr_cap_value,
+                &pr_pub_key.n,
+                &mut ctx,
+            )?;
             ordered_r_cap_values.push(val);
         }
 
@@ -326,7 +386,10 @@ impl Prover {
         let valid = key_correctness_proof.c.eq(&c);
 
         if !valid {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid Credential key correctness proof"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid Credential key correctness proof",
+            ));
         }
 
         trace!("Prover::_check_credential_key_correctness_proof: <<<");
@@ -334,8 +397,10 @@ impl Prover {
         Ok(())
     }
 
-    fn _generate_blinded_primary_credential_secrets_factors(p_pub_key: &CredentialPrimaryPublicKey,
-                                                            credential_values: &CredentialValues) -> UrsaCryptoResult<PrimaryBlindedCredentialSecretsFactors> {
+    fn _generate_blinded_primary_credential_secrets_factors(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        credential_values: &CredentialValues,
+    ) -> UrsaCryptoResult<PrimaryBlindedCredentialSecretsFactors> {
         trace!("Prover::_generate_blinded_primary_credential_secrets_factors: >>> p_pub_key: {:?}, credential_values: {:?}",
                p_pub_key,
                credential_values
@@ -352,33 +417,33 @@ impl Prover {
             .map(|(attr, _)| attr.clone())
             .collect::<BTreeSet<String>>();
         let u = hidden_attributes.iter().fold(
-            p_pub_key.s.mod_exp(
-                &v_prime,
-                &p_pub_key.n,
-                Some(&mut ctx),
-            ),
+            p_pub_key.s.mod_exp(&v_prime, &p_pub_key.n, Some(&mut ctx)),
             |acc, attr| {
-                let pk_r = p_pub_key.r.get(&attr.clone()).ok_or(
-                    err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in pk.r", attr))
-                )?;
+                let pk_r = p_pub_key.r.get(&attr.clone()).ok_or(err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    format!("Value by key '{}' not found in pk.r", attr),
+                ))?;
                 let cred_value = &credential_values.attrs_values[attr];
                 acc?.mod_mul(
-                    &pk_r.mod_exp(
-                        cred_value.value(),
-                        &p_pub_key.n,
-                        Some(&mut ctx),
-                    )?,
+                    &pk_r.mod_exp(cred_value.value(), &p_pub_key.n, Some(&mut ctx))?,
                     &p_pub_key.n,
                     Some(&mut ctx),
                 )
             },
         )?;
 
-
         let mut committed_attributes = BTreeMap::new();
 
-        for (attr, cv) in credential_values.attrs_values.iter().filter(|(_, v)| v.is_commitment()) {
-            if let CredentialValue::Commitment { value, blinding_factor } = cv {
+        for (attr, cv) in credential_values
+            .attrs_values
+            .iter()
+            .filter(|(_, v)| v.is_commitment())
+        {
+            if let CredentialValue::Commitment {
+                value,
+                blinding_factor,
+            } = cv
+            {
                 committed_attributes.insert(
                     attr.clone(),
                     get_pedersen_commitment(
@@ -405,31 +470,41 @@ impl Prover {
         Ok(primary_blinded_cred_secrets)
     }
 
-    fn _generate_blinded_revocation_credential_secrets(r_pub_key: &CredentialRevocationPublicKey) -> UrsaCryptoResult<RevocationBlindedCredentialSecretsFactors> {
-        trace!("Prover::_generate_blinded_revocation_credential_secrets: >>> r_pub_key: {:?}", r_pub_key);
+    fn _generate_blinded_revocation_credential_secrets(
+        r_pub_key: &CredentialRevocationPublicKey,
+    ) -> UrsaCryptoResult<RevocationBlindedCredentialSecretsFactors> {
+        trace!(
+            "Prover::_generate_blinded_revocation_credential_secrets: >>> r_pub_key: {:?}",
+            r_pub_key
+        );
 
         let vr_prime = GroupOrderElement::new()?;
         let ur = r_pub_key.h2.mul(&vr_prime)?;
 
-        let revocation_blinded_credential_secrets = RevocationBlindedCredentialSecretsFactors { ur, vr_prime };
+        let revocation_blinded_credential_secrets =
+            RevocationBlindedCredentialSecretsFactors { ur, vr_prime };
 
         trace!("Prover::_generate_blinded_revocation_credential_secrets: <<< revocation_blinded_credential_secrets: {:?}", revocation_blinded_credential_secrets);
 
         Ok(revocation_blinded_credential_secrets)
     }
 
-    fn _new_blinded_credential_secrets_correctness_proof(p_pub_key: &CredentialPrimaryPublicKey,
-                                                         blinded_primary_credential_secrets: &PrimaryBlindedCredentialSecretsFactors,
-                                                         nonce: &BigNumber,
-                                                         credential_values: &CredentialValues) -> UrsaCryptoResult<BlindedCredentialSecretsCorrectnessProof> {
-        trace!("Prover::_new_blinded_credential_secrets_correctness_proof: >>> p_pub_key: {:?}, \
-                                                                               blinded_primary_credential_secrets: {:?}, \
-                                                                               nonce: {:?}, \
-                                                                               credential_values: {:?}",
-               blinded_primary_credential_secrets,
-               nonce,
-               p_pub_key,
-               credential_values);
+    fn _new_blinded_credential_secrets_correctness_proof(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        blinded_primary_credential_secrets: &PrimaryBlindedCredentialSecretsFactors,
+        nonce: &BigNumber,
+        credential_values: &CredentialValues,
+    ) -> UrsaCryptoResult<BlindedCredentialSecretsCorrectnessProof> {
+        trace!(
+            "Prover::_new_blinded_credential_secrets_correctness_proof: >>> p_pub_key: {:?}, \
+             blinded_primary_credential_secrets: {:?}, \
+             nonce: {:?}, \
+             credential_values: {:?}",
+            blinded_primary_credential_secrets,
+            nonce,
+            p_pub_key,
+            credential_values
+        );
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -439,19 +514,20 @@ impl Prover {
         let mut r_tildes = BTreeMap::new();
 
         let mut values: Vec<u8> = Vec::new();
-        let mut u_tilde = p_pub_key.s.mod_exp(
-            &v_dash_tilde,
-            &p_pub_key.n,
-            Some(&mut ctx),
-        )?;
+        let mut u_tilde = p_pub_key
+            .s
+            .mod_exp(&v_dash_tilde, &p_pub_key.n, Some(&mut ctx))?;
 
-        for (attr, cred_value) in credential_values.attrs_values
+        for (attr, cred_value) in credential_values
+            .attrs_values
             .iter()
-            .filter(|&(_, v)| v.is_hidden() || v.is_commitment()) {
+            .filter(|&(_, v)| v.is_hidden() || v.is_commitment())
+        {
             let m_tilde = bn_rand(LARGE_MTILDE)?;
-            let pk_r = p_pub_key.r.get(attr).ok_or(
-                err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in pk.r", attr))
-            )?;
+            let pk_r = p_pub_key.r.get(attr).ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!("Value by key '{}' not found in pk.r", attr),
+            ))?;
 
             match *cred_value {
                 CredentialValue::Hidden { .. } => {
@@ -493,19 +569,21 @@ impl Prover {
 
         let c = get_hash_as_int(&[values])?;
 
-        let v_dash_cap = c.mul(&blinded_primary_credential_secrets.v_prime, Some(&mut ctx))?
+        let v_dash_cap = c
+            .mul(&blinded_primary_credential_secrets.v_prime, Some(&mut ctx))?
             .add(&v_dash_tilde)?;
 
         let mut m_caps = BTreeMap::new();
         let mut r_caps = BTreeMap::new();
 
         for (attr, m_tilde) in &m_tildes {
-            let ca = credential_values.attrs_values.get(attr).ok_or(
-                err_msg(UrsaCryptoErrorKind::InvalidStructure, format!(
+            let ca = credential_values.attrs_values.get(attr).ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!(
                     "Value by key '{}' not found in cred_values.committed_attributes",
                     attr
-                )),
-            )?;
+                ),
+            ))?;
 
             match ca {
                 CredentialValue::Hidden { value } => {
@@ -539,9 +617,15 @@ impl Prover {
         Ok(blinded_credential_secrets_correctness_proof)
     }
 
-    fn _process_primary_credential(p_cred: &mut PrimaryCredentialSignature,
-                                   v_prime: &BigNumber) -> UrsaCryptoResult<()> {
-        trace!("Prover::_process_primary_credential: >>> p_cred: {:?}, v_prime: {:?}", p_cred, v_prime);
+    fn _process_primary_credential(
+        p_cred: &mut PrimaryCredentialSignature,
+        v_prime: &BigNumber,
+    ) -> UrsaCryptoResult<()> {
+        trace!(
+            "Prover::_process_primary_credential: >>> p_cred: {:?}, v_prime: {:?}",
+            p_cred,
+            v_prime
+        );
 
         p_cred.v = v_prime.add(&p_cred.v)?;
 
@@ -550,53 +634,69 @@ impl Prover {
         Ok(())
     }
 
-    fn _process_non_revocation_credential(r_cred: &mut NonRevocationCredentialSignature,
-                                          vr_prime: &GroupOrderElement,
-                                          cred_rev_pub_key: &CredentialRevocationPublicKey,
-                                          rev_key_pub: &RevocationKeyPublic,
-                                          rev_reg: &RevocationRegistry,
-                                          witness: &Witness) -> UrsaCryptoResult<()> {
+    fn _process_non_revocation_credential(
+        r_cred: &mut NonRevocationCredentialSignature,
+        vr_prime: &GroupOrderElement,
+        cred_rev_pub_key: &CredentialRevocationPublicKey,
+        rev_key_pub: &RevocationKeyPublic,
+        rev_reg: &RevocationRegistry,
+        witness: &Witness,
+    ) -> UrsaCryptoResult<()> {
         trace!("Prover::_process_non_revocation_credential: >>> r_cred: {:?}, vr_prime: {:?}, cred_rev_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}",
                r_cred, vr_prime, cred_rev_pub_key, rev_reg, rev_key_pub);
 
         let r_cnxt_m2 = BigNumber::from_bytes(&r_cred.m2.to_bytes()?)?;
         r_cred.vr_prime_prime = vr_prime.add_mod(&r_cred.vr_prime_prime)?;
-        Prover::_test_witness_signature(&r_cred, cred_rev_pub_key, rev_key_pub, rev_reg, witness, &r_cnxt_m2)?;
+        Prover::_test_witness_signature(
+            &r_cred,
+            cred_rev_pub_key,
+            rev_key_pub,
+            rev_reg,
+            witness,
+            &r_cnxt_m2,
+        )?;
 
         trace!("Prover::_process_non_revocation_credential: <<<");
 
         Ok(())
     }
 
-    fn _check_signature_correctness_proof(p_cred_sig: &PrimaryCredentialSignature,
-                                          cred_values: &CredentialValues,
-                                          signature_correctness_proof: &SignatureCorrectnessProof,
-                                          p_pub_key: &CredentialPrimaryPublicKey,
-                                          nonce: &Nonce) -> UrsaCryptoResult<()> {
-        trace!("Prover::_check_signature_correctness_proof: >>> p_cred_sig: {:?}, \
-                                                                cred_values: {:?}, \
-                                                                signature_correctness_proof: {:?}, \
-                                                                p_pub_key: {:?}, \
-                                                                nonce: {:?}",
-               p_cred_sig,
-               cred_values,
-               signature_correctness_proof,
-               p_pub_key,
-               nonce
+    fn _check_signature_correctness_proof(
+        p_cred_sig: &PrimaryCredentialSignature,
+        cred_values: &CredentialValues,
+        signature_correctness_proof: &SignatureCorrectnessProof,
+        p_pub_key: &CredentialPrimaryPublicKey,
+        nonce: &Nonce,
+    ) -> UrsaCryptoResult<()> {
+        trace!(
+            "Prover::_check_signature_correctness_proof: >>> p_cred_sig: {:?}, \
+             cred_values: {:?}, \
+             signature_correctness_proof: {:?}, \
+             p_pub_key: {:?}, \
+             nonce: {:?}",
+            p_cred_sig,
+            cred_values,
+            signature_correctness_proof,
+            p_pub_key,
+            nonce
         );
-
 
         let mut ctx = BigNumber::new_context()?;
 
         if !p_cred_sig.e.is_prime(Some(&mut ctx))? {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid Signature correctness proof"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid Signature correctness proof",
+            ));
         }
 
-        if let Some((ref attr, _)) = cred_values.attrs_values
-            .iter()
-            .find(|( attr, value)|
-                (value.is_known() || value.is_hidden()) && !p_pub_key.r.contains_key(attr.as_str())) {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in public key", attr)));
+        if let Some((ref attr, _)) = cred_values.attrs_values.iter().find(|(attr, value)| {
+            (value.is_known() || value.is_hidden()) && !p_pub_key.r.contains_key(attr.as_str())
+        }) {
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!("Value by key '{}' not found in public key", attr),
+            ));
         }
 
         let rx = cred_values
@@ -629,17 +729,26 @@ impl Prover {
 
         let q = p_pub_key.z.mod_div(&rx, &p_pub_key.n, Some(&mut ctx))?;
 
-        let expected_q = p_cred_sig.a.mod_exp(&p_cred_sig.e, &p_pub_key.n, Some(&mut ctx))?;
+        let expected_q = p_cred_sig
+            .a
+            .mod_exp(&p_cred_sig.e, &p_pub_key.n, Some(&mut ctx))?;
 
         if !q.eq(&expected_q) {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid Signature correctness proof q != q'"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid Signature correctness proof q != q'",
+            ));
         }
 
         let degree = signature_correctness_proof.c.add(
-            &signature_correctness_proof.se.mul(&p_cred_sig.e, Some(&mut ctx))?
+            &signature_correctness_proof
+                .se
+                .mul(&p_cred_sig.e, Some(&mut ctx))?,
         )?;
 
-        let a_cap = p_cred_sig.a.mod_exp(&degree, &p_pub_key.n, Some(&mut ctx))?;
+        let a_cap = p_cred_sig
+            .a
+            .mod_exp(&degree, &p_pub_key.n, Some(&mut ctx))?;
 
         let mut values: Vec<u8> = Vec::new();
         values.extend_from_slice(&q.to_bytes()?);
@@ -652,7 +761,10 @@ impl Prover {
         let valid = signature_correctness_proof.c.eq(&c);
 
         if !valid {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid Signature correctness proof c != c'"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid Signature correctness proof c != c'",
+            ));
         }
 
         trace!("Prover::_check_signature_correctness_proof: <<<");
@@ -660,12 +772,14 @@ impl Prover {
         Ok(())
     }
 
-    fn _test_witness_signature(r_cred: &NonRevocationCredentialSignature,
-                               cred_rev_pub_key: &CredentialRevocationPublicKey,
-                               rev_key_pub: &RevocationKeyPublic,
-                               rev_reg: &RevocationRegistry,
-                               witness: &Witness,
-                               r_cnxt_m2: &BigNumber) -> UrsaCryptoResult<()> {
+    fn _test_witness_signature(
+        r_cred: &NonRevocationCredentialSignature,
+        cred_rev_pub_key: &CredentialRevocationPublicKey,
+        rev_key_pub: &RevocationKeyPublic,
+        rev_reg: &RevocationRegistry,
+        witness: &Witness,
+        r_cnxt_m2: &BigNumber,
+    ) -> UrsaCryptoResult<()> {
         trace!("Prover::_test_witness_signature: >>> r_cred: {:?}, cred_rev_pub_key: {:?}, rev_key_pub: {:?}, rev_reg: {:?}, r_cnxt_m2: {:?}",
                r_cred, cred_rev_pub_key, rev_key_pub, rev_reg, r_cnxt_m2);
 
@@ -673,28 +787,46 @@ impl Prover {
             .mul(&Pair::pair(&cred_rev_pub_key.g, &witness.omega)?.inverse()?)?;
 
         if z_calc != rev_key_pub.z {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Issuer is sending incorrect data"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Issuer is sending incorrect data",
+            ));
         }
-        let pair_gg_calc = Pair::pair(&cred_rev_pub_key.pk.add(&r_cred.g_i)?, &r_cred.witness_signature.sigma_i)?;
+        let pair_gg_calc = Pair::pair(
+            &cred_rev_pub_key.pk.add(&r_cred.g_i)?,
+            &r_cred.witness_signature.sigma_i,
+        )?;
         let pair_gg = Pair::pair(&cred_rev_pub_key.g, &cred_rev_pub_key.g_dash)?;
 
         if pair_gg_calc != pair_gg {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Issuer is sending incorrect data"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Issuer is sending incorrect data",
+            ));
         }
 
         let m2 = GroupOrderElement::from_bytes(&r_cnxt_m2.to_bytes()?)?;
 
-        let pair_h1 = Pair::pair(&r_cred.sigma, &cred_rev_pub_key.y.add(&cred_rev_pub_key.h_cap.mul(&r_cred.c)?)?)?;
+        let pair_h1 = Pair::pair(
+            &r_cred.sigma,
+            &cred_rev_pub_key
+                .y
+                .add(&cred_rev_pub_key.h_cap.mul(&r_cred.c)?)?,
+        )?;
         let pair_h2 = Pair::pair(
-            &cred_rev_pub_key.h0
+            &cred_rev_pub_key
+                .h0
                 .add(&cred_rev_pub_key.h1.mul(&m2)?)?
                 .add(&cred_rev_pub_key.h2.mul(&r_cred.vr_prime_prime)?)?
                 .add(&r_cred.g_i)?,
-            &cred_rev_pub_key.h_cap
+            &cred_rev_pub_key.h_cap,
         )?;
 
         if pair_h1 != pair_h2 {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Issuer is sending incorrect data"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Issuer is sending incorrect data",
+            ));
         }
 
         trace!("Prover::_test_witness_signature: <<<");
@@ -714,7 +846,8 @@ pub struct ProofBuilder {
 impl ProofBuilder {
     /// Creates m_tildes for attributes that will be the same across all subproofs
     pub fn add_common_attribute(&mut self, attr_name: &str) -> UrsaCryptoResult<()> {
-        self.common_attributes.insert(attr_name.to_owned(), bn_rand(LARGE_MVECT)?);
+        self.common_attributes
+            .insert(attr_name.to_owned(), bn_rand(LARGE_MVECT)?);
         Ok(())
     }
     /// Adds sub proof request to proof builder which will be used fo building of proof.
@@ -793,31 +926,35 @@ impl ProofBuilder {
     ///                                     None,
     ///                                     None).unwrap();
     /// ```
-    pub fn add_sub_proof_request(&mut self,
-                                 sub_proof_request: &SubProofRequest,
-                                 credential_schema: &CredentialSchema,
-                                 non_credential_schema: &NonCredentialSchema,
-                                 credential_signature: &CredentialSignature,
-                                 credential_values: &CredentialValues,
-                                 credential_pub_key: &CredentialPublicKey,
-                                 rev_reg: Option<&RevocationRegistry>,
-                                 witness: Option<&Witness>) -> UrsaCryptoResult<()> {
-        trace!("ProofBuilder::add_sub_proof_request: >>> sub_proof_request: {:?}, \
-                                                         credential_schema: {:?}, \
-                                                         non_credential_schema: {:?}, \
-                                                         credential_signature: {:?}, \
-                                                         credential_values: {:?}, \
-                                                         credential_pub_key: {:?}, \
-                                                         rev_reg: {:?}, \
-                                                         witness: {:?}",
-               sub_proof_request,
-               credential_schema,
-               non_credential_schema,
-               credential_signature,
-               credential_values,
-               credential_pub_key,
-               rev_reg,
-               witness);
+    pub fn add_sub_proof_request(
+        &mut self,
+        sub_proof_request: &SubProofRequest,
+        credential_schema: &CredentialSchema,
+        non_credential_schema: &NonCredentialSchema,
+        credential_signature: &CredentialSignature,
+        credential_values: &CredentialValues,
+        credential_pub_key: &CredentialPublicKey,
+        rev_reg: Option<&RevocationRegistry>,
+        witness: Option<&Witness>,
+    ) -> UrsaCryptoResult<()> {
+        trace!(
+            "ProofBuilder::add_sub_proof_request: >>> sub_proof_request: {:?}, \
+             credential_schema: {:?}, \
+             non_credential_schema: {:?}, \
+             credential_signature: {:?}, \
+             credential_values: {:?}, \
+             credential_pub_key: {:?}, \
+             rev_reg: {:?}, \
+             witness: {:?}",
+            sub_proof_request,
+            credential_schema,
+            non_credential_schema,
+            credential_signature,
+            credential_values,
+            credential_pub_key,
+            rev_reg,
+            witness
+        );
         ProofBuilder::_check_add_sub_proof_request_params_consistency(
             credential_values,
             sub_proof_request,
@@ -828,14 +965,14 @@ impl ProofBuilder {
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
-        if let (&Some(ref r_cred), &Some(ref r_reg), &Some(ref r_pub_key), &Some(ref witness)) = (&credential_signature.r_credential,
-                                                                                                  &rev_reg,
-                                                                                                  &credential_pub_key.r_key,
-                                                                                                  &witness) {
-            let proof = ProofBuilder::_init_non_revocation_proof(&r_cred,
-                                                                 &r_reg,
-                                                                 &r_pub_key,
-                                                                 &witness)?;
+        if let (&Some(ref r_cred), &Some(ref r_reg), &Some(ref r_pub_key), &Some(ref witness)) = (
+            &credential_signature.r_credential,
+            &rev_reg,
+            &credential_pub_key.r_key,
+            &witness,
+        ) {
+            let proof =
+                ProofBuilder::_init_non_revocation_proof(&r_cred, &r_reg, &r_pub_key, &witness)?;
 
             self.c_list.extend_from_slice(&proof.as_c_list()?);
             self.tau_list.extend_from_slice(&proof.as_tau_list()?);
@@ -843,17 +980,21 @@ impl ProofBuilder {
             non_revoc_init_proof = Some(proof);
         }
 
-        let primary_init_proof = ProofBuilder::_init_primary_proof(&self.common_attributes,
-                                                                   &credential_pub_key.p_key,
-                                                                   &credential_signature.p_credential,
-                                                                   credential_values,
-                                                                   credential_schema,
-                                                                   non_credential_schema,
-                                                                   sub_proof_request,
-                                                                   m2_tilde)?;
+        let primary_init_proof = ProofBuilder::_init_primary_proof(
+            &self.common_attributes,
+            &credential_pub_key.p_key,
+            &credential_signature.p_credential,
+            credential_values,
+            credential_schema,
+            non_credential_schema,
+            sub_proof_request,
+            m2_tilde,
+        )?;
 
-        self.c_list.extend_from_slice(&primary_init_proof.as_c_list()?);
-        self.tau_list.extend_from_slice(&primary_init_proof.as_tau_list()?);
+        self.c_list
+            .extend_from_slice(&primary_init_proof.as_c_list()?);
+        self.tau_list
+            .extend_from_slice(&primary_init_proof.as_tau_list()?);
 
         let init_proof = InitProof {
             primary_init_proof,
@@ -960,7 +1101,10 @@ impl ProofBuilder {
         for init_proof in self.init_proofs.iter() {
             let mut non_revoc_proof: Option<NonRevocProof> = None;
             if let Some(ref non_revoc_init_proof) = init_proof.non_revoc_init_proof {
-                non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(&non_revoc_init_proof, &challenge)?);
+                non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(
+                    &non_revoc_init_proof,
+                    &challenge,
+                )?);
             }
 
             let primary_proof = ProofBuilder::_finalize_primary_proof(
@@ -972,13 +1116,22 @@ impl ProofBuilder {
                 &init_proof.sub_proof_request,
             )?;
 
-            let proof = SubProof { primary_proof, non_revoc_proof };
+            let proof = SubProof {
+                primary_proof,
+                non_revoc_proof,
+            };
             proofs.push(proof);
         }
 
-        let aggregated_proof = AggregatedProof { c_hash: challenge, c_list: self.c_list.clone() };
+        let aggregated_proof = AggregatedProof {
+            c_hash: challenge,
+            c_list: self.c_list.clone(),
+        };
 
-        let proof = Proof { proofs, aggregated_proof };
+        let proof = Proof {
+            proofs,
+            aggregated_proof,
+        };
 
         trace!("ProofBuilder::finalize: <<< proof: {:?}", proof);
 
@@ -1007,16 +1160,23 @@ impl ProofBuilder {
         let cred_attrs = BTreeSet::from_iter(cred_values.attrs_values.keys().cloned());
 
         if schema_attrs != cred_attrs {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Credential doesn't correspond to credential schema"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Credential doesn't correspond to credential schema",
+            ));
         }
 
         if sub_proof_request
             .revealed_attrs
             .difference(&cred_attrs)
-            .count() != 0
-            {
-                return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Credential doesn't contain requested attribute"));
-            }
+            .count()
+            != 0
+        {
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Credential doesn't contain requested attribute",
+            ));
+        }
 
         let predicates_attrs = sub_proof_request
             .predicates
@@ -1025,7 +1185,10 @@ impl ProofBuilder {
             .collect::<BTreeSet<String>>();
 
         if predicates_attrs.difference(&cred_attrs).count() != 0 {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Credential doesn't contain attribute requested in predicate"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Credential doesn't contain attribute requested in predicate",
+            ));
         }
 
         trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
@@ -1033,32 +1196,43 @@ impl ProofBuilder {
         Ok(())
     }
 
-    fn _init_primary_proof(common_attributes: &HashMap<String, BigNumber>,
-                           issuer_pub_key: &CredentialPrimaryPublicKey,
-                           c1: &PrimaryCredentialSignature,
-                           cred_values: &CredentialValues,
-                           cred_schema: &CredentialSchema,
-                           non_cred_schema_elems: &NonCredentialSchema,
-                           sub_proof_request: &SubProofRequest,
-                           m2_t: Option<BigNumber>) -> UrsaCryptoResult<PrimaryInitProof> {
-        trace!("ProofBuilder::_init_primary_proof: >>> common_attributes: {:?}, \
-                                                       issuer_pub_key: {:?}, \
-                                                       c1: {:?}, \
-                                                       cred_values: {:?}, \
-                                                       cred_schema: {:?}, \
-                                                       non_cred_schema_elems: {:?}, \
-                                                       sub_proof_request: {:?}, \
-                                                       m2_t: {:?}",
-               common_attributes, issuer_pub_key, c1, cred_values, cred_schema, non_cred_schema_elems, sub_proof_request, m2_t);
+    fn _init_primary_proof(
+        common_attributes: &HashMap<String, BigNumber>,
+        issuer_pub_key: &CredentialPrimaryPublicKey,
+        c1: &PrimaryCredentialSignature,
+        cred_values: &CredentialValues,
+        cred_schema: &CredentialSchema,
+        non_cred_schema_elems: &NonCredentialSchema,
+        sub_proof_request: &SubProofRequest,
+        m2_t: Option<BigNumber>,
+    ) -> UrsaCryptoResult<PrimaryInitProof> {
+        trace!(
+            "ProofBuilder::_init_primary_proof: >>> common_attributes: {:?}, \
+             issuer_pub_key: {:?}, \
+             c1: {:?}, \
+             cred_values: {:?}, \
+             cred_schema: {:?}, \
+             non_cred_schema_elems: {:?}, \
+             sub_proof_request: {:?}, \
+             m2_t: {:?}",
+            common_attributes,
+            issuer_pub_key,
+            c1,
+            cred_values,
+            cred_schema,
+            non_cred_schema_elems,
+            sub_proof_request,
+            m2_t
+        );
 
-
-        let eq_proof = ProofBuilder::_init_eq_proof(common_attributes,
-                                                    issuer_pub_key,
-                                                    c1,
-                                                    cred_schema,
-                                                    non_cred_schema_elems,
-                                                    sub_proof_request,
-                                                    m2_t,
+        let eq_proof = ProofBuilder::_init_eq_proof(
+            common_attributes,
+            issuer_pub_key,
+            c1,
+            cred_schema,
+            non_cred_schema_elems,
+            sub_proof_request,
+            m2_t,
         )?;
 
         let mut ne_proofs: Vec<PrimaryPredicateInequalityInitProof> = Vec::new();
@@ -1072,55 +1246,78 @@ impl ProofBuilder {
             ne_proofs.push(ne_proof);
         }
 
-        let primary_init_proof = PrimaryInitProof { eq_proof, ne_proofs };
+        let primary_init_proof = PrimaryInitProof {
+            eq_proof,
+            ne_proofs,
+        };
 
-        trace!("ProofBuilder::_init_primary_proof: <<< primary_init_proof: {:?}", primary_init_proof);
+        trace!(
+            "ProofBuilder::_init_primary_proof: <<< primary_init_proof: {:?}",
+            primary_init_proof
+        );
 
         Ok(primary_init_proof)
     }
 
-    fn _init_non_revocation_proof(r_cred: &NonRevocationCredentialSignature,
-                                  rev_reg: &RevocationRegistry,
-                                  cred_rev_pub_key: &CredentialRevocationPublicKey,
-                                  witness: &Witness) -> UrsaCryptoResult<NonRevocInitProof> {
+    fn _init_non_revocation_proof(
+        r_cred: &NonRevocationCredentialSignature,
+        rev_reg: &RevocationRegistry,
+        cred_rev_pub_key: &CredentialRevocationPublicKey,
+        witness: &Witness,
+    ) -> UrsaCryptoResult<NonRevocInitProof> {
         trace!("ProofBuilder::_init_non_revocation_proof: >>> r_cred: {:?}, rev_reg: {:?}, cred_rev_pub_key: {:?}, witness: {:?}",
                r_cred, rev_reg, cred_rev_pub_key, witness);
 
         let c_list_params = ProofBuilder::_gen_c_list_params(&r_cred)?;
-        let c_list = ProofBuilder::_create_c_list_values(&r_cred, &c_list_params, &cred_rev_pub_key, witness)?;
+        let c_list = ProofBuilder::_create_c_list_values(
+            &r_cred,
+            &c_list_params,
+            &cred_rev_pub_key,
+            witness,
+        )?;
 
         let tau_list_params = ProofBuilder::_gen_tau_list_params()?;
-        let tau_list = create_tau_list_values(&cred_rev_pub_key,
-                                              &rev_reg,
-                                              &tau_list_params,
-                                              &c_list)?;
+        let tau_list =
+            create_tau_list_values(&cred_rev_pub_key, &rev_reg, &tau_list_params, &c_list)?;
 
         let r_init_proof = NonRevocInitProof {
             c_list_params,
             tau_list_params,
             c_list,
-            tau_list
+            tau_list,
         };
 
-        trace!("ProofBuilder::_init_non_revocation_proof: <<< r_init_proof: {:?}", r_init_proof);
+        trace!(
+            "ProofBuilder::_init_non_revocation_proof: <<< r_init_proof: {:?}",
+            r_init_proof
+        );
 
         Ok(r_init_proof)
     }
 
-    fn _init_eq_proof(common_attributes: &HashMap<String, BigNumber>,
-                      cred_pub_key: &CredentialPrimaryPublicKey,
-                      c1: &PrimaryCredentialSignature,
-                      cred_schema: &CredentialSchema,
-                      non_cred_schema_elems: &NonCredentialSchema,
-                      sub_proof_request: &SubProofRequest,
-                      m2_t: Option<BigNumber>) -> UrsaCryptoResult<PrimaryEqualInitProof> {
-        trace!("ProofBuilder::_init_eq_proof: >>> cred_pub_key: {:?}, \
-                                                  c1: {:?}, \
-                                                  cred_schema: {:?}, \
-                                                  non_cred_schema_elems: {:?}, \
-                                                  sub_proof_request: {:?}, \
-                                                  m2_t: {:?}",
-               cred_pub_key, c1, cred_schema, non_cred_schema_elems, sub_proof_request, m2_t);
+    fn _init_eq_proof(
+        common_attributes: &HashMap<String, BigNumber>,
+        cred_pub_key: &CredentialPrimaryPublicKey,
+        c1: &PrimaryCredentialSignature,
+        cred_schema: &CredentialSchema,
+        non_cred_schema_elems: &NonCredentialSchema,
+        sub_proof_request: &SubProofRequest,
+        m2_t: Option<BigNumber>,
+    ) -> UrsaCryptoResult<PrimaryEqualInitProof> {
+        trace!(
+            "ProofBuilder::_init_eq_proof: >>> cred_pub_key: {:?}, \
+             c1: {:?}, \
+             cred_schema: {:?}, \
+             non_cred_schema_elems: {:?}, \
+             sub_proof_request: {:?}, \
+             m2_t: {:?}",
+            cred_pub_key,
+            c1,
+            cred_schema,
+            non_cred_schema_elems,
+            sub_proof_request,
+            m2_t
+        );
 
         let mut ctx = BigNumber::new_context()?;
 
@@ -1130,7 +1327,9 @@ impl ProofBuilder {
         let e_tilde = bn_rand(LARGE_ETILDE)?;
         let v_tilde = bn_rand(LARGE_VTILDE)?;
 
-        let unrevealed_attrs = non_cred_schema_elems.attrs.union(&cred_schema.attrs)
+        let unrevealed_attrs = non_cred_schema_elems
+            .attrs
+            .union(&cred_schema.attrs)
             .cloned()
             .collect::<BTreeSet<String>>()
             .difference(&sub_proof_request.revealed_attrs)
@@ -1140,7 +1339,8 @@ impl ProofBuilder {
         let mut m_tilde = clone_bignum_map(&common_attributes)?;
         get_mtilde(&unrevealed_attrs, &mut m_tilde)?;
 
-        let a_prime = cred_pub_key.s
+        let a_prime = cred_pub_key
+            .s
             .mod_exp(&r, &cred_pub_key.n, Some(&mut ctx))?
             .mod_mul(&c1.a, &cred_pub_key.n, Some(&mut ctx))?;
 
@@ -1148,7 +1348,15 @@ impl ProofBuilder {
 
         let v_prime = c1.v.sub(&c1.e.mul(&r, Some(&mut ctx))?)?;
 
-        let t = calc_teq(&cred_pub_key, &a_prime, &e_tilde, &v_tilde, &m_tilde, &m2_tilde, &unrevealed_attrs)?;
+        let t = calc_teq(
+            &cred_pub_key,
+            &a_prime,
+            &e_tilde,
+            &v_tilde,
+            &m_tilde,
+            &m2_tilde,
+            &unrevealed_attrs,
+        )?;
 
         let primary_equal_init_proof = PrimaryEqualInitProof {
             a_prime,
@@ -1159,34 +1367,55 @@ impl ProofBuilder {
             v_prime,
             m_tilde,
             m2_tilde: m2_tilde.try_clone()?,
-            m2: c1.m_2.try_clone()?
+            m2: c1.m_2.try_clone()?,
         };
 
-        trace!("ProofBuilder::_init_eq_proof: <<< primary_equal_init_proof: {:?}", primary_equal_init_proof);
+        trace!(
+            "ProofBuilder::_init_eq_proof: <<< primary_equal_init_proof: {:?}",
+            primary_equal_init_proof
+        );
 
         Ok(primary_equal_init_proof)
     }
 
-    fn _init_ne_proof(p_pub_key: &CredentialPrimaryPublicKey,
-                      m_tilde: &HashMap<String, BigNumber>,
-                      cred_values: &CredentialValues,
-                      predicate: &Predicate) -> UrsaCryptoResult<PrimaryPredicateInequalityInitProof> {
+    fn _init_ne_proof(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        m_tilde: &HashMap<String, BigNumber>,
+        cred_values: &CredentialValues,
+        predicate: &Predicate,
+    ) -> UrsaCryptoResult<PrimaryPredicateInequalityInitProof> {
         trace!("ProofBuilder::_init_ne_proof: >>> p_pub_key: {:?}, m_tilde: {:?}, cred_values: {:?}, predicate: {:?}",
                p_pub_key, m_tilde, cred_values, predicate);
 
         let mut ctx = BigNumber::new_context()?;
 
-        let attr_value = cred_values.attrs_values.get(&predicate.attr_name)
-            .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in cred_values", predicate.attr_name)))?
+        let attr_value = cred_values
+            .attrs_values
+            .get(&predicate.attr_name)
+            .ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!(
+                    "Value by key '{}' not found in cred_values",
+                    predicate.attr_name
+                ),
+            ))?
             .value()
             .to_dec()?
             .parse::<i32>()
-            .map_err(|_| err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' has invalid format", predicate.attr_name)))?;
+            .map_err(|_| {
+                err_msg(
+                    UrsaCryptoErrorKind::InvalidStructure,
+                    format!("Value by key '{}' has invalid format", predicate.attr_name),
+                )
+            })?;
 
         let delta = predicate.get_delta(attr_value);
 
         if delta < 0 {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Predicate is not satisfied"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Predicate is not satisfied",
+            ));
         }
 
         let u = four_squares(delta)?;
@@ -1196,12 +1425,20 @@ impl ProofBuilder {
         let mut c_list: Vec<BigNumber> = Vec::new();
 
         for i in 0..ITERATION {
-            let cur_u = u.get(&i.to_string())
-                .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in u1", i)))?;
+            let cur_u = u.get(&i.to_string()).ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!("Value by key '{}' not found in u1", i),
+            ))?;
 
             let cur_r = bn_rand(LARGE_VPRIME)?;
-            let cut_t = get_pedersen_commitment(&p_pub_key.z, &cur_u, &p_pub_key.s,
-                                                &cur_r, &p_pub_key.n, &mut ctx)?;
+            let cut_t = get_pedersen_commitment(
+                &p_pub_key.z,
+                &cur_u,
+                &p_pub_key.s,
+                &cur_r,
+                &p_pub_key.n,
+                &mut ctx,
+            )?;
 
             r.insert(i.to_string(), cur_r);
             t.insert(i.to_string(), cut_t.try_clone()?);
@@ -1210,8 +1447,14 @@ impl ProofBuilder {
 
         let r_delta = bn_rand(LARGE_VPRIME)?;
 
-        let t_delta = get_pedersen_commitment(&p_pub_key.z, &BigNumber::from_dec(&delta.to_string())?,
-                                              &p_pub_key.s, &r_delta, &p_pub_key.n, &mut ctx)?;
+        let t_delta = get_pedersen_commitment(
+            &p_pub_key.z,
+            &BigNumber::from_dec(&delta.to_string())?,
+            &p_pub_key.s,
+            &r_delta,
+            &p_pub_key.n,
+            &mut ctx,
+        )?;
 
         r.insert("DELTA".to_string(), r_delta);
         t.insert("DELTA".to_string(), t_delta.try_clone()?);
@@ -1228,10 +1471,23 @@ impl ProofBuilder {
         r_tilde.insert("DELTA".to_string(), bn_rand(LARGE_RTILDE)?);
         let alpha_tilde = bn_rand(LARGE_ALPHATILDE)?;
 
-        let mj = m_tilde.get(&predicate.attr_name)
-            .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in eq_proof.mtilde", predicate.attr_name)))?;
+        let mj = m_tilde.get(&predicate.attr_name).ok_or(err_msg(
+            UrsaCryptoErrorKind::InvalidStructure,
+            format!(
+                "Value by key '{}' not found in eq_proof.mtilde",
+                predicate.attr_name
+            ),
+        ))?;
 
-        let tau_list = calc_tne(&p_pub_key, &u_tilde, &r_tilde, &mj, &alpha_tilde, &t, predicate.is_less())?;
+        let tau_list = calc_tne(
+            &p_pub_key,
+            &u_tilde,
+            &r_tilde,
+            &mj,
+            &alpha_tilde,
+            &t,
+            predicate.is_less(),
+        )?;
 
         let primary_predicate_ne_init_proof = PrimaryPredicateInequalityInitProof {
             c_list,
@@ -1242,20 +1498,25 @@ impl ProofBuilder {
             r_tilde,
             alpha_tilde,
             predicate: predicate.clone(),
-            t
+            t,
         };
 
-        trace!("ProofBuilder::_init_ne_proof: <<< primary_predicate_ne_init_proof: {:?}", primary_predicate_ne_init_proof);
+        trace!(
+            "ProofBuilder::_init_ne_proof: <<< primary_predicate_ne_init_proof: {:?}",
+            primary_predicate_ne_init_proof
+        );
 
         Ok(primary_predicate_ne_init_proof)
     }
 
-    fn _finalize_eq_proof(init_proof: &PrimaryEqualInitProof,
-                          challenge: &BigNumber,
-                          cred_schema: &CredentialSchema,
-                          non_cred_schema_elems: &NonCredentialSchema,
-                          cred_values: &CredentialValues,
-                          sub_proof_request: &SubProofRequest) -> UrsaCryptoResult<PrimaryEqualProof> {
+    fn _finalize_eq_proof(
+        init_proof: &PrimaryEqualInitProof,
+        challenge: &BigNumber,
+        cred_schema: &CredentialSchema,
+        non_cred_schema_elems: &NonCredentialSchema,
+        cred_values: &CredentialValues,
+        sub_proof_request: &SubProofRequest,
+    ) -> UrsaCryptoResult<PrimaryEqualProof> {
         trace!(
             "ProofBuilder::_finalize_eq_proof: >>> init_proof: {:?}, challenge: {:?}, cred_schema: {:?}, \
         cred_values: {:?}, sub_proof_request: {:?}",
@@ -1288,11 +1549,15 @@ impl ProofBuilder {
             .collect::<BTreeSet<String>>();
 
         for k in unrevealed_attrs.iter() {
-            let cur_mtilde = init_proof.m_tilde.get(k)
-                .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in init_proof.mtilde", k)))?;
+            let cur_mtilde = init_proof.m_tilde.get(k).ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!("Value by key '{}' not found in init_proof.mtilde", k),
+            ))?;
 
-            let cur_val = cred_values.attrs_values.get(k)
-                .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in attributes_values", k)))?;
+            let cur_val = cred_values.attrs_values.get(k).ok_or(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!("Value by key '{}' not found in attributes_values", k),
+            ))?;
 
             let val = challenge
                 .mul(&cur_val.value(), Some(&mut ctx))?
@@ -1310,9 +1575,13 @@ impl ProofBuilder {
         for attr in sub_proof_request.revealed_attrs.iter() {
             revealed_attrs_with_values.insert(
                 attr.clone(),
-                cred_values.attrs_values
+                cred_values
+                    .attrs_values
                     .get(attr)
-                    .ok_or(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Encoded value not found"))?
+                    .ok_or(err_msg(
+                        UrsaCryptoErrorKind::InvalidStructure,
+                        "Encoded value not found",
+                    ))?
                     .value()
                     .try_clone()?,
             );
@@ -1324,18 +1593,28 @@ impl ProofBuilder {
             e,
             v,
             m,
-            m2
+            m2,
         };
 
-        trace!("ProofBuilder::_finalize_eq_proof: <<< primary_equal_proof: {:?}", primary_equal_proof);
+        trace!(
+            "ProofBuilder::_finalize_eq_proof: <<< primary_equal_proof: {:?}",
+            primary_equal_proof
+        );
 
         Ok(primary_equal_proof)
     }
 
-    fn _finalize_ne_proof(c_h: &BigNumber,
-                          init_proof: &PrimaryPredicateInequalityInitProof,
-                          eq_proof: &PrimaryEqualProof) -> UrsaCryptoResult<PrimaryPredicateInequalityProof> {
-        trace!("ProofBuilder::_finalize_ne_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}", c_h, init_proof, eq_proof);
+    fn _finalize_ne_proof(
+        c_h: &BigNumber,
+        init_proof: &PrimaryPredicateInequalityInitProof,
+        eq_proof: &PrimaryEqualProof,
+    ) -> UrsaCryptoResult<PrimaryPredicateInequalityProof> {
+        trace!(
+            "ProofBuilder::_finalize_ne_proof: >>> c_h: {:?}, init_proof: {:?}, eq_proof: {:?}",
+            c_h,
+            init_proof,
+            eq_proof
+        );
 
         let mut ctx = BigNumber::new_context()?;
         let mut u = HashMap::new();
@@ -1348,19 +1627,13 @@ impl ProofBuilder {
             let cur_rtilde = &init_proof.r_tilde[&i.to_string()];
             let cur_r = &init_proof.r[&i.to_string()];
 
-            let new_u: BigNumber = c_h
-                .mul(&cur_u, Some(&mut ctx))?
-                .add(&cur_utilde)?;
-            let new_r: BigNumber = c_h
-                .mul(&cur_r, Some(&mut ctx))?
-                .add(&cur_rtilde)?;
+            let new_u: BigNumber = c_h.mul(&cur_u, Some(&mut ctx))?.add(&cur_utilde)?;
+            let new_r: BigNumber = c_h.mul(&cur_r, Some(&mut ctx))?.add(&cur_rtilde)?;
 
             u.insert(i.to_string(), new_u);
             r.insert(i.to_string(), new_r);
 
-            urproduct = cur_u
-                .mul(&cur_r, Some(&mut ctx))?
-                .add(&urproduct)?;
+            urproduct = cur_u.mul(&cur_r, Some(&mut ctx))?.add(&urproduct)?;
 
             let cur_rtilde_delta = &init_proof.r_tilde["DELTA"];
 
@@ -1382,20 +1655,25 @@ impl ProofBuilder {
             mj: eq_proof.m[&init_proof.predicate.attr_name].try_clone()?,
             alpha,
             t: clone_bignum_map(&init_proof.t)?,
-            predicate: init_proof.predicate.clone()
+            predicate: init_proof.predicate.clone(),
         };
 
-        trace!("ProofBuilder::_finalize_ne_proof: <<< primary_predicate_ne_proof: {:?}", primary_predicate_ne_proof);
+        trace!(
+            "ProofBuilder::_finalize_ne_proof: <<< primary_predicate_ne_proof: {:?}",
+            primary_predicate_ne_proof
+        );
 
         Ok(primary_predicate_ne_proof)
     }
 
-    fn _finalize_primary_proof(init_proof: &PrimaryInitProof,
-                               challenge: &BigNumber,
-                               cred_schema: &CredentialSchema,
-                               non_cred_schema_elems: &NonCredentialSchema,
-                               cred_values: &CredentialValues,
-                               sub_proof_request: &SubProofRequest) -> UrsaCryptoResult<PrimaryProof> {
+    fn _finalize_primary_proof(
+        init_proof: &PrimaryInitProof,
+        challenge: &BigNumber,
+        cred_schema: &CredentialSchema,
+        non_cred_schema_elems: &NonCredentialSchema,
+        cred_values: &CredentialValues,
+        sub_proof_request: &SubProofRequest,
+    ) -> UrsaCryptoResult<PrimaryProof> {
         trace!(
             "ProofBuilder::_finalize_primary_proof: >>> init_proof: {:?}, challenge: {:?}, cred_schema: {:?}, \
         cred_values: {:?}, sub_proof_request: {:?}",
@@ -1421,14 +1699,22 @@ impl ProofBuilder {
             ne_proofs.push(ne_proof);
         }
 
-        let primary_proof = PrimaryProof { eq_proof, ne_proofs };
+        let primary_proof = PrimaryProof {
+            eq_proof,
+            ne_proofs,
+        };
 
-        trace!("ProofBuilder::_finalize_primary_proof: <<< primary_proof: {:?}", primary_proof);
+        trace!(
+            "ProofBuilder::_finalize_primary_proof: <<< primary_proof: {:?}",
+            primary_proof
+        );
 
         Ok(primary_proof)
     }
 
-    fn _gen_c_list_params(r_cred: &NonRevocationCredentialSignature) -> UrsaCryptoResult<NonRevocProofXList> {
+    fn _gen_c_list_params(
+        r_cred: &NonRevocationCredentialSignature,
+    ) -> UrsaCryptoResult<NonRevocProofXList> {
         trace!("ProofBuilder::_gen_c_list_params: >>> r_cred: {:?}", r_cred);
 
         let rho = GroupOrderElement::new()?;
@@ -1458,56 +1744,54 @@ impl ProofBuilder {
             t_prime,
             m2,
             s: r_cred.vr_prime_prime,
-            c: r_cred.c
+            c: r_cred.c,
         };
 
-        trace!("ProofBuilder::_gen_c_list_params: <<< non_revoc_proof_x_list: {:?}", non_revoc_proof_x_list);
+        trace!(
+            "ProofBuilder::_gen_c_list_params: <<< non_revoc_proof_x_list: {:?}",
+            non_revoc_proof_x_list
+        );
 
         Ok(non_revoc_proof_x_list)
     }
 
-    fn _create_c_list_values(r_cred: &NonRevocationCredentialSignature,
-                             params: &NonRevocProofXList,
-                             r_pub_key: &CredentialRevocationPublicKey,
-                             witness: &Witness) -> UrsaCryptoResult<NonRevocProofCList> {
-        trace!("ProofBuilder::_create_c_list_values: >>> r_cred: {:?}, r_pub_key: {:?}", r_cred, r_pub_key);
+    fn _create_c_list_values(
+        r_cred: &NonRevocationCredentialSignature,
+        params: &NonRevocProofXList,
+        r_pub_key: &CredentialRevocationPublicKey,
+        witness: &Witness,
+    ) -> UrsaCryptoResult<NonRevocProofCList> {
+        trace!(
+            "ProofBuilder::_create_c_list_values: >>> r_cred: {:?}, r_pub_key: {:?}",
+            r_cred,
+            r_pub_key
+        );
 
-        let e = r_pub_key.h
+        let e = r_pub_key
+            .h
             .mul(&params.rho)?
-            .add(
-                &r_pub_key.htilde.mul(&params.o)?
-            )?;
+            .add(&r_pub_key.htilde.mul(&params.o)?)?;
 
-        let d = r_pub_key.g
+        let d = r_pub_key
+            .g
             .mul(&params.r)?
-            .add(
-                &r_pub_key.htilde.mul(&params.o_prime)?
-            )?;
+            .add(&r_pub_key.htilde.mul(&params.o_prime)?)?;
 
-        let a = r_cred.sigma
-            .add(
-                &r_pub_key.htilde.mul(&params.rho)?
-            )?;
+        let a = r_cred.sigma.add(&r_pub_key.htilde.mul(&params.rho)?)?;
 
-        let g = r_cred.g_i
-            .add(
-                &r_pub_key.htilde.mul(&params.r)?
-            )?;
+        let g = r_cred.g_i.add(&r_pub_key.htilde.mul(&params.r)?)?;
 
-        let w = witness.omega
-            .add(
-                &r_pub_key.h_cap.mul(&params.r_prime)?
-            )?;
+        let w = witness.omega.add(&r_pub_key.h_cap.mul(&params.r_prime)?)?;
 
-        let s = r_cred.witness_signature.sigma_i
-            .add(
-                &r_pub_key.h_cap.mul(&params.r_prime_prime)?
-            )?;
+        let s = r_cred
+            .witness_signature
+            .sigma_i
+            .add(&r_pub_key.h_cap.mul(&params.r_prime_prime)?)?;
 
-        let u = r_cred.witness_signature.u_i
-            .add(
-                &r_pub_key.h_cap.mul(&params.r_prime_prime_prime)?
-            )?;
+        let u = r_cred
+            .witness_signature
+            .u_i
+            .add(&r_pub_key.h_cap.mul(&params.r_prime_prime_prime)?)?;
 
         let non_revoc_proof_c_list = NonRevocProofCList {
             e,
@@ -1516,10 +1800,13 @@ impl ProofBuilder {
             g,
             w,
             s,
-            u
+            u,
         };
 
-        trace!("ProofBuilder::_create_c_list_values: <<< non_revoc_proof_c_list: {:?}", non_revoc_proof_c_list);
+        trace!(
+            "ProofBuilder::_create_c_list_values: <<< non_revoc_proof_c_list: {:?}",
+            non_revoc_proof_c_list
+        );
 
         Ok(non_revoc_proof_c_list)
     }
@@ -1541,32 +1828,48 @@ impl ProofBuilder {
             t_prime: GroupOrderElement::new()?,
             m2: GroupOrderElement::new()?,
             s: GroupOrderElement::new()?,
-            c: GroupOrderElement::new()?
+            c: GroupOrderElement::new()?,
         };
 
-        trace!("ProofBuilder::_gen_tau_list_params: <<< Nnon_revoc_proof_x_list: {:?}", non_revoc_proof_x_list);
+        trace!(
+            "ProofBuilder::_gen_tau_list_params: <<< Nnon_revoc_proof_x_list: {:?}",
+            non_revoc_proof_x_list
+        );
 
         Ok(non_revoc_proof_x_list)
     }
 
-    fn _finalize_non_revocation_proof(init_proof: &NonRevocInitProof, c_h: &BigNumber) -> UrsaCryptoResult<NonRevocProof> {
-        trace!("ProofBuilder::_finalize_non_revocation_proof: >>> init_proof: {:?}, c_h: {:?}", init_proof, c_h);
+    fn _finalize_non_revocation_proof(
+        init_proof: &NonRevocInitProof,
+        c_h: &BigNumber,
+    ) -> UrsaCryptoResult<NonRevocProof> {
+        trace!(
+            "ProofBuilder::_finalize_non_revocation_proof: >>> init_proof: {:?}, c_h: {:?}",
+            init_proof,
+            c_h
+        );
 
         let ch_num_z = bignum_to_group_element(&c_h)?;
         let mut x_list: Vec<GroupOrderElement> = Vec::new();
 
-        for (x, y) in init_proof.tau_list_params.as_list()?.iter().zip(init_proof.c_list_params.as_list()?.iter()) {
-            x_list.push(x.add_mod(
-                &ch_num_z.mul_mod(&y)?.mod_neg()?
-            )?);
+        for (x, y) in init_proof
+            .tau_list_params
+            .as_list()?
+            .iter()
+            .zip(init_proof.c_list_params.as_list()?.iter())
+        {
+            x_list.push(x.add_mod(&ch_num_z.mul_mod(&y)?.mod_neg()?)?);
         }
 
         let non_revoc_proof = NonRevocProof {
             x_list: NonRevocProofXList::from_list(x_list.as_slice()),
-            c_list: init_proof.c_list.clone()
+            c_list: init_proof.c_list.clone(),
         };
 
-        trace!("ProofBuilder::_finalize_non_revocation_proof: <<< non_revoc_proof: {:?}", non_revoc_proof);
+        trace!(
+            "ProofBuilder::_finalize_non_revocation_proof: <<< non_revoc_proof: {:?}",
+            non_revoc_proof
+        );
 
         Ok(non_revoc_proof)
     }
@@ -1625,7 +1928,10 @@ mod tests {
         MockHelper::inject();
 
         let ms = Prover::new_master_secret().unwrap();
-        assert_eq!(ms.ms.to_dec().unwrap(), mocks::master_secret().ms.to_dec().unwrap());
+        assert_eq!(
+            ms.ms.to_dec().unwrap(),
+            mocks::master_secret().ms.to_dec().unwrap()
+        );
     }
 
     #[test]
@@ -1635,12 +1941,17 @@ mod tests {
         let pk = issuer::mocks::credential_primary_public_key();
         let credential_values = issuer::mocks::credential_values();
 
-        let _blinded_primary_credential_secrets = Prover::_generate_blinded_primary_credential_secrets_factors(&pk, &credential_values).unwrap();
+        let _blinded_primary_credential_secrets =
+            Prover::_generate_blinded_primary_credential_secrets_factors(&pk, &credential_values)
+                .unwrap();
         let expected_u = BigNumber::from_dec("90379212883377051942444457214004439563879517047934957924109506327827266424864106127396714346970738216284320507530527754324729206801422601992700522417322083581628939167117187181423638437856384315973558857250692265909530560844452355964326255821057551846167569170509524949792604814958417070636632379251447321861706466435758587453671398786938921675857732974923901803378547250372362630279485056161267415391507414010183531088200803261695568846058335634754886427522606528221525388671780017596236038760448329929785833010252968356814800693372830944570065390232033948827218950397755480445898892886723022422888608162061797883541").unwrap();
         let expected_v_prime = BigNumber::from_dec("35131625843806290832574870589259287147303302356085937450138681169270844305658441640899780357851554390281352797472151859633451190372182905767740276000477099644043795107449461869975792759973231599572009337886283219344284767785705740629929916685684025616389621432096690068102576167647117576924865030253290356476886389376786906469624913865400296221181743871195998667521041628188272244376790322856843509187067488962831880868979749045372839549034465343690176440012266969614156191820420452812733264350018673445974099278245215963827842041818557926829011513408602244298030173493359464182527821314118075880620818817455331127028576670474022443879858290").unwrap();
 
         assert_eq!(_blinded_primary_credential_secrets.u, expected_u);
-        assert_eq!(_blinded_primary_credential_secrets.v_prime, expected_v_prime);
+        assert_eq!(
+            _blinded_primary_credential_secrets.v_prime,
+            expected_v_prime
+        );
     }
 
     #[test]
@@ -1660,8 +1971,17 @@ mod tests {
         let credential_values = issuer::mocks::credential_values();
         let nonce = issuer::mocks::credential_nonce();
 
-        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
-            Prover::blind_credential_secrets(&pk, &key_correctness_proof, &credential_values, &nonce).unwrap();
+        let (
+            blinded_credential_secrets,
+            credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof,
+        ) = Prover::blind_credential_secrets(
+            &pk,
+            &key_correctness_proof,
+            &credential_values,
+            &nonce,
+        )
+        .unwrap();
 
         assert_eq!(blinded_credential_secrets.u, BigNumber::from_dec("90379212883377051942444457214004439563879517047934957924109506327827266424864106127396714346970738216284320507530527754324729206801422601992700522417322083581628939167117187181423638437856384315973558857250692265909530560844452355964326255821057551846167569170509524949792604814958417070636632379251447321861706466435758587453671398786938921675857732974923901803378547250372362630279485056161267415391507414010183531088200803261695568846058335634754886427522606528221525388671780017596236038760448329929785833010252968356814800693372830944570065390232033948827218950397755480445898892886723022422888608162061797883541").unwrap());
         assert_eq!(credential_secrets_blinding_factors.v_prime, BigNumber::from_dec("35131625843806290832574870589259287147303302356085937450138681169270844305658441640899780357851554390281352797472151859633451190372182905767740276000477099644043795107449461869975792759973231599572009337886283219344284767785705740629929916685684025616389621432096690068102576167647117576924865030253290356476886389376786906469624913865400296221181743871195998667521041628188272244376790322856843509187067488962831880868979749045372839549034465343690176440012266969614156191820420452812733264350018673445974099278245215963827842041818557926829011513408602244298030173493359464182527821314118075880620818817455331127028576670474022443879858290").unwrap());
@@ -1677,7 +1997,10 @@ mod tests {
             r_caps: BTreeMap::new()
         };
 
-        assert_eq!(blinded_credential_secrets_correctness_proof, expected_blinded_credential_secrets_correctness_proof);
+        assert_eq!(
+            blinded_credential_secrets_correctness_proof,
+            expected_blinded_credential_secrets_correctness_proof
+        );
     }
 
     #[test]
@@ -1704,17 +2027,23 @@ mod tests {
         let signature_correctness_proof = issuer::mocks::signature_correctness_proof();
         let nonce = new_nonce().unwrap();
 
-        Prover::process_credential_signature(&mut credential_signature,
-                                             &credential_values,
-                                             &signature_correctness_proof,
-                                             &credential_secrets_blinding_factors,
-                                             &pk,
-                                             &nonce,
-                                             None,
-                                             None,
-                                             None).unwrap();
+        Prover::process_credential_signature(
+            &mut credential_signature,
+            &credential_values,
+            &signature_correctness_proof,
+            &credential_secrets_blinding_factors,
+            &pk,
+            &nonce,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
 
-        assert_eq!(mocks::primary_credential(), credential_signature.p_credential);
+        assert_eq!(
+            mocks::primary_credential(),
+            credential_signature.p_credential
+        );
     }
 
     #[test]
@@ -1727,15 +2056,20 @@ mod tests {
         let non_cred_schema_elems = issuer::mocks::non_credential_schema();
         let credential = mocks::primary_credential();
         let sub_proof_request = mocks::sub_proof_request();
-        let m2_tilde = group_element_to_bignum(&mocks::init_non_revocation_proof().tau_list_params.m2).unwrap();
+        let m2_tilde =
+            group_element_to_bignum(&mocks::init_non_revocation_proof().tau_list_params.m2)
+                .unwrap();
 
-        let init_eq_proof = ProofBuilder::_init_eq_proof(&common_attributes,
-                                                         &pk,
-                                                         &credential,
-                                                         &cred_schema,
-                                                         &non_cred_schema_elems,
-                                                         &sub_proof_request,
-                                                         Some(m2_tilde)).unwrap();
+        let init_eq_proof = ProofBuilder::_init_eq_proof(
+            &common_attributes,
+            &pk,
+            &credential,
+            &cred_schema,
+            &non_cred_schema_elems,
+            &sub_proof_request,
+            Some(m2_tilde),
+        )
+        .unwrap();
 
         assert_eq!(mocks::primary_equal_init_proof(), init_eq_proof);
     }
@@ -1749,10 +2083,13 @@ mod tests {
         let predicate = mocks::predicate();
         let credential_values = issuer::mocks::credential_values();
 
-        let init_ne_proof = ProofBuilder::_init_ne_proof(&pk,
-                                                         &init_eq_proof.m_tilde,
-                                                         &credential_values,
-                                                         &predicate).unwrap();
+        let init_ne_proof = ProofBuilder::_init_ne_proof(
+            &pk,
+            &init_eq_proof.m_tilde,
+            &credential_values,
+            &predicate,
+        )
+        .unwrap();
 
         assert_eq!(mocks::primary_ne_init_proof(), init_ne_proof);
     }
@@ -1768,16 +2105,21 @@ mod tests {
         let credential_values = issuer::mocks::credential_values();
         let sub_proof_request = mocks::sub_proof_request();
         let common_attributes = mocks::proof_common_attributes();
-        let m2_tilde = group_element_to_bignum(&mocks::init_non_revocation_proof().tau_list_params.m2).unwrap();
+        let m2_tilde =
+            group_element_to_bignum(&mocks::init_non_revocation_proof().tau_list_params.m2)
+                .unwrap();
 
-        let init_proof = ProofBuilder::_init_primary_proof(&common_attributes,
-                                                           &pk,
-                                                           &credential.p_credential,
-                                                           &credential_values,
-                                                           &credential_schema,
-                                                           &non_credential_schema,
-                                                           &sub_proof_request,
-                                                           Some(m2_tilde)).unwrap();
+        let init_proof = ProofBuilder::_init_primary_proof(
+            &common_attributes,
+            &pk,
+            &credential.p_credential,
+            &credential_values,
+            &credential_schema,
+            &non_credential_schema,
+            &sub_proof_request,
+            Some(m2_tilde),
+        )
+        .unwrap();
         assert_eq!(mocks::primary_init_proof(), init_proof);
     }
 
@@ -1792,12 +2134,15 @@ mod tests {
         let credential_schema = issuer::mocks::credential_schema();
         let sub_proof_request = mocks::sub_proof_request();
 
-        let eq_proof = ProofBuilder::_finalize_eq_proof(&init_proof,
-                                                        &c_h,
-                                                        &credential_schema,
-                                                        &non_credential_schema,
-                                                        &credential_values,
-                                                        &sub_proof_request).unwrap();
+        let eq_proof = ProofBuilder::_finalize_eq_proof(
+            &init_proof,
+            &c_h,
+            &credential_schema,
+            &non_credential_schema,
+            &credential_values,
+            &sub_proof_request,
+        )
+        .unwrap();
 
         assert_eq!(mocks::eq_proof(), eq_proof);
     }
@@ -1810,9 +2155,7 @@ mod tests {
         let ne_proof = mocks::primary_ne_init_proof();
         let eq_proof = mocks::eq_proof();
 
-        let ne_proof = ProofBuilder::_finalize_ne_proof(&c_h,
-                                                        &ne_proof,
-                                                        &eq_proof).unwrap();
+        let ne_proof = ProofBuilder::_finalize_ne_proof(&c_h, &ne_proof, &eq_proof).unwrap();
         assert_eq!(mocks::ne_proof(), ne_proof);
     }
 
@@ -1827,12 +2170,15 @@ mod tests {
         let credential_values = issuer::mocks::credential_values();
         let sub_proof_request = mocks::sub_proof_request();
 
-        let proof = ProofBuilder::_finalize_primary_proof(&proof,
-                                                          &c_h,
-                                                          &credential_schema,
-                                                          &non_credential_schema,
-                                                          &credential_values,
-                                                          &sub_proof_request).unwrap();
+        let proof = ProofBuilder::_finalize_primary_proof(
+            &proof,
+            &c_h,
+            &credential_schema,
+            &non_credential_schema,
+            &credential_values,
+            &sub_proof_request,
+        )
+        .unwrap();
 
         assert_eq!(mocks::primary_proof(), proof);
     }
@@ -1876,68 +2222,88 @@ mod tests {
 
         let cred_schema = issuer::mocks::credential_schema();
         let non_cred_schema = issuer::mocks::non_credential_schema();
-        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = issuer::Issuer::new_credential_def(&cred_schema, &non_cred_schema, true).unwrap();
+        let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) =
+            issuer::Issuer::new_credential_def(&cred_schema, &non_cred_schema, true).unwrap();
 
         let start_time = time::get_time();
 
-        let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = issuer::Issuer::new_revocation_registry_def(&cred_pub_key, n, false).unwrap();
+        let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
+            issuer::Issuer::new_revocation_registry_def(&cred_pub_key, n, false).unwrap();
 
         let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
         let end_time = time::get_time();
 
-        println!("Create RevocationRegistry Time: {:?}", end_time - start_time);
+        println!(
+            "Create RevocationRegistry Time: {:?}",
+            end_time - start_time
+        );
 
         let cred_values = issuer::mocks::credential_values();
 
         // Issue first correct Claim
         let credential_nonce = new_nonce().unwrap();
 
-        let (blinded_credential_secrets, credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
-            Prover::blind_credential_secrets(&cred_pub_key,
-                                             &cred_key_correctness_proof,
-                                             &cred_values,
-                                             &credential_nonce).unwrap();
+        let (
+            blinded_credential_secrets,
+            credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof,
+        ) = Prover::blind_credential_secrets(
+            &cred_pub_key,
+            &cred_key_correctness_proof,
+            &cred_values,
+            &credential_nonce,
+        )
+        .unwrap();
 
         let cred_issuance_nonce = new_nonce().unwrap();
 
         let rev_idx = 1;
         let (mut cred_signature, signature_correctness_proof, rev_reg_delta) =
-            issuer::Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
-                                                       &blinded_credential_secrets,
-                                                       &blinded_credential_secrets_correctness_proof,
-                                                       &credential_nonce,
-                                                       &cred_issuance_nonce,
-                                                       &cred_values,
-                                                       &cred_pub_key,
-                                                       &cred_priv_key,
-                                                       rev_idx,
-                                                       n,
-                                                       false,
-                                                       &mut rev_reg,
-                                                       &rev_key_priv,
-                                                       &simple_tail_accessor).unwrap();
+            issuer::Issuer::sign_credential_with_revoc(
+                "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+                &blinded_credential_secrets,
+                &blinded_credential_secrets_correctness_proof,
+                &credential_nonce,
+                &cred_issuance_nonce,
+                &cred_values,
+                &cred_pub_key,
+                &cred_priv_key,
+                rev_idx,
+                n,
+                false,
+                &mut rev_reg,
+                &rev_key_priv,
+                &simple_tail_accessor,
+            )
+            .unwrap();
         let mut rev_reg_delta = rev_reg_delta.unwrap();
 
-        let mut witness = Witness::new(rev_idx, n, false, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        let mut witness =
+            Witness::new(rev_idx, n, false, &rev_reg_delta, &simple_tail_accessor).unwrap();
 
-        Prover::process_credential_signature(&mut cred_signature,
-                                             &cred_values,
-                                             &signature_correctness_proof,
-                                             &credential_secrets_blinding_factors,
-                                             &cred_pub_key,
-                                             &cred_issuance_nonce,
-                                             Some(&rev_key_pub),
-                                             Some(&rev_reg),
-                                             Some(&witness)).unwrap();
+        Prover::process_credential_signature(
+            &mut cred_signature,
+            &cred_values,
+            &signature_correctness_proof,
+            &credential_secrets_blinding_factors,
+            &cred_pub_key,
+            &cred_issuance_nonce,
+            Some(&rev_key_pub),
+            Some(&rev_reg),
+            Some(&witness),
+        )
+        .unwrap();
 
         // Populate accumulator
         for i in 2..n {
             let index = n + 1 - i;
 
-            simple_tail_accessor.access_tail(index, &mut |tail| {
-                rev_reg_delta.accum = rev_reg_delta.accum.sub(tail).unwrap();
-            }).unwrap();
+            simple_tail_accessor
+                .access_tail(index, &mut |tail| {
+                    rev_reg_delta.accum = rev_reg_delta.accum.sub(tail).unwrap();
+                })
+                .unwrap();
 
             rev_reg_delta.issued.insert(i);
         }
@@ -1946,14 +2312,23 @@ mod tests {
 
         let start_time = time::get_time();
 
-        witness.update(rev_idx, n, &rev_reg_delta, &simple_tail_accessor).unwrap();
+        witness
+            .update(rev_idx, n, &rev_reg_delta, &simple_tail_accessor)
+            .unwrap();
 
         let end_time = time::get_time();
 
-        println!("Update NonRevocation Credential Time: {:?}", end_time - start_time);
+        println!(
+            "Update NonRevocation Credential Time: {:?}",
+            end_time - start_time
+        );
 
         let total_end_time = time::get_time();
-        println!("Total Time for {} credentials: {:?}", n, total_end_time - total_start_time);
+        println!(
+            "Total Time for {} credentials: {:?}",
+            n,
+            total_end_time - total_start_time
+        );
 
         println!("Update Proof test -> end");
     }
@@ -1973,39 +2348,46 @@ mod tests {
 
         let mut proof_builder = Prover::new_proof_builder().unwrap();
         proof_builder.add_common_attribute("master_secret").unwrap();
-        proof_builder.add_sub_proof_request(&sub_proof_request,
-                                            &credential_schema,
-                                            &non_credential_schema,
-                                            &cred_signature,
-                                            &cred_values,
-                                            &cred_pub_key,
-                                            Some(&rev_reg),
-                                            Some(&witness)).unwrap();
+        proof_builder
+            .add_sub_proof_request(
+                &sub_proof_request,
+                &credential_schema,
+                &non_credential_schema,
+                &cred_signature,
+                &cred_values,
+                &cred_pub_key,
+                Some(&rev_reg),
+                Some(&witness),
+            )
+            .unwrap();
         let proof_request_nonce = new_nonce().unwrap();
         let proof = proof_builder.finalize(&proof_request_nonce).unwrap();
 
         println!("proof_request_nonce = {:#?}", proof_request_nonce);
         println!("proof = {:#?}", proof);
 
-//        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
-//        proof_verifier.add_sub_proof_request(&sub_proof_request,
-//                                             &credential_schema,
-//                                             &non_credential_schema,
-//                                             &cred_pub_key,
-//                                             Some(&rev_key_pub),
-//                                             Some(&rev_reg)).unwrap();
+        //        let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+        //        proof_verifier.add_sub_proof_request(&sub_proof_request,
+        //                                             &credential_schema,
+        //                                             &non_credential_schema,
+        //                                             &cred_pub_key,
+        //                                             Some(&rev_key_pub),
+        //                                             Some(&rev_reg)).unwrap();
     }
 }
 
 pub mod mocks {
-    use super::*;
     use self::issuer::mocks as issuer_mocks;
+    use super::*;
 
     pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 
     pub fn master_secret() -> MasterSecret {
         MasterSecret {
-            ms: BigNumber::from_dec("21578029250517794450984707538122537192839006240802068037273983354680998203845").unwrap()
+            ms: BigNumber::from_dec(
+                "21578029250517794450984707538122537192839006240802068037273983354680998203845",
+            )
+            .unwrap(),
         }
     }
 
@@ -2018,14 +2400,14 @@ pub mod mocks {
             u: primary_blinded_credential_secrets_factors().u,
             ur: Some(revocation_blinded_credential_secrets_factors().ur),
             hidden_attributes: primary_blinded_credential_secrets_factors().hidden_attributes,
-            committed_attributes: primary_blinded_credential_secrets_factors().committed_attributes
+            committed_attributes: primary_blinded_credential_secrets_factors().committed_attributes,
         }
     }
 
     pub fn credential_secrets_blinding_factors() -> CredentialSecretsBlindingFactors {
         CredentialSecretsBlindingFactors {
             v_prime: primary_blinded_credential_secrets_factors().v_prime,
-            vr_prime: Some(revocation_blinded_credential_secrets_factors().vr_prime)
+            vr_prime: Some(revocation_blinded_credential_secrets_factors().vr_prime),
         }
     }
 
@@ -2038,14 +2420,16 @@ pub mod mocks {
         }
     }
 
-    pub fn revocation_blinded_credential_secrets_factors() -> RevocationBlindedCredentialSecretsFactors {
+    pub fn revocation_blinded_credential_secrets_factors(
+    ) -> RevocationBlindedCredentialSecretsFactors {
         RevocationBlindedCredentialSecretsFactors {
             ur: PointG1::from_string("1 19C7E3A5BC00073DFDF072C87818E94E5036FABABCECED727CA52B35CD13623E 1 14338266060779CA8E7881A8C6F01D76493C6E2E0799699B48B9B0C37EFB7F10 1 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8A8").unwrap(),
             vr_prime: GroupOrderElement::from_string("208420C983A52DB6FEEAC0B4401E1C644DE02CEDB54A5B9727E67C15D42D3F47").unwrap(),
         }
     }
 
-    pub fn blinded_credential_secrets_correctness_proof() -> BlindedCredentialSecretsCorrectnessProof {
+    pub fn blinded_credential_secrets_correctness_proof() -> BlindedCredentialSecretsCorrectnessProof
+    {
         BlindedCredentialSecretsCorrectnessProof {
             c: BigNumber::from_dec("22221897091810097116104550881114461643082148268292262107370452543809392119980").unwrap(),
             v_dash_cap: BigNumber::from_dec("138550075139853703898921089249742109370933383442122536758241462797136898723372217745073733484760321944313196224005959283313214691823866099200206619511094340510410379756132564018900336272408451952758744911909745270186687469351805926400048940751546663384456932526357210721105286298911954309847673030848924669039030892926351271528361352647229815570200886413331044936523522169734991711074388744670236246090794460955452530165454411261777397994727107643177636412180478391610457843032096905372535244501319937136828286952881920600234066686774078964666681460452086101831609169073744423947479573031477418206287304633516634999897586640587369694314600219843979420979423192697295668825747083934480262776849450155189470507444304681").unwrap(),
@@ -2059,7 +2443,7 @@ pub mod mocks {
     pub fn credential() -> CredentialSignature {
         CredentialSignature {
             p_credential: primary_credential(),
-            r_credential: Some(issuer::mocks::revocation_credential())
+            r_credential: Some(issuer::mocks::revocation_credential()),
         }
     }
 
@@ -2092,26 +2476,28 @@ pub mod mocks {
         }
     }
 
-    pub fn proof_request_nonce() -> Nonce { BigNumber::from_dec("1164046393264787986302355").unwrap() }
+    pub fn proof_request_nonce() -> Nonce {
+        BigNumber::from_dec("1164046393264787986302355").unwrap()
+    }
 
     pub fn proof() -> Proof {
         Proof {
             proofs: vec![subproof()],
-            aggregated_proof: aggregated_proof()
+            aggregated_proof: aggregated_proof(),
         }
     }
 
     pub fn subproof() -> SubProof {
         SubProof {
             primary_proof: primary_proof(),
-            non_revoc_proof: Some(non_revoc_proof())
+            non_revoc_proof: Some(non_revoc_proof()),
         }
     }
 
     pub fn primary_init_proof() -> PrimaryInitProof {
         PrimaryInitProof {
             eq_proof: primary_equal_init_proof(),
-            ne_proofs: vec![primary_ne_init_proof()]
+            ne_proofs: vec![primary_ne_init_proof()],
         }
     }
 
@@ -2237,22 +2623,183 @@ pub mod mocks {
 
     pub fn aggregated_proof() -> AggregatedProof {
         AggregatedProof {
-            c_hash: BigNumber::from_dec("36734255395875387097236654317906397277981258563238377220233648793005935253962").unwrap(),
+            c_hash: BigNumber::from_dec(
+                "36734255395875387097236654317906397277981258563238377220233648793005935253962",
+            )
+            .unwrap(),
             c_list: vec![
-                vec![4, 15, 40, 221, 185, 162, 221, 161, 254, 176, 57, 207, 14, 190, 121, 73, 122, 188, 36, 147, 47, 72, 242, 193, 17, 241, 109, 66, 73, 52, 131, 185, 112, 8, 84, 230, 192, 255, 105, 116, 83, 170, 71, 219, 182, 149, 126, 9, 180, 11, 152, 255, 241, 228, 123, 229, 108, 200, 210, 17, 231, 83, 158, 93, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                vec![4, 28, 250, 35, 217, 251, 183, 160, 58, 131, 37, 66, 222, 201, 38, 193, 138, 177, 229, 88, 130, 59, 53, 75, 226, 216, 166, 7, 23, 245, 57, 128, 209, 19, 86, 133, 7, 82, 39, 63, 42, 66, 66, 228, 69, 93, 156, 108, 147, 249, 138, 148, 56, 223, 216, 102, 204, 90, 134, 78, 135, 164, 254, 181, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                vec![4, 2, 107, 241, 180, 5, 3, 229, 146, 229, 80, 96, 229, 210, 175, 238, 65, 126, 113, 152, 143, 49, 231, 47, 144, 156, 239, 75, 149, 169, 140, 112, 107, 14, 249, 31, 191, 70, 33, 146, 43, 37, 116, 188, 36, 78, 23, 15, 36, 90, 97, 103, 149, 137, 1, 69, 230, 214, 159, 35, 217, 75, 217, 129, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                vec![4, 36, 173, 234, 183, 207, 24, 100, 172, 217, 41, 238, 60, 232, 136, 84, 41, 129, 223, 88, 29, 111, 132, 214, 99, 54, 252, 215, 160, 195, 248, 53, 127, 29, 196, 61, 22, 192, 127, 209, 129, 74, 115, 208, 177, 10, 177, 7, 80, 197, 209, 72, 58, 159, 244, 141, 207, 108, 59, 255, 71, 233, 195, 77, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                vec![21, 39, 33, 136, 4, 35, 81, 232, 221, 50, 46, 137, 180, 37, 68, 198, 205, 92, 210, 203, 242, 91, 190, 222, 21, 10, 99, 147, 17, 10, 254, 238, 25, 87, 208, 140, 223, 63, 52, 47, 159, 24, 121, 222, 233, 36, 55, 227, 15, 72, 28, 2, 160, 137, 120, 159, 50, 140, 82, 152, 35, 213, 100, 213, 21, 84, 190, 96, 165, 232, 146, 117, 252, 253, 26, 247, 179, 48, 76, 241, 74, 64, 22, 232, 177, 232, 212, 64, 161, 198, 27, 223, 164, 122, 206, 11, 27, 52, 163, 239, 155, 71, 87, 221, 17, 160, 128, 70, 123, 232, 177, 38, 18, 80, 72, 147, 150, 193, 146, 127, 155, 135, 110, 222, 23, 227, 56, 131],
-                vec![28, 237, 222, 213, 234, 194, 241, 249, 239, 157, 147, 62, 11, 203, 25, 150, 180, 231, 63, 84, 153, 26, 206, 79, 58, 75, 86, 61, 31, 109, 67, 59, 19, 57, 174, 176, 165, 87, 167, 78, 193, 53, 45, 106, 121, 182, 87, 79, 57, 63, 119, 21, 170, 135, 99, 137, 169, 190, 232, 179, 145, 21, 93, 55, 7, 5, 222, 148, 253, 230, 147, 253, 12, 149, 89, 159, 207, 219, 48, 75, 105, 67, 3, 121, 81, 145, 202, 199, 118, 73, 28, 23, 237, 177, 247, 146, 28, 119, 71, 155, 232, 63, 22, 240, 112, 247, 180, 192, 176, 234, 116, 233, 207, 154, 224, 115, 177, 236, 32, 186, 139, 159, 134, 118, 56, 155, 200, 165],
-                vec![25, 93, 0, 27, 250, 169, 144, 36, 216, 143, 51, 252, 92, 156, 171, 245, 170, 182, 90, 155, 59, 0, 138, 84, 6, 90, 215, 215, 45, 47, 250, 15, 8, 252, 188, 97, 242, 241, 207, 232, 195, 100, 252, 182, 254, 227, 217, 16, 251, 87, 121, 96, 101, 204, 185, 43, 67, 237, 160, 143, 247, 10, 52, 33, 22, 241, 186, 108, 67, 227, 145, 13, 52, 67, 22, 238, 126, 129, 54, 68, 159, 71, 179, 147, 198, 12, 199, 0, 9, 92, 232, 40, 178, 34, 172, 187, 16, 6, 17, 84, 137, 147, 242, 238, 8, 88, 151, 254, 178, 149, 190, 46, 43, 249, 133, 164, 15, 77, 210, 177, 153, 235, 51, 12, 39, 106, 207, 77],
-                vec![1, 39, 90, 159, 247, 134, 155, 5, 88, 27, 171, 241, 196, 35, 255, 144, 167, 205, 110, 43, 253, 22, 127, 201, 227, 133, 192, 22, 170, 22, 87, 93, 158, 89, 203, 59, 80, 13, 46, 104, 216, 77, 111, 122, 96, 111, 17, 125, 104, 208, 139, 2, 58, 245, 217, 152, 50, 239, 205, 102, 250, 37, 214, 12, 118, 204, 99, 233, 215, 53, 226, 50, 120, 208, 61, 98, 49, 48, 182, 109, 235, 86, 184, 164, 189, 9, 239, 252, 27, 143, 213, 131, 62, 193, 197, 184, 236, 1, 114, 86, 61, 69, 229, 65, 236, 6, 164, 208, 105, 20, 4, 125, 63, 43, 66, 207, 112, 61, 131, 130, 251, 242, 175, 253, 233, 43, 226, 205, 239, 89, 235, 104, 225, 96, 209, 69, 65, 134, 56, 180, 120, 53, 125, 191, 111, 29, 250, 153, 158, 169, 250, 139, 37, 229, 207, 126, 38, 150, 65, 39, 219, 58, 180, 114, 204, 0, 188, 164, 188, 53, 186, 230, 181, 48, 23, 122, 106, 107, 31, 221, 142, 237, 129, 35, 23, 11, 67, 85, 177, 166, 190, 19, 148, 238, 223, 206, 211, 40, 183, 123, 203, 75, 88, 159, 0, 52, 8, 138, 192, 144, 97, 177, 180, 212, 45, 91, 237, 86, 36, 161, 180, 47, 61, 239, 155, 44, 187, 162, 124, 178, 38, 252, 167, 166, 147, 27, 156, 115, 105, 218, 24, 163, 214, 183, 10, 216, 25, 222, 187, 243, 123, 232, 197, 29, 30, 133, 47],
-                vec![2, 143, 29, 183, 142, 29, 117, 172, 90, 120, 157, 84, 126, 194, 34, 226, 142, 152, 56, 25, 37, 145, 30, 102, 45, 73, 131, 55, 43, 33, 138, 174, 97, 250, 234, 215, 49, 197, 194, 21, 16, 58, 156, 69, 108, 214, 139, 71, 141, 205, 160, 47, 5, 83, 143, 58, 171, 150, 166, 180, 217, 193, 236, 108, 9, 114, 7, 122, 65, 212, 150, 227, 168, 216, 175, 141, 82, 50, 62, 205, 178, 69, 100, 205, 85, 18, 173, 25, 186, 149, 195, 119, 169, 165, 107, 28, 146, 17, 36, 101, 125, 158, 127, 249, 20, 112, 227, 118, 58, 128, 101, 249, 120, 152, 147, 121, 27, 78, 242, 138, 154, 226, 196, 27, 77, 5, 4, 216, 72, 225, 167, 102, 226, 67, 152, 119, 85, 81, 71, 131, 91, 113, 74, 152, 140, 2, 9, 84, 197, 97, 38, 50, 181, 26, 228, 252, 24, 254, 158, 80, 224, 106, 49, 226, 255, 1, 143, 118, 250, 155, 19, 104, 154, 35, 56, 121, 94, 16, 163, 213, 225, 10, 32, 125, 87, 116, 110, 103, 127, 251, 212, 227, 41, 230, 28, 143, 94, 149, 46, 40, 77, 28, 247, 40, 159, 105, 52, 178, 46, 150, 0, 207, 111, 143, 98, 152, 79, 218, 176, 242, 18, 224, 230, 135, 74, 1, 50, 250, 138, 126, 89, 79, 199, 177, 220, 199, 224, 44, 89, 142, 224, 169, 164, 169, 32, 130, 82, 178, 156, 233, 197, 157, 11, 35, 212, 100, 222],
-                vec![1, 15, 91, 146, 224, 9, 222, 151, 66, 32, 116, 1, 233, 133, 250, 79, 40, 227, 195, 180, 173, 37, 206, 231, 172, 177, 61, 134, 178, 158, 135, 167, 46, 154, 181, 100, 54, 45, 107, 102, 106, 122, 232, 12, 146, 63, 125, 166, 247, 128, 230, 126, 254, 243, 2, 152, 19, 217, 41, 107, 207, 76, 225, 205, 77, 103, 18, 137, 145, 20, 198, 94, 106, 172, 10, 166, 45, 232, 29, 179, 185, 31, 205, 57, 247, 223, 166, 229, 216, 229, 45, 22, 227, 20, 16, 100, 198, 55, 14, 90, 77, 144, 110, 175, 218, 120, 192, 139, 20, 130, 214, 206, 135, 37, 223, 14, 172, 26, 93, 156, 252, 180, 27, 40, 236, 249, 248, 116, 160, 47, 123, 249, 53, 213, 143, 1, 104, 171, 151, 211, 183, 99, 208, 11, 24, 191, 172, 57, 175, 244, 53, 223, 168, 209, 247, 79, 193, 87, 140, 40, 254, 5, 65, 189, 224, 92, 103, 23, 219, 89, 171, 25, 153, 224, 147, 14, 78, 26, 3, 17, 196, 1, 250, 177, 107, 140, 67, 176, 3, 122, 233, 14, 232, 72, 44, 21, 142, 141, 54, 33, 165, 12, 101, 4, 55, 145, 60, 16, 152, 214, 42, 204, 158, 109, 12, 115, 230, 254, 45, 162, 84, 120, 147, 218, 228, 149, 99, 209, 140, 39, 253, 234, 247, 123, 183, 239, 253, 84, 87, 147, 5, 65, 6, 12, 214, 164, 76, 237, 174, 189, 211, 200, 214, 184, 3, 148, 30],
-                vec![112, 136, 12, 69, 162, 232, 90, 39, 235, 18, 179, 156, 164, 229, 85, 100, 26, 106, 16, 229, 75, 96, 231, 27, 156, 137, 219, 80, 17, 195, 30, 191, 190, 138, 125, 73, 177, 90, 163, 12, 180, 146, 47, 156, 132, 26, 89, 24, 220, 151, 226, 24, 28, 129, 73, 218, 11, 220, 178, 114, 190, 130, 222, 96, 72, 176, 8, 117, 64, 241, 48, 247, 228, 125, 207, 40, 106, 93, 164, 236, 52, 112, 12, 135, 179, 4, 96, 117, 48, 203, 123, 59, 231, 150, 44, 90, 79, 75, 55, 150, 253, 239, 148, 119, 50, 177, 246, 104, 156, 205, 13, 17, 71, 238, 149, 88, 77, 68, 112, 130, 22, 55, 141, 34, 170, 133, 238, 134, 40, 180, 212, 195, 132, 28, 175, 208, 235, 145, 228, 79, 112, 75, 235, 96, 140, 111, 102, 236, 203, 3, 239, 236, 189, 193, 33, 253, 226, 1, 124, 37, 36, 173, 125, 187, 109, 44, 31, 30, 4, 139, 125, 243, 73, 108, 109, 105, 138, 128, 140, 106, 54, 52, 103, 104, 152, 27, 185, 6, 150, 105, 151, 124, 67, 25, 221, 161, 13, 97, 20, 111, 129, 255, 95, 56, 137, 141, 149, 168, 245, 105, 31, 81, 11, 90, 166, 141, 188, 69, 85, 126, 201, 38, 128, 158, 9, 123, 132, 118, 22, 107, 212, 173, 122, 106, 237, 109, 26, 57, 89, 218, 173, 97, 101, 51, 224, 36, 201, 160, 57, 55, 226, 68, 191, 183, 151, 187],
-                vec![1, 36, 34, 217, 148, 4, 116, 74, 94, 18, 213, 219, 10, 186, 52, 205, 246, 171, 246, 1, 244, 105, 203, 134, 211, 51, 152, 9, 108, 39, 0, 113, 95, 86, 147, 173, 92, 23, 194, 206, 112, 210, 224, 121, 226, 110, 1, 204, 123, 63, 201, 221, 146, 109, 204, 16, 122, 199, 50, 172, 197, 5, 59, 20, 59, 95, 59, 238, 162, 75, 237, 81, 209, 48, 71, 105, 213, 49, 201, 238, 156, 7, 101, 149, 230, 249, 108, 40, 77, 5, 187, 204, 144, 62, 205, 225, 62, 214, 80, 56, 72, 149, 75, 92, 185, 5, 25, 26, 23, 221, 25, 133, 23, 163, 72, 142, 5, 153, 67, 129, 250, 23, 39, 23, 237, 137, 255, 34, 2, 1, 105, 74, 116, 228, 165, 214, 216, 139, 213, 184, 177, 19, 169, 74, 31, 7, 77, 177, 2, 116, 104, 168, 35, 53, 201, 162, 150, 123, 236, 5, 81, 197, 160, 209, 146, 5, 237, 191, 13, 153, 64, 230, 61, 155, 254, 118, 112, 135, 162, 210, 217, 243, 5, 66, 204, 161, 190, 190, 115, 80, 246, 130, 7, 174, 243, 124, 44, 92, 215, 31, 23, 143, 81, 85, 51, 175, 208, 232, 240, 242, 151, 194, 42, 222, 111, 32, 80, 185, 17, 60, 52, 147, 62, 135, 81, 196, 164, 62, 115, 96, 221, 14, 186, 23, 172, 38, 29, 41, 145, 13, 191, 8, 34, 174, 70, 10, 204, 109, 17, 144, 112, 200, 228, 239, 63, 122, 91],
-                vec![67, 166, 56, 239, 86, 131, 23, 62, 130, 21, 236, 196, 219, 166, 34, 35, 168, 88, 154, 22, 214, 47, 37, 232, 17, 105, 61, 39, 233, 155, 167, 46, 22, 162, 113, 91, 17, 72, 56, 236, 241, 15, 90, 78, 115, 180, 156, 67, 56, 51, 21, 72, 122, 185, 199, 19, 77, 132, 139, 104, 228, 230, 152, 144, 89, 95, 196, 14, 176, 93, 68, 157, 116, 188, 93, 66, 174, 130, 76, 156, 87, 2, 246, 180, 28, 151, 181, 73, 67, 76, 82, 79, 121, 98, 46, 85, 140, 67, 19, 68, 188, 208, 45, 55, 217, 107, 124, 73, 45, 112, 164, 133, 58, 102, 109, 239, 203, 143, 40, 118, 135, 152, 199, 50, 91, 117, 42, 196, 176, 113, 152, 154, 149, 117, 214, 174, 54, 187, 79, 190, 113, 15, 86, 150, 242, 6, 8, 148, 205, 3, 127, 18, 251, 184, 115, 16, 152, 66, 15, 53, 74, 152, 131, 162, 211, 99, 17, 106, 57, 112, 200, 253, 252, 209, 157, 64, 54, 103, 126, 101, 173, 203, 239, 201, 163, 181, 66, 145, 207, 32, 191, 21, 67, 107, 58, 237, 182, 17, 201, 134, 217, 112, 123, 85, 239, 156, 132, 27, 74, 48, 228, 212, 24, 241, 12, 139, 152, 237, 130, 25, 128, 153, 128, 34, 253, 163, 123, 169, 154, 10, 73, 35, 23, 50, 123, 133, 240, 140, 19, 97, 176, 4, 45, 175, 234, 32, 68, 17, 105, 45, 50, 74, 82, 219, 233, 179]
-            ]
+                vec![
+                    4, 15, 40, 221, 185, 162, 221, 161, 254, 176, 57, 207, 14, 190, 121, 73, 122,
+                    188, 36, 147, 47, 72, 242, 193, 17, 241, 109, 66, 73, 52, 131, 185, 112, 8, 84,
+                    230, 192, 255, 105, 116, 83, 170, 71, 219, 182, 149, 126, 9, 180, 11, 152, 255,
+                    241, 228, 123, 229, 108, 200, 210, 17, 231, 83, 158, 93, 114, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+                vec![
+                    4, 28, 250, 35, 217, 251, 183, 160, 58, 131, 37, 66, 222, 201, 38, 193, 138,
+                    177, 229, 88, 130, 59, 53, 75, 226, 216, 166, 7, 23, 245, 57, 128, 209, 19, 86,
+                    133, 7, 82, 39, 63, 42, 66, 66, 228, 69, 93, 156, 108, 147, 249, 138, 148, 56,
+                    223, 216, 102, 204, 90, 134, 78, 135, 164, 254, 181, 71, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0,
+                ],
+                vec![
+                    4, 2, 107, 241, 180, 5, 3, 229, 146, 229, 80, 96, 229, 210, 175, 238, 65, 126,
+                    113, 152, 143, 49, 231, 47, 144, 156, 239, 75, 149, 169, 140, 112, 107, 14,
+                    249, 31, 191, 70, 33, 146, 43, 37, 116, 188, 36, 78, 23, 15, 36, 90, 97, 103,
+                    149, 137, 1, 69, 230, 214, 159, 35, 217, 75, 217, 129, 101, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+                vec![
+                    4, 36, 173, 234, 183, 207, 24, 100, 172, 217, 41, 238, 60, 232, 136, 84, 41,
+                    129, 223, 88, 29, 111, 132, 214, 99, 54, 252, 215, 160, 195, 248, 53, 127, 29,
+                    196, 61, 22, 192, 127, 209, 129, 74, 115, 208, 177, 10, 177, 7, 80, 197, 209,
+                    72, 58, 159, 244, 141, 207, 108, 59, 255, 71, 233, 195, 77, 157, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                ],
+                vec![
+                    21, 39, 33, 136, 4, 35, 81, 232, 221, 50, 46, 137, 180, 37, 68, 198, 205, 92,
+                    210, 203, 242, 91, 190, 222, 21, 10, 99, 147, 17, 10, 254, 238, 25, 87, 208,
+                    140, 223, 63, 52, 47, 159, 24, 121, 222, 233, 36, 55, 227, 15, 72, 28, 2, 160,
+                    137, 120, 159, 50, 140, 82, 152, 35, 213, 100, 213, 21, 84, 190, 96, 165, 232,
+                    146, 117, 252, 253, 26, 247, 179, 48, 76, 241, 74, 64, 22, 232, 177, 232, 212,
+                    64, 161, 198, 27, 223, 164, 122, 206, 11, 27, 52, 163, 239, 155, 71, 87, 221,
+                    17, 160, 128, 70, 123, 232, 177, 38, 18, 80, 72, 147, 150, 193, 146, 127, 155,
+                    135, 110, 222, 23, 227, 56, 131,
+                ],
+                vec![
+                    28, 237, 222, 213, 234, 194, 241, 249, 239, 157, 147, 62, 11, 203, 25, 150,
+                    180, 231, 63, 84, 153, 26, 206, 79, 58, 75, 86, 61, 31, 109, 67, 59, 19, 57,
+                    174, 176, 165, 87, 167, 78, 193, 53, 45, 106, 121, 182, 87, 79, 57, 63, 119,
+                    21, 170, 135, 99, 137, 169, 190, 232, 179, 145, 21, 93, 55, 7, 5, 222, 148,
+                    253, 230, 147, 253, 12, 149, 89, 159, 207, 219, 48, 75, 105, 67, 3, 121, 81,
+                    145, 202, 199, 118, 73, 28, 23, 237, 177, 247, 146, 28, 119, 71, 155, 232, 63,
+                    22, 240, 112, 247, 180, 192, 176, 234, 116, 233, 207, 154, 224, 115, 177, 236,
+                    32, 186, 139, 159, 134, 118, 56, 155, 200, 165,
+                ],
+                vec![
+                    25, 93, 0, 27, 250, 169, 144, 36, 216, 143, 51, 252, 92, 156, 171, 245, 170,
+                    182, 90, 155, 59, 0, 138, 84, 6, 90, 215, 215, 45, 47, 250, 15, 8, 252, 188,
+                    97, 242, 241, 207, 232, 195, 100, 252, 182, 254, 227, 217, 16, 251, 87, 121,
+                    96, 101, 204, 185, 43, 67, 237, 160, 143, 247, 10, 52, 33, 22, 241, 186, 108,
+                    67, 227, 145, 13, 52, 67, 22, 238, 126, 129, 54, 68, 159, 71, 179, 147, 198,
+                    12, 199, 0, 9, 92, 232, 40, 178, 34, 172, 187, 16, 6, 17, 84, 137, 147, 242,
+                    238, 8, 88, 151, 254, 178, 149, 190, 46, 43, 249, 133, 164, 15, 77, 210, 177,
+                    153, 235, 51, 12, 39, 106, 207, 77,
+                ],
+                vec![
+                    1, 39, 90, 159, 247, 134, 155, 5, 88, 27, 171, 241, 196, 35, 255, 144, 167,
+                    205, 110, 43, 253, 22, 127, 201, 227, 133, 192, 22, 170, 22, 87, 93, 158, 89,
+                    203, 59, 80, 13, 46, 104, 216, 77, 111, 122, 96, 111, 17, 125, 104, 208, 139,
+                    2, 58, 245, 217, 152, 50, 239, 205, 102, 250, 37, 214, 12, 118, 204, 99, 233,
+                    215, 53, 226, 50, 120, 208, 61, 98, 49, 48, 182, 109, 235, 86, 184, 164, 189,
+                    9, 239, 252, 27, 143, 213, 131, 62, 193, 197, 184, 236, 1, 114, 86, 61, 69,
+                    229, 65, 236, 6, 164, 208, 105, 20, 4, 125, 63, 43, 66, 207, 112, 61, 131, 130,
+                    251, 242, 175, 253, 233, 43, 226, 205, 239, 89, 235, 104, 225, 96, 209, 69, 65,
+                    134, 56, 180, 120, 53, 125, 191, 111, 29, 250, 153, 158, 169, 250, 139, 37,
+                    229, 207, 126, 38, 150, 65, 39, 219, 58, 180, 114, 204, 0, 188, 164, 188, 53,
+                    186, 230, 181, 48, 23, 122, 106, 107, 31, 221, 142, 237, 129, 35, 23, 11, 67,
+                    85, 177, 166, 190, 19, 148, 238, 223, 206, 211, 40, 183, 123, 203, 75, 88, 159,
+                    0, 52, 8, 138, 192, 144, 97, 177, 180, 212, 45, 91, 237, 86, 36, 161, 180, 47,
+                    61, 239, 155, 44, 187, 162, 124, 178, 38, 252, 167, 166, 147, 27, 156, 115,
+                    105, 218, 24, 163, 214, 183, 10, 216, 25, 222, 187, 243, 123, 232, 197, 29, 30,
+                    133, 47,
+                ],
+                vec![
+                    2, 143, 29, 183, 142, 29, 117, 172, 90, 120, 157, 84, 126, 194, 34, 226, 142,
+                    152, 56, 25, 37, 145, 30, 102, 45, 73, 131, 55, 43, 33, 138, 174, 97, 250, 234,
+                    215, 49, 197, 194, 21, 16, 58, 156, 69, 108, 214, 139, 71, 141, 205, 160, 47,
+                    5, 83, 143, 58, 171, 150, 166, 180, 217, 193, 236, 108, 9, 114, 7, 122, 65,
+                    212, 150, 227, 168, 216, 175, 141, 82, 50, 62, 205, 178, 69, 100, 205, 85, 18,
+                    173, 25, 186, 149, 195, 119, 169, 165, 107, 28, 146, 17, 36, 101, 125, 158,
+                    127, 249, 20, 112, 227, 118, 58, 128, 101, 249, 120, 152, 147, 121, 27, 78,
+                    242, 138, 154, 226, 196, 27, 77, 5, 4, 216, 72, 225, 167, 102, 226, 67, 152,
+                    119, 85, 81, 71, 131, 91, 113, 74, 152, 140, 2, 9, 84, 197, 97, 38, 50, 181,
+                    26, 228, 252, 24, 254, 158, 80, 224, 106, 49, 226, 255, 1, 143, 118, 250, 155,
+                    19, 104, 154, 35, 56, 121, 94, 16, 163, 213, 225, 10, 32, 125, 87, 116, 110,
+                    103, 127, 251, 212, 227, 41, 230, 28, 143, 94, 149, 46, 40, 77, 28, 247, 40,
+                    159, 105, 52, 178, 46, 150, 0, 207, 111, 143, 98, 152, 79, 218, 176, 242, 18,
+                    224, 230, 135, 74, 1, 50, 250, 138, 126, 89, 79, 199, 177, 220, 199, 224, 44,
+                    89, 142, 224, 169, 164, 169, 32, 130, 82, 178, 156, 233, 197, 157, 11, 35, 212,
+                    100, 222,
+                ],
+                vec![
+                    1, 15, 91, 146, 224, 9, 222, 151, 66, 32, 116, 1, 233, 133, 250, 79, 40, 227,
+                    195, 180, 173, 37, 206, 231, 172, 177, 61, 134, 178, 158, 135, 167, 46, 154,
+                    181, 100, 54, 45, 107, 102, 106, 122, 232, 12, 146, 63, 125, 166, 247, 128,
+                    230, 126, 254, 243, 2, 152, 19, 217, 41, 107, 207, 76, 225, 205, 77, 103, 18,
+                    137, 145, 20, 198, 94, 106, 172, 10, 166, 45, 232, 29, 179, 185, 31, 205, 57,
+                    247, 223, 166, 229, 216, 229, 45, 22, 227, 20, 16, 100, 198, 55, 14, 90, 77,
+                    144, 110, 175, 218, 120, 192, 139, 20, 130, 214, 206, 135, 37, 223, 14, 172,
+                    26, 93, 156, 252, 180, 27, 40, 236, 249, 248, 116, 160, 47, 123, 249, 53, 213,
+                    143, 1, 104, 171, 151, 211, 183, 99, 208, 11, 24, 191, 172, 57, 175, 244, 53,
+                    223, 168, 209, 247, 79, 193, 87, 140, 40, 254, 5, 65, 189, 224, 92, 103, 23,
+                    219, 89, 171, 25, 153, 224, 147, 14, 78, 26, 3, 17, 196, 1, 250, 177, 107, 140,
+                    67, 176, 3, 122, 233, 14, 232, 72, 44, 21, 142, 141, 54, 33, 165, 12, 101, 4,
+                    55, 145, 60, 16, 152, 214, 42, 204, 158, 109, 12, 115, 230, 254, 45, 162, 84,
+                    120, 147, 218, 228, 149, 99, 209, 140, 39, 253, 234, 247, 123, 183, 239, 253,
+                    84, 87, 147, 5, 65, 6, 12, 214, 164, 76, 237, 174, 189, 211, 200, 214, 184, 3,
+                    148, 30,
+                ],
+                vec![
+                    112, 136, 12, 69, 162, 232, 90, 39, 235, 18, 179, 156, 164, 229, 85, 100, 26,
+                    106, 16, 229, 75, 96, 231, 27, 156, 137, 219, 80, 17, 195, 30, 191, 190, 138,
+                    125, 73, 177, 90, 163, 12, 180, 146, 47, 156, 132, 26, 89, 24, 220, 151, 226,
+                    24, 28, 129, 73, 218, 11, 220, 178, 114, 190, 130, 222, 96, 72, 176, 8, 117,
+                    64, 241, 48, 247, 228, 125, 207, 40, 106, 93, 164, 236, 52, 112, 12, 135, 179,
+                    4, 96, 117, 48, 203, 123, 59, 231, 150, 44, 90, 79, 75, 55, 150, 253, 239, 148,
+                    119, 50, 177, 246, 104, 156, 205, 13, 17, 71, 238, 149, 88, 77, 68, 112, 130,
+                    22, 55, 141, 34, 170, 133, 238, 134, 40, 180, 212, 195, 132, 28, 175, 208, 235,
+                    145, 228, 79, 112, 75, 235, 96, 140, 111, 102, 236, 203, 3, 239, 236, 189, 193,
+                    33, 253, 226, 1, 124, 37, 36, 173, 125, 187, 109, 44, 31, 30, 4, 139, 125, 243,
+                    73, 108, 109, 105, 138, 128, 140, 106, 54, 52, 103, 104, 152, 27, 185, 6, 150,
+                    105, 151, 124, 67, 25, 221, 161, 13, 97, 20, 111, 129, 255, 95, 56, 137, 141,
+                    149, 168, 245, 105, 31, 81, 11, 90, 166, 141, 188, 69, 85, 126, 201, 38, 128,
+                    158, 9, 123, 132, 118, 22, 107, 212, 173, 122, 106, 237, 109, 26, 57, 89, 218,
+                    173, 97, 101, 51, 224, 36, 201, 160, 57, 55, 226, 68, 191, 183, 151, 187,
+                ],
+                vec![
+                    1, 36, 34, 217, 148, 4, 116, 74, 94, 18, 213, 219, 10, 186, 52, 205, 246, 171,
+                    246, 1, 244, 105, 203, 134, 211, 51, 152, 9, 108, 39, 0, 113, 95, 86, 147, 173,
+                    92, 23, 194, 206, 112, 210, 224, 121, 226, 110, 1, 204, 123, 63, 201, 221, 146,
+                    109, 204, 16, 122, 199, 50, 172, 197, 5, 59, 20, 59, 95, 59, 238, 162, 75, 237,
+                    81, 209, 48, 71, 105, 213, 49, 201, 238, 156, 7, 101, 149, 230, 249, 108, 40,
+                    77, 5, 187, 204, 144, 62, 205, 225, 62, 214, 80, 56, 72, 149, 75, 92, 185, 5,
+                    25, 26, 23, 221, 25, 133, 23, 163, 72, 142, 5, 153, 67, 129, 250, 23, 39, 23,
+                    237, 137, 255, 34, 2, 1, 105, 74, 116, 228, 165, 214, 216, 139, 213, 184, 177,
+                    19, 169, 74, 31, 7, 77, 177, 2, 116, 104, 168, 35, 53, 201, 162, 150, 123, 236,
+                    5, 81, 197, 160, 209, 146, 5, 237, 191, 13, 153, 64, 230, 61, 155, 254, 118,
+                    112, 135, 162, 210, 217, 243, 5, 66, 204, 161, 190, 190, 115, 80, 246, 130, 7,
+                    174, 243, 124, 44, 92, 215, 31, 23, 143, 81, 85, 51, 175, 208, 232, 240, 242,
+                    151, 194, 42, 222, 111, 32, 80, 185, 17, 60, 52, 147, 62, 135, 81, 196, 164,
+                    62, 115, 96, 221, 14, 186, 23, 172, 38, 29, 41, 145, 13, 191, 8, 34, 174, 70,
+                    10, 204, 109, 17, 144, 112, 200, 228, 239, 63, 122, 91,
+                ],
+                vec![
+                    67, 166, 56, 239, 86, 131, 23, 62, 130, 21, 236, 196, 219, 166, 34, 35, 168,
+                    88, 154, 22, 214, 47, 37, 232, 17, 105, 61, 39, 233, 155, 167, 46, 22, 162,
+                    113, 91, 17, 72, 56, 236, 241, 15, 90, 78, 115, 180, 156, 67, 56, 51, 21, 72,
+                    122, 185, 199, 19, 77, 132, 139, 104, 228, 230, 152, 144, 89, 95, 196, 14, 176,
+                    93, 68, 157, 116, 188, 93, 66, 174, 130, 76, 156, 87, 2, 246, 180, 28, 151,
+                    181, 73, 67, 76, 82, 79, 121, 98, 46, 85, 140, 67, 19, 68, 188, 208, 45, 55,
+                    217, 107, 124, 73, 45, 112, 164, 133, 58, 102, 109, 239, 203, 143, 40, 118,
+                    135, 152, 199, 50, 91, 117, 42, 196, 176, 113, 152, 154, 149, 117, 214, 174,
+                    54, 187, 79, 190, 113, 15, 86, 150, 242, 6, 8, 148, 205, 3, 127, 18, 251, 184,
+                    115, 16, 152, 66, 15, 53, 74, 152, 131, 162, 211, 99, 17, 106, 57, 112, 200,
+                    253, 252, 209, 157, 64, 54, 103, 126, 101, 173, 203, 239, 201, 163, 181, 66,
+                    145, 207, 32, 191, 21, 67, 107, 58, 237, 182, 17, 201, 134, 217, 112, 123, 85,
+                    239, 156, 132, 27, 74, 48, 228, 212, 24, 241, 12, 139, 152, 237, 130, 25, 128,
+                    153, 128, 34, 253, 163, 123, 169, 154, 10, 73, 35, 23, 50, 123, 133, 240, 140,
+                    19, 97, 176, 4, 45, 175, 234, 32, 68, 17, 105, 45, 50, 74, 82, 219, 233, 179,
+                ],
+            ],
         }
     }
 
@@ -2287,7 +2834,7 @@ pub mod mocks {
     pub fn primary_proof() -> PrimaryProof {
         PrimaryProof {
             eq_proof: eq_proof(),
-            ne_proofs: vec![ne_proof()]
+            ne_proofs: vec![ne_proof()],
         }
     }
 
@@ -2380,7 +2927,9 @@ pub mod mocks {
     pub fn sub_proof_request() -> SubProofRequest {
         let mut sub_proof_request_builder = SubProofRequestBuilder::new().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
+        sub_proof_request_builder
+            .add_predicate("age", "GE", 18)
+            .unwrap();
         sub_proof_request_builder.finalize().unwrap()
     }
 
@@ -2394,7 +2943,9 @@ pub mod mocks {
 
     pub fn credential_revealed_attributes_values() -> CredentialValues {
         let mut credential_values_builder = CredentialValuesBuilder::new().unwrap();
-        credential_values_builder.add_dec_known("name", "1139481716457488690172217916278103335").unwrap();
+        credential_values_builder
+            .add_dec_known("name", "1139481716457488690172217916278103335")
+            .unwrap();
         credential_values_builder.finalize().unwrap()
     }
 
@@ -2402,7 +2953,7 @@ pub mod mocks {
         Predicate {
             attr_name: "age".to_owned(),
             p_type: PredicateType::GE,
-            value: 18
+            value: 18,
         }
     }
 }

@@ -1,5 +1,5 @@
-pub mod cl;
 pub mod bls;
+pub mod cl;
 pub mod logger;
 
 use errors::prelude::*;
@@ -7,8 +7,7 @@ use std::os::raw::c_char;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(usize)]
-pub enum ErrorCode
-{
+pub enum ErrorCode {
     Success = 0,
 
     // Common errors
@@ -86,8 +85,11 @@ pub enum ErrorCode
 /// }
 ///
 #[no_mangle]
-pub extern fn ursa_get_current_error(error_json_p: *mut *const c_char) {
-    trace!("ursa_get_current_error >>> error_json_p: {:?}", error_json_p);
+pub extern "C" fn ursa_get_current_error(error_json_p: *mut *const c_char) {
+    trace!(
+        "ursa_get_current_error >>> error_json_p: {:?}",
+        error_json_p
+    );
 
     let error = get_current_error_c_json();
     unsafe { *error_json_p = error };
@@ -99,13 +101,12 @@ pub extern fn ursa_get_current_error(error_json_p: *mut *const c_char) {
 mod tests {
     use super::*;
 
-    use std::ptr;
     use ffi::cl::issuer::ursa_cl_credential_private_key_from_json;
+    use std::ptr;
     use utils::ctypes::*;
 
     #[test]
     fn ursa_get_current_error_works() {
-
         ursa_cl_credential_private_key_from_json(ptr::null(), &mut ptr::null());
 
         let mut error_json_p: *const c_char = ptr::null();

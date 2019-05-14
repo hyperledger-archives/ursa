@@ -24,12 +24,15 @@ pub const LARGE_ALPHATILDE: usize = 2787;
 
 // Constants that are used throughout the CL signatures code, so avoiding recomputation.
 lazy_static! {
-    pub static ref LARGE_E_START_VALUE: BigNumber = BIGNUMBER_2.exp(
-                &BigNumber::from_u32(LARGE_E_START).unwrap(),
-                None).unwrap();
-    pub static ref LARGE_E_END_RANGE_VALUE: BigNumber = BIGNUMBER_2.exp(
-                &BigNumber::from_u32(LARGE_E_END_RANGE).unwrap(),
-                None).unwrap().add(&LARGE_E_START_VALUE).unwrap();
-    pub static ref LARGE_VPRIME_PRIME_VALUE: BigNumber = BIGNUMBER_2.exp(
-        &BigNumber::from_u32(LARGE_VPRIME_PRIME - 1).unwrap(), None).unwrap();
+    pub static ref LARGE_E_START_VALUE: BigNumber = BIGNUMBER_2
+        .exp(&BigNumber::from_u32(LARGE_E_START).unwrap(), None)
+        .unwrap();
+    pub static ref LARGE_E_END_RANGE_VALUE: BigNumber = BIGNUMBER_2
+        .exp(&BigNumber::from_u32(LARGE_E_END_RANGE).unwrap(), None)
+        .unwrap()
+        .add(&LARGE_E_START_VALUE)
+        .unwrap();
+    pub static ref LARGE_VPRIME_PRIME_VALUE: BigNumber = BIGNUMBER_2
+        .exp(&BigNumber::from_u32(LARGE_VPRIME_PRIME - 1).unwrap(), None)
+        .unwrap();
 }

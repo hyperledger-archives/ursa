@@ -1,6 +1,6 @@
-use zeroize::Zeroize;
 use encoding::hex::{bin2hex, hex2bin};
 use std::ops::Drop;
+use zeroize::Zeroize;
 
 // A private key instance.
 /// The underlying content is dependent on implementation.
@@ -19,14 +19,14 @@ impl_bytearray!(MacKey);
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum KeyGenOption {
     UseSeed(Vec<u8>),
-    FromSecretKey(PrivateKey)
+    FromSecretKey(PrivateKey),
 }
 
 impl Drop for KeyGenOption {
     fn drop(&mut self) {
         match self {
             KeyGenOption::UseSeed(ref mut v) => v.zeroize(),
-            KeyGenOption::FromSecretKey(ref mut s) => s.zeroize()
+            KeyGenOption::FromSecretKey(ref mut s) => s.zeroize(),
         }
     }
 }
@@ -41,5 +41,8 @@ fn serialize_tests() {
     assert_eq!(KeyGenOption::UseSeed(t), f);
     let sk = PrivateKey(vec![1u8, 1u8, 1u8, 1u8, 1u8, 1u8, 2u8]);
     let e = KeyGenOption::FromSecretKey(sk);
-    assert_eq!(r#"{"FromSecretKey":"01010101010102"}"#, ::serde_json::to_string(&e).unwrap());
+    assert_eq!(
+        r#"{"FromSecretKey":"01010101010102"}"#,
+        ::serde_json::to_string(&e).unwrap()
+    );
 }

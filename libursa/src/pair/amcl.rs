@@ -3,31 +3,24 @@ use errors::prelude::*;
 use amcl::bn254::big::BIG;
 
 use amcl::bn254::rom::{
-    CURVE_GX,
-    CURVE_GY,
-    CURVE_ORDER,
-    CURVE_PXA,
-    CURVE_PYA,
-    CURVE_PXB,
-    CURVE_PYB,
-    MODBYTES
+    CURVE_GX, CURVE_GY, CURVE_ORDER, CURVE_PXA, CURVE_PXB, CURVE_PYA, CURVE_PYB, MODBYTES,
 };
 
 use amcl::bn254::ecp::ECP;
 use amcl::bn254::ecp2::ECP2;
 use amcl::bn254::fp12::FP12;
 use amcl::bn254::fp2::FP2;
-use amcl::bn254::pair::{ate, g1mul, g2mul, gtpow, fexp};
+use amcl::bn254::pair::{ate, fexp, g1mul, g2mul, gtpow};
 use amcl::rand::RAND;
 
 use rand::rngs::OsRng;
 use rand::RngCore;
-use std::fmt::{Debug, Formatter, Error};
+use std::fmt::{Debug, Error, Formatter};
 
 #[cfg(feature = "serialization")]
-use serde::ser::{Serialize, Serializer, Error as SError};
+use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
 #[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
+use serde::ser::{Error as SError, Serialize, Serializer};
 #[cfg(feature = "serialization")]
 use std::fmt;
 
@@ -65,9 +58,10 @@ fn random_mod_order() -> UrsaCryptoResult<BIG> {
 #[cfg(test)]
 fn random_mod_order() -> UrsaCryptoResult<BIG> {
     if PairMocksHelper::is_injected() {
-        Ok(BIG::from_hex("22EB5716FB01F2122DE924466542B923D8C96F16C9B5FE2C00B7D7DC1499EA50".to_string()))
-    }
-    else {
+        Ok(BIG::from_hex(
+            "22EB5716FB01F2122DE924466542B923D8C96F16C9B5FE2C00B7D7DC1499EA50".to_string(),
+        ))
+    } else {
         _random_mod_order()
     }
 }
@@ -86,7 +80,7 @@ fn _random_mod_order() -> UrsaCryptoResult<BIG> {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct PointG1 {
-    point: ECP
+    point: ECP,
 }
 
 impl PointG1 {
@@ -101,18 +95,14 @@ impl PointG1 {
 
         let point = g1mul(&gen_g1, &mut random_mod_order()?);
 
-        Ok(PointG1 {
-            point
-        })
+        Ok(PointG1 { point })
     }
 
     /// Creates new infinity PointG1
     pub fn new_inf() -> UrsaCryptoResult<PointG1> {
         let mut r = ECP::new();
         r.inf();
-        Ok(PointG1 {
-            point: r
-        })
+        Ok(PointG1 { point: r })
     }
 
     /// Checks infinity
@@ -125,7 +115,7 @@ impl PointG1 {
         let r = self.point;
         let mut bn = e.bn;
         Ok(PointG1 {
-            point: g1mul(&r, &mut bn)
+            point: g1mul(&r, &mut bn),
         })
     }
 
@@ -134,9 +124,7 @@ impl PointG1 {
         let mut r = self.point;
         let point = q.point;
         r.add(&point);
-        Ok(PointG1 {
-            point: r
-        })
+        Ok(PointG1 { point: r })
     }
 
     /// PointG1 / PointG1
@@ -144,18 +132,14 @@ impl PointG1 {
         let mut r = self.point;
         let point = q.point;
         r.sub(&point);
-        Ok(PointG1 {
-            point: r
-        })
+        Ok(PointG1 { point: r })
     }
 
     /// 1 / PointG1
     pub fn neg(&self) -> UrsaCryptoResult<PointG1> {
         let mut r = self.point;
         r.neg();
-        Ok(PointG1 {
-            point: r
-        })
+        Ok(PointG1 { point: r })
     }
 
     pub fn to_string(&self) -> UrsaCryptoResult<String> {
@@ -164,7 +148,7 @@ impl PointG1 {
 
     pub fn from_string(str: &str) -> UrsaCryptoResult<PointG1> {
         Ok(PointG1 {
-            point: ECP::from_hex(str.to_string())
+            point: ECP::from_hex(str.to_string()),
         })
     }
 
@@ -176,13 +160,14 @@ impl PointG1 {
 
     pub fn from_bytes(b: &[u8]) -> UrsaCryptoResult<PointG1> {
         if b.len() != Self::BYTES_REPR_SIZE {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid len of bytes representation for PointG1"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid len of bytes representation for PointG1",
+            ));
         }
-        Ok(
-            PointG1 {
-                point: ECP::frombytes(b)
-            }
-        )
+        Ok(PointG1 {
+            point: ECP::frombytes(b),
+        })
     }
 
     pub fn from_hash(hash: &[u8]) -> UrsaCryptoResult<PointG1> {
@@ -194,9 +179,7 @@ impl PointG1 {
             point = ECP::new_big(&el.bn);
         }
 
-        Ok(PointG1 {
-            point
-        })
+        Ok(PointG1 { point })
     }
 }
 
@@ -208,14 +191,20 @@ impl Debug for PointG1 {
 
 #[cfg(feature = "serialization")]
 impl Serialize for PointG1 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_newtype_struct("PointG1", &self.to_string().map_err(SError::custom)?)
     }
 }
 
 #[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for PointG1 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
         struct PointG1Visitor;
 
         impl<'a> Visitor<'a> for PointG1Visitor {
@@ -226,7 +215,8 @@ impl<'a> Deserialize<'a> for PointG1 {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<PointG1, E>
-                where E: DError
+            where
+                E: DError,
             {
                 Ok(PointG1::from_string(value).map_err(DError::custom)?)
             }
@@ -238,7 +228,7 @@ impl<'a> Deserialize<'a> for PointG1 {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct PointG2 {
-    point: ECP2
+    point: ECP2,
 }
 
 impl PointG2 {
@@ -258,9 +248,7 @@ impl PointG2 {
 
         let point = g2mul(&gen_g2, &random_mod_order()?);
 
-        Ok(PointG2 {
-            point
-        })
+        Ok(PointG2 { point })
     }
 
     /// Creates new infinity PointG2
@@ -268,9 +256,7 @@ impl PointG2 {
         let mut point = ECP2::new();
         point.inf();
 
-        Ok(PointG2 {
-            point
-        })
+        Ok(PointG2 { point })
     }
 
     /// PointG2 * PointG2
@@ -279,9 +265,7 @@ impl PointG2 {
         let point = q.point;
         r.add(&point);
 
-        Ok(PointG2 {
-            point: r
-        })
+        Ok(PointG2 { point: r })
     }
 
     /// PointG2 / PointG2
@@ -290,9 +274,7 @@ impl PointG2 {
         let point = q.point;
         r.sub(&point);
 
-        Ok(PointG2 {
-            point: r
-        })
+        Ok(PointG2 { point: r })
     }
 
     /// PointG2 ^ GroupOrderElement
@@ -300,7 +282,7 @@ impl PointG2 {
         let r = self.point;
         let bn = e.bn;
         Ok(PointG2 {
-            point: g2mul(&r, &bn)
+            point: g2mul(&r, &bn),
         })
     }
 
@@ -310,7 +292,7 @@ impl PointG2 {
 
     pub fn from_string(str: &str) -> UrsaCryptoResult<PointG2> {
         Ok(PointG2 {
-            point: ECP2::from_hex(str.to_string())
+            point: ECP2::from_hex(str.to_string()),
         })
     }
 
@@ -322,13 +304,14 @@ impl PointG2 {
 
     pub fn from_bytes(b: &[u8]) -> UrsaCryptoResult<PointG2> {
         if b.len() != Self::BYTES_REPR_SIZE {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid len of bytes representation for PoingG2"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid len of bytes representation for PoingG2",
+            ));
         }
-        Ok(
-            PointG2 {
-                point: ECP2::frombytes(b)
-            }
-        )
+        Ok(PointG2 {
+            point: ECP2::frombytes(b),
+        })
     }
 }
 
@@ -340,14 +323,20 @@ impl Debug for PointG2 {
 
 #[cfg(feature = "serialization")]
 impl Serialize for PointG2 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_newtype_struct("PointG2", &self.to_string().map_err(SError::custom)?)
     }
 }
 
 #[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for PointG2 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
         struct PointG2Visitor;
 
         impl<'a> Visitor<'a> for PointG2Visitor {
@@ -358,7 +347,8 @@ impl<'a> Deserialize<'a> for PointG2 {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<PointG2, E>
-                where E: DError
+            where
+                E: DError,
             {
                 Ok(PointG2::from_string(value).map_err(DError::custom)?)
             }
@@ -370,7 +360,7 @@ impl<'a> Deserialize<'a> for PointG2 {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct GroupOrderElement {
-    bn: BIG
+    bn: BIG,
 }
 
 impl GroupOrderElement {
@@ -379,21 +369,28 @@ impl GroupOrderElement {
     pub fn new() -> UrsaCryptoResult<GroupOrderElement> {
         // returns random element in 0, ..., GroupOrder-1
         Ok(GroupOrderElement {
-            bn: random_mod_order()?
+            bn: random_mod_order()?,
         })
     }
 
     pub fn new_from_seed(seed: &[u8]) -> UrsaCryptoResult<GroupOrderElement> {
         // returns random element in 0, ..., GroupOrder-1
         if seed.len() != MODBYTES {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Invalid len of seed: expected {}, actual {}", MODBYTES, seed.len())));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                format!(
+                    "Invalid len of seed: expected {}, actual {}",
+                    MODBYTES,
+                    seed.len()
+                ),
+            ));
         }
         let mut rng = RAND::new();
         rng.clean();
         rng.seed(seed.len(), seed);
 
         Ok(GroupOrderElement {
-            bn: BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng)
+            bn: BIG::randomnum(&BIG::new_ints(&CURVE_ORDER), &mut rng),
         })
     }
 
@@ -402,7 +399,7 @@ impl GroupOrderElement {
         let mut base = self.bn;
         let pow = e.bn;
         Ok(GroupOrderElement {
-            bn: base.powmod(&pow, &BIG::new_ints(&CURVE_ORDER))
+            bn: base.powmod(&pow, &BIG::new_ints(&CURVE_ORDER)),
         })
     }
 
@@ -411,9 +408,7 @@ impl GroupOrderElement {
         let mut sum = self.bn;
         sum.add(&r.bn);
         sum.rmod(&BIG::new_ints(&CURVE_ORDER));
-        Ok(GroupOrderElement {
-            bn: sum
-        })
+        Ok(GroupOrderElement { bn: sum })
     }
 
     /// (GroupOrderElement - GroupOrderElement) mod GroupOrder
@@ -426,13 +421,11 @@ impl GroupOrderElement {
 
         if diff < zero {
             return Ok(GroupOrderElement {
-                bn: BIG::modneg(&diff, &BIG::new_ints(&CURVE_ORDER))
+                bn: BIG::modneg(&diff, &BIG::new_ints(&CURVE_ORDER)),
             });
         }
 
-        Ok(GroupOrderElement {
-            bn: diff
-        })
+        Ok(GroupOrderElement { bn: diff })
     }
 
     /// (GroupOrderElement * GroupOrderElement) mod GroupOrder
@@ -440,7 +433,7 @@ impl GroupOrderElement {
         let base = self.bn;
         let r = r.bn;
         Ok(GroupOrderElement {
-            bn: BIG::modmul(&base, &r, &BIG::new_ints(&CURVE_ORDER))
+            bn: BIG::modmul(&base, &r, &BIG::new_ints(&CURVE_ORDER)),
         })
     }
 
@@ -449,18 +442,14 @@ impl GroupOrderElement {
         let mut bn = self.bn;
         bn.invmodp(&BIG::new_ints(&CURVE_ORDER));
 
-        Ok(GroupOrderElement {
-            bn
-        })
+        Ok(GroupOrderElement { bn })
     }
 
     /// - GroupOrderElement mod GroupOrder
     pub fn mod_neg(&self) -> UrsaCryptoResult<GroupOrderElement> {
         let mut r = self.bn;
         r = BIG::modneg(&r, &BIG::new_ints(&CURVE_ORDER));
-        Ok(GroupOrderElement {
-            bn: r
-        })
+        Ok(GroupOrderElement { bn: r })
     }
 
     pub fn to_string(&self) -> UrsaCryptoResult<String> {
@@ -470,7 +459,7 @@ impl GroupOrderElement {
 
     pub fn from_string(str: &str) -> UrsaCryptoResult<GroupOrderElement> {
         Ok(GroupOrderElement {
-            bn: BIG::from_hex(str.to_string())
+            bn: BIG::from_hex(str.to_string()),
         })
     }
 
@@ -483,7 +472,10 @@ impl GroupOrderElement {
 
     pub fn from_bytes(b: &[u8]) -> UrsaCryptoResult<GroupOrderElement> {
         if b.len() > Self::BYTES_REPR_SIZE {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Invalid len of bytes representation for GroupOrderElement"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Invalid len of bytes representation for GroupOrderElement",
+            ));
         }
         let mut vec = b.to_vec();
         let len = vec.len();
@@ -491,17 +483,13 @@ impl GroupOrderElement {
             let diff = MODBYTES - len;
             let mut result = vec![0; diff];
             result.append(&mut vec);
-            return Ok(
-                GroupOrderElement {
-                    bn: BIG::frombytes(&result)
-                }
-            );
+            return Ok(GroupOrderElement {
+                bn: BIG::frombytes(&result),
+            });
         }
-        Ok(
-            GroupOrderElement {
-                bn: BIG::frombytes(b)
-            }
-        )
+        Ok(GroupOrderElement {
+            bn: BIG::frombytes(b),
+        })
     }
 }
 
@@ -514,14 +502,23 @@ impl Debug for GroupOrderElement {
 
 #[cfg(feature = "serialization")]
 impl Serialize for GroupOrderElement {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_newtype_struct("GroupOrderElement", &self.to_string().map_err(SError::custom)?)
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_newtype_struct(
+            "GroupOrderElement",
+            &self.to_string().map_err(SError::custom)?,
+        )
     }
 }
 
 #[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for GroupOrderElement {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
         struct GroupOrderElementVisitor;
 
         impl<'a> Visitor<'a> for GroupOrderElementVisitor {
@@ -532,7 +529,8 @@ impl<'a> Deserialize<'a> for GroupOrderElement {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<GroupOrderElement, E>
-                where E: DError
+            where
+                E: DError,
             {
                 Ok(GroupOrderElement::from_string(value).map_err(DError::custom)?)
             }
@@ -544,7 +542,7 @@ impl<'a> Deserialize<'a> for GroupOrderElement {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Pair {
-    pair: FP12
+    pair: FP12,
 }
 
 impl Pair {
@@ -554,9 +552,7 @@ impl Pair {
         let mut result = fexp(&ate(&q.point, &p.point));
         result.reduce();
 
-        Ok(Pair {
-            pair: result
-        })
+        Ok(Pair { pair: result })
     }
 
     /// e() * e()
@@ -564,15 +560,13 @@ impl Pair {
         let mut base = self.pair;
         base.mul(&b.pair);
         base.reduce();
-        Ok(Pair {
-            pair: base
-        })
+        Ok(Pair { pair: base })
     }
 
     /// e() ^ GroupOrderElement
     pub fn pow(&self, b: &GroupOrderElement) -> UrsaCryptoResult<Pair> {
         Ok(Pair {
-            pair: gtpow(&self.pair, &b.bn)
+            pair: gtpow(&self.pair, &b.bn),
         })
     }
 
@@ -580,9 +574,7 @@ impl Pair {
     pub fn inverse(&self) -> UrsaCryptoResult<Pair> {
         let mut r = self.pair;
         r.conj();
-        Ok(Pair {
-            pair: r
-        })
+        Ok(Pair { pair: r })
     }
 
     pub fn to_string(&self) -> UrsaCryptoResult<String> {
@@ -591,7 +583,7 @@ impl Pair {
 
     pub fn from_string(str: &str) -> UrsaCryptoResult<Pair> {
         Ok(Pair {
-            pair: FP12::from_hex(str.to_string())
+            pair: FP12::from_hex(str.to_string()),
         })
     }
 
@@ -611,14 +603,20 @@ impl Debug for Pair {
 
 #[cfg(feature = "serialization")]
 impl Serialize for Pair {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_newtype_struct("Pair", &self.to_string().map_err(SError::custom)?)
     }
 }
 
 #[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for Pair {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
         struct PairVisitor;
 
         impl<'a> Visitor<'a> for PairVisitor {
@@ -629,7 +627,8 @@ impl<'a> Deserialize<'a> for Pair {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Pair, E>
-                where E: DError
+            where
+                E: DError,
             {
                 Ok(Pair::from_string(value).map_err(DError::custom)?)
             }
@@ -656,7 +655,10 @@ mod tests {
         let p = PointG1::new().unwrap();
         let q = PointG2::new().unwrap();
         let left = Pair::pair(&p.mul(&a).unwrap(), &q.mul(&b).unwrap()).unwrap();
-        let right = Pair::pair(&p, &q).unwrap().pow(&a.mul_mod(&b).unwrap()).unwrap();
+        let right = Pair::pair(&p, &q)
+            .unwrap()
+            .pow(&a.mul_mod(&b).unwrap())
+            .unwrap();
         assert_eq!(left, right);
     }
 
@@ -708,27 +710,30 @@ mod serialization_tests {
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct TestGroupOrderElementStructure {
-        field: GroupOrderElement
+        field: GroupOrderElement,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct TestPointG1Structure {
-        field: PointG1
+        field: PointG1,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct TestPointG2Structure {
-        field: PointG2
+        field: PointG2,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct TestPairStructure {
-        field: Pair
+        field: Pair,
     }
 
     #[test]
     fn from_bytes_to_bytes_works_for_group_order_element() {
-        let vec = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 116, 221, 243, 243, 0, 77, 170, 65, 179, 245, 119, 182, 251, 185, 78, 98];
+        let vec = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 116, 221, 243, 243, 0, 77, 170, 65,
+            179, 245, 119, 182, 251, 185, 78, 98,
+        ];
         let bytes = GroupOrderElement::from_bytes(&vec).unwrap();
         let result = bytes.to_bytes().unwrap();
         assert_eq!(vec, result);
@@ -737,9 +742,13 @@ mod serialization_tests {
     #[test]
     fn serialize_deserialize_works_for_group_order_element() {
         let structure = TestGroupOrderElementStructure {
-            field: GroupOrderElement::from_string("09181F00DD41F2F92026FC20E189DE31926EEE6E05C6A17E676556E08075C6111").unwrap()
+            field: GroupOrderElement::from_string(
+                "09181F00DD41F2F92026FC20E189DE31926EEE6E05C6A17E676556E08075C6111",
+            )
+            .unwrap(),
         };
-        let deserialized: TestGroupOrderElementStructure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
+        let deserialized: TestGroupOrderElementStructure =
+            serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
 
         assert_eq!(structure, deserialized);
     }
@@ -750,7 +759,8 @@ mod serialization_tests {
             field: PointG1::from_string("1 09181F00DD41F2F92026FC20E189DE31926EEE6E05C6A17E676556E08075C6 1 09BC971251F977993486B19600760C4F972925D98934EA6B2D0BEC671398C0 1 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8").unwrap()
         };
 
-        let deserialized: TestPointG1Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
+        let deserialized: TestPointG1Structure =
+            serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
 
         assert_eq!(structure, deserialized);
     }
@@ -760,7 +770,8 @@ mod serialization_tests {
         let structure = TestPointG2Structure {
             field: PointG2::from_string("1 16027A65C15E16E00BFCAD948F216B5CFBE07B98876D8889A5DEE03DE7C57B 1 0EC9DBC2286A9485A0DA8525C5BE0F88E27C2B3C337E522DDC170C1764D615 1 1A021C8EFE70DCC7F81DD8E8CDC74F3D64E63E886C73B3A8B9849696E99FF3 1 2505CB0CFAAE75ACCAF60CB5A9F7E7A8250918155886E7FFF9A32D7B5A0500 1 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8 1 00000000000000000000000000000000000000000000000000000000000000").unwrap()
         };
-        let deserialized: TestPointG2Structure = serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
+        let deserialized: TestPointG2Structure =
+            serde_json::from_str(&serde_json::to_string(&structure).unwrap()).unwrap();
 
         assert_eq!(structure, deserialized);
     }
@@ -783,9 +794,10 @@ mod serialization_tests {
             point: PointG2::from_string("1 16027A65C15E16E00BFCAD948F216B5CFBE07B98876D8889A5DEE03DE7C57B 1 0EC9DBC2286A9485A0DA8525C5BE0F88E27C2B3C337E522DDC170C1764D615 1 1A021C8EFE70DCC7F81DD8E8CDC74F3D64E63E886C73B3A8B9849696E99FF3 1 2505CB0CFAAE75ACCAF60CB5A9F7E7A8250918155886E7FFF9A32D7B5A0500 1 095E45DDF417D05FB10933FFC63D474548B7FFFF7888802F07FFFFFF7D07A8 1 00000000000000000000000000000000000000000000000000000000000000").unwrap().point
         };
         let pair = TestPairStructure {
-            field: Pair::pair(&point_g1, &point_g2).unwrap()
+            field: Pair::pair(&point_g1, &point_g2).unwrap(),
         };
-        let deserialized: TestPairStructure = serde_json::from_str(&serde_json::to_string(&pair).unwrap()).unwrap();
+        let deserialized: TestPairStructure =
+            serde_json::from_str(&serde_json::to_string(&pair).unwrap()).unwrap();
 
         assert_eq!(pair, deserialized);
     }

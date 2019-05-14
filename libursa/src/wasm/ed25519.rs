@@ -1,10 +1,10 @@
-use signatures::SignatureScheme;
+use keys::{KeyGenOption, PrivateKey, PublicKey};
 use signatures::ed25519::Ed25519Sha512 as Ed25519Sha512Impl;
-use keys::{KeyGenOption, PublicKey, PrivateKey};
+use signatures::SignatureScheme;
 
 use wasm_bindgen::prelude::*;
 
-use super::{KeyPair, WasmPublicKey, WasmPrivateKey};
+use super::{KeyPair, WasmPrivateKey, WasmPublicKey};
 
 #[wasm_bindgen]
 pub struct Ed25519Sha512(Ed25519Sha512Impl);
@@ -32,18 +32,25 @@ impl Ed25519Sha512 {
 
     pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
         let sk = PrivateKey::from(sk);
-        let (pk, _) = maperr!(self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
+        let (pk, _) = maperr!(self
+            .0
+            .keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
         let pk = WasmPublicKey::from(&pk);
         Ok(pk)
     }
 
-    pub fn sign(&self, message: &[u8], sk: &WasmPrivateKey)-> Result<Vec<u8>, JsValue> {
+    pub fn sign(&self, message: &[u8], sk: &WasmPrivateKey) -> Result<Vec<u8>, JsValue> {
         let sk = PrivateKey::from(sk);
         let sig = maperr!(self.0.sign(message, &sk));
         Ok(sig)
     }
 
-    pub fn verify(&self, message: &[u8], signature: &[u8], pk: &WasmPublicKey) -> Result<bool, JsValue> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        pk: &WasmPublicKey,
+    ) -> Result<bool, JsValue> {
         let pk = PublicKey::from(pk);
         Ok(maperr!(self.0.verify(message, signature, &pk)))
     }

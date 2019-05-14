@@ -1,17 +1,17 @@
+extern crate log;
 #[cfg(feature = "serialization")]
 extern crate serde_json;
-extern crate log;
 
 #[cfg(feature = "ffi")]
 use ffi::ErrorCode;
 
-use std::fmt;
 use std::cell::RefCell;
-#[cfg(feature = "ffi")]
-use std::ptr;
 use std::ffi::CString;
+use std::fmt;
 #[cfg(feature = "ffi")]
 use std::os::raw::c_char;
+#[cfg(feature = "ffi")]
+use std::ptr;
 
 use failure::{Backtrace, Context, Fail};
 
@@ -20,12 +20,17 @@ use utils::ctypes;
 
 #[cfg(feature = "ffi")]
 pub mod prelude {
-    pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult, set_current_error, get_current_error_c_json};
+    pub use super::{
+        err_msg, get_current_error_c_json, set_current_error, UrsaCryptoError, UrsaCryptoErrorExt,
+        UrsaCryptoErrorKind, UrsaCryptoResult,
+    };
 }
 
 #[cfg(not(feature = "ffi"))]
 pub mod prelude {
-    pub use super::{err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult};
+    pub use super::{
+        err_msg, UrsaCryptoError, UrsaCryptoErrorExt, UrsaCryptoErrorKind, UrsaCryptoResult,
+    };
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
@@ -52,7 +57,7 @@ pub enum UrsaCryptoErrorKind {
 
 #[derive(Debug)]
 pub struct UrsaCryptoError {
-    inner: Context<UrsaCryptoErrorKind>
+    inner: Context<UrsaCryptoErrorKind>,
 }
 
 impl Fail for UrsaCryptoError {
@@ -67,8 +72,12 @@ impl Fail for UrsaCryptoError {
 
 impl UrsaCryptoError {
     pub fn from_msg<D>(kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
-        where D: fmt::Display + fmt::Debug + Send + Sync + 'static {
-        UrsaCryptoError { inner: Context::new(msg).context(kind) }
+    where
+        D: fmt::Display + fmt::Debug + Send + Sync + 'static,
+    {
+        UrsaCryptoError {
+            inner: Context::new(msg).context(kind),
+        }
     }
 
     pub fn kind(&self) -> UrsaCryptoErrorKind {
@@ -94,7 +103,9 @@ impl fmt::Display for UrsaCryptoError {
 }
 
 pub fn err_msg<D>(kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
-    where D: fmt::Display + fmt::Debug + Send + Sync + 'static {
+where
+    D: fmt::Display + fmt::Debug + Send + Sync + 'static,
+{
     UrsaCryptoError::from_msg(kind, msg)
 }
 
@@ -116,26 +127,29 @@ impl From<UrsaCryptoErrorKind> for ErrorCode {
         match code {
             UrsaCryptoErrorKind::InvalidState => ErrorCode::CommonInvalidState,
             UrsaCryptoErrorKind::InvalidStructure => ErrorCode::CommonInvalidStructure,
-            UrsaCryptoErrorKind::InvalidParam(num) =>
-                match num {
-                    1 => ErrorCode::CommonInvalidParam1,
-                    2 => ErrorCode::CommonInvalidParam2,
-                    3 => ErrorCode::CommonInvalidParam3,
-                    4 => ErrorCode::CommonInvalidParam4,
-                    5 => ErrorCode::CommonInvalidParam5,
-                    6 => ErrorCode::CommonInvalidParam6,
-                    7 => ErrorCode::CommonInvalidParam7,
-                    8 => ErrorCode::CommonInvalidParam8,
-                    9 => ErrorCode::CommonInvalidParam9,
-                    10 => ErrorCode::CommonInvalidParam10,
-                    11 => ErrorCode::CommonInvalidParam11,
-                    12 => ErrorCode::CommonInvalidParam12,
-                    _ => ErrorCode::CommonInvalidState
-                },
+            UrsaCryptoErrorKind::InvalidParam(num) => match num {
+                1 => ErrorCode::CommonInvalidParam1,
+                2 => ErrorCode::CommonInvalidParam2,
+                3 => ErrorCode::CommonInvalidParam3,
+                4 => ErrorCode::CommonInvalidParam4,
+                5 => ErrorCode::CommonInvalidParam5,
+                6 => ErrorCode::CommonInvalidParam6,
+                7 => ErrorCode::CommonInvalidParam7,
+                8 => ErrorCode::CommonInvalidParam8,
+                9 => ErrorCode::CommonInvalidParam9,
+                10 => ErrorCode::CommonInvalidParam10,
+                11 => ErrorCode::CommonInvalidParam11,
+                12 => ErrorCode::CommonInvalidParam12,
+                _ => ErrorCode::CommonInvalidState,
+            },
             UrsaCryptoErrorKind::IOError => ErrorCode::CommonIOError,
             UrsaCryptoErrorKind::ProofRejected => ErrorCode::AnoncredsProofRejected,
-            UrsaCryptoErrorKind::RevocationAccumulatorIsFull => ErrorCode::AnoncredsRevocationAccumulatorIsFull,
-            UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex => ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex,
+            UrsaCryptoErrorKind::RevocationAccumulatorIsFull => {
+                ErrorCode::AnoncredsRevocationAccumulatorIsFull
+            }
+            UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex => {
+                ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex
+            }
             UrsaCryptoErrorKind::CredentialRevoked => ErrorCode::AnoncredsCredentialRevoked,
         }
     }
@@ -161,10 +175,14 @@ impl From<ErrorCode> for UrsaCryptoErrorKind {
             ErrorCode::CommonInvalidParam12 => UrsaCryptoErrorKind::InvalidParam(12),
             ErrorCode::CommonIOError => UrsaCryptoErrorKind::IOError,
             ErrorCode::AnoncredsProofRejected => UrsaCryptoErrorKind::ProofRejected,
-            ErrorCode::AnoncredsRevocationAccumulatorIsFull => UrsaCryptoErrorKind::RevocationAccumulatorIsFull,
-            ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex => UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex,
+            ErrorCode::AnoncredsRevocationAccumulatorIsFull => {
+                UrsaCryptoErrorKind::RevocationAccumulatorIsFull
+            }
+            ErrorCode::AnoncredsInvalidRevocationAccumulatorIndex => {
+                UrsaCryptoErrorKind::InvalidRevocationAccumulatorIndex
+            }
             ErrorCode::AnoncredsCredentialRevoked => UrsaCryptoErrorKind::CredentialRevoked,
-            _code => UrsaCryptoErrorKind::InvalidState
+            _code => UrsaCryptoErrorKind::InvalidState,
         }
     }
 }
@@ -181,12 +199,19 @@ pub type UrsaCryptoResult<T> = Result<T, UrsaCryptoError>;
 
 /// Extension methods for `Error`.
 pub trait UrsaCryptoErrorExt {
-    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError where D: fmt::Display + Send + Sync + 'static;
+    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
+    where
+        D: fmt::Display + Send + Sync + 'static;
 }
 
-impl<E> UrsaCryptoErrorExt for E where E: Fail
+impl<E> UrsaCryptoErrorExt for E
+where
+    E: Fail,
 {
-    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError where D: fmt::Display + Send + Sync + 'static {
+    fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
+    where
+        D: fmt::Display + Send + Sync + 'static,
+    {
         self.context(msg).context(kind).into()
     }
 }
@@ -201,7 +226,8 @@ pub fn set_current_error(err: &UrsaCryptoError) {
         let error_json = json!({
             "message": err.to_string(),
             "backtrace": err.backtrace().map(|bt| bt.to_string())
-        }).to_string();
+        })
+        .to_string();
         error.replace(Some(ctypes::string_to_cstring(error_json)));
     });
 }
@@ -210,9 +236,7 @@ pub fn set_current_error(err: &UrsaCryptoError) {
 pub fn get_current_error_c_json() -> *const c_char {
     let mut value = ptr::null();
 
-    CURRENT_ERROR_C_JSON.with(|err|
-        err.borrow().as_ref().map(|err| value = err.as_ptr())
-    );
+    CURRENT_ERROR_C_JSON.with(|err| err.borrow().as_ref().map(|err| value = err.as_ptr()));
 
     value
 }

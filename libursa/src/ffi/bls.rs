@@ -15,7 +15,7 @@ use std::slice;
 /// # Arguments
 /// * `gen_p` - Reference that will contain generator instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_generator_new(gen_p: *mut *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_generator_new(gen_p: *mut *const c_void) -> ErrorCode {
     trace!("ursa_bls_generator_new: >>> gen_p: {:?}", gen_p);
 
     check_useful_c_ptr!(gen_p, ErrorCode::CommonInvalidParam1);
@@ -29,7 +29,7 @@ pub extern fn ursa_bls_generator_new(gen_p: *mut *const c_void) -> ErrorCode {
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_generator_new: <<< res: {:?}", res);
@@ -45,12 +45,24 @@ pub extern fn ursa_bls_generator_new(gen_p: *mut *const c_void) -> ErrorCode {
 /// * `bytes_len` - Bytes buffer len
 /// * `gen_p` - Reference that will contain generator instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_generator_from_bytes(bytes: *const u8, bytes_len: usize,
-                                                   gen_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_generator_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}", bytes, bytes_len, gen_p);
+pub extern "C" fn ursa_bls_generator_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    gen_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_generator_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}",
+        bytes,
+        bytes_len,
+        gen_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(gen_p, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_generator_from_bytes: bytes: {:?}", bytes);
@@ -64,7 +76,7 @@ pub extern fn ursa_bls_generator_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_generator_from_bytes: <<< res: {:?}", res);
@@ -80,9 +92,17 @@ pub extern fn ursa_bls_generator_from_bytes(bytes: *const u8, bytes_len: usize,
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_generator_as_bytes(gen: *const c_void,
-                                                 bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_generator_as_bytes: >>> gen: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", gen, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_generator_as_bytes(
+    gen: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_generator_as_bytes: >>> gen: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        gen,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
@@ -106,12 +126,14 @@ pub extern fn ursa_bls_generator_as_bytes(gen: *const c_void,
 /// # Arguments
 /// * `gen` - Generator instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_generator_free(gen: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_generator_free(gen: *const c_void) -> ErrorCode {
     trace!("ursa_bls_generator_free: >>> gen: {:?}", gen);
 
     check_useful_c_ptr!(gen, ErrorCode::CommonInvalidParam1);
 
-    unsafe { Box::from_raw(gen as *mut Generator); }
+    unsafe {
+        Box::from_raw(gen as *mut Generator);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_generator_free: <<< res: {:?}", res);
@@ -127,13 +149,24 @@ pub extern fn ursa_bls_generator_free(gen: *const c_void) -> ErrorCode {
 /// * `seed` - Seed buffer len.
 /// * `gen_p` - Reference that will contain sign key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_sign_key_new(seed: *const u8,
-                                           seed_len: usize,
-                                           sign_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_sign_key_new: >>> seed: {:?}, seed_len: {:?}, sign_key_p: {:?}", seed, seed_len, sign_key_p);
+pub extern "C" fn ursa_bls_sign_key_new(
+    seed: *const u8,
+    seed_len: usize,
+    sign_key_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_sign_key_new: >>> seed: {:?}, seed_len: {:?}, sign_key_p: {:?}",
+        seed,
+        seed_len,
+        sign_key_p
+    );
 
-    check_useful_opt_c_byte_array!(seed, seed_len,
-                                   ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_opt_c_byte_array!(
+        seed,
+        seed_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
 
     trace!("ursa_bls_sign_key_new: seed: {:?}", secret!(&seed));
 
@@ -146,7 +179,7 @@ pub extern fn ursa_bls_sign_key_new(seed: *const u8,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_sign_key_new: <<< res: {:?}", res);
@@ -162,26 +195,44 @@ pub extern fn ursa_bls_sign_key_new(seed: *const u8,
 /// * `bytes_len` - Bytes buffer len
 /// * `sign_key_p` - Reference that will contain sign key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: usize,
-                                                  sign_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_sign_key_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}", bytes, bytes_len, sign_key_p);
+pub extern "C" fn ursa_bls_sign_key_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    sign_key_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_sign_key_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}",
+        bytes,
+        bytes_len,
+        sign_key_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(sign_key_p, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_sign_key_from_bytes: bytes: {:?}", secret!(&bytes));
 
     let res = match SignKey::from_bytes(bytes) {
         Ok(sign_key) => {
-            trace!("ursa_bls_sign_key_from_bytes: sign_key: {:?}", secret!(&sign_key));
+            trace!(
+                "ursa_bls_sign_key_from_bytes: sign_key: {:?}",
+                secret!(&sign_key)
+            );
             unsafe {
                 *sign_key_p = Box::into_raw(Box::new(sign_key)) as *const c_void;
-                trace!("ursa_bls_sign_key_from_bytes: *sign_key_p: {:?}", *sign_key_p);
+                trace!(
+                    "ursa_bls_sign_key_from_bytes: *sign_key_p: {:?}",
+                    *sign_key_p
+                );
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_sign_key_from_bytes: <<< res: {:?}", res);
@@ -197,15 +248,26 @@ pub extern fn ursa_bls_sign_key_from_bytes(bytes: *const u8, bytes_len: usize,
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_sign_key_as_bytes(sign_key: *const c_void,
-                                                bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_sign_key_as_bytes: >>> sign_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", sign_key, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_sign_key_as_bytes(
+    sign_key: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_sign_key_as_bytes: >>> sign_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        sign_key,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
     check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
-    trace!("ursa_bls_sign_key_as_bytes: sign_key: {:?}", secret!(sign_key));
+    trace!(
+        "ursa_bls_sign_key_as_bytes: sign_key: {:?}",
+        secret!(sign_key)
+    );
 
     unsafe {
         *bytes_p = sign_key.as_bytes().as_ptr();
@@ -223,12 +285,17 @@ pub extern fn ursa_bls_sign_key_as_bytes(sign_key: *const c_void,
 /// # Arguments
 /// * `sign_key` - Sign key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(sign_key, ErrorCode::CommonInvalidParam1);
 
-    trace!("ursa_bls_sign_key_free: >>> sign_key: {:?}", secret!(sign_key));
+    trace!(
+        "ursa_bls_sign_key_free: >>> sign_key: {:?}",
+        secret!(sign_key)
+    );
 
-    unsafe { Box::from_raw(sign_key as *mut SignKey); }
+    unsafe {
+        Box::from_raw(sign_key as *mut SignKey);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_sign_key_free: <<< res: {:?}", res);
@@ -244,15 +311,26 @@ pub extern fn ursa_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
 /// * `sign_key` - Sign key instance
 /// * `ver_key_p` - Reference that will contain verification key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_ver_key_new(gen: *const c_void,
-                                          sign_key: *const c_void,
-                                          ver_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_ver_key_new: >>> gen: {:?}, sign_key: {:?}, ver_key_p: {:?}", gen, sign_key, ver_key_p);
+pub extern "C" fn ursa_bls_ver_key_new(
+    gen: *const c_void,
+    sign_key: *const c_void,
+    ver_key_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_ver_key_new: >>> gen: {:?}, sign_key: {:?}, ver_key_p: {:?}",
+        gen,
+        sign_key,
+        ver_key_p
+    );
 
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam2);
 
-    trace!("ursa_bls_ver_key_new: gen: {:?}, sign_key: {:?}", gen, secret!(sign_key));
+    trace!(
+        "ursa_bls_ver_key_new: gen: {:?}, sign_key: {:?}",
+        gen,
+        secret!(sign_key)
+    );
 
     let res = match VerKey::new(gen, sign_key) {
         Ok(ver_key) => {
@@ -263,7 +341,7 @@ pub extern fn ursa_bls_ver_key_new(gen: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_sign_key_new: <<< res: {:?}", res);
@@ -279,12 +357,24 @@ pub extern fn ursa_bls_ver_key_new(gen: *const c_void,
 /// * `bytes_len` - Bytes buffer len
 /// * `ver_key_p` - Reference that will contain verification key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: usize,
-                                                 ver_key_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_ver_key_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}", bytes, bytes_len, ver_key_p);
+pub extern "C" fn ursa_bls_ver_key_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    ver_key_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_ver_key_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}",
+        bytes,
+        bytes_len,
+        ver_key_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(ver_key_p, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_ver_key_from_bytes: bytes: {:?}", bytes);
@@ -298,7 +388,7 @@ pub extern fn ursa_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_ver_key_from_bytes: <<< res: {:?}", res);
@@ -314,9 +404,17 @@ pub extern fn ursa_bls_ver_key_from_bytes(bytes: *const u8, bytes_len: usize,
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_ver_key_as_bytes(ver_key: *const c_void,
-                                               bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_sign_key_as_bytes: >>> ver_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", ver_key, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_ver_key_as_bytes(
+    ver_key: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_sign_key_as_bytes: >>> ver_key: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        ver_key,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
@@ -340,12 +438,14 @@ pub extern fn ursa_bls_ver_key_as_bytes(ver_key: *const c_void,
 /// # Arguments
 /// * `ver_key` - Verification key instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(ver_key, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_ver_key_free: >>> ver_key: {:?}", ver_key);
 
-    unsafe { Box::from_raw(ver_key as *mut VerKey); }
+    unsafe {
+        Box::from_raw(ver_key as *mut VerKey);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_ver_key_free: <<< res: {:?}", res);
@@ -361,15 +461,26 @@ pub extern fn ursa_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode {
 /// * `sign_key` - Sign key instance
 /// * `pop_p` - Reference that will contain proof of possession instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_pop_new(ver_key: *const c_void,
-                                      sign_key: *const c_void,
-                                      pop_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_pop_new: >>> ver_key: {:?}, sign_key: {:?}, pop_p: {:?}", ver_key, sign_key, pop_p);
+pub extern "C" fn ursa_bls_pop_new(
+    ver_key: *const c_void,
+    sign_key: *const c_void,
+    pop_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_pop_new: >>> ver_key: {:?}, sign_key: {:?}, pop_p: {:?}",
+        ver_key,
+        sign_key,
+        pop_p
+    );
 
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam2);
 
-    trace!("ursa_bls_pop_new: ver_key: {:?}, sign_key: {:?}", ver_key, sign_key);
+    trace!(
+        "ursa_bls_pop_new: ver_key: {:?}, sign_key: {:?}",
+        ver_key,
+        sign_key
+    );
 
     let res = match ProofOfPossession::new(ver_key, sign_key) {
         Ok(pop) => {
@@ -380,7 +491,7 @@ pub extern fn ursa_bls_pop_new(ver_key: *const c_void,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_pop_new: <<< res: {:?}", res);
@@ -396,12 +507,24 @@ pub extern fn ursa_bls_pop_new(ver_key: *const c_void,
 /// * `bytes_len` - Bytes buffer len
 /// * `pop_p` - Reference that will contain proof of possession instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_pop_from_bytes(bytes: *const u8, bytes_len: usize,
-                                             pop_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_pop_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}", bytes, bytes_len, pop_p);
+pub extern "C" fn ursa_bls_pop_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    pop_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_pop_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, gen_p: {:?}",
+        bytes,
+        bytes_len,
+        pop_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(pop_p, ErrorCode::CommonInvalidParam3);
 
     trace!("ursa_bls_pop_from_bytes: bytes: {:?}", bytes);
@@ -415,7 +538,7 @@ pub extern fn ursa_bls_pop_from_bytes(bytes: *const u8, bytes_len: usize,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_pop_from_bytes: <<< res: {:?}", res);
@@ -431,9 +554,17 @@ pub extern fn ursa_bls_pop_from_bytes(bytes: *const u8, bytes_len: usize,
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_pop_as_bytes(pop: *const c_void,
-                                           bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_pop_as_bytes: >>> pop: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", pop, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_pop_as_bytes(
+    pop: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_pop_as_bytes: >>> pop: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        pop,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_reference!(pop, ProofOfPossession, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
@@ -457,12 +588,14 @@ pub extern fn ursa_bls_pop_as_bytes(pop: *const c_void,
 /// # Arguments
 /// * `pop` - Proof of possession instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_pop_free(pop: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_pop_free(pop: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(pop, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_pop_free: >>> pop: {:?}", pop);
 
-    unsafe { Box::from_raw(pop as *mut ProofOfPossession); }
+    unsafe {
+        Box::from_raw(pop as *mut ProofOfPossession);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_pop_free: <<< res: {:?}", res);
@@ -478,12 +611,24 @@ pub extern fn ursa_bls_pop_free(pop: *const c_void) -> ErrorCode {
 /// * `bytes_len` - Bytes buffer len
 /// * `signature_p` - Reference that will contain signature instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_signature_from_bytes(bytes: *const u8, bytes_len: usize,
-                                                   signature_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_signature_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, signature_p: {:?}", bytes, bytes_len, signature_p);
+pub extern "C" fn ursa_bls_signature_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    signature_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_signature_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, signature_p: {:?}",
+        bytes,
+        bytes_len,
+        signature_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(signature_p, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_signature_from_bytes: bytes: {:?}", bytes);
@@ -493,11 +638,14 @@ pub extern fn ursa_bls_signature_from_bytes(bytes: *const u8, bytes_len: usize,
             trace!("ursa_bls_signature_from_bytes: signature: {:?}", signature);
             unsafe {
                 *signature_p = Box::into_raw(Box::new(signature)) as *const c_void;
-                trace!("ursa_bls_signature_from_bytes: *signature_p: {:?}", *signature_p);
+                trace!(
+                    "ursa_bls_signature_from_bytes: *signature_p: {:?}",
+                    *signature_p
+                );
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_signature_from_bytes: <<< res: {:?}", res);
@@ -513,9 +661,17 @@ pub extern fn ursa_bls_signature_from_bytes(bytes: *const u8, bytes_len: usize,
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_signature_as_bytes(signature: *const c_void,
-                                                 bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_signature_as_bytes: >>> signature: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", signature, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_signature_as_bytes(
+    signature: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_signature_as_bytes: >>> signature: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        signature,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_reference!(signature, Signature, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
@@ -539,12 +695,14 @@ pub extern fn ursa_bls_signature_as_bytes(signature: *const c_void,
 /// # Arguments
 /// * `signature` - Signature instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_signature_free(signature: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_signature_free(signature: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(signature, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_signature_free: >>> signature: {:?}", signature);
 
-    unsafe { Box::from_raw(signature as *mut Signature); }
+    unsafe {
+        Box::from_raw(signature as *mut Signature);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_signature_free: <<< res: {:?}", res);
@@ -560,12 +718,20 @@ pub extern fn ursa_bls_signature_free(signature: *const c_void) -> ErrorCode {
 /// * `signatures_len` - Signature instance pointers array len
 /// * `multi_sig_p` - Reference that will contain multi signature instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_multi_signature_new(signatures: *const *const c_void,
-                                                  signatures_len: usize,
-                                                  multi_sig_p: *mut *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_multi_signature_new(
+    signatures: *const *const c_void,
+    signatures_len: usize,
+    multi_sig_p: *mut *const c_void,
+) -> ErrorCode {
     trace!("ursa_bls_multi_signature_new: >>> signatures: {:?}, signatures_len: {:?}, multi_sig_p: {:?}", signatures, signatures_len, multi_sig_p);
 
-    check_useful_c_reference_array!(signatures, signatures_len, Signature, ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_reference_array!(
+        signatures,
+        signatures_len,
+        Signature,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(multi_sig_p, ErrorCode::CommonInvalidParam3);
 
     trace!("ursa_bls_multi_signature_new: signatures: {:?}", signatures);
@@ -575,11 +741,14 @@ pub extern fn ursa_bls_multi_signature_new(signatures: *const *const c_void,
             trace!("ursa_bls_multi_signature_new: multi_sig: {:?}", multi_sig);
             unsafe {
                 *multi_sig_p = Box::into_raw(Box::new(multi_sig)) as *const c_void;
-                trace!("ursa_bls_multi_signature_new: *multi_sig_p: {:?}", *multi_sig_p);
+                trace!(
+                    "ursa_bls_multi_signature_new: *multi_sig_p: {:?}",
+                    *multi_sig_p
+                );
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_multi_signature_new: <<< res: {:?}", res);
@@ -595,26 +764,44 @@ pub extern fn ursa_bls_multi_signature_new(signatures: *const *const c_void,
 /// * `bytes_len` - Bytes buffer len
 /// * `multi_sig_p` - Reference that will contain multi signature instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_multi_signature_from_bytes(bytes: *const u8, bytes_len: usize,
-                                                         multi_sig_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_multi_signature_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, multi_sig_p: {:?}", bytes, bytes_len, multi_sig_p);
+pub extern "C" fn ursa_bls_multi_signature_from_bytes(
+    bytes: *const u8,
+    bytes_len: usize,
+    multi_sig_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_multi_signature_from_bytes: >>> bytes: {:?}, bytes_len: {:?}, multi_sig_p: {:?}",
+        bytes,
+        bytes_len,
+        multi_sig_p
+    );
 
-    check_useful_c_byte_array!(bytes, bytes_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        bytes,
+        bytes_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_ptr!(multi_sig_p, ErrorCode::CommonInvalidParam1);
 
     trace!("ursa_bls_multi_signature_from_bytes: bytes: {:?}", bytes);
 
     let res = match MultiSignature::from_bytes(bytes) {
         Ok(multi_sig) => {
-            trace!("ursa_bls_multi_signature_from_bytes: multi_sig: {:?}", multi_sig);
+            trace!(
+                "ursa_bls_multi_signature_from_bytes: multi_sig: {:?}",
+                multi_sig
+            );
             unsafe {
                 *multi_sig_p = Box::into_raw(Box::new(multi_sig)) as *const c_void;
-                trace!("ursa_bls_multi_signature_from_bytes: *multi_sig_p: {:?}", *multi_sig_p);
+                trace!(
+                    "ursa_bls_multi_signature_from_bytes: *multi_sig_p: {:?}",
+                    *multi_sig_p
+                );
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_multi_signature_from_bytes: <<< res: {:?}", res);
@@ -630,16 +817,27 @@ pub extern fn ursa_bls_multi_signature_from_bytes(bytes: *const u8, bytes_len: u
 /// * `bytes_p` - Pointer that will contains bytes buffer
 /// * `bytes_len_p` - Pointer that will contains bytes buffer len
 #[no_mangle]
-pub extern fn ursa_bls_multi_signature_as_bytes(multi_sig: *const c_void,
-                                                       bytes_p: *mut *const u8, bytes_len_p: *mut usize) -> ErrorCode {
-    trace!("ursa_bls_multi_signature_as_bytes: >>> multi_sig: {:?}, bytes_p: {:?}, bytes_len_p: {:?}", multi_sig, bytes_p, bytes_len_p);
+pub extern "C" fn ursa_bls_multi_signature_as_bytes(
+    multi_sig: *const c_void,
+    bytes_p: *mut *const u8,
+    bytes_len_p: *mut usize,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_multi_signature_as_bytes: >>> multi_sig: {:?}, bytes_p: {:?}, bytes_len_p: {:?}",
+        multi_sig,
+        bytes_p,
+        bytes_len_p
+    );
 
     check_useful_c_ptr!(multi_sig, ErrorCode::CommonInvalidParam1);
     check_useful_c_ptr!(bytes_p, ErrorCode::CommonInvalidParam2);
     check_useful_c_ptr!(bytes_len_p, ErrorCode::CommonInvalidParam3);
 
     let multi_sig = unsafe { &*(multi_sig as *const MultiSignature) };
-    trace!("ursa_bls_multi_signature_as_bytes: multi_sig: {:?}", multi_sig);
+    trace!(
+        "ursa_bls_multi_signature_as_bytes: multi_sig: {:?}",
+        multi_sig
+    );
 
     unsafe {
         *bytes_p = multi_sig.as_bytes().as_ptr();
@@ -657,12 +855,17 @@ pub extern fn ursa_bls_multi_signature_as_bytes(multi_sig: *const c_void,
 /// # Arguments
 /// * `multi_sig` - Multi signature instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_multi_signature_free(multi_sig: *const c_void) -> ErrorCode {
+pub extern "C" fn ursa_bls_multi_signature_free(multi_sig: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(multi_sig, ErrorCode::CommonInvalidParam1);
 
-    trace!("ursa_bls_multi_signature_free: >>> multi_sig: {:?}", multi_sig);
+    trace!(
+        "ursa_bls_multi_signature_free: >>> multi_sig: {:?}",
+        multi_sig
+    );
 
-    unsafe { Box::from_raw(multi_sig as *mut MultiSignature); }
+    unsafe {
+        Box::from_raw(multi_sig as *mut MultiSignature);
+    }
     let res = ErrorCode::Success;
 
     trace!("ursa_bls_multi_signature_free: <<< res: {:?}", res);
@@ -681,18 +884,34 @@ pub extern fn ursa_bls_multi_signature_free(multi_sig: *const c_void) -> ErrorCo
 /// * `sign_key` - Pointer to Sign Key instance
 /// * `signature_p` - Reference that will contain Signture Instance pointer
 #[no_mangle]
-pub extern fn ursa_bls_sign(message: *const u8,
-                                   message_len: usize,
-                                   sign_key: *const c_void,
-                                   signature_p: *mut *const c_void) -> ErrorCode {
-    trace!("ursa_bls_sign: >>> message: {:?}, message_len: {:?}, sign_key: {:?}, signature_p: {:?}", message, message_len, sign_key, signature_p);
+pub extern "C" fn ursa_bls_sign(
+    message: *const u8,
+    message_len: usize,
+    sign_key: *const c_void,
+    signature_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_sign: >>> message: {:?}, message_len: {:?}, sign_key: {:?}, signature_p: {:?}",
+        message,
+        message_len,
+        sign_key,
+        signature_p
+    );
 
-    check_useful_c_byte_array!(message, message_len,
-                               ErrorCode::CommonInvalidParam1, ErrorCode::CommonInvalidParam2);
+    check_useful_c_byte_array!(
+        message,
+        message_len,
+        ErrorCode::CommonInvalidParam1,
+        ErrorCode::CommonInvalidParam2
+    );
     check_useful_c_reference!(sign_key, SignKey, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(signature_p, ErrorCode::CommonInvalidParam5);
 
-    trace!("ursa_bls_sign: message: {:?}, sign_key: {:?}", message, secret!(sign_key));
+    trace!(
+        "ursa_bls_sign: message: {:?}, sign_key: {:?}",
+        message,
+        secret!(sign_key)
+    );
 
     let res = match Bls::sign(message, sign_key) {
         Ok(signature) => {
@@ -703,7 +922,7 @@ pub extern fn ursa_bls_sign(message: *const u8,
             }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_sign: <<< res: {:?}", res);
@@ -721,30 +940,44 @@ pub extern fn ursa_bls_sign(message: *const u8,
 /// * `gen` - Generator instance pointer
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn ursa_bls_verify(signature: *const c_void,
-                                     message: *const u8,
-                                     message_len: usize,
-                                     ver_key: *const c_void,
-                                     gen: *const c_void,
-                                     valid_p: *mut bool) -> ErrorCode {
+pub extern "C" fn ursa_bls_verify(
+    signature: *const c_void,
+    message: *const u8,
+    message_len: usize,
+    ver_key: *const c_void,
+    gen: *const c_void,
+    valid_p: *mut bool,
+) -> ErrorCode {
     trace!("ursa_bls_verify: >>> signature: {:?}, message: {:?}, message_len: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", signature, message, message_len, ver_key, gen, valid_p);
 
     check_useful_c_reference!(signature, Signature, ErrorCode::CommonInvalidParam1);
-    check_useful_c_byte_array!(message, message_len,
-                               ErrorCode::CommonInvalidParam2, ErrorCode::CommonInvalidParam3);
+    check_useful_c_byte_array!(
+        message,
+        message_len,
+        ErrorCode::CommonInvalidParam2,
+        ErrorCode::CommonInvalidParam3
+    );
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam4);
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam5);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam6);
 
-    trace!("ursa_bls_verify: signature: {:?}, message: {:?}, ver_key: {:?}, gen: {:?}", signature, message, ver_key, gen);
+    trace!(
+        "ursa_bls_verify: signature: {:?}, message: {:?}, ver_key: {:?}, gen: {:?}",
+        signature,
+        message,
+        ver_key,
+        gen
+    );
 
     let res = match Bls::verify(signature, message, ver_key, gen) {
         Ok(valid) => {
             trace!("ursa_bls_verify: valid: {:?}", valid);
-            unsafe { *valid_p = valid; }
+            unsafe {
+                *valid_p = valid;
+            }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_verify: <<< res: {:?}", res);
@@ -763,30 +996,51 @@ pub extern fn ursa_bls_verify(signature: *const c_void,
 /// * `gen` - Generator point instance
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn ursa_bls_verify_multi_sig(multi_sig: *const c_void,
-                                               message: *const u8,
-                                               message_len: usize,
-                                               ver_keys: *const *const c_void,
-                                               ver_keys_len: usize,
-                                               gen: *const c_void,
-                                               valid_p: *mut bool) -> ErrorCode {
+pub extern "C" fn ursa_bls_verify_multi_sig(
+    multi_sig: *const c_void,
+    message: *const u8,
+    message_len: usize,
+    ver_keys: *const *const c_void,
+    ver_keys_len: usize,
+    gen: *const c_void,
+    valid_p: *mut bool,
+) -> ErrorCode {
     trace!("ursa_bls_verify_multi_sig: >>> multi_sig: {:?}, message: {:?}, message_len: {:?}, ver_keys: {:?}, ver_keys_len: {:?}, gen: {:?}, valid_p: {:?}", multi_sig, message, message_len, ver_keys, ver_keys_len, gen, valid_p);
 
     check_useful_c_reference!(multi_sig, MultiSignature, ErrorCode::CommonInvalidParam1);
-    check_useful_c_byte_array!(message, message_len, ErrorCode::CommonInvalidParam2, ErrorCode::CommonInvalidParam3);
-    check_useful_c_reference_array!(ver_keys, ver_keys_len, VerKey, ErrorCode::CommonInvalidParam4, ErrorCode::CommonInvalidParam5);
+    check_useful_c_byte_array!(
+        message,
+        message_len,
+        ErrorCode::CommonInvalidParam2,
+        ErrorCode::CommonInvalidParam3
+    );
+    check_useful_c_reference_array!(
+        ver_keys,
+        ver_keys_len,
+        VerKey,
+        ErrorCode::CommonInvalidParam4,
+        ErrorCode::CommonInvalidParam5
+    );
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam6);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam7);
 
-    trace!("ursa_bls_verify_multi_sig: multi_sig: {:?}, message: {:?}, ver_keys: {:?}, gen: {:?}", multi_sig, message, ver_keys, gen);
+    trace!(
+        "ursa_bls_verify_multi_sig: multi_sig: {:?}, message: {:?}, ver_keys: {:?}, gen: {:?}",
+        multi_sig,
+        message,
+        ver_keys,
+        gen
+    );
 
     let res = match Bls::verify_multi_sig(multi_sig, message, &ver_keys, gen) {
         Ok(valid) => {
             trace!("ursa_bls_verify_multi_sig: valid: {:?}", valid);
-            unsafe { *valid_p = valid; }
+            unsafe {
+                *valid_p = valid;
+            }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_verify_multi_sig: <<< res: {:?}", res);
@@ -802,26 +1056,41 @@ pub extern fn ursa_bls_verify_multi_sig(multi_sig: *const c_void,
 /// * `gen` - Generator instance pointer
 /// * `valid_p` - Reference that will be filled with true - if signature valid or false otherwise.
 #[no_mangle]
-pub extern fn ursa_bls_verify_pop(pop: *const c_void,
-                                         ver_key: *const c_void,
-                                         gen: *const c_void,
-                                         valid_p: *mut bool) -> ErrorCode {
-    trace!("ursa_bls_verify_pop: >>> pop: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}", pop, ver_key, gen, valid_p);
+pub extern "C" fn ursa_bls_verify_pop(
+    pop: *const c_void,
+    ver_key: *const c_void,
+    gen: *const c_void,
+    valid_p: *mut bool,
+) -> ErrorCode {
+    trace!(
+        "ursa_bls_verify_pop: >>> pop: {:?}, ver_key: {:?}, gen: {:?}, valid_p: {:?}",
+        pop,
+        ver_key,
+        gen,
+        valid_p
+    );
 
     check_useful_c_reference!(pop, ProofOfPossession, ErrorCode::CommonInvalidParam1);
     check_useful_c_reference!(ver_key, VerKey, ErrorCode::CommonInvalidParam2);
     check_useful_c_reference!(gen, Generator, ErrorCode::CommonInvalidParam3);
     check_useful_c_ptr!(valid_p, ErrorCode::CommonInvalidParam4);
 
-    trace!("ursa_bls_verify_pop: pop: {:?}, ver_key: {:?}, gen: {:?}", pop, ver_key, gen);
+    trace!(
+        "ursa_bls_verify_pop: pop: {:?}, ver_key: {:?}, gen: {:?}",
+        pop,
+        ver_key,
+        gen
+    );
 
     let res = match Bls::verify_proof_of_posession(pop, ver_key, gen) {
         Ok(valid) => {
             trace!("ursa_bls_verify_pop: valid: {:?}", valid);
-            unsafe { *valid_p = valid; }
+            unsafe {
+                *valid_p = valid;
+            }
             ErrorCode::Success
         }
-        Err(err) => err.into()
+        Err(err) => err.into(),
     };
 
     trace!("ursa_bls_verify_pop: <<< res: {:?}", res);
@@ -914,9 +1183,10 @@ mod tests {
     fn ursa_bls_sign_key_new_works_for_seed() {
         let mut sign_key: *const c_void = ptr::null();
 
-        let seed_v = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-                          11, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-                          21, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31, 32];
+        let seed_v = vec![
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 2, 3, 4, 5, 6, 7, 8,
+            9, 10, 31, 32,
+        ];
         let seed = seed_v.as_ptr();
         let seed_len = seed_v.len();
 
@@ -1228,7 +1498,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!multi_sig.is_null());
 
@@ -1277,7 +1548,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!multi_sig.is_null());
 
@@ -1333,7 +1605,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut bytes: *const u8 = ptr::null();
@@ -1396,7 +1669,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
 
         let err_code = ursa_bls_sign_key_free(sign_key1);
@@ -1414,7 +1688,6 @@ mod tests {
         let err_code = ursa_bls_multi_signature_free(multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
     }
-
 
     #[test]
     fn ursa_bls_verify_works() {
@@ -1442,10 +1715,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = ursa_bls_verify(signature,
-                                              message, message_len,
-                                              ver_key,
-                                              gen, &mut valid);
+        let err_code = ursa_bls_verify(signature, message, message_len, ver_key, gen, &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(valid);
 
@@ -1494,10 +1764,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = ursa_bls_verify(signature,
-                                              message, message_len,
-                                              ver_key,
-                                              gen, &mut valid);
+        let err_code = ursa_bls_verify(signature, message, message_len, ver_key, gen, &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!valid);
 
@@ -1694,10 +1961,7 @@ mod tests {
 
         let mut valid = false;
 
-        let err_code = ursa_bls_verify_pop(pop,
-                                                  ver_key,
-                                                  gen,
-                                                  &mut valid);
+        let err_code = ursa_bls_verify_pop(pop, ver_key, gen, &mut valid);
         assert_eq!(err_code, ErrorCode::Success);
         assert!(valid);
 
@@ -1747,7 +2011,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut ver_key1: *const c_void = ptr::null();
@@ -1761,11 +2026,15 @@ mod tests {
         let ver_keys = [ver_key1, ver_key2];
         let mut valid = false;
 
-        let err_code = ursa_bls_verify_multi_sig(multi_sig,
-                                                        message, message_len,
-                                                        ver_keys.as_ptr(), ver_keys.len(),
-                                                        gen,
-                                                        &mut valid);
+        let err_code = ursa_bls_verify_multi_sig(
+            multi_sig,
+            message,
+            message_len,
+            ver_keys.as_ptr(),
+            ver_keys.len(),
+            gen,
+            &mut valid,
+        );
         assert_eq!(err_code, ErrorCode::Success);
         assert!(valid);
 
@@ -1833,7 +2102,8 @@ mod tests {
         let signatures = [signature1, signature2];
 
         let mut multi_sig: *const c_void = ptr::null();
-        let err_code = ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
+        let err_code =
+            ursa_bls_multi_signature_new(signatures.as_ptr(), signatures.len(), &mut multi_sig);
         assert_eq!(err_code, ErrorCode::Success);
 
         let mut ver_key1: *const c_void = ptr::null();
@@ -1847,11 +2117,15 @@ mod tests {
         let ver_keys = [ver_key1, ver_key2];
         let mut valid = false;
 
-        let err_code = ursa_bls_verify_multi_sig(multi_sig,
-                                                        message, message_len,
-                                                        ver_keys.as_ptr(), ver_keys.len(),
-                                                        gen,
-                                                        &mut valid);
+        let err_code = ursa_bls_verify_multi_sig(
+            multi_sig,
+            message,
+            message_len,
+            ver_keys.as_ptr(),
+            ver_keys.len(),
+            gen,
+            &mut valid,
+        );
         assert_eq!(err_code, ErrorCode::Success);
         assert!(!valid);
 
