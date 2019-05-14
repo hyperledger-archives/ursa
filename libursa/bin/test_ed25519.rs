@@ -1,5 +1,5 @@
-extern crate ursa;
 extern crate libsodium_ffi as ffi;
+extern crate ursa;
 
 use ursa::signatures::ed25519::Ed25519Sha512;
 use ursa::signatures::SignatureScheme;
@@ -32,16 +32,20 @@ fn main() {
     now = Instant::now();
     for _ in 0..trials {
         unsafe {
-            ffi::crypto_sign_ed25519_detached(signature.as_mut_ptr() as *mut u8,
-                                              0u64 as *mut u64,
-                                              letters.as_ptr() as *const u8,
-                                              letters.len() as u64,
-                                              s.as_ptr() as *const u8);
+            ffi::crypto_sign_ed25519_detached(
+                signature.as_mut_ptr() as *mut u8,
+                0u64 as *mut u64,
+                letters.as_ptr() as *const u8,
+                letters.len() as u64,
+                s.as_ptr() as *const u8,
+            );
 
-            ffi::crypto_sign_ed25519_verify_detached(signature.as_ptr() as *const u8,
-                                                     letters.as_ptr() as *const u8,
-                                                     letters.len() as u64,
-                                                     p.as_ptr() as *const u8)
+            ffi::crypto_sign_ed25519_verify_detached(
+                signature.as_ptr() as *const u8,
+                letters.as_ptr() as *const u8,
+                letters.len() as u64,
+                p.as_ptr() as *const u8,
+            )
         };
     }
 

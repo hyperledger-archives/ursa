@@ -2,42 +2,40 @@ use errors::prelude::*;
 
 use int_traits::IntTraits;
 
-use openssl::bn::{BigNum, BigNumRef, BigNumContext, MsbOption};
-use openssl::hash::{hash, MessageDigest, Hasher};
+use openssl::bn::{BigNum, BigNumContext, BigNumRef, MsbOption};
 use openssl::error::ErrorStack;
+use openssl::hash::{hash, Hasher, MessageDigest};
 
 #[cfg(feature = "serialization")]
-use serde::ser::{Serialize, Serializer, Error as SError};
+use serde::ser::{Error as SError, Serialize, Serializer};
 
 #[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Visitor, Error as DError};
+use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
 
-use std::fmt;
 use std::cmp::Ord;
 use std::cmp::Ordering;
+use std::fmt;
 
 pub struct BigNumberContext {
-    openssl_bn_context: BigNumContext
+    openssl_bn_context: BigNumContext,
 }
 
 #[derive(Debug)]
 pub struct BigNumber {
-    openssl_bn: BigNum
+    openssl_bn: BigNum,
 }
 
 impl BigNumber {
     pub fn new_context() -> UrsaCryptoResult<BigNumberContext> {
         let ctx = BigNumContext::new()?;
         Ok(BigNumberContext {
-            openssl_bn_context: ctx
+            openssl_bn_context: ctx,
         })
     }
 
     pub fn new() -> UrsaCryptoResult<BigNumber> {
         let bn = BigNum::new()?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn generate_prime(size: usize) -> UrsaCryptoResult<BigNumber> {
@@ -52,7 +50,10 @@ impl BigNumber {
         Ok(bn)
     }
 
-    pub fn generate_prime_in_range(start: &BigNumber, end: &BigNumber) -> UrsaCryptoResult<BigNumber> {
+    pub fn generate_prime_in_range(
+        start: &BigNumber,
+        end: &BigNumber,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut prime;
         let mut iteration = 0;
         let mut bn_ctx = BigNumber::new_context()?;
@@ -76,16 +77,19 @@ impl BigNumber {
         let prime_len = self.to_dec()?.len();
         let checks = prime_len.log2() as i32;
         match ctx {
-            Some(context) => Ok(self.openssl_bn.is_prime(checks, &mut context.openssl_bn_context)?),
+            Some(context) => Ok(self
+                .openssl_bn
+                .is_prime(checks, &mut context.openssl_bn_context)?),
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                Ok(self.openssl_bn.is_prime(checks, &mut ctx.openssl_bn_context)?)
+                Ok(self
+                    .openssl_bn
+                    .is_prime(checks, &mut ctx.openssl_bn_context)?)
             }
         }
     }
 
     pub fn is_safe_prime(&self, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<bool> {
-
         match ctx {
             Some(c) => {
                 // according to https://eprint.iacr.org/2003/186.pdf
@@ -94,11 +98,11 @@ impl BigNumber {
                 // a safe prime satisfies (p-1)/2 is prime. Since a
                 // prime is odd, We just need to divide by 2
                 Ok(
-                    self.modulus(&BigNumber::from_u32(3)?, Some(c))? == BigNumber::from_u32(2)? &&
-                    self.is_prime(Some(c))? &&
-                    self.rshift1()?.is_prime(Some(c))?
+                    self.modulus(&BigNumber::from_u32(3)?, Some(c))? == BigNumber::from_u32(2)?
+                        && self.is_prime(Some(c))?
+                        && self.rshift1()?.is_prime(Some(c))?,
                 )
-            },
+            }
             None => {
                 let mut context = BigNumber::new_context()?;
                 self.is_safe_prime(Some(&mut context))
@@ -108,7 +112,12 @@ impl BigNumber {
 
     pub fn rand(size: usize) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
-        BigNumRef::rand(&mut bn.openssl_bn, size as i32, MsbOption::MAYBE_ZERO, false)?;
+        BigNumRef::rand(
+            &mut bn.openssl_bn,
+            size as i32,
+            MsbOption::MAYBE_ZERO,
+            false,
+        )?;
         Ok(bn)
     }
 
@@ -133,30 +142,22 @@ impl BigNumber {
 
     pub fn from_u32(n: usize) -> UrsaCryptoResult<BigNumber> {
         let bn = BigNum::from_u32(n as u32)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn from_dec(dec: &str) -> UrsaCryptoResult<BigNumber> {
         let bn = BigNum::from_dec_str(dec)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn from_hex(hex: &str) -> UrsaCryptoResult<BigNumber> {
         let bn = BigNum::from_hex_str(hex)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<BigNumber> {
         let bn = BigNum::from_slice(bytes)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn to_dec(&self) -> UrsaCryptoResult<String> {
@@ -192,58 +193,128 @@ impl BigNumber {
     pub fn sqr(&self, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::sqr(&mut bn.openssl_bn, &self.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::sqr(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::sqr(&mut bn.openssl_bn, &self.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::sqr(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn mul(&self, a: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn mul(
+        &self,
+        a: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::checked_mul(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::checked_mul(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::checked_mul(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::checked_mul(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn mod_mul(&self, a: &BigNumber, n: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn mod_mul(
+        &self,
+        a: &BigNumber,
+        n: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::mod_mul(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::mod_mul(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &n.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::mod_mul(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::mod_mul(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &n.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn mod_sub(&self, a: &BigNumber, n: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn mod_sub(
+        &self,
+        a: &BigNumber,
+        n: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::mod_sub(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::mod_sub(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &n.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::mod_sub(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::mod_sub(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &n.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn div(&self, a: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn div(
+        &self,
+        a: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::checked_div(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::checked_div(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::checked_div(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::checked_div(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
@@ -269,7 +340,12 @@ impl BigNumber {
         Ok(self)
     }
 
-    pub fn mod_exp(&self, a: &BigNumber, b: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn mod_exp(
+        &self,
+        a: &BigNumber,
+        b: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         match ctx {
             Some(context) => self._mod_exp(a, b, context),
             None => {
@@ -279,48 +355,107 @@ impl BigNumber {
         }
     }
 
-    fn _mod_exp(&self, a: &BigNumber, b: &BigNumber, ctx: &mut BigNumberContext) -> UrsaCryptoResult<BigNumber> {
+    fn _mod_exp(
+        &self,
+        a: &BigNumber,
+        b: &BigNumber,
+        ctx: &mut BigNumberContext,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
 
         if a.openssl_bn.is_negative() {
-            BigNumRef::mod_exp(&mut bn.openssl_bn, &self.inverse(b, Some(ctx))?.openssl_bn, &a.set_negative(false)?.openssl_bn, &b.openssl_bn, &mut ctx.openssl_bn_context)?;
+            BigNumRef::mod_exp(
+                &mut bn.openssl_bn,
+                &self.inverse(b, Some(ctx))?.openssl_bn,
+                &a.set_negative(false)?.openssl_bn,
+                &b.openssl_bn,
+                &mut ctx.openssl_bn_context,
+            )?;
         } else {
-            BigNumRef::mod_exp(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &b.openssl_bn, &mut ctx.openssl_bn_context)?;
+            BigNumRef::mod_exp(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &b.openssl_bn,
+                &mut ctx.openssl_bn_context,
+            )?;
         };
         Ok(bn)
     }
 
-    pub fn modulus(&self, a: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn modulus(
+        &self,
+        a: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::nnmod(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::nnmod(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::nnmod(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::nnmod(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn exp(&self, a: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn exp(
+        &self,
+        a: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::exp(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::exp(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &a.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::exp(&mut bn.openssl_bn, &self.openssl_bn, &a.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::exp(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &a.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
     }
 
-    pub fn inverse(&self, n: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn inverse(
+        &self,
+        n: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
-            Some(context) => BigNumRef::mod_inverse(&mut bn.openssl_bn, &self.openssl_bn, &n.openssl_bn, &mut context.openssl_bn_context)?,
+            Some(context) => BigNumRef::mod_inverse(
+                &mut bn.openssl_bn,
+                &self.openssl_bn,
+                &n.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
             None => {
                 let mut ctx = BigNumber::new_context()?;
-                BigNumRef::mod_inverse(&mut bn.openssl_bn, &self.openssl_bn, &n.openssl_bn, &mut ctx.openssl_bn_context)?;
+                BigNumRef::mod_inverse(
+                    &mut bn.openssl_bn,
+                    &self.openssl_bn,
+                    &n.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
             }
         }
         Ok(bn)
@@ -329,9 +464,7 @@ impl BigNumber {
     pub fn set_negative(&self, negative: bool) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNum::from_slice(&self.openssl_bn.to_vec())?;
         bn.set_negative(negative);
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn is_negative(&self) -> bool {
@@ -341,17 +474,13 @@ impl BigNumber {
     pub fn increment(&self) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNum::from_slice(&self.openssl_bn.to_vec())?;
         bn.add_word(1)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn decrement(&self) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNum::from_slice(&self.openssl_bn.to_vec())?;
         bn.sub_word(1)?;
-        Ok(BigNumber {
-            openssl_bn: bn
-        })
+        Ok(BigNumber { openssl_bn: bn })
     }
 
     pub fn lshift1(&self) -> UrsaCryptoResult<BigNumber> {
@@ -372,7 +501,12 @@ impl BigNumber {
         Ok(bn)
     }
 
-    pub fn mod_div(&self, b: &BigNumber, p: &BigNumber, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
+    pub fn mod_div(
+        &self,
+        b: &BigNumber,
+        p: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
         //(a * (1/b mod p) mod p)
         match ctx {
             Some(mut context) => self._mod_div(b, p, &mut context),
@@ -384,28 +518,32 @@ impl BigNumber {
     }
 
     ///(a * (1/b mod p) mod p)
-    fn _mod_div(&self, b: &BigNumber, p: &BigNumber, ctx: &mut BigNumberContext)-> UrsaCryptoResult<BigNumber> {
+    fn _mod_div(
+        &self,
+        b: &BigNumber,
+        p: &BigNumber,
+        ctx: &mut BigNumberContext,
+    ) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
-        BigNumRef::mod_mul(&mut bn.openssl_bn, &self.openssl_bn,
-                           &b.inverse(p, Some(ctx))?.openssl_bn,
-                           &p.openssl_bn, &mut ctx.openssl_bn_context)?;
+        BigNumRef::mod_mul(
+            &mut bn.openssl_bn,
+            &self.openssl_bn,
+            &b.inverse(p, Some(ctx))?.openssl_bn,
+            &p.openssl_bn,
+            &mut ctx.openssl_bn_context,
+        )?;
         Ok(bn)
     }
 
     pub fn random_qr(n: &BigNumber) -> UrsaCryptoResult<BigNumber> {
-        let qr = n
-            .rand_range()?
-            .sqr(None)?
-            .modulus(&n, None)?;
+        let qr = n.rand_range()?.sqr(None)?.modulus(&n, None)?;
         Ok(qr)
     }
 
     pub fn try_clone(&self) -> UrsaCryptoResult<BigNumber> {
         let mut openssl_bn = BigNum::from_slice(&self.openssl_bn.to_vec()[..])?;
         openssl_bn.set_negative(self.is_negative());
-        Ok(BigNumber {
-            openssl_bn
-        })
+        Ok(BigNumber { openssl_bn })
     }
 
     pub fn hash_array(nums: &[Vec<u8>]) -> UrsaCryptoResult<Vec<u8>> {
@@ -441,14 +579,20 @@ impl PartialEq for BigNumber {
 
 #[cfg(feature = "serialization")]
 impl Serialize for BigNumber {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_newtype_struct("BigNumber", &self.to_dec().map_err(SError::custom)?)
     }
 }
 
 #[cfg(feature = "serialization")]
 impl<'a> Deserialize<'a> for BigNumber {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
         struct BigNumberVisitor;
 
         impl<'a> Visitor<'a> for BigNumberVisitor {
@@ -459,7 +603,8 @@ impl<'a> Deserialize<'a> for BigNumber {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<BigNumber, E>
-                where E: DError
+            where
+                E: DError,
             {
                 Ok(BigNumber::from_dec(value).map_err(DError::custom)?)
             }
@@ -472,7 +617,7 @@ impl<'a> Deserialize<'a> for BigNumber {
 impl From<ErrorStack> for UrsaCryptoError {
     fn from(err: ErrorStack) -> Self {
         // TODO: FIXME: Analyze ErrorStack and split invalid structure errors from other errors
-	    err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Internal OpenSSL error")
+        err.to_ursa(UrsaCryptoErrorKind::InvalidState, "Internal OpenSSL error")
     }
 }
 
@@ -500,7 +645,10 @@ mod tests {
     #[test]
     fn test_exp_works() {
         let answer = BigNumber::from_dec("259344723055062059907025491480697571938277889515152306249728583105665800713306759149981690559193987143012367913206299323899696942213235956742929677132122730441323862712594345230336").unwrap();
-        let test = BigNumber::from_u32(2).unwrap().exp(&BigNumber::from_u32(596).unwrap(), None).unwrap();
+        let test = BigNumber::from_u32(2)
+            .unwrap()
+            .exp(&BigNumber::from_u32(596).unwrap(), None)
+            .unwrap();
         assert_eq!(answer, test);
     }
 
@@ -516,7 +664,7 @@ mod tests {
 
     #[test]
     fn is_prime_works() {
-        let primes:Vec<u64> = vec![2, 23, 31, 42885908609, 24473809133, 47055833459];
+        let primes: Vec<u64> = vec![2, 23, 31, 42885908609, 24473809133, 47055833459];
         for pr in primes {
             let num = BigNumber::from_dec(&pr.to_string()).unwrap();
             assert!(num.is_prime(None).unwrap());
@@ -549,11 +697,26 @@ mod tests {
 
         for (modulus, expected) in [
             (BigNumber::from_u32(1).unwrap(), BigNumber::new().unwrap()),
-            (BigNumber::from_u32(1).unwrap().set_negative(true).unwrap(), BigNumber::new().unwrap()),
+            (
+                BigNumber::from_u32(1).unwrap().set_negative(true).unwrap(),
+                BigNumber::new().unwrap(),
+            ),
             (BigNumber::from_u32(2).unwrap(), BigNumber::new().unwrap()),
-            (BigNumber::from_u32(2).unwrap().set_negative(true).unwrap(), BigNumber::new().unwrap()),
-            (BigNumber::from_u32(5).unwrap(), BigNumber::from_u32(1).unwrap()),
-            (BigNumber::from_u32(5).unwrap().set_negative(true).unwrap(), BigNumber::from_u32(1).unwrap())].iter() {
+            (
+                BigNumber::from_u32(2).unwrap().set_negative(true).unwrap(),
+                BigNumber::new().unwrap(),
+            ),
+            (
+                BigNumber::from_u32(5).unwrap(),
+                BigNumber::from_u32(1).unwrap(),
+            ),
+            (
+                BigNumber::from_u32(5).unwrap().set_negative(true).unwrap(),
+                BigNumber::from_u32(1).unwrap(),
+            ),
+        ]
+        .iter()
+        {
             assert_eq!(*expected, base.modulus(&modulus, None).unwrap());
         }
     }
@@ -569,19 +732,31 @@ mod tests {
         let base = BigNumber::from_u32(6).unwrap();
         let exp = BigNumber::from_u32(5).unwrap().set_negative(true).unwrap();
         let modulus = BigNumber::from_u32(13).unwrap();
-        assert_eq!(BigNumber::from_u32(7).unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+        assert_eq!(
+            BigNumber::from_u32(7).unwrap(),
+            base.mod_exp(&exp, &modulus, None).unwrap()
+        );
 
         let modulus = BigNumber::from_u32(1).unwrap();
-        assert_eq!(BigNumber::new().unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+        assert_eq!(
+            BigNumber::new().unwrap(),
+            base.mod_exp(&exp, &modulus, None).unwrap()
+        );
 
         let modulus = BigNumber::from_u32(0).unwrap();
         assert!(base.mod_exp(&exp, &modulus, None).is_err());
 
         let modulus = BigNumber::from_u32(1).unwrap().set_negative(true).unwrap();
-        assert_eq!(BigNumber::new().unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+        assert_eq!(
+            BigNumber::new().unwrap(),
+            base.mod_exp(&exp, &modulus, None).unwrap()
+        );
 
         let modulus = BigNumber::from_u32(5).unwrap().set_negative(true).unwrap();
-        assert_eq!(BigNumber::from_u32(1).unwrap(), base.mod_exp(&exp, &modulus, None).unwrap());
+        assert_eq!(
+            BigNumber::from_u32(1).unwrap(),
+            base.mod_exp(&exp, &modulus, None).unwrap()
+        );
     }
 
     #[test]
@@ -648,13 +823,15 @@ mod tests {
     #[cfg(feature = "serialization")]
     #[derive(Serialize, Deserialize)]
     struct Test {
-        field: BigNumber
+        field: BigNumber,
     }
 
     #[cfg(feature = "serialization")]
     #[test]
     fn serialize_works() {
-        let s = Test { field: BigNumber::from_dec("1").unwrap() };
+        let s = Test {
+            field: BigNumber::from_dec("1").unwrap(),
+        };
         let serialized = serde_json::to_string(&s);
 
         assert!(serialized.is_ok());

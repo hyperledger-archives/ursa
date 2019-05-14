@@ -1,15 +1,16 @@
-#[deny(warnings,
-       unused_qualifications,
-       unused_import_braces,
-       trivial_casts,
-       trivial_numeric_casts)]
-
-#[cfg(feature = "wasm")]
-extern crate wasm_bindgen;
 #[cfg(feature = "wasm")]
 extern crate console_error_panic_hook;
 #[cfg(feature = "wasm")]
 extern crate js_sys;
+#[deny(
+    warnings,
+    unused_qualifications,
+    unused_import_braces,
+    trivial_casts,
+    trivial_numeric_casts
+)]
+#[cfg(feature = "wasm")]
+extern crate wasm_bindgen;
 
 /// Portable try to solely use Rust and no external C libraries.
 /// This is considered less secure only because the Rust code may not have had a
@@ -24,19 +25,19 @@ extern crate env_logger;
 extern crate failure;
 #[macro_use]
 extern crate log;
-extern crate rand;
-extern crate rand_chacha;
-pub extern crate sha2;
-pub extern crate sha3;
 pub extern crate blake2;
-extern crate zeroize;
 extern crate generic_array;
 #[cfg(test)]
 extern crate libsodium_ffi;
-#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
-extern crate secp256k1 as libsecp256k1;
+extern crate rand;
+extern crate rand_chacha;
 #[cfg(all(feature = "portable", not(feature = "native")))]
 extern crate rustlibsecp256k1;
+#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
+extern crate secp256k1 as libsecp256k1;
+pub extern crate sha2;
+pub extern crate sha3;
+extern crate zeroize;
 
 // To use macros from util inside of other modules it must me loaded first.
 #[macro_use]
@@ -61,9 +62,9 @@ extern crate openssl;
 extern crate int_traits;
 
 #[cfg(feature = "bn_rust")]
-extern crate num_bigint;
-#[cfg(feature = "bn_rust")]
 extern crate glass_pumpkin;
+#[cfg(feature = "bn_rust")]
+extern crate num_bigint;
 #[cfg(feature = "bn_rust")]
 extern crate num_integer;
 #[cfg(feature = "bn_rust")]
@@ -99,10 +100,10 @@ pub mod pair;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod encoding;
 pub mod hash;
 pub mod keys;
 pub mod signatures;
-pub mod encoding;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
@@ -119,7 +120,7 @@ pub enum CryptoError {
     /// Returned when an error occurs during key generation
     KeyGenError(String),
     /// Returned when an error occurs during digest generation
-    DigestGenError(String)
+    DigestGenError(String),
 }
 
 impl std::fmt::Display for CryptoError {
@@ -129,7 +130,7 @@ impl std::fmt::Display for CryptoError {
             CryptoError::ParseError(s) => write!(f, "ParseError({})", s),
             CryptoError::SigningError(s) => write!(f, "SigningError({})", s),
             CryptoError::KeyGenError(s) => write!(f, "KeyGenError({})", s),
-            CryptoError::DigestGenError(s) => write!(f, "DigestGenError({})", s)
+            CryptoError::DigestGenError(s) => write!(f, "DigestGenError({})", s),
         }
     }
 }
@@ -138,13 +139,27 @@ impl std::fmt::Display for CryptoError {
 impl From<libsecp256k1::Error> for CryptoError {
     fn from(error: libsecp256k1::Error) -> CryptoError {
         match error {
-            libsecp256k1::Error::IncorrectSignature => CryptoError::ParseError("Incorrect Signature".to_string()),
-            libsecp256k1::Error::InvalidMessage => CryptoError::ParseError("Invalid Message".to_string()),
-            libsecp256k1::Error::InvalidPublicKey => CryptoError::ParseError("Invalid Public Key".to_string()),
-            libsecp256k1::Error::InvalidSignature => CryptoError::ParseError("Invalid Signature".to_string()),
-            libsecp256k1::Error::InvalidSecretKey => CryptoError::ParseError("Invalid Secret Key".to_string()),
-            libsecp256k1::Error::InvalidRecoveryId => CryptoError::ParseError("Invalid Recovery Id".to_string()),
-            libsecp256k1::Error::InvalidTweak => CryptoError::ParseError("Invalid Tweak".to_string())
+            libsecp256k1::Error::IncorrectSignature => {
+                CryptoError::ParseError("Incorrect Signature".to_string())
+            }
+            libsecp256k1::Error::InvalidMessage => {
+                CryptoError::ParseError("Invalid Message".to_string())
+            }
+            libsecp256k1::Error::InvalidPublicKey => {
+                CryptoError::ParseError("Invalid Public Key".to_string())
+            }
+            libsecp256k1::Error::InvalidSignature => {
+                CryptoError::ParseError("Invalid Signature".to_string())
+            }
+            libsecp256k1::Error::InvalidSecretKey => {
+                CryptoError::ParseError("Invalid Secret Key".to_string())
+            }
+            libsecp256k1::Error::InvalidRecoveryId => {
+                CryptoError::ParseError("Invalid Recovery Id".to_string())
+            }
+            libsecp256k1::Error::InvalidTweak => {
+                CryptoError::ParseError("Invalid Tweak".to_string())
+            }
         }
     }
 }

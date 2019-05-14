@@ -15,10 +15,14 @@ macro_rules! impl_bytearray {
 
             #[inline]
             /// Returns the length of the object as an array
-            pub fn len(&self) -> usize { self.0.len() }
+            pub fn len(&self) -> usize {
+                self.0.len()
+            }
 
             #[inline]
-            pub fn is_empty(&self) -> bool { self.0.is_empty() }
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
         }
 
         impl PartialEq for $thing {
@@ -42,7 +46,7 @@ macro_rules! impl_bytearray {
 
             #[inline]
             fn index(&self, index: usize) -> &u8 {
-               &self.0[index]
+                &self.0[index]
             }
         }
 
@@ -83,13 +87,23 @@ macro_rules! impl_bytearray {
         }
         impl ::std::fmt::Display for $thing {
             fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                write!(formatter, "{} {{ {} }}", stringify!($thing), bin2hex(&self.0[..]))
+                write!(
+                    formatter,
+                    "{} {{ {} }}",
+                    stringify!($thing),
+                    bin2hex(&self.0[..])
+                )
             }
         }
 
         impl ::std::fmt::Debug for $thing {
             fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                write!(formatter, "{} {{ {} }}", stringify!($thing), bin2hex(&self.0[..]))
+                write!(
+                    formatter,
+                    "{} {{ {} }}",
+                    stringify!($thing),
+                    bin2hex(&self.0[..])
+                )
             }
         }
 
@@ -108,25 +122,35 @@ macro_rules! impl_bytearray {
 
         #[cfg(feature = "serialization")]
         impl serde::ser::Serialize for $thing {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: ::serde::ser::Serializer {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: ::serde::ser::Serializer,
+            {
                 serializer.serialize_newtype_struct(stringify!($thing), &bin2hex(&self.0[..]))
             }
         }
 
         #[cfg(feature = "serialization")]
         impl<'a> serde::de::Deserialize<'a> for $thing {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: ::serde::de::Deserializer<'a> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: ::serde::de::Deserializer<'a>,
+            {
                 struct Thingvisitor;
 
                 impl<'a> ::serde::de::Visitor<'a> for Thingvisitor {
                     type Value = $thing;
 
-                    fn expecting(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                    fn expecting(
+                        &self,
+                        formatter: &mut ::std::fmt::Formatter,
+                    ) -> ::std::fmt::Result {
                         write!(formatter, "expected {}", stringify!($thing))
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<$thing, E>
-                        where E: ::serde::de::Error
+                    where
+                        E: ::serde::de::Error,
                     {
                         Ok($thing(hex2bin(value).map_err(::serde::de::Error::custom)?))
                     }
@@ -135,5 +159,5 @@ macro_rules! impl_bytearray {
                 deserializer.deserialize_str(Thingvisitor)
             }
         }
-    }
+    };
 }

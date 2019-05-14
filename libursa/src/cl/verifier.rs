@@ -1,8 +1,8 @@
 use bn::BigNumber;
-use cl::*;
-use cl::constants::{LARGE_E_START_VALUE, ITERATION};
-use cl::helpers::*;
+use cl::constants::{ITERATION, LARGE_E_START_VALUE};
 use cl::hash::get_hash_as_int;
+use cl::helpers::*;
+use cl::*;
 use errors::prelude::*;
 
 use std::collections::BTreeSet;
@@ -48,7 +48,6 @@ impl Verifier {
         })
     }
 }
-
 
 #[derive(Debug)]
 pub struct ProofVerifier {
@@ -96,14 +95,19 @@ impl ProofVerifier {
     ///                                      None,
     ///                                      None).unwrap();
     /// ```
-    pub fn add_sub_proof_request(&mut self,
-                                 sub_proof_request: &SubProofRequest,
-                                 credential_schema: &CredentialSchema,
-                                 non_credential_schema: &NonCredentialSchema,
-                                 credential_pub_key: &CredentialPublicKey,
-                                 rev_key_pub: Option<&RevocationKeyPublic>,
-                                 rev_reg: Option<&RevocationRegistry>) -> UrsaCryptoResult<()> {
-        ProofVerifier::_check_add_sub_proof_request_params_consistency(sub_proof_request, credential_schema)?;
+    pub fn add_sub_proof_request(
+        &mut self,
+        sub_proof_request: &SubProofRequest,
+        credential_schema: &CredentialSchema,
+        non_credential_schema: &NonCredentialSchema,
+        credential_pub_key: &CredentialPublicKey,
+        rev_key_pub: Option<&RevocationKeyPublic>,
+        rev_reg: Option<&RevocationRegistry>,
+    ) -> UrsaCryptoResult<()> {
+        ProofVerifier::_check_add_sub_proof_request_params_consistency(
+            sub_proof_request,
+            credential_schema,
+        )?;
 
         self.credentials.push(VerifiableCredential {
             pub_key: credential_pub_key.try_clone()?,
@@ -111,7 +115,7 @@ impl ProofVerifier {
             credential_schema: credential_schema.clone(),
             non_credential_schema: non_credential_schema.clone(),
             rev_key_pub: rev_key_pub.map(Clone::clone),
-            rev_reg: rev_reg.map(Clone::clone)
+            rev_reg: rev_reg.map(Clone::clone),
         });
         Ok(())
     }
@@ -200,10 +204,12 @@ impl ProofVerifier {
     ///                                      None).unwrap();
     /// assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     /// ```
-    pub fn verify(&self,
-                  proof: &Proof,
-                  nonce: &Nonce) -> UrsaCryptoResult<bool> {
-        trace!("ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}", proof, nonce);
+    pub fn verify(&self, proof: &Proof, nonce: &Nonce) -> UrsaCryptoResult<bool> {
+        trace!(
+            "ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}",
+            proof,
+            nonce
+        );
 
         ProofVerifier::_check_verify_params_consistency(&self.credentials, proof)?;
 
@@ -213,27 +219,37 @@ impl ProofVerifier {
         for idx in 0..proof.proofs.len() {
             let proof_item = &proof.proofs[idx];
             let credential = &self.credentials[idx];
-            if let (Some(non_revocation_proof), Some(cred_rev_pub_key), Some(rev_reg), Some(rev_key_pub)) = (proof_item.non_revoc_proof.as_ref(),
-                                                                                                             credential.pub_key.r_key.as_ref(),
-                                                                                                             credential.rev_reg.as_ref(),
-                                                                                                             credential.rev_key_pub.as_ref()) {
+            if let (
+                Some(non_revocation_proof),
+                Some(cred_rev_pub_key),
+                Some(rev_reg),
+                Some(rev_key_pub),
+            ) = (
+                proof_item.non_revoc_proof.as_ref(),
+                credential.pub_key.r_key.as_ref(),
+                credential.rev_reg.as_ref(),
+                credential.rev_key_pub.as_ref(),
+            ) {
                 tau_list.extend_from_slice(
-                    &ProofVerifier::_verify_non_revocation_proof(&cred_rev_pub_key,
-                                                                 &rev_reg,
-                                                                 &rev_key_pub,
-                                                                 &proof.aggregated_proof.c_hash,
-                                                                 &non_revocation_proof)?.as_slice()?
+                    &ProofVerifier::_verify_non_revocation_proof(
+                        &cred_rev_pub_key,
+                        &rev_reg,
+                        &rev_key_pub,
+                        &proof.aggregated_proof.c_hash,
+                        &non_revocation_proof,
+                    )?
+                    .as_slice()?,
                 );
             };
 
-            tau_list.append_vec(
-                &ProofVerifier::_verify_primary_proof(&credential.pub_key.p_key,
-                                                      &proof.aggregated_proof.c_hash,
-                                                      &proof_item.primary_proof,
-                                                      &credential.credential_schema,
-                                                      &credential.non_credential_schema,
-                                                      &credential.sub_proof_request)?
-            )?;
+            tau_list.append_vec(&ProofVerifier::_verify_primary_proof(
+                &credential.pub_key.p_key,
+                &proof.aggregated_proof.c_hash,
+                &proof_item.primary_proof,
+                &credential.credential_schema,
+                &credential.non_credential_schema,
+                &credential.sub_proof_request,
+            )?)?;
         }
 
         let mut values: Vec<Vec<u8>> = Vec::new();
@@ -252,21 +268,35 @@ impl ProofVerifier {
         Ok(valid)
     }
 
-    fn _check_add_sub_proof_request_params_consistency(sub_proof_request: &SubProofRequest,
-                                                       cred_schema: &CredentialSchema) -> UrsaCryptoResult<()> {
+    fn _check_add_sub_proof_request_params_consistency(
+        sub_proof_request: &SubProofRequest,
+        cred_schema: &CredentialSchema,
+    ) -> UrsaCryptoResult<()> {
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: >>> sub_proof_request: {:?}, cred_schema: {:?}", sub_proof_request, cred_schema);
 
-        if sub_proof_request.revealed_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Credential doesn't contain requested attribute"));
+        if sub_proof_request
+            .revealed_attrs
+            .difference(&cred_schema.attrs)
+            .count()
+            != 0
+        {
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Credential doesn't contain requested attribute",
+            ));
         }
 
-        let predicates_attrs =
-            sub_proof_request.predicates.iter()
-                .map(|predicate| predicate.attr_name.clone())
-                .collect::<BTreeSet<String>>();
+        let predicates_attrs = sub_proof_request
+            .predicates
+            .iter()
+            .map(|predicate| predicate.attr_name.clone())
+            .collect::<BTreeSet<String>>();
 
         if predicates_attrs.difference(&cred_schema.attrs).count() != 0 {
-            return Err(err_msg(UrsaCryptoErrorKind::InvalidStructure, "Credential doesn't contain attribute requested in predicate"));
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Credential doesn't contain attribute requested in predicate",
+            ));
         }
 
         trace!("ProofVerifier::_check_add_sub_proof_request_params_consistency: <<<");
@@ -274,26 +304,46 @@ impl ProofVerifier {
         Ok(())
     }
 
-    fn _check_verify_params_consistency(credentials: &[VerifiableCredential],
-                                        proof: &Proof) -> UrsaCryptoResult<()> {
-        trace!("ProofVerifier::_check_verify_params_consistency: >>> credentials: {:?}, proof: {:?}", credentials, proof);
+    fn _check_verify_params_consistency(
+        credentials: &[VerifiableCredential],
+        proof: &Proof,
+    ) -> UrsaCryptoResult<()> {
+        trace!(
+            "ProofVerifier::_check_verify_params_consistency: >>> credentials: {:?}, proof: {:?}",
+            credentials,
+            proof
+        );
 
         assert_eq!(proof.proofs.len(), credentials.len()); //FIXME return error
         for (proof_for_credential, credential) in proof.proofs.iter().zip(credentials) {
-
-            let proof_revealed_attrs = BTreeSet::from_iter(proof_for_credential.primary_proof.eq_proof.revealed_attrs.keys().cloned());
+            let proof_revealed_attrs = BTreeSet::from_iter(
+                proof_for_credential
+                    .primary_proof
+                    .eq_proof
+                    .revealed_attrs
+                    .keys()
+                    .cloned(),
+            );
 
             if proof_revealed_attrs != credential.sub_proof_request.revealed_attrs {
-                return Err(err_msg(UrsaCryptoErrorKind::ProofRejected, "Proof revealed attributes not correspond to requested attributes"));
+                return Err(err_msg(
+                    UrsaCryptoErrorKind::ProofRejected,
+                    "Proof revealed attributes not correspond to requested attributes",
+                ));
             }
 
-            let proof_predicates =
-                proof_for_credential.primary_proof.ne_proofs.iter()
-                    .map(|ne_proof| ne_proof.predicate.clone())
-                    .collect::<BTreeSet<Predicate>>();
+            let proof_predicates = proof_for_credential
+                .primary_proof
+                .ne_proofs
+                .iter()
+                .map(|ne_proof| ne_proof.predicate.clone())
+                .collect::<BTreeSet<Predicate>>();
 
             if proof_predicates != credential.sub_proof_request.predicates {
-                return Err(err_msg(UrsaCryptoErrorKind::ProofRejected, "Proof predicates not correspond to requested predicates"));
+                return Err(err_msg(
+                    UrsaCryptoErrorKind::ProofRejected,
+                    "Proof predicates not correspond to requested predicates",
+                ));
             }
         }
 
@@ -302,40 +352,50 @@ impl ProofVerifier {
         Ok(())
     }
 
-    fn _verify_primary_proof(p_pub_key: &CredentialPrimaryPublicKey,
-                             c_hash: &BigNumber,
-                             primary_proof: &PrimaryProof,
-                             cred_schema: &CredentialSchema,
-                             non_cred_schema: &NonCredentialSchema,
-                             sub_proof_request: &SubProofRequest) -> UrsaCryptoResult<Vec<BigNumber>> {
+    fn _verify_primary_proof(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        c_hash: &BigNumber,
+        primary_proof: &PrimaryProof,
+        cred_schema: &CredentialSchema,
+        non_cred_schema: &NonCredentialSchema,
+        sub_proof_request: &SubProofRequest,
+    ) -> UrsaCryptoResult<Vec<BigNumber>> {
         trace!("ProofVerifier::_verify_primary_proof: >>> p_pub_key: {:?}, c_hash: {:?}, primary_proof: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
                p_pub_key, c_hash, primary_proof, cred_schema, sub_proof_request);
 
-        let mut t_hat: Vec<BigNumber> = ProofVerifier::_verify_equality(p_pub_key,
-                                                                        &primary_proof.eq_proof,
-                                                                        c_hash,
-                                                                        cred_schema,
-                                                                        non_cred_schema,
-                                                                        sub_proof_request)?;
+        let mut t_hat: Vec<BigNumber> = ProofVerifier::_verify_equality(
+            p_pub_key,
+            &primary_proof.eq_proof,
+            c_hash,
+            cred_schema,
+            non_cred_schema,
+            sub_proof_request,
+        )?;
 
         for ne_proof in primary_proof.ne_proofs.iter() {
-            t_hat.append(&mut ProofVerifier::_verify_ne_predicate(p_pub_key, ne_proof, c_hash)?)
+            t_hat.append(&mut ProofVerifier::_verify_ne_predicate(
+                p_pub_key, ne_proof, c_hash,
+            )?)
         }
 
-        trace!("ProofVerifier::_verify_primary_proof: <<< t_hat: {:?}", t_hat);
+        trace!(
+            "ProofVerifier::_verify_primary_proof: <<< t_hat: {:?}",
+            t_hat
+        );
 
         Ok(t_hat)
     }
 
-    fn _verify_equality(p_pub_key: &CredentialPrimaryPublicKey,
-                        proof: &PrimaryEqualProof,
-                        c_hash: &BigNumber,
-                        cred_schema: &CredentialSchema,
-                        non_cred_schema: &NonCredentialSchema,
-                        sub_proof_request: &SubProofRequest) -> UrsaCryptoResult<Vec<BigNumber>> {
+    fn _verify_equality(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        proof: &PrimaryEqualProof,
+        c_hash: &BigNumber,
+        cred_schema: &CredentialSchema,
+        non_cred_schema: &NonCredentialSchema,
+        sub_proof_request: &SubProofRequest,
+    ) -> UrsaCryptoResult<Vec<BigNumber>> {
         trace!("ProofVerifier::_verify_equality: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}, cred_schema: {:?}, sub_proof_request: {:?}",
                p_pub_key, proof, c_hash, cred_schema, sub_proof_request);
-
 
         let unrevealed_attrs = cred_schema
             .attrs
@@ -346,22 +406,35 @@ impl ProofVerifier {
             .cloned()
             .collect::<HashSet<String>>();
 
-        let t1: BigNumber = calc_teq(&p_pub_key, &proof.a_prime, &proof.e, &proof.v, &proof.m, &proof.m2, &unrevealed_attrs)?;
+        let t1: BigNumber = calc_teq(
+            &p_pub_key,
+            &proof.a_prime,
+            &proof.e,
+            &proof.v,
+            &proof.m,
+            &proof.m2,
+            &unrevealed_attrs,
+        )?;
 
         let mut ctx = BigNumber::new_context()?;
 
-        let mut rar = proof.a_prime.mod_exp(&LARGE_E_START_VALUE, &p_pub_key.n, Some(&mut ctx))?;
+        let mut rar = proof
+            .a_prime
+            .mod_exp(&LARGE_E_START_VALUE, &p_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
-            let cur_r = p_pub_key.r.get(attr)
-                .ok_or(err_msg(UrsaCryptoErrorKind::ProofRejected, format!("Value by key '{}' not found in pk.r", attr)))?;
+            let cur_r = p_pub_key.r.get(attr).ok_or(err_msg(
+                UrsaCryptoErrorKind::ProofRejected,
+                format!("Value by key '{}' not found in pk.r", attr),
+            ))?;
 
             rar = cur_r
                 .mod_exp(encoded_value, &p_pub_key.n, Some(&mut ctx))?
                 .mod_mul(&rar, &p_pub_key.n, Some(&mut ctx))?;
         }
 
-        let t2: BigNumber = p_pub_key.z
+        let t2: BigNumber = p_pub_key
+            .z
             .mod_div(&rar, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?;
@@ -373,18 +446,34 @@ impl ProofVerifier {
         Ok(vec![t])
     }
 
-    fn _verify_ne_predicate(p_pub_key: &CredentialPrimaryPublicKey,
-                            proof: &PrimaryPredicateInequalityProof,
-                            c_hash: &BigNumber) -> UrsaCryptoResult<Vec<BigNumber>> {
-        trace!("ProofVerifier::_verify_ne_predicate: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}", p_pub_key, proof, c_hash);
+    fn _verify_ne_predicate(
+        p_pub_key: &CredentialPrimaryPublicKey,
+        proof: &PrimaryPredicateInequalityProof,
+        c_hash: &BigNumber,
+    ) -> UrsaCryptoResult<Vec<BigNumber>> {
+        trace!(
+            "ProofVerifier::_verify_ne_predicate: >>> p_pub_key: {:?}, proof: {:?}, c_hash: {:?}",
+            p_pub_key,
+            proof,
+            c_hash
+        );
 
         let mut ctx = BigNumber::new_context()?;
-        let mut tau_list = calc_tne(&p_pub_key, &proof.u, &proof.r, &proof.mj,
-                                    &proof.alpha, &proof.t, proof.predicate.is_less())?;
+        let mut tau_list = calc_tne(
+            &p_pub_key,
+            &proof.u,
+            &proof.r,
+            &proof.mj,
+            &proof.alpha,
+            &proof.t,
+            proof.predicate.is_less(),
+        )?;
 
         for i in 0..ITERATION {
-            let cur_t = proof.t.get(&i.to_string())
-                .ok_or(err_msg(UrsaCryptoErrorKind::ProofRejected, format!("Value by key '{}' not found in proof.t", i)))?;
+            let cur_t = proof.t.get(&i.to_string()).ok_or(err_msg(
+                UrsaCryptoErrorKind::ProofRejected,
+                format!("Value by key '{}' not found in proof.t", i),
+            ))?;
 
             tau_list[i] = cur_t
                 .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
@@ -392,8 +481,10 @@ impl ProofVerifier {
                 .mod_mul(&tau_list[i], &p_pub_key.n, Some(&mut ctx))?;
         }
 
-        let delta = proof.t.get("DELTA")
-            .ok_or(err_msg(UrsaCryptoErrorKind::ProofRejected, format!("Value by key '{}' not found in proof.t", "DELTA")))?;
+        let delta = proof.t.get("DELTA").ok_or(err_msg(
+            UrsaCryptoErrorKind::ProofRejected,
+            format!("Value by key '{}' not found in proof.t", "DELTA"),
+        ))?;
 
         let delta_prime = if proof.predicate.is_less() {
             delta.inverse(&p_pub_key.n, Some(&mut ctx))?
@@ -401,9 +492,13 @@ impl ProofVerifier {
             delta.try_clone()?
         };
 
-        tau_list[ITERATION] = p_pub_key.z
-            .mod_exp(&proof.predicate.get_delta_prime()?,
-                &p_pub_key.n, Some(&mut ctx))?
+        tau_list[ITERATION] = p_pub_key
+            .z
+            .mod_exp(
+                &proof.predicate.get_delta_prime()?,
+                &p_pub_key.n,
+                Some(&mut ctx),
+            )?
             .mul(&delta_prime, Some(&mut ctx))?
             .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
@@ -414,36 +509,70 @@ impl ProofVerifier {
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&tau_list[ITERATION + 1], &p_pub_key.n, Some(&mut ctx))?;
 
-        trace!("ProofVerifier::_verify_ne_predicate: <<< tau_list: {:?},", tau_list);
+        trace!(
+            "ProofVerifier::_verify_ne_predicate: <<< tau_list: {:?},",
+            tau_list
+        );
 
         Ok(tau_list)
     }
 
-    fn _verify_non_revocation_proof(r_pub_key: &CredentialRevocationPublicKey,
-                                    rev_reg: &RevocationRegistry,
-                                    rev_key_pub: &RevocationKeyPublic,
-                                    c_hash: &BigNumber, proof: &NonRevocProof) -> UrsaCryptoResult<NonRevocProofTauList> {
+    fn _verify_non_revocation_proof(
+        r_pub_key: &CredentialRevocationPublicKey,
+        rev_reg: &RevocationRegistry,
+        rev_key_pub: &RevocationKeyPublic,
+        c_hash: &BigNumber,
+        proof: &NonRevocProof,
+    ) -> UrsaCryptoResult<NonRevocProofTauList> {
         trace!("ProofVerifier::_verify_non_revocation_proof: >>> r_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}, c_hash: {:?}",
                r_pub_key, rev_reg, rev_key_pub, c_hash);
 
         let ch_num_z = bignum_to_group_element(&c_hash)?;
 
-        let t_hat_expected_values = create_tau_list_expected_values(r_pub_key, rev_reg, rev_key_pub, &proof.c_list)?;
-        let t_hat_calc_values = create_tau_list_values(&r_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
-
+        let t_hat_expected_values =
+            create_tau_list_expected_values(r_pub_key, rev_reg, rev_key_pub, &proof.c_list)?;
+        let t_hat_calc_values =
+            create_tau_list_values(&r_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
 
         let non_revoc_proof_tau_list = Ok(NonRevocProofTauList {
-            t1: t_hat_expected_values.t1.mul(&ch_num_z)?.add(&t_hat_calc_values.t1)?,
-            t2: t_hat_expected_values.t2.mul(&ch_num_z)?.add(&t_hat_calc_values.t2)?,
-            t3: t_hat_expected_values.t3.pow(&ch_num_z)?.mul(&t_hat_calc_values.t3)?,
-            t4: t_hat_expected_values.t4.pow(&ch_num_z)?.mul(&t_hat_calc_values.t4)?,
-            t5: t_hat_expected_values.t5.mul(&ch_num_z)?.add(&t_hat_calc_values.t5)?,
-            t6: t_hat_expected_values.t6.mul(&ch_num_z)?.add(&t_hat_calc_values.t6)?,
-            t7: t_hat_expected_values.t7.pow(&ch_num_z)?.mul(&t_hat_calc_values.t7)?,
-            t8: t_hat_expected_values.t8.pow(&ch_num_z)?.mul(&t_hat_calc_values.t8)?
+            t1: t_hat_expected_values
+                .t1
+                .mul(&ch_num_z)?
+                .add(&t_hat_calc_values.t1)?,
+            t2: t_hat_expected_values
+                .t2
+                .mul(&ch_num_z)?
+                .add(&t_hat_calc_values.t2)?,
+            t3: t_hat_expected_values
+                .t3
+                .pow(&ch_num_z)?
+                .mul(&t_hat_calc_values.t3)?,
+            t4: t_hat_expected_values
+                .t4
+                .pow(&ch_num_z)?
+                .mul(&t_hat_calc_values.t4)?,
+            t5: t_hat_expected_values
+                .t5
+                .mul(&ch_num_z)?
+                .add(&t_hat_calc_values.t5)?,
+            t6: t_hat_expected_values
+                .t6
+                .mul(&ch_num_z)?
+                .add(&t_hat_calc_values.t6)?,
+            t7: t_hat_expected_values
+                .t7
+                .pow(&ch_num_z)?
+                .mul(&t_hat_calc_values.t7)?,
+            t8: t_hat_expected_values
+                .t8
+                .pow(&ch_num_z)?
+                .mul(&t_hat_calc_values.t8)?,
         });
 
-        trace!("ProofVerifier::_verify_non_revocation_proof: <<< non_revoc_proof_tau_list: {:?}", non_revoc_proof_tau_list);
+        trace!(
+            "ProofVerifier::_verify_non_revocation_proof: <<< non_revoc_proof_tau_list: {:?}",
+            non_revoc_proof_tau_list
+        );
 
         non_revoc_proof_tau_list
     }
@@ -452,16 +581,18 @@ impl ProofVerifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cl::prover;
-    use cl::issuer;
     use cl::helpers::MockHelper;
+    use cl::issuer;
+    use cl::prover;
     use cl::prover::mocks::*;
 
     #[test]
     fn sub_proof_request_builder_works() {
         let mut sub_proof_request_builder = Verifier::new_sub_proof_request_builder().unwrap();
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
-        sub_proof_request_builder.add_predicate("age", "GE", 18).unwrap();
+        sub_proof_request_builder
+            .add_predicate("age", "GE", 18)
+            .unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
         assert!(sub_proof_request.revealed_attrs.contains("name"));
@@ -482,12 +613,15 @@ mod tests {
         sub_proof_request_builder.add_revealed_attr("name").unwrap();
         let sub_proof_request = sub_proof_request_builder.finalize().unwrap();
 
-        let res: Vec<BigNumber> = ProofVerifier::_verify_equality(&pk,
-                                                                  &proof,
-                                                                  &c_h,
-                                                                  &credential_schema,
-                                                                  &non_credential_schema,
-                                                                  &sub_proof_request).unwrap();
+        let res: Vec<BigNumber> = ProofVerifier::_verify_equality(
+            &pk,
+            &proof,
+            &c_h,
+            &credential_schema,
+            &non_credential_schema,
+            &sub_proof_request,
+        )
+        .unwrap();
 
         assert_eq!("10403187904873314760355557832761590691431383521745031865309573910963034393207684\
         41047372720051528347747837647360259125725910627967862485202935551931564829193622679374932738\

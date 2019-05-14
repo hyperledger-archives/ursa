@@ -1,11 +1,11 @@
-use signatures::SignatureScheme;
+use keys::{KeyGenOption, PrivateKey, PublicKey};
 use signatures::secp256k1::EcdsaSecp256k1Sha256 as EcdsaSecp256k1Sha256Impl;
 use signatures::EcdsaPublicKeyHandler;
-use keys::{KeyGenOption, PublicKey, PrivateKey};
+use signatures::SignatureScheme;
 
 use wasm_bindgen::prelude::*;
 
-use super::{KeyPair, WasmPublicKey, WasmPrivateKey};
+use super::{KeyPair, WasmPrivateKey, WasmPublicKey};
 
 #[wasm_bindgen]
 pub struct EcdsaSecp256k1Sha256(EcdsaSecp256k1Sha256Impl);
@@ -33,23 +33,30 @@ impl EcdsaSecp256k1Sha256 {
 
     pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
         let sk = PrivateKey::from(sk);
-        let (pk, _) = maperr!(self.0.keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
+        let (pk, _) = maperr!(self
+            .0
+            .keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
         let pk = WasmPublicKey::from(&pk);
         Ok(pk)
     }
 
-    pub fn sign(&self, message: &[u8], sk: &WasmPrivateKey)-> Result<Vec<u8>, JsValue> {
+    pub fn sign(&self, message: &[u8], sk: &WasmPrivateKey) -> Result<Vec<u8>, JsValue> {
         let sk = PrivateKey::from(sk);
         let sig = maperr!(self.0.sign(message, &sk));
         Ok(sig)
     }
 
-    pub fn verify(&self, message: &[u8], signature: &[u8], pk: &WasmPublicKey) -> Result<bool, JsValue> {
+    pub fn verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        pk: &WasmPublicKey,
+    ) -> Result<bool, JsValue> {
         let pk = PublicKey::from(pk);
         Ok(maperr!(self.0.verify(message, signature, &pk)))
     }
 
-    pub fn normalizeS(&self, signature: &mut [u8]) -> Result<(), JsValue>  {
+    pub fn normalizeS(&self, signature: &mut [u8]) -> Result<(), JsValue> {
         maperr!(self.0.normalize_s(signature));
         Ok(())
     }

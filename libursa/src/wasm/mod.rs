@@ -3,18 +3,18 @@ mod macros;
 #[cfg(feature = "bls")]
 pub mod bls;
 
-pub mod secp256k1;
 pub mod ed25519;
+pub mod secp256k1;
 
 #[cfg(feature = "cl")]
 pub mod cl;
 
-use keys::{PublicKey, PrivateKey};
 use encoding::hex::{bin2hex, hex2bin};
+use keys::{PrivateKey, PublicKey};
 
-use wasm_bindgen::prelude::*;
 use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
 use serde;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,7 +27,7 @@ pub struct WasmPublicKey(String);
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyPair {
     pk: WasmPublicKey,
-    sk: WasmPrivateKey
+    sk: WasmPrivateKey,
 }
 
 impl From<&PublicKey> for WasmPublicKey {
@@ -73,8 +73,9 @@ where
 {
     match val.into_serde() {
         Ok(unwrapped) => Ok(unwrapped),
-        Err(_) => Err(UrsaCryptoError::from_msg(UrsaCryptoErrorKind::InvalidStructure,
-            "Invalid argument".to_string()
+        Err(_) => Err(UrsaCryptoError::from_msg(
+            UrsaCryptoErrorKind::InvalidStructure,
+            "Invalid argument".to_string(),
         )),
     }
 }

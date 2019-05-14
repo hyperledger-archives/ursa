@@ -1,7 +1,7 @@
 use errors::prelude::*;
-use pair::{GroupOrderElement, PointG2, PointG1, Pair};
+use pair::{GroupOrderElement, Pair, PointG1, PointG2};
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use sha3::Keccak256;
 
 /// BLS generator point.
@@ -10,7 +10,7 @@ use sha3::Keccak256;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Generator {
     point: PointG2,
-    bytes: Vec<u8>
+    bytes: Vec<u8>,
 }
 
 impl Generator {
@@ -26,7 +26,7 @@ impl Generator {
         let point = PointG2::new()?;
         Ok(Generator {
             point,
-            bytes: point.to_bytes()?
+            bytes: point.to_bytes()?,
         })
     }
 
@@ -55,12 +55,10 @@ impl Generator {
     /// Generator::from_bytes(gen_bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<Generator> {
-        Ok(
-            Generator {
-                point: PointG2::from_bytes(bytes)?,
-                bytes: bytes.to_vec()
-            }
-        )
+        Ok(Generator {
+            point: PointG2::from_bytes(bytes)?,
+            bytes: bytes.to_vec(),
+        })
     }
 }
 
@@ -68,7 +66,7 @@ impl Generator {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignKey {
     group_order_element: GroupOrderElement,
-    bytes: Vec<u8>
+    bytes: Vec<u8>,
 }
 
 impl SignKey {
@@ -83,12 +81,12 @@ impl SignKey {
     pub fn new(seed: Option<&[u8]>) -> UrsaCryptoResult<SignKey> {
         let group_order_element = match seed {
             Some(seed) => GroupOrderElement::new_from_seed(seed)?,
-            _ => GroupOrderElement::new()?
+            _ => GroupOrderElement::new()?,
         };
 
         Ok(SignKey {
             group_order_element,
-            bytes: group_order_element.to_bytes()?
+            bytes: group_order_element.to_bytes()?,
         })
     }
 
@@ -116,12 +114,10 @@ impl SignKey {
     /// let sign_key = SignKey::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<SignKey> {
-        Ok(
-            SignKey {
-                group_order_element: GroupOrderElement::from_bytes(bytes)?,
-                bytes: bytes.to_vec()
-            }
-        )
+        Ok(SignKey {
+            group_order_element: GroupOrderElement::from_bytes(bytes)?,
+            bytes: bytes.to_vec(),
+        })
     }
 }
 
@@ -129,7 +125,7 @@ impl SignKey {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerKey {
     point: PointG2,
-    bytes: Vec<u8>
+    bytes: Vec<u8>,
 }
 
 impl VerKey {
@@ -150,7 +146,7 @@ impl VerKey {
 
         Ok(VerKey {
             point,
-            bytes: point.to_bytes()?
+            bytes: point.to_bytes()?,
         })
     }
 
@@ -174,12 +170,10 @@ impl VerKey {
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<VerKey> {
         let point = PointG2::from_bytes(bytes)?;
-        Ok(
-            VerKey {
-                point,
-                bytes: bytes.to_vec()
-            }
-        )
+        Ok(VerKey {
+            point,
+            bytes: bytes.to_vec(),
+        })
     }
 }
 
@@ -187,7 +181,7 @@ impl VerKey {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOfPossession {
     point: PointG1,
-    bytes: Vec<u8>
+    bytes: Vec<u8>,
 }
 
 impl ProofOfPossession {
@@ -212,7 +206,7 @@ impl ProofOfPossession {
 
         Ok(ProofOfPossession {
             point,
-            bytes: point.to_bytes()?
+            bytes: point.to_bytes()?,
         })
     }
 
@@ -238,7 +232,7 @@ impl ProofOfPossession {
         let point = PointG1::from_bytes(bytes)?;
         Ok(ProofOfPossession {
             point,
-            bytes: bytes.to_vec()
+            bytes: bytes.to_vec(),
         })
     }
 }
@@ -271,12 +265,10 @@ impl Signature {
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<Signature> {
         let point = PointG1::from_bytes(bytes)?;
-        Ok(
-            Signature {
-                point,
-                bytes: bytes.to_vec()
-            }
-        )
+        Ok(Signature {
+            point,
+            bytes: bytes.to_vec(),
+        })
     }
 }
 
@@ -288,31 +280,31 @@ pub struct MultiSignature {
 }
 
 impl MultiSignature {
-   /// Creates and returns multi signature for provided list of signatures.
-   ///
-   /// # Arguments
-   ///
-   /// * `signatures` - List of signatures
-   ///
-   /// # Example
-   ///
-   /// ```
-   /// use ursa::bls::*;
-   /// let sign_key1 = SignKey::new(None).unwrap();
-   /// let sign_key2 = SignKey::new(None).unwrap();
-   ///
-   /// let message = vec![1, 2, 3, 4, 5];
-   ///
-   /// let signature1 = Bls::sign(&message, &sign_key1).unwrap();
-   /// let signature2 = Bls::sign(&message, &sign_key2).unwrap();
-   ///
-   /// let signatures = vec![
-   ///    &signature1,
-   ///    &signature2
-   /// ];
-   ///
-   /// MultiSignature::new(&signatures).unwrap();
-   /// ```
+    /// Creates and returns multi signature for provided list of signatures.
+    ///
+    /// # Arguments
+    ///
+    /// * `signatures` - List of signatures
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ursa::bls::*;
+    /// let sign_key1 = SignKey::new(None).unwrap();
+    /// let sign_key2 = SignKey::new(None).unwrap();
+    ///
+    /// let message = vec![1, 2, 3, 4, 5];
+    ///
+    /// let signature1 = Bls::sign(&message, &sign_key1).unwrap();
+    /// let signature2 = Bls::sign(&message, &sign_key2).unwrap();
+    ///
+    /// let signatures = vec![
+    ///    &signature1,
+    ///    &signature2
+    /// ];
+    ///
+    /// MultiSignature::new(&signatures).unwrap();
+    /// ```
     pub fn new(signatures: &[&Signature]) -> UrsaCryptoResult<MultiSignature> {
         let mut point = PointG1::new_inf()?;
 
@@ -322,7 +314,7 @@ impl MultiSignature {
 
         Ok(MultiSignature {
             point,
-            bytes: point.to_bytes()?
+            bytes: point.to_bytes()?,
         })
     }
 
@@ -346,12 +338,10 @@ impl MultiSignature {
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<MultiSignature> {
         let point = PointG1::from_bytes(bytes)?;
-        Ok(
-            MultiSignature {
-                point,
-                bytes: bytes.to_vec()
-            }
-        )
+        Ok(MultiSignature {
+            point,
+            bytes: bytes.to_vec(),
+        })
     }
 }
 
@@ -378,7 +368,7 @@ impl Bls {
 
         Ok(Signature {
             point,
-            bytes: point.to_bytes()?
+            bytes: point.to_bytes()?,
         })
     }
 
@@ -404,8 +394,19 @@ impl Bls {
     /// let valid = Bls::verify(&signature, &message, &ver_key, &gen).unwrap();
     /// assert!(valid);
     /// ```
-    pub fn verify(signature: &Signature, message: &[u8], ver_key: &VerKey, gen: &Generator) -> UrsaCryptoResult<bool> {
-        Bls::_verify_signature(&signature.point, message, &ver_key.point, gen, Sha256::default())
+    pub fn verify(
+        signature: &Signature,
+        message: &[u8],
+        ver_key: &VerKey,
+        gen: &Generator,
+    ) -> UrsaCryptoResult<bool> {
+        Bls::_verify_signature(
+            &signature.point,
+            message,
+            &ver_key.point,
+            gen,
+            Sha256::default(),
+        )
     }
 
     /// Verifies the proof of possession and returns true - if valid or false otherwise.
@@ -428,8 +429,18 @@ impl Bls {
     /// let valid = Bls::verify_proof_of_posession(&pop, &ver_key, &gen).unwrap();
     /// assert!(valid);
     /// ```
-    pub fn verify_proof_of_posession(pop: &ProofOfPossession, ver_key: &VerKey, gen: &Generator) -> UrsaCryptoResult<bool> {
-        Bls::_verify_signature(&pop.point, &ver_key.bytes, &ver_key.point, gen, Keccak256::default())
+    pub fn verify_proof_of_posession(
+        pop: &ProofOfPossession,
+        ver_key: &VerKey,
+        gen: &Generator,
+    ) -> UrsaCryptoResult<bool> {
+        Bls::_verify_signature(
+            &pop.point,
+            &ver_key.bytes,
+            &ver_key.point,
+            gen,
+            Keccak256::default(),
+        )
     }
 
     /// Verifies the message multi signature and returns true - if signature valid or false otherwise.
@@ -471,7 +482,12 @@ impl Bls {
     /// let valid = Bls::verify_multi_sig(&multi_sig, &message, &ver_keys, &gen).unwrap();
     /// assert!(valid)
     /// ```
-    pub fn verify_multi_sig(multi_sig: &MultiSignature, message: &[u8], ver_keys: &[&VerKey], gen: &Generator) -> UrsaCryptoResult<bool> {
+    pub fn verify_multi_sig(
+        multi_sig: &MultiSignature,
+        message: &[u8],
+        ver_keys: &[&VerKey],
+        gen: &Generator,
+    ) -> UrsaCryptoResult<bool> {
         // Since each signer (identified by a Verkey) has signed the same message, the public keys
         // can be added together to form the aggregated verkey
         let mut aggregated_verkey = PointG2::new_inf()?;
@@ -483,19 +499,40 @@ impl Bls {
         // the C API. Verifiers can thus cache the aggregated verkey and avoid several EC point additions.
         // The code below should be moved to such method.
 
-        Bls::_verify_signature(&multi_sig.point, message, &aggregated_verkey, gen, Sha256::default())
+        Bls::_verify_signature(
+            &multi_sig.point,
+            message,
+            &aggregated_verkey,
+            gen,
+            Sha256::default(),
+        )
     }
 
-    fn _gen_signature<T>(message: &[u8], sign_key: &SignKey, hasher: T) -> UrsaCryptoResult<PointG1> where T: Digest {
+    fn _gen_signature<T>(message: &[u8], sign_key: &SignKey, hasher: T) -> UrsaCryptoResult<PointG1>
+    where
+        T: Digest,
+    {
         Bls::_hash(message, hasher)?.mul(&sign_key.group_order_element)
     }
 
-    pub fn _verify_signature<T>(signature: &PointG1, message: &[u8], ver_key: &PointG2, gen: &Generator, hasher: T) -> UrsaCryptoResult<bool> where T: Digest {
+    pub fn _verify_signature<T>(
+        signature: &PointG1,
+        message: &[u8],
+        ver_key: &PointG2,
+        gen: &Generator,
+        hasher: T,
+    ) -> UrsaCryptoResult<bool>
+    where
+        T: Digest,
+    {
         let h = Bls::_hash(message, hasher)?;
         Ok(Pair::pair(&signature, &gen.point)?.eq(&Pair::pair(&h, &ver_key)?))
     }
 
-    fn _hash<T>(message: &[u8], mut hasher: T) -> UrsaCryptoResult<PointG1> where T: Digest {
+    fn _hash<T>(message: &[u8], mut hasher: T) -> UrsaCryptoResult<PointG1>
+    where
+        T: Digest,
+    {
         hasher.input(message);
         Ok(PointG1::from_hash(hasher.result().as_slice())?)
     }
@@ -517,19 +554,22 @@ mod tests {
 
     #[test]
     fn sign_key_new_works_for_seed() {
-        let seed = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31, 32];
+        let seed = vec![
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 21, 2, 3, 4, 5, 6, 7, 8,
+            9, 10, 31, 32,
+        ];
         SignKey::new(Some(&seed)).unwrap();
     }
 
     #[test]
-    fn sign_key_as_bytes_works(){
+    fn sign_key_as_bytes_works() {
         let sign_key = SignKey::new(None).unwrap();
         let bytes = sign_key.as_bytes();
         assert!(bytes.len() > 0);
     }
 
     #[test]
-    fn sign_key_from_bytes_works(){
+    fn sign_key_from_bytes_works() {
         let sign_key = SignKey::new(None).unwrap();
         let bytes = sign_key.as_bytes();
         SignKey::from_bytes(bytes).unwrap();
@@ -568,10 +608,7 @@ mod tests {
         let signature1 = Bls::sign(&message, &sign_key1).unwrap();
         let signature2 = Bls::sign(&message, &sign_key2).unwrap();
 
-        let signatures = vec![
-            &signature1,
-            &signature2
-        ];
+        let signatures = vec![&signature1, &signature2];
 
         MultiSignature::new(&signatures).unwrap();
     }
@@ -638,18 +675,12 @@ mod tests {
         let sign_key2 = SignKey::new(None).unwrap();
         let ver_key2 = VerKey::new(&gen, &sign_key2).unwrap();
 
-        let ver_keys = vec![
-            &ver_key1,
-            &ver_key2
-        ];
+        let ver_keys = vec![&ver_key1, &ver_key2];
 
         let signature1 = Bls::sign(&message, &sign_key1).unwrap();
         let signature2 = Bls::sign(&message, &sign_key2).unwrap();
 
-        let signatures = vec![
-            &signature1,
-            &signature2
-        ];
+        let signatures = vec![&signature1, &signature2];
 
         let multi_signature = MultiSignature::new(&signatures).unwrap();
         let valid = Bls::verify_multi_sig(&multi_signature, &message, &ver_keys, &gen).unwrap();
@@ -668,21 +699,16 @@ mod tests {
         let sign_key2 = SignKey::new(None).unwrap();
         let ver_key2 = VerKey::new(&gen, &sign_key2).unwrap();
 
-        let ver_keys = vec![
-            &ver_key1,
-            &ver_key2
-        ];
+        let ver_keys = vec![&ver_key1, &ver_key2];
 
         let signature1 = Bls::sign(&message, &sign_key1).unwrap();
         let signature2 = Bls::sign(&message, &sign_key2).unwrap();
 
-        let signatures = vec![
-            &signature1,
-            &signature2
-        ];
+        let signatures = vec![&signature1, &signature2];
 
         let multi_signature = MultiSignature::new(&signatures).unwrap();
-        let valid = Bls::verify_multi_sig(&multi_signature, &message_invalid, &ver_keys, &gen).unwrap();
+        let valid =
+            Bls::verify_multi_sig(&multi_signature, &message_invalid, &ver_keys, &gen).unwrap();
 
         assert!(!valid)
     }
@@ -698,21 +724,16 @@ mod tests {
         let sign_key2 = SignKey::new(None).unwrap();
         let ver_key2 = VerKey::new(&gen, &SignKey::new(None).unwrap()).unwrap();
 
-        let ver_keys = vec![
-            &ver_key1,
-            &ver_key2
-        ];
+        let ver_keys = vec![&ver_key1, &ver_key2];
 
         let signature1 = Bls::sign(&message, &sign_key1).unwrap();
         let signature2 = Bls::sign(&message, &sign_key2).unwrap();
 
-        let signatures = vec![
-            &signature1,
-            &signature2
-        ];
+        let signatures = vec![&signature1, &signature2];
 
         let multi_signature_invalid = MultiSignature::new(&signatures).unwrap();
-        let valid = Bls::verify_multi_sig(&multi_signature_invalid, &message, &ver_keys, &gen).unwrap();
+        let valid =
+            Bls::verify_multi_sig(&multi_signature_invalid, &message, &ver_keys, &gen).unwrap();
 
         assert!(!valid)
     }
