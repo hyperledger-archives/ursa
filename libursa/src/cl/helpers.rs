@@ -328,11 +328,11 @@ pub fn calc_teq(
     let mut result: BigNumber = a_prime.mod_exp(&e, &p_pub_key.n, Some(&mut ctx))?;
 
     for k in unrevealed_attrs.iter() {
-        let cur_r = p_pub_key.r.get(k).ok_or(err_msg(
+        let cur_r = p_pub_key.r.get(k).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in pk.r", k),
         ))?;
-        let cur_m = m_tilde.get(k).ok_or(err_msg(
+        let cur_m = m_tilde.get(k).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in m_tilde", k),
         ))?;
@@ -380,11 +380,11 @@ pub fn calc_tne(
     let mut ctx = BigNumber::new_context()?;
 
     for i in 0..ITERATION {
-        let cur_u = u.get(&i.to_string()).ok_or(err_msg(
+        let cur_u = u.get(&i.to_string()).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in u", i),
         ))?;
-        let cur_r = r.get(&i.to_string()).ok_or(err_msg(
+        let cur_r = r.get(&i.to_string()).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in r", i),
         ))?;
@@ -401,7 +401,7 @@ pub fn calc_tne(
         tau_list.push(t_tau);
     }
 
-    let delta = r.get("DELTA").ok_or(err_msg(
+    let delta = r.get("DELTA").ok_or_else(||err_msg(
         UrsaCryptoErrorKind::InvalidStructure,
         format!("Value by key '{}' not found in r", "DELTA"),
     ))?;
@@ -427,11 +427,11 @@ pub fn calc_tne(
     let mut q: BigNumber = BIGNUMBER_1.try_clone()?;
 
     for i in 0..ITERATION {
-        let cur_t = t.get(&i.to_string()).ok_or(err_msg(
+        let cur_t = t.get(&i.to_string()).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in t", i),
         ))?;
-        let cur_u = u.get(&i.to_string()).ok_or(err_msg(
+        let cur_u = u.get(&i.to_string()).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!("Value by key '{}' not found in u", i),
         ))?;

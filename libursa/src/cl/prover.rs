@@ -419,7 +419,7 @@ impl Prover {
         let u = hidden_attributes.iter().fold(
             p_pub_key.s.mod_exp(&v_prime, &p_pub_key.n, Some(&mut ctx)),
             |acc, attr| {
-                let pk_r = p_pub_key.r.get(&attr.clone()).ok_or(err_msg(
+                let pk_r = p_pub_key.r.get(&attr.clone()).ok_or_else(||err_msg(
                     UrsaCryptoErrorKind::InvalidStructure,
                     format!("Value by key '{}' not found in pk.r", attr),
                 ))?;
@@ -524,7 +524,7 @@ impl Prover {
             .filter(|&(_, v)| v.is_hidden() || v.is_commitment())
         {
             let m_tilde = bn_rand(LARGE_MTILDE)?;
-            let pk_r = p_pub_key.r.get(attr).ok_or(err_msg(
+            let pk_r = p_pub_key.r.get(attr).ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!("Value by key '{}' not found in pk.r", attr),
             ))?;
@@ -536,7 +536,6 @@ impl Prover {
                         &p_pub_key.n,
                         Some(&mut ctx),
                     )?;
-                    ()
                 }
                 CredentialValue::Commitment { .. } => {
                     let r_tilde = bn_rand(LARGE_MTILDE)?;
@@ -553,10 +552,9 @@ impl Prover {
                     values.extend_from_slice(&commitment_tilde.to_bytes()?);
                     let ca_value = blinded_primary_credential_secrets.committed_attributes
                         .get(attr)
-                        .ok_or(
+                        .ok_or_else(||
                             err_msg(UrsaCryptoErrorKind::InvalidStructure, format!("Value by key '{}' not found in primary_blinded_cred_secrets.committed_attributes", attr)))?;
                     values.extend_from_slice(&ca_value.to_bytes()?);
-                    ()
                 }
                 _ => (),
             }
@@ -577,7 +575,7 @@ impl Prover {
         let mut r_caps = BTreeMap::new();
 
         for (attr, m_tilde) in &m_tildes {
-            let ca = credential_values.attrs_values.get(attr).ok_or(err_msg(
+            let ca = credential_values.attrs_values.get(attr).ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!(
                     "Value by key '{}' not found in cred_values.committed_attributes",
@@ -1392,7 +1390,7 @@ impl ProofBuilder {
         let attr_value = cred_values
             .attrs_values
             .get(&predicate.attr_name)
-            .ok_or(err_msg(
+            .ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!(
                     "Value by key '{}' not found in cred_values",
@@ -1425,7 +1423,7 @@ impl ProofBuilder {
         let mut c_list: Vec<BigNumber> = Vec::new();
 
         for i in 0..ITERATION {
-            let cur_u = u.get(&i.to_string()).ok_or(err_msg(
+            let cur_u = u.get(&i.to_string()).ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!("Value by key '{}' not found in u1", i),
             ))?;
@@ -1471,7 +1469,7 @@ impl ProofBuilder {
         r_tilde.insert("DELTA".to_string(), bn_rand(LARGE_RTILDE)?);
         let alpha_tilde = bn_rand(LARGE_ALPHATILDE)?;
 
-        let mj = m_tilde.get(&predicate.attr_name).ok_or(err_msg(
+        let mj = m_tilde.get(&predicate.attr_name).ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             format!(
                 "Value by key '{}' not found in eq_proof.mtilde",
@@ -1549,12 +1547,12 @@ impl ProofBuilder {
             .collect::<BTreeSet<String>>();
 
         for k in unrevealed_attrs.iter() {
-            let cur_mtilde = init_proof.m_tilde.get(k).ok_or(err_msg(
+            let cur_mtilde = init_proof.m_tilde.get(k).ok_or_else(|| err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!("Value by key '{}' not found in init_proof.mtilde", k),
             ))?;
 
-            let cur_val = cred_values.attrs_values.get(k).ok_or(err_msg(
+            let cur_val = cred_values.attrs_values.get(k).ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!("Value by key '{}' not found in attributes_values", k),
             ))?;
@@ -1578,7 +1576,7 @@ impl ProofBuilder {
                 cred_values
                     .attrs_values
                     .get(attr)
-                    .ok_or(err_msg(
+                    .ok_or_else(|| err_msg(
                         UrsaCryptoErrorKind::InvalidStructure,
                         "Encoded value not found",
                     ))?
@@ -2380,7 +2378,7 @@ pub mod mocks {
     use self::issuer::mocks as issuer_mocks;
     use super::*;
 
-    pub const PROVER_DID: &'static str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
+    pub const PROVER_DID: &str = "CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW";
 
     pub fn master_secret() -> MasterSecret {
         MasterSecret {

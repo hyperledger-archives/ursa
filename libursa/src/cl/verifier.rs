@@ -423,7 +423,7 @@ impl ProofVerifier {
             .mod_exp(&LARGE_E_START_VALUE, &p_pub_key.n, Some(&mut ctx))?;
 
         for (attr, encoded_value) in &proof.revealed_attrs {
-            let cur_r = p_pub_key.r.get(attr).ok_or(err_msg(
+            let cur_r = p_pub_key.r.get(attr).ok_or_else(|| err_msg(
                 UrsaCryptoErrorKind::ProofRejected,
                 format!("Value by key '{}' not found in pk.r", attr),
             ))?;
@@ -470,7 +470,7 @@ impl ProofVerifier {
         )?;
 
         for i in 0..ITERATION {
-            let cur_t = proof.t.get(&i.to_string()).ok_or(err_msg(
+            let cur_t = proof.t.get(&i.to_string()).ok_or_else(|| err_msg(
                 UrsaCryptoErrorKind::ProofRejected,
                 format!("Value by key '{}' not found in proof.t", i),
             ))?;
@@ -481,7 +481,7 @@ impl ProofVerifier {
                 .mod_mul(&tau_list[i], &p_pub_key.n, Some(&mut ctx))?;
         }
 
-        let delta = proof.t.get("DELTA").ok_or(err_msg(
+        let delta = proof.t.get("DELTA").ok_or_else(|| err_msg(
             UrsaCryptoErrorKind::ProofRejected,
             format!("Value by key '{}' not found in proof.t", "DELTA"),
         ))?;

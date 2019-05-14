@@ -142,7 +142,7 @@ impl Issuer {
                credential_pub_key, max_cred_num, issuance_by_default);
 
         let cred_rev_pub_key: &CredentialRevocationPublicKey =
-            credential_pub_key.r_key.as_ref().ok_or(err_msg(
+            credential_pub_key.r_key.as_ref().ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 "There are not revocation keys in the credential public key.",
             ))?;
@@ -924,7 +924,7 @@ impl Issuer {
                     Some(&mut ctx),
                 ),
             |acc, attr| {
-                let pk_r = cred_pr_pub_key.r.get(&attr.clone()).ok_or(err_msg(
+                let pk_r = cred_pr_pub_key.r.get(&attr.clone()).ok_or_else(||err_msg(
                     UrsaCryptoErrorKind::InvalidStructure,
                     format!("Value by key '{}' not found in cred_pr_pub_key.r", attr),
                 ))?;
@@ -1102,7 +1102,7 @@ impl Issuer {
             .iter()
             .filter(|&(_, v)| v.is_known())
         {
-            let pk_r = p_pub_key.r.get(key).ok_or(err_msg(
+            let pk_r = p_pub_key.r.get(key).ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!("Value by key '{}' not found in pk.r", key),
             ))?;
@@ -1197,19 +1197,19 @@ impl Issuer {
                secret!(rev_idx), secret!(cred_context), blinded_credential_secrets, cred_pub_key, secret!(cred_priv_key), max_cred_num,
                issuance_by_default, rev_reg, secret!(rev_key_priv));
 
-        let ur = blinded_credential_secrets.ur.ok_or(err_msg(
+        let ur = blinded_credential_secrets.ur.ok_or_else(||err_msg(
             UrsaCryptoErrorKind::InvalidStructure,
             "No revocation part present in blinded master secret.",
         ))?;
 
         let r_pub_key: &CredentialRevocationPublicKey =
-            cred_pub_key.r_key.as_ref().ok_or(err_msg(
+            cred_pub_key.r_key.as_ref().ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 "No revocation part present in credential revocation public key.er secret.",
             ))?;
 
         let r_priv_key: &CredentialRevocationPrivateKey =
-            cred_priv_key.r_key.as_ref().ok_or(err_msg(
+            cred_priv_key.r_key.as_ref().ok_or_else(||err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 "No revocation part present in credential revocation private key.",
             ))?;
