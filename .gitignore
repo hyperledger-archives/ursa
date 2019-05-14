@@ -7,5 +7,4 @@ build
 .cache
 .DS_Store
 **/*.rs.bk
-Cargo.lock
 Podfile.lock

@@ -50,9 +50,8 @@ script:
   - cargo fmt --all -- --check
   - cargo clippy --all
   - cargo check
-  - cd libursa; cargo audit ; cd ..
+  - cargo audit
   - cargo build
   - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=portable
-  - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=wasm --target=wasm32-unknown-unknown
   - cargo test
   - cargo doc --no-deps
