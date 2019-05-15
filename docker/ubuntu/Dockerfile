@@ -13,11 +13,11 @@ RUN apt-get update 2>&1 > /dev/null \
     && cd /usr/lib/x86_64-linux-gnu \
     && ln -s libssl.so.1.0.0 libssl.so.10 \
     && ln -s libcrypto.so.1.0.0 libcrypto.so.10 \
-    && curl -fsSL https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.14.tar.gz | tar -xz \
-    && cd libsodium-1.0.14 \ 
+    && curl -fsSL https://download.libsodium.org/libsodium/releases/libsodium-1.0.16.tar.gz | tar -xz \
+    && cd libsodium-1.0.16 \ 
     && ./autogen.sh \
     && ./configure \
     && make install \
     && cd .. \
-    && rm -rf libsodium-1.0.14 \
+    && rm -rf libsodium-1.0.16 \
     && curl https://sh.rustup.rs -sSf | sh -s -- -y
