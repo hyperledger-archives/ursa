@@ -48,7 +48,7 @@ found in Libursa.
 Ursa and zmix use the following external dependencies:
 
 - [libsodium
-  1.0.14](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
+  1.0.16](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
   (Written in C)
 - [openssl 1.1.0j](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
   newer (Written in C)
