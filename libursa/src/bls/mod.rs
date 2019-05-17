@@ -268,7 +268,11 @@ impl Signature {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{SignKey, Signature, Bls};
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let signature = Bls::sign(&message, &sign_key).unwrap();
+    /// let bytes = signature.as_bytes();
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
@@ -279,7 +283,12 @@ impl Signature {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{SignKey, Signature, Bls};
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let signature = Bls::sign(&message, &sign_key).unwrap();
+    /// let bytes = signature.as_bytes();
+    /// let signature2 = Signature::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<Signature> {
         let point = PointG1::from_bytes(bytes)?;
@@ -659,6 +668,25 @@ mod tests {
         let message = vec![1, 2, 3, 4, 5];
 
         Bls::sign(&message, &sign_key).unwrap();
+    }
+
+    #[test]
+    fn signature_as_bytes_works() {
+        let sign_key = SignKey::new(None).unwrap();
+        let message = vec![1, 2, 3, 4, 5];
+        let signature = Bls::sign(&message, &sign_key).unwrap();
+        let bytes = signature.as_bytes();
+        assert!(bytes.len() == signature.bytes.len());
+    }
+
+    #[test]
+    fn signature_from_bytes_works() {
+        let sign_key = SignKey::new(None).unwrap();
+        let message = vec![1, 2, 3, 4, 5];
+        let signature = Bls::sign(&message, &sign_key).unwrap();
+        let bytes = signature.as_bytes();
+        let signature2 = Signature::from_bytes(bytes).unwrap();
+        assert!(signature2.point == signature.point);
     }
 
     #[test]
