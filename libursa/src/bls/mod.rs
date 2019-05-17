@@ -134,9 +134,7 @@ impl VerKey {
     /// # Example
     ///
     /// ```
-    /// use ursa::bls::Generator;
-    /// use ursa::bls::SignKey;
-    /// use ursa::bls::VerKey;
+    /// use ursa::bls::{Generator, SignKey, VerKey};
     /// let gen = Generator::new().unwrap();
     /// let sign_key = SignKey::new(None).unwrap();
     /// VerKey::new(&gen, &sign_key).unwrap();
@@ -155,7 +153,11 @@ impl VerKey {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{Generator, SignKey, VerKey};
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+    /// let bytes = ver_key.as_bytes();
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
@@ -166,7 +168,12 @@ impl VerKey {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{Generator, SignKey, VerKey};
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+    /// let bytes = ver_key.as_bytes();
+    /// let ver_key2 = VerKey::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<VerKey> {
         let point = PointG2::from_bytes(bytes)?;
@@ -542,11 +549,13 @@ impl Bls {
 mod tests {
     use super::*;
 
+    // Test Generator
     #[test]
     fn generator_new_works() {
         Generator::new().unwrap();
     }
 
+    // Test SignKey
     #[test]
     fn sign_key_new_works() {
         SignKey::new(None).unwrap();
@@ -575,6 +584,7 @@ mod tests {
         SignKey::from_bytes(bytes).unwrap();
     }
 
+    // Test VerKey
     #[test]
     fn ver_key_new_works() {
         let gen = Generator::new().unwrap();
@@ -583,6 +593,26 @@ mod tests {
     }
 
     #[test]
+    fn ver_key_as_bytes_works() {
+        let gen = Generator::new().unwrap();
+        let sign_key = SignKey::new(None).unwrap();
+        let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+        let bytes = ver_key.as_bytes();
+        assert!(bytes.len() == ver_key.bytes.len());
+    }
+
+    #[test]
+    fn ver_key_from_bytes_works() {
+        let gen = Generator::new().unwrap();
+        let sign_key = SignKey::new(None).unwrap();
+        let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+        let bytes = ver_key.as_bytes();
+        let ver_key2 = VerKey::from_bytes(bytes).unwrap();
+        assert!(ver_key2.point == ver_key.point);
+    }
+
+    // Test ProofOfPossession
+    #[test]
     fn pop_new_works() {
         let gen = Generator::new().unwrap();
         let sign_key = SignKey::new(None).unwrap();
@@ -590,6 +620,7 @@ mod tests {
         ProofOfPossession::new(&ver_key, &sign_key).unwrap();
     }
 
+    // Test Bls
     #[test]
     fn bls_sign_works() {
         let sign_key = SignKey::new(None).unwrap();
