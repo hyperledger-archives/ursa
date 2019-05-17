@@ -222,7 +222,12 @@ impl ProofOfPossession {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{Generator, SignKey, VerKey, ProofOfPossession};
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+    /// let signature = ProofOfPossession::new(&ver_key, &sign_key).unwrap();
+    /// let bytes = signature.as_bytes();
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
@@ -233,7 +238,13 @@ impl ProofOfPossession {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{Generator, SignKey, VerKey, ProofOfPossession};
+    /// let gen = Generator::new().unwrap();
+    /// let sign_key = SignKey::new(None).unwrap();
+    /// let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+    /// let signature = ProofOfPossession::new(&ver_key, &sign_key).unwrap();
+    /// let bytes = signature.as_bytes();
+    /// let signature2 = ProofOfPossession::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<ProofOfPossession> {
         let point = PointG1::from_bytes(bytes)?;
@@ -613,11 +624,32 @@ mod tests {
 
     // Test ProofOfPossession
     #[test]
-    fn pop_new_works() {
+    fn proof_of_possession_new_works() {
         let gen = Generator::new().unwrap();
         let sign_key = SignKey::new(None).unwrap();
         let ver_key = VerKey::new(&gen, &sign_key).unwrap();
         ProofOfPossession::new(&ver_key, &sign_key).unwrap();
+    }
+
+    #[test]
+    fn proof_of_possession_as_bytes_works() {
+        let gen = Generator::new().unwrap();
+        let sign_key = SignKey::new(None).unwrap();
+        let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+        let signature = ProofOfPossession::new(&ver_key, &sign_key).unwrap();
+        let bytes = signature.as_bytes();
+        assert!(bytes.len() == signature.bytes.len());
+    }
+
+    #[test]
+    fn proof_of_possession_from_bytes_works() {
+        let gen = Generator::new().unwrap();
+        let sign_key = SignKey::new(None).unwrap();
+        let ver_key = VerKey::new(&gen, &sign_key).unwrap();
+        let signature = ProofOfPossession::new(&ver_key, &sign_key).unwrap();
+        let bytes = signature.as_bytes();
+        let signature2 = ProofOfPossession::from_bytes(bytes).unwrap();
+        assert!(signature2.point == signature.point);
     }
 
     // Test Bls
