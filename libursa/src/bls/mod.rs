@@ -350,7 +350,15 @@ impl MultiSignature {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{SignKey, Bls, MultiSignature};
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let sign_key1 = SignKey::new(None).unwrap();
+    /// let sign_key2 = SignKey::new(None).unwrap();
+    /// let signature1 = Bls::sign(&message, &sign_key1).unwrap();
+    /// let signature2 = Bls::sign(&message, &sign_key2).unwrap();
+    /// let signatures = vec![&signature1, &signature2];
+    /// let multi_signature = MultiSignature::new(&signatures).unwrap();
+    /// let bytes = multi_signature.as_bytes();
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
@@ -361,7 +369,16 @@ impl MultiSignature {
     /// # Example
     ///
     /// ```
-    /// //TODO: Provide an example!
+    /// use ursa::bls::{SignKey, Bls, MultiSignature};
+    /// let message = vec![1, 2, 3, 4, 5];
+    /// let sign_key1 = SignKey::new(None).unwrap();
+    /// let sign_key2 = SignKey::new(None).unwrap();
+    /// let signature1 = Bls::sign(&message, &sign_key1).unwrap();
+    /// let signature2 = Bls::sign(&message, &sign_key2).unwrap();
+    /// let signatures = vec![&signature1, &signature2];
+    /// let multi_signature = MultiSignature::new(&signatures).unwrap();
+    /// let bytes = multi_signature.as_bytes();
+    /// let multi_signature2 = MultiSignature::from_bytes(bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> UrsaCryptoResult<MultiSignature> {
         let point = PointG1::from_bytes(bytes)?;
@@ -702,6 +719,41 @@ mod tests {
         let signatures = vec![&signature1, &signature2];
 
         MultiSignature::new(&signatures).unwrap();
+    }
+
+    #[test]
+    fn multi_signature_as_bytes_works() {
+        let message = vec![1, 2, 3, 4, 5];
+
+        let sign_key1 = SignKey::new(None).unwrap();
+        let sign_key2 = SignKey::new(None).unwrap();
+
+        let signature1 = Bls::sign(&message, &sign_key1).unwrap();
+        let signature2 = Bls::sign(&message, &sign_key2).unwrap();
+
+        let signatures = vec![&signature1, &signature2];
+
+        let multi_signature = MultiSignature::new(&signatures).unwrap();
+        let bytes = multi_signature.as_bytes();
+        assert!(bytes.len() == multi_signature.bytes.len());
+    }
+
+    #[test]
+    fn multi_signature_from_bytes_works() {
+        let message = vec![1, 2, 3, 4, 5];
+
+        let sign_key1 = SignKey::new(None).unwrap();
+        let sign_key2 = SignKey::new(None).unwrap();
+
+        let signature1 = Bls::sign(&message, &sign_key1).unwrap();
+        let signature2 = Bls::sign(&message, &sign_key2).unwrap();
+
+        let signatures = vec![&signature1, &signature2];
+
+        let multi_signature = MultiSignature::new(&signatures).unwrap();
+        let bytes = multi_signature.as_bytes();
+        let multi_signature2 = MultiSignature::from_bytes(bytes).unwrap();
+        assert!(multi_signature2.point == multi_signature.point);
     }
 
     #[test]
