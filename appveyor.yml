@@ -6,11 +6,6 @@ environment:
       MSYS2: 1
       SODIUM_BUILD_STATIC: yes
       OPENSSL_DIR: C:\OpenSSL-v111-Win64
-    - TARGET: i686-pc-windows-gnu
-      BITS: 32
-      MSYS2: 1
-      SODIUM_BUILD_STATIC: yes
-      OPENSSL_DIR: C:\OpenSSL-v111-Win32
 
 branches:
   only:
@@ -26,7 +21,6 @@ install:
   - cargo -V
 
 cache:
-  - target
   - C:\Users\appveyor\.cargo\registry
 
 build: false
