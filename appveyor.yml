@@ -1,0 +1,29 @@
+clone_depth: 5
+environment: 
+  matrix:
+    - TARGET: x86_64-pc-windows-msvc
+      BITS: 64
+      MSYS2: 1
+      SODIUM_BUILD_STATIC: yes
+      OPENSSL_DIR: C:\OpenSSL-v111-Win64
+
+branches:
+  only:
+    - master
+
+install:
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init.exe -y --default-host %TARGET%
+  - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+  - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
+
+  - rustc -V
+  - cargo -V
+
+cache:
+  - C:\Users\appveyor\.cargo\registry
+
+build: false
+
+test_script:
+  - cargo test --no-fail-fast
