@@ -303,7 +303,9 @@ pub fn get_mtilde(
 
     for attr in unrevealed_attrs {
         if !mtilde.contains_key(attr) {
-            mtilde.insert(attr.clone(), bn_rand(LARGE_MVECT)?);
+            let v = bn_rand(LARGE_MVECT)?;
+            println!("For attribute named {}, generated mtilde {:?}", &attr, &v);
+            mtilde.insert(attr.clone(), v);
         }
     }
 
@@ -325,6 +327,7 @@ pub fn calc_teq(
     unrevealed_attrs: {:?}", p_pub_key, a_prime, e, v, m_tilde, m2tilde, unrevealed_attrs);
 
     let mut ctx = BigNumber::new_context()?;
+    // a_prime^e % p_pub_key.n
     let mut result: BigNumber = a_prime.mod_exp(&e, &p_pub_key.n, Some(&mut ctx))?;
 
     for k in unrevealed_attrs.iter() {
@@ -341,6 +344,7 @@ pub fn calc_teq(
             )
         })?;
 
+        // result = result * (cur_r^cur_m % p_pub_key.n) % p_pub_key.n
         result = cur_r
             .mod_exp(&cur_m, &p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&result, &p_pub_key.n, Some(&mut ctx))?;

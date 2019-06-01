@@ -406,6 +406,13 @@ impl ProofVerifier {
             .cloned()
             .collect::<HashSet<String>>();
 
+        // TODO: `m_hat`s should be equal for all attributes across sub proofs which are assumed to be equal. `master_secret` is one such attribute.
+        // `m_hat` is the term used in paper, in code it is `proof.m`.
+        println!("m_hats in _verify_equality: {:?}", &proof.m);
+
+        // TODO: The verifier should have a notion of common attributes similar to `ProofBuilder`. `master_secret` is one such common attribute.
+        // The verifier should keep a map tracking `m_hat`s of all common attributes and ensure that `m_hat`s for them are same.
+
         let t1: BigNumber = calc_teq(
             &p_pub_key,
             &proof.a_prime,
