@@ -1547,7 +1547,7 @@ impl ProofBuilder {
             .mul(&init_proof.v_prime, Some(&mut ctx))?
             .add(&init_proof.v_tilde)?;
 
-        let mut m = HashMap::new();
+        let mut m_hat = HashMap::new();
 
         let unrevealed_attrs = non_cred_schema_elems
             .attrs
@@ -1573,11 +1573,12 @@ impl ProofBuilder {
                 )
             })?;
 
+            // val = cur_mtilde + (cur_val * challenge)
             let val = challenge
                 .mul(&cur_val.value(), Some(&mut ctx))?
                 .add(&cur_mtilde)?;
 
-            m.insert(k.clone(), val);
+            m_hat.insert(k.clone(), val);
         }
 
         let m2 = challenge
@@ -1608,7 +1609,7 @@ impl ProofBuilder {
             a_prime: init_proof.a_prime.try_clone()?,
             e,
             v,
-            m,
+            m: m_hat,
             m2,
         };
 

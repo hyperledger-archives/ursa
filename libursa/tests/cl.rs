@@ -989,6 +989,383 @@ mod cl_tests {
         }
 
         #[test]
+        fn anoncreds_works_for_multiple_credentials_different_master_secret() {
+            // This test fails currently.
+
+            HLCryptoDefaultLogger::init(None).ok();
+
+            // 1. Prover creates master secret
+            let master_secret = Prover::new_master_secret().unwrap();
+            println!("master secret={:?}", &master_secret);
+
+            let gvt_credential_values = helpers::gvt_credential_values(&master_secret);
+            println!("gvt_credential_values={:?}", &gvt_credential_values);
+
+            // 2. Issuer creates and signs GVT credential for Prover
+            let gvt_credential_schema = helpers::gvt_credential_schema();
+            let non_credential_schema = helpers::non_credential_schema();
+            let (
+                gvt_credential_pub_key,
+                gvt_credential_priv_key,
+                gvt_credential_key_correctness_proof,
+            ) = Issuer::new_credential_def(&gvt_credential_schema, &non_credential_schema, false)
+                .unwrap();
+
+            let gvt_credential_nonce = new_nonce().unwrap();
+
+            let (
+                gvt_blinded_credential_secrets,
+                gvt_credential_secrets_blinding_factors,
+                gvt_blinded_credential_secrets_correctness_proof,
+            ) = Prover::blind_credential_secrets(
+                &gvt_credential_pub_key,
+                &gvt_credential_key_correctness_proof,
+                &gvt_credential_values,
+                &gvt_credential_nonce,
+            )
+                .unwrap();
+
+            let gvt_credential_issuance_nonce = new_nonce().unwrap();
+
+            let (mut gvt_credential_signature, gvt_signature_correctness_proof) =
+                Issuer::sign_credential(
+                    PROVER_ID,
+                    &gvt_blinded_credential_secrets,
+                    &gvt_blinded_credential_secrets_correctness_proof,
+                    &gvt_credential_nonce,
+                    &gvt_credential_issuance_nonce,
+                    &gvt_credential_values,
+                    &gvt_credential_pub_key,
+                    &gvt_credential_priv_key,
+                )
+                    .unwrap();
+
+            // 3. Prover processes GVT credential
+            Prover::process_credential_signature(
+                &mut gvt_credential_signature,
+                &gvt_credential_values,
+                &gvt_signature_correctness_proof,
+                &gvt_credential_secrets_blinding_factors,
+                &gvt_credential_pub_key,
+                &gvt_credential_issuance_nonce,
+                None,
+                None,
+                None,
+            )
+                .unwrap();
+
+            // 4. Issuer creates and signs PQR credential for Prover
+            let pqr_credential_schema = helpers::pqr_credential_schema();
+            let (
+                pqr_credential_pub_key,
+                pqr_credential_priv_key,
+                pqr_credential_key_correctness_proof,
+            ) = Issuer::new_credential_def(&pqr_credential_schema, &non_credential_schema, false)
+                .unwrap();
+
+            let master_secret_1 = Prover::new_master_secret().unwrap();
+            println!("master secret_1={:?}", &master_secret_1);
+            let pqr_credential_nonce = new_nonce().unwrap();
+            let pqr_credential_values = helpers::pqr_credential_values(&master_secret_1);
+            println!("pqr_credential_values={:?}", &pqr_credential_values);
+
+            let (
+                pqr_blinded_credential_secrets,
+                pqr_credential_secrets_blinding_factors,
+                pqr_blinded_credential_secrets_correctness_proof,
+            ) = Prover::blind_credential_secrets(
+                &pqr_credential_pub_key,
+                &pqr_credential_key_correctness_proof,
+                &pqr_credential_values,
+                &pqr_credential_nonce,
+            )
+                .unwrap();
+
+            let pqr_credential_issuance_nonce = new_nonce().unwrap();
+
+            let (mut pqr_credential_signature, pqr_signature_correctness_proof) =
+                Issuer::sign_credential(
+                    PROVER_ID,
+                    &pqr_blinded_credential_secrets,
+                    &pqr_blinded_credential_secrets_correctness_proof,
+                    &pqr_credential_nonce,
+                    &pqr_credential_issuance_nonce,
+                    &pqr_credential_values,
+                    &pqr_credential_pub_key,
+                    &pqr_credential_priv_key,
+                )
+                    .unwrap();
+
+            // 5. Prover processes XYZ credential
+            Prover::process_credential_signature(
+                &mut pqr_credential_signature,
+                &pqr_credential_values,
+                &pqr_signature_correctness_proof,
+                &pqr_credential_secrets_blinding_factors,
+                &pqr_credential_pub_key,
+                &pqr_credential_issuance_nonce,
+                None,
+                None,
+                None,
+            )
+                .unwrap();
+            // 6. Verifier creates nonce
+            let nonce = new_nonce().unwrap();
+
+            // 7. Verifier creates proof request which contains two sub proof requests: GVT and XYZ
+            let gvt_sub_proof_request = helpers::gvt_sub_proof_request_1();
+            let pqr_sub_proof_request = helpers::pqr_sub_proof_request();
+
+            // 8. Prover creates proof builder
+            let mut proof_builder = Prover::new_proof_builder().unwrap();
+            proof_builder.add_common_attribute("master_secret").unwrap();
+
+            // 9. Prover adds GVT sub proof request
+            proof_builder
+                .add_sub_proof_request(
+                    &gvt_sub_proof_request,
+                    &gvt_credential_schema,
+                    &non_credential_schema,
+                    &gvt_credential_signature,
+                    &gvt_credential_values,
+                    &gvt_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            // 10. Prover adds XYZ sub proof request
+            proof_builder
+                .add_sub_proof_request(
+                    &pqr_sub_proof_request,
+                    &pqr_credential_schema,
+                    &non_credential_schema,
+                    &pqr_credential_signature,
+                    &pqr_credential_values,
+                    &pqr_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            // 11. Prover gets proof which contains sub proofs for GVT and XYZ sub proof requests
+            let proof = proof_builder.finalize(&nonce).unwrap();
+
+            // 12. Verifier verifies proof for GVT and XYZ sub proof requests
+            let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+            proof_verifier
+                .add_sub_proof_request(
+                    &gvt_sub_proof_request,
+                    &gvt_credential_schema,
+                    &non_credential_schema,
+                    &gvt_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+            proof_verifier
+                .add_sub_proof_request(
+                    &pqr_sub_proof_request,
+                    &pqr_credential_schema,
+                    &non_credential_schema,
+                    &pqr_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            assert!(!proof_verifier.verify(&proof, &nonce).unwrap());
+        }
+
+        #[test]
+        fn anoncreds_works_for_multiple_credentials_common_attribute() {
+            // TODO: Create a negative test case.
+            HLCryptoDefaultLogger::init(None).ok();
+
+            // 1. Prover creates master secret
+            let master_secret = Prover::new_master_secret().unwrap();
+            println!("master secret={:?}", &master_secret);
+
+            let gvt_credential_values = helpers::gvt_credential_values(&master_secret);
+            println!("gvt_credential_values={:?}", &gvt_credential_values);
+
+            // 2. Issuer creates and signs GVT credential for Prover
+            let gvt_credential_schema = helpers::gvt_credential_schema();
+            let non_credential_schema = helpers::non_credential_schema();
+            let (
+                gvt_credential_pub_key,
+                gvt_credential_priv_key,
+                gvt_credential_key_correctness_proof,
+            ) = Issuer::new_credential_def(&gvt_credential_schema, &non_credential_schema, false)
+                .unwrap();
+
+            let gvt_credential_nonce = new_nonce().unwrap();
+
+            let (
+                gvt_blinded_credential_secrets,
+                gvt_credential_secrets_blinding_factors,
+                gvt_blinded_credential_secrets_correctness_proof,
+            ) = Prover::blind_credential_secrets(
+                &gvt_credential_pub_key,
+                &gvt_credential_key_correctness_proof,
+                &gvt_credential_values,
+                &gvt_credential_nonce,
+            )
+                .unwrap();
+
+            let gvt_credential_issuance_nonce = new_nonce().unwrap();
+
+            let (mut gvt_credential_signature, gvt_signature_correctness_proof) =
+                Issuer::sign_credential(
+                    PROVER_ID,
+                    &gvt_blinded_credential_secrets,
+                    &gvt_blinded_credential_secrets_correctness_proof,
+                    &gvt_credential_nonce,
+                    &gvt_credential_issuance_nonce,
+                    &gvt_credential_values,
+                    &gvt_credential_pub_key,
+                    &gvt_credential_priv_key,
+                )
+                    .unwrap();
+
+            // 3. Prover processes GVT credential
+            Prover::process_credential_signature(
+                &mut gvt_credential_signature,
+                &gvt_credential_values,
+                &gvt_signature_correctness_proof,
+                &gvt_credential_secrets_blinding_factors,
+                &gvt_credential_pub_key,
+                &gvt_credential_issuance_nonce,
+                None,
+                None,
+                None,
+            )
+                .unwrap();
+
+            // 4. Issuer creates and signs PQR credential for Prover
+            let pqr_credential_schema = helpers::pqr_credential_schema();
+            let (
+                pqr_credential_pub_key,
+                pqr_credential_priv_key,
+                pqr_credential_key_correctness_proof,
+            ) = Issuer::new_credential_def(&pqr_credential_schema, &non_credential_schema, false)
+                .unwrap();
+
+            let pqr_credential_nonce = new_nonce().unwrap();
+            let pqr_credential_values = helpers::pqr_credential_values(&master_secret);
+            println!("pqr_credential_values={:?}", &pqr_credential_values);
+
+            let (
+                pqr_blinded_credential_secrets,
+                pqr_credential_secrets_blinding_factors,
+                pqr_blinded_credential_secrets_correctness_proof,
+            ) = Prover::blind_credential_secrets(
+                &pqr_credential_pub_key,
+                &pqr_credential_key_correctness_proof,
+                &pqr_credential_values,
+                &pqr_credential_nonce,
+            )
+                .unwrap();
+
+            let pqr_credential_issuance_nonce = new_nonce().unwrap();
+
+            let (mut pqr_credential_signature, pqr_signature_correctness_proof) =
+                Issuer::sign_credential(
+                    PROVER_ID,
+                    &pqr_blinded_credential_secrets,
+                    &pqr_blinded_credential_secrets_correctness_proof,
+                    &pqr_credential_nonce,
+                    &pqr_credential_issuance_nonce,
+                    &pqr_credential_values,
+                    &pqr_credential_pub_key,
+                    &pqr_credential_priv_key,
+                )
+                    .unwrap();
+
+            // 5. Prover processes XYZ credential
+            Prover::process_credential_signature(
+                &mut pqr_credential_signature,
+                &pqr_credential_values,
+                &pqr_signature_correctness_proof,
+                &pqr_credential_secrets_blinding_factors,
+                &pqr_credential_pub_key,
+                &pqr_credential_issuance_nonce,
+                None,
+                None,
+                None,
+            )
+                .unwrap();
+            // 6. Verifier creates nonce
+            let nonce = new_nonce().unwrap();
+
+            // 7. Verifier creates proof request which contains two sub proof requests: GVT and XYZ
+            let gvt_sub_proof_request = helpers::gvt_sub_proof_request_1();
+            let pqr_sub_proof_request = helpers::pqr_sub_proof_request();
+
+            // 8. Prover creates proof builder
+            let mut proof_builder = Prover::new_proof_builder().unwrap();
+            proof_builder.add_common_attribute("master_secret").unwrap();
+            // name attribute value is same across both gvt and pqr credentials
+            proof_builder.add_common_attribute("name").unwrap();
+
+            // 9. Prover adds GVT sub proof request
+            proof_builder
+                .add_sub_proof_request(
+                    &gvt_sub_proof_request,
+                    &gvt_credential_schema,
+                    &non_credential_schema,
+                    &gvt_credential_signature,
+                    &gvt_credential_values,
+                    &gvt_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            // 10. Prover adds XYZ sub proof request
+            proof_builder
+                .add_sub_proof_request(
+                    &pqr_sub_proof_request,
+                    &pqr_credential_schema,
+                    &non_credential_schema,
+                    &pqr_credential_signature,
+                    &pqr_credential_values,
+                    &pqr_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            // 11. Prover gets proof which contains sub proofs for GVT and XYZ sub proof requests
+            let proof = proof_builder.finalize(&nonce).unwrap();
+
+            // 12. Verifier verifies proof for GVT and XYZ sub proof requests
+            let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+            proof_verifier
+                .add_sub_proof_request(
+                    &gvt_sub_proof_request,
+                    &gvt_credential_schema,
+                    &non_credential_schema,
+                    &gvt_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+            proof_verifier
+                .add_sub_proof_request(
+                    &pqr_sub_proof_request,
+                    &pqr_credential_schema,
+                    &non_credential_schema,
+                    &pqr_credential_pub_key,
+                    None,
+                    None,
+                )
+                .unwrap();
+
+            assert!(proof_verifier.verify(&proof, &nonce).unwrap());
+        }
+
+        #[test]
         fn anoncreds_works_for_revocation_proof_for_three_credentials_proving_first() {
             HLCryptoDefaultLogger::init(None).ok();
 
@@ -4490,6 +4867,13 @@ mod cl_tests {
             credential_schema_builder.finalize().unwrap()
         }
 
+        pub fn pqr_credential_schema() -> CredentialSchema {
+            let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+            credential_schema_builder.add_attr("name").unwrap();
+            credential_schema_builder.add_attr("address").unwrap();
+            credential_schema_builder.finalize().unwrap()
+        }
+
         pub fn non_credential_schema() -> NonCredentialSchema {
             let mut non_credential_schema_builder =
                 Issuer::new_non_credential_schema_builder().unwrap();
@@ -4536,6 +4920,20 @@ mod cl_tests {
             credential_values_builder.finalize().unwrap()
         }
 
+        pub fn pqr_credential_values(master_secret: &MasterSecret) -> CredentialValues {
+            let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+            credential_values_builder
+                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .unwrap();
+            credential_values_builder
+                .add_dec_known("name", "1139481716457488690172217916278103335")
+                .unwrap();
+            credential_values_builder
+                .add_dec_known("address", "51792877103171595686471452153480627530891")
+                .unwrap();
+            credential_values_builder.finalize().unwrap()
+        }
+
         pub fn gvt_sub_proof_request() -> SubProofRequest {
             let mut gvt_sub_proof_request_builder =
                 Verifier::new_sub_proof_request_builder().unwrap();
@@ -4558,6 +4956,24 @@ mod cl_tests {
                 .add_predicate("period", "GE", 4)
                 .unwrap();
             xyz_sub_proof_request_builder.finalize().unwrap()
+        }
+
+        pub fn pqr_sub_proof_request() -> SubProofRequest {
+            let mut pqr_sub_proof_request_builder =
+                Verifier::new_sub_proof_request_builder().unwrap();
+            pqr_sub_proof_request_builder
+                .add_revealed_attr("address")
+                .unwrap();
+            pqr_sub_proof_request_builder.finalize().unwrap()
+        }
+
+        pub fn gvt_sub_proof_request_1() -> SubProofRequest {
+            let mut gvt_sub_proof_request_builder =
+                Verifier::new_sub_proof_request_builder().unwrap();
+            gvt_sub_proof_request_builder
+                .add_predicate("age", "GE", 18)
+                .unwrap();
+            gvt_sub_proof_request_builder.finalize().unwrap()
         }
     }
 
