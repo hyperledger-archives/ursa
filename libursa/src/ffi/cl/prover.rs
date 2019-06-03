@@ -945,6 +945,40 @@ pub extern "C" fn ursa_cl_prover_new_proof_builder(
     res
 }
 
+/// Add a common attribute to the proof builder
+///
+/// # Arguments
+/// * `proof_builder` - Reference that contain proof builder instance pointer.
+/// * `attribute_name` - Common attribute's name
+
+#[no_mangle]
+pub extern "C" fn ursa_cl_proof_builder_add_common_attribute(
+    proof_builder: *const c_void,
+    attribute_name: *const c_char,
+) -> ErrorCode {
+    trace!(
+        "ursa_cl_proof_builder_add_common_attribute: >>> proof_builder: {:?}, attribute_name: {:?}",
+        proof_builder,
+        attribute_name
+    );
+
+    check_useful_mut_c_reference!(proof_builder, ProofBuilder, ErrorCode::CommonInvalidParam1);
+    check_useful_c_str!(attribute_name, ErrorCode::CommonInvalidParam2);
+
+    trace!(
+        "ursa_cl_proof_builder_add_common_attribute: entities: proof_builder: {:?}, attribute_name: {:?}",
+        proof_builder,
+        attribute_name
+    );
+
+    let res = match proof_builder.add_common_attribute(&attribute_name) {
+        Ok(()) => ErrorCode::Success,
+        Err(err) => err.into(),
+    };
+
+    res
+}
+
 /// Add a sub proof request to the proof builder
 ///
 /// # Arguments
@@ -1234,6 +1268,9 @@ mod tests {
     use ffi::cl::prover::mocks::*;
     use std::ptr;
 
+    // Master secret is now called link secret.
+    pub static LINK_SECRET: &'static str = "master_secret";
+
     #[test]
     fn ursa_cl_prover_new_master_secret_works() {
         let mut master_secret_p: *const c_void = ptr::null();
@@ -1389,6 +1426,75 @@ mod tests {
             credential_secrets_blinding_factors,
             blinded_credential_secrets_correctness_proof,
         );
+    }
+
+    #[test]
+    fn ursa_cl_prover_proof_builder_add_common_attribute_works() {
+        let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) =
+            _credential_def();
+        let credential_values = _credential_values();
+        let credential_nonce = _nonce();
+        let (
+            blinded_credential_secrets,
+            credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof,
+        ) = _blinded_credential_secrets(
+            credential_pub_key,
+            credential_key_correctness_proof,
+            credential_values,
+            credential_nonce,
+        );
+        let sub_proof_request = _sub_proof_request();
+        let credential_schema = _credential_schema();
+        let non_credential_schema = _non_credential_schema();
+        let credential_issuance_nonce = _nonce();
+        let (credential_signature, signature_correctness_proof) = _credential_signature(
+            blinded_credential_secrets,
+            blinded_credential_secrets_correctness_proof,
+            credential_nonce,
+            credential_issuance_nonce,
+            credential_values,
+            credential_pub_key,
+            credential_priv_key,
+        );
+        _process_credential_signature(
+            credential_signature,
+            signature_correctness_proof,
+            credential_secrets_blinding_factors,
+            credential_values,
+            credential_pub_key,
+            credential_issuance_nonce,
+            ptr::null(),
+            ptr::null(),
+            ptr::null(),
+        );
+        let proof_builder = _proof_builder();
+
+        let common_attr_name = string_to_cstring(String::from(LINK_SECRET));
+        let err_code =
+            ursa_cl_proof_builder_add_common_attribute(proof_builder, common_attr_name.as_ptr());
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let nonce = _nonce();
+
+        _free_proof_builder(proof_builder, nonce);
+        _free_credential_def(
+            credential_pub_key,
+            credential_priv_key,
+            credential_key_correctness_proof,
+        );
+        _free_blinded_credential_secrets(
+            blinded_credential_secrets,
+            credential_secrets_blinding_factors,
+            blinded_credential_secrets_correctness_proof,
+        );
+        _free_nonce(credential_nonce);
+        _free_nonce(credential_issuance_nonce);
+        _free_credential_values(credential_values);
+        _free_sub_proof_request(sub_proof_request);
+        _free_credential_signature(credential_signature, signature_correctness_proof);
+        _free_credential_schema(credential_schema);
+        _free_non_credential_schema(non_credential_schema);
     }
 
     #[test]

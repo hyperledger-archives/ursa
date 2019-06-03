@@ -5,7 +5,8 @@ use cl::helpers::*;
 use cl::*;
 use errors::prelude::*;
 
-use std::collections::BTreeSet;
+use std::collections::hash_map::Entry;
+use std::collections::{BTreeSet, HashMap};
 use std::iter::FromIterator;
 
 /// Party that wants to check that prover has some credentials provided by issuer.
@@ -45,6 +46,7 @@ impl Verifier {
     pub fn new_proof_verifier() -> UrsaCryptoResult<ProofVerifier> {
         Ok(ProofVerifier {
             credentials: Vec::new(),
+            common_attributes: HashMap::new(),
         })
     }
 }
@@ -52,9 +54,18 @@ impl Verifier {
 #[derive(Debug)]
 pub struct ProofVerifier {
     credentials: Vec<VerifiableCredential>,
+    common_attributes: HashMap<String, Option<BigNumber>>,
 }
 
 impl ProofVerifier {
+    /// Attributes that are supposed to have same value across all subproofs.
+    /// The verifier first enters attribute names in the hashmap before proof verification starts.
+    /// The hashmap is again updated during verification of sub proofs by the blinded value of attributes (`m_hat`s in paper)
+    pub fn add_common_attribute(&mut self, attr_name: &str) -> UrsaCryptoResult<()> {
+        self.common_attributes.insert(attr_name.to_owned(), None);
+        Ok(())
+    }
+
     /// Add sub proof request to proof verifier.
     /// The order of sub-proofs is important: both Prover and Verifier should use the same order.
     ///
@@ -204,7 +215,7 @@ impl ProofVerifier {
     ///                                      None).unwrap();
     /// assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     /// ```
-    pub fn verify(&self, proof: &Proof, nonce: &Nonce) -> UrsaCryptoResult<bool> {
+    pub fn verify(&mut self, proof: &Proof, nonce: &Nonce) -> UrsaCryptoResult<bool> {
         trace!(
             "ProofVerifier::verify: >>> proof: {:?}, nonce: {:?}",
             proof,
@@ -242,6 +253,47 @@ impl ProofVerifier {
                 );
             };
 
+            // Check that `m_hat`s of all common attributes are same. Also `m_hat` for each common attribute must be present in each sub proof
+            let attr_names: Vec<String> = self
+                .common_attributes
+                .keys()
+                .map(|s| s.to_string())
+                .collect();
+            for attr_name in attr_names {
+                if proof_item.primary_proof.eq_proof.m.contains_key(&attr_name) {
+                    let m_hat = &proof_item.primary_proof.eq_proof.m[&attr_name];
+                    match self.common_attributes.entry(attr_name.clone()) {
+                        Entry::Occupied(mut entry) => {
+                            let x = entry.get_mut();
+                            match x {
+                                Some(v) => {
+                                    if v != m_hat {
+                                        return Err(err_msg(
+                                            UrsaCryptoErrorKind::ProofRejected,
+                                            format!("Blinded value for common attribute '{}' different across sub proofs", attr_name),
+                                        ));
+                                    }
+                                }
+                                // For first subproof
+                                None => {
+                                    *x = Some(m_hat.try_clone()?);
+                                }
+                            }
+                        }
+                        // Vacant is not possible because `attr_names` is constructed from keys of `self.common_attributes`
+                        Entry::Vacant(_) => (),
+                    }
+                } else {
+                    // `m_hat` for common attribute not present in sub proof
+                    return Err(err_msg(
+                        UrsaCryptoErrorKind::ProofRejected,
+                        format!(
+                            "Blinded value for common attribute '{}' not found in proof.m",
+                            attr_name
+                        ),
+                    ));
+                }
+            }
             tau_list.append_vec(&ProofVerifier::_verify_primary_proof(
                 &credential.pub_key.p_key,
                 &proof.aggregated_proof.c_hash,
@@ -405,13 +457,6 @@ impl ProofVerifier {
             .difference(&sub_proof_request.revealed_attrs)
             .cloned()
             .collect::<HashSet<String>>();
-
-        // TODO: `m_hat`s should be equal for all attributes across sub proofs which are assumed to be equal. `master_secret` is one such attribute.
-        // `m_hat` is the term used in paper, in code it is `proof.m`.
-        println!("m_hats in _verify_equality: {:?}", &proof.m);
-
-        // TODO: The verifier should have a notion of common attributes similar to `ProofBuilder`. `master_secret` is one such common attribute.
-        // The verifier should keep a map tracking `m_hat`s of all common attributes and ensure that `m_hat`s for them are same.
 
         let t1: BigNumber = calc_teq(
             &p_pub_key,
