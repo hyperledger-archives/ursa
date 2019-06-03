@@ -303,9 +303,7 @@ pub fn get_mtilde(
 
     for attr in unrevealed_attrs {
         if !mtilde.contains_key(attr) {
-            let v = bn_rand(LARGE_MVECT)?;
-            println!("For attribute named {}, generated mtilde {:?}", &attr, &v);
-            mtilde.insert(attr.clone(), v);
+            mtilde.insert(attr.clone(), bn_rand(LARGE_MVECT)?);
         }
     }
 
