@@ -1418,7 +1418,7 @@ mod tests {
             credential_issuance_nonce,
             credential_values,
             credential_pub_key,
-            credential_pub_key,
+            credential_priv_key,
         );
         _process_credential_signature(
             credential_signature,
