@@ -851,7 +851,7 @@ pub extern "C" fn ursa_cl_prover_process_credential_signature(
         "ursa_cl_prover_process_credential_signature: <<< res: {:?}",
         res
     );
-    ErrorCode::Success
+    res
 }
 
 #[no_mangle]
@@ -900,7 +900,7 @@ pub extern "C" fn ursa_cl_prover_get_credential_revocation_index(
         "ursa_cl_prover_get_credential_revocation_index: <<< res: {:?}",
         res
     );
-    ErrorCode::Success
+    res
 }
 
 /// Creates and returns proof builder.
@@ -1063,7 +1063,7 @@ pub extern "C" fn ursa_cl_proof_builder_add_sub_proof_request(
         "ursa_cl_proof_builder_add_sub_proof_request: <<< res: {:?}",
         res
     );
-    ErrorCode::Success
+    res
 }
 
 /// Finalize proof.
