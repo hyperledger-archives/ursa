@@ -1246,7 +1246,7 @@ pub extern "C" fn ursa_cl_issuer_sign_credential(
     };
 
     trace!("ursa_cl_issuer_sign_credential: <<< res: {:?}", res);
-    ErrorCode::Success
+    res
 }
 
 /// Signs credential values with both primary and revocation keys.
@@ -1396,7 +1396,7 @@ pub extern "C" fn ursa_cl_issuer_sign_credential_with_revoc(
     };
 
     trace!("ursa_cl_issuer_sign_credential: <<< res: {:?}", res);
-    ErrorCode::Success
+    res
 }
 
 /// Returns json representation of credential signature.
@@ -1917,7 +1917,7 @@ pub extern "C" fn ursa_cl_issuer_revoke_credential(
     };
 
     trace!("ursa_cl_issuer_revoke_credential: <<< res: {:?}", res);
-    ErrorCode::Success
+    res
 }
 
 /// Recovery a credential by a rev_idx in a given revocation registry
@@ -1963,7 +1963,7 @@ pub extern "C" fn ursa_cl_issuer_recovery_credential(
     };
 
     trace!("ursa_cl_issuer_recovery_credential: <<< res: {:?}", res);
-    ErrorCode::Success
+    res
 }
 
 #[no_mangle]
