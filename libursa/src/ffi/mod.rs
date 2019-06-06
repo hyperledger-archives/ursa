@@ -1,6 +1,7 @@
 pub mod bls;
 pub mod cl;
 pub mod logger;
+pub mod signatures;
 
 use errors::prelude::*;
 use std::os::raw::c_char;

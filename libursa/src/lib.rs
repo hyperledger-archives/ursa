@@ -69,6 +69,9 @@ extern crate num_bigint;
 extern crate num_integer;
 #[cfg(feature = "bn_rust")]
 extern crate num_traits;
+#[cfg(feature = "ffi")]
+#[macro_use]
+extern crate ffi_support;
 
 extern crate time;
 
