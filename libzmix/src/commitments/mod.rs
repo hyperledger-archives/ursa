@@ -7,7 +7,7 @@ pub enum CommitmentError {
     InvalidBigNumSize(usize, usize),
     ZeroMessageCount(String),
     InvalidGeneratorCount(usize, usize),
-    HashError(HashError)
+    HashError(HashError),
 }
 
 impl From<HashError> for CommitmentError {
@@ -26,9 +26,16 @@ trait CommitmentScheme {
     fn setup(num_elements: usize) -> Result<Vec<Vec<u8>>, CommitmentError>;
 
     // Commits to `messages`. Returns a commitment
-    fn commit(generators: &[&[u8]], messages: &[&[u8]]) -> Result<(Vec<u8>, Vec<u8>), CommitmentError>;
+    fn commit(
+        generators: &[&[u8]],
+        messages: &[&[u8]],
+    ) -> Result<(Vec<u8>, Vec<u8>), CommitmentError>;
 
     // Takes the `opening` and check that the `commitment` was indeed done for the `messages`
-    fn verify(commitment: &[u8], opening: &[u8], generators: &[&[u8]], messages: &[&[u8]]) -> Result<bool, CommitmentError>;
+    fn verify(
+        commitment: &[u8],
+        opening: &[u8],
+        generators: &[&[u8]],
+        messages: &[&[u8]],
+    ) -> Result<bool, CommitmentError>;
 }
-

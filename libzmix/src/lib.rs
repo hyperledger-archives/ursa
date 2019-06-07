@@ -1,11 +1,11 @@
-extern crate serde_json;
-extern crate rand;
 extern crate amcl;
+extern crate rand;
+extern crate serde_json;
 
 pub mod commitments;
 pub mod ffi;
-pub mod zkl;
-pub mod prf;
 pub mod hash_functions;
+pub mod prf;
 pub mod signatures;
 pub mod utils;
+pub mod zkl;
