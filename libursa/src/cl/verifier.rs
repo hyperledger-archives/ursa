@@ -226,7 +226,6 @@ impl ProofVerifier {
 
         let mut tau_list: Vec<Vec<u8>> = Vec::new();
 
-        assert_eq!(proof.proofs.len(), self.credentials.len()); //FIXME return error
         for idx in 0..proof.proofs.len() {
             let proof_item = &proof.proofs[idx];
             let credential = &self.credentials[idx];
@@ -366,7 +365,13 @@ impl ProofVerifier {
             proof
         );
 
-        assert_eq!(proof.proofs.len(), credentials.len()); //FIXME return error
+        if proof.proofs.len() != credentials.len() {
+            return Err(err_msg(
+                UrsaCryptoErrorKind::ProofRejected,
+                format!("Invalid proof length"),
+            ));
+        }
+
         for (proof_for_credential, credential) in proof.proofs.iter().zip(credentials) {
             let proof_revealed_attrs = BTreeSet::from_iter(
                 proof_for_credential
