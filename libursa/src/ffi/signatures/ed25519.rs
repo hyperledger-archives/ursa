@@ -160,7 +160,7 @@ pub extern "C" fn ursa_ed25519_verify(
     rust_slice!(public_key, public_key_len);
     let pk = PublicKey(public_key.to_vec());
 
-    let res = match scheme.verify(message, signature, &pk) {
+    match scheme.verify(message, signature, &pk) {
         Ok(b) => {
             if b {
                 *err = ExternError::success();
@@ -176,8 +176,7 @@ pub extern "C" fn ursa_ed25519_verify(
             );
             0
         }
-    };
-    res
+    }
 }
 
 fn ursa_ed25519_keypair_gen(
@@ -187,7 +186,7 @@ fn ursa_ed25519_keypair_gen(
     err: &mut ExternError,
 ) -> i32 {
     let scheme = ed25519::Ed25519Sha512::new();
-    let res = match scheme.keypair(option) {
+    match scheme.keypair(option) {
         Ok((pk, sk)) => {
             *err = ExternError::success();
             *public_key = ByteBuffer::from_vec(pk.0.to_vec());
@@ -203,8 +202,7 @@ fn ursa_ed25519_keypair_gen(
             );
             0
         }
-    };
-    res
+    }
 }
 
 fn check_useful_byte_array(ptr: *const u8, len: usize, err: &mut ExternError) -> bool {
@@ -216,7 +214,7 @@ fn check_useful_byte_array(ptr: *const u8, len: usize, err: &mut ExternError) ->
         return false;
     }
 
-    if len <= 0 {
+    if len == 0 {
         *err = ExternError::new_error(
             ErrorCode::new(ed25519_error_codes::INVALID_PARAM2),
             "Array length must be greater than 0".to_string(),
