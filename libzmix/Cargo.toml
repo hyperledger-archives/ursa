@@ -6,9 +6,9 @@ license = "Apache-2.0"
 
 [lib]
 name = "zmix"
-crate-type = ["rlib", "staticlib", "dylib", "cdylib"]
+crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
 amcl = { version = "0.2.0", features = ["bls381"] }
-serde_json = "1.0.26"
+serde_json = "1.0"
 rand = "0.6"
