@@ -181,8 +181,8 @@ mod test {
         let hf = Bls12381Sha256G1::new(Some(hm));
         assert!(hf.is_err());
 
-        digest_test!(Bls12381Sha256G1, 2*MODBYTES+1);
-        digest_test!(Bls12381Sha256G2, 4*MODBYTES);
+        digest_test!(Bls12381Sha256G1, 2 * MODBYTES + 1);
+        digest_test!(Bls12381Sha256G2, 4 * MODBYTES);
     }
 
     #[test]

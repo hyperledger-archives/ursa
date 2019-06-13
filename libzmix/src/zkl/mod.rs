@@ -44,7 +44,7 @@ mod tests {
     fn parse_empty_clause() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         let result = Parser::parse(&proof_spec, &witness);
         assert!(result.is_err());
         if let Err(e) = result {
@@ -57,7 +57,7 @@ mod tests {
         //TODO: Add credential clause to the proof_spec
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         assert!(Parser::parse(&proof_spec, &witness).is_ok());
     }
 
@@ -66,7 +66,7 @@ mod tests {
         //TODO: Add interval clause to the proof_spec
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         assert!(Parser::parse(&proof_spec, &witness).is_ok());
     }
 
@@ -75,7 +75,7 @@ mod tests {
         //TODO: Add set membership clause to the proof_spec
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         assert!(Parser::parse(&proof_spec, &witness).is_ok());
     }
 
@@ -84,7 +84,7 @@ mod tests {
         //TODO: Add verifiable encryption clause to the proof_spec
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         assert!(Parser::parse(&proof_spec, &witness).is_ok());
     }
 
@@ -93,7 +93,7 @@ mod tests {
         //TODO: Add nym clause to the proof_spec
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         assert!(Parser::parse(&proof_spec, &witness).is_ok());
     }
 
@@ -101,7 +101,7 @@ mod tests {
     fn proof_verify() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         let proof = Parser::parse(&proof_spec, &witness).unwrap();
 
         assert!(proof.verify(&proof_spec).is_ok());
@@ -111,7 +111,7 @@ mod tests {
     fn proof_verify_fail_attribute_mismatch() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
-        let witness = Witness{};
+        let witness = Witness {};
         let proof = Parser::parse(&proof_spec, &witness).unwrap();
 
         //Different proof spec
