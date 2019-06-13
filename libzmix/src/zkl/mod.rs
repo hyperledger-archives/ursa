@@ -41,6 +41,7 @@ mod tests {
     use zkl::spec::ProofSpecBuilder;
 
     #[test]
+    #[ignore]
     fn parse_empty_clause() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
@@ -53,6 +54,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_credential_clause() {
         //TODO: Add credential clause to the proof_spec
         let pb = ProofSpecBuilder::new();
@@ -62,6 +64,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_interval_clause() {
         //TODO: Add interval clause to the proof_spec
         let pb = ProofSpecBuilder::new();
@@ -71,6 +74,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_set_membership_clause() {
         //TODO: Add set membership clause to the proof_spec
         let pb = ProofSpecBuilder::new();
@@ -80,6 +84,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_verifiable_encryption_clause() {
         //TODO: Add verifiable encryption clause to the proof_spec
         let pb = ProofSpecBuilder::new();
@@ -89,6 +94,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_nym_clause() {
         //TODO: Add nym clause to the proof_spec
         let pb = ProofSpecBuilder::new();
@@ -98,6 +104,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn proof_verify() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
@@ -108,6 +115,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn proof_verify_fail_attribute_mismatch() {
         let pb = ProofSpecBuilder::new();
         let proof_spec = pb.finalize();
