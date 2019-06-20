@@ -3700,7 +3700,7 @@ mod cl_tests {
             // 19. Issuer creates and signs new credential values
             let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
             credential_values_builder
-                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .add_value_hidden("master_secret", &master_secret.value().unwrap())
                 .unwrap();
             credential_values_builder
                 .add_dec_known("name", "1139481716457488690172217916278103335")
@@ -5281,7 +5281,7 @@ mod cl_tests {
         pub fn gvt_credential_values(master_secret: &MasterSecret) -> CredentialValues {
             let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
             credential_values_builder
-                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .add_value_hidden("master_secret", &master_secret.value().unwrap())
                 .unwrap();
             credential_values_builder
                 .add_dec_known("name", "1139481716457488690172217916278103335")
@@ -5304,7 +5304,7 @@ mod cl_tests {
         pub fn xyz_credential_values(master_secret: &MasterSecret) -> CredentialValues {
             let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
             credential_values_builder
-                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .add_value_hidden("master_secret", &master_secret.value().unwrap())
                 .unwrap();
             credential_values_builder
                 .add_dec_known("status", "51792877103171595686471452153480627530895")
@@ -5318,7 +5318,7 @@ mod cl_tests {
         pub fn pqr_credential_values(master_secret: &MasterSecret) -> CredentialValues {
             let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
             credential_values_builder
-                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .add_value_hidden("master_secret", &master_secret.value().unwrap())
                 .unwrap();
             credential_values_builder
                 .add_dec_known("name", "1139481716457488690172217916278103335")
@@ -5332,7 +5332,7 @@ mod cl_tests {
         pub fn pqr_credential_values_1(master_secret: &MasterSecret) -> CredentialValues {
             let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
             credential_values_builder
-                .add_value_known("master_secret", &master_secret.value().unwrap())
+                .add_value_hidden("master_secret", &master_secret.value().unwrap())
                 .unwrap();
             credential_values_builder
                 .add_dec_known("name", "7181645748869017221791627810333511394")

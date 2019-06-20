@@ -29,7 +29,7 @@ fn get_non_credential_schema() -> NonCredentialSchema {
 fn get_credential_values(master_secret: &MasterSecret) -> CredentialValues {
     let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
     credential_values_builder
-        .add_value_known("master_secret", &master_secret.value().unwrap())
+        .add_value_hidden("master_secret", &master_secret.value().unwrap())
         .unwrap();
     credential_values_builder
         .add_dec_known("name", "1139481716457488690172217916278103335")
