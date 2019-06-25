@@ -33,6 +33,11 @@
 //         return 1;
 //     }
 //
+//     ursa_ed25519_bytebuffer_free(*public_key);
+//     ursa_ed25519_bytebuffer_free(*private_key);
+//
+//     ursa_ed25519_bytebuffer_free(*seed);
+//
 //     free(seed);
 //
 //     printf("Success from seed!\n");
@@ -78,6 +83,11 @@
 //         return 1;
 //     }
 //     printf("Verified!\n");
+//
+//     ursa_ed25519_bytebuffer_free(*public_key);
+//     ursa_ed25519_bytebuffer_free(*private_key);
+//     ursa_ed25519_bytebuffer_free(*message);
+//     ursa_ed25519_bytebuffer_free(*signature);
 //
 //     free(public_key);
 //     free(private_key);
@@ -128,7 +138,8 @@ pub extern "C" fn ursa_ed25519_get_signature_size() -> i32 {
 }
 
 /// Create a new keypair.
-/// Caller will need to free the memory for on `public_key` and `private_key`
+/// Caller will need to call `ursa_ed25519_bytebuffer_free` on `public_key` and `private_key`
+/// to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_keypair_new(
     public_key: &mut ByteBuffer,
@@ -139,7 +150,8 @@ pub extern "C" fn ursa_ed25519_keypair_new(
 }
 
 /// Create a new keypair from a seed.
-/// Caller will need to free the memory for on `public_key` and `private_key`
+/// Caller will need to call `ursa_ed25519_bytebuffer_free` on `public_key` and `private_key`
+/// to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_keypair_from_seed(
     seed: *const u8,
@@ -160,8 +172,9 @@ pub extern "C" fn ursa_ed25519_keypair_from_seed(
     )
 }
 
-/// Create a new keypair from a seed.
-/// Caller will need to free the memory for on `public_key` and `private_key`
+/// Get a public key from a private key.
+/// Caller will need to call `ursa_ed25519_bytebuffer_free` on `public_key` and `private_key`
+/// to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_get_public_key(
     private_key: *const u8,
@@ -184,7 +197,8 @@ pub extern "C" fn ursa_ed25519_get_public_key(
 }
 
 /// Sign a message
-/// Caller will need to free the memory for on `signature`
+/// Caller will need to call `ursa_ed25519_bytebuffer_free` on `signature`
+/// to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_sign(
     message: *const u8,
