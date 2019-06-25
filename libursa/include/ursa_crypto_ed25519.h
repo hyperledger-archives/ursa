@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+extern void ursa_ed25519_bytebuffer_free(struct ByteBuffer buffer);
+
 extern int32_t ursa_ed25519_get_public_key_size(void);
 extern int32_t ursa_ed25519_get_private_key_size(void);
 extern int32_t ursa_ed25519_get_signature_size(void);
@@ -36,4 +38,3 @@ extern int32_t ursa_ed25519_verify(const uint8_t* const message, uint64_t messag
 #endif
 
 #endif
-
