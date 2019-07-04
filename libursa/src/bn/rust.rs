@@ -266,6 +266,16 @@ impl BigNumber {
         }
     }
 
+    pub fn gcd(
+        a: &BigNumber,
+        b: &BigNumber,
+        _ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
+        Ok(BigNumber {
+            bn: a.bn.gcd(&b.bn),
+        })
+    }
+
     pub fn add_word(&mut self, w: u32) -> Result<&mut BigNumber, UrsaCryptoError> {
         self.bn += w;
         Ok(self)

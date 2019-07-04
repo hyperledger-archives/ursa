@@ -3,6 +3,7 @@ mod constants;
 mod datastructures;
 #[macro_use]
 mod helpers;
+pub mod cs_verifiable_encryption;
 mod hash;
 pub mod issuer;
 pub mod prover;
