@@ -8,4 +8,5 @@ pub mod hash_functions;
 pub mod prf;
 pub mod signatures;
 pub mod utils;
+pub mod verifiable_encryption;
 pub mod zkl;

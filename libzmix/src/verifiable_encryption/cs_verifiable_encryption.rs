@@ -3,12 +3,12 @@
 /// Need to be used with Anonymous credentials as described in Specification of the Identity
 /// Mixer Cryptographic Library, https://domino.research.ibm.com/library/cyberdig.nsf/papers/EEB54FF3B91C1D648525759B004FBBB1/$File/rz3730_revised.pdf
 /// sections 5.3, 6.2.10 and 6.2.19
-use bn::{BigNumber, BigNumberContext, BIGNUMBER_1, BIGNUMBER_2};
-use errors::prelude::*;
+use super::bn::{BigNumber, BigNumberContext, BIGNUMBER_1, BIGNUMBER_2};
+use super::errors::prelude::*;
 
-use cl::constants::*;
-use cl::hash::get_hash_as_int;
-use cl::helpers::*;
+use super::cl::constants::*;
+use super::cl::hash::get_hash_as_int;
+use super::cl::helpers::*;
 
 pub struct PaillierGroup {
     pub g: BigNumber,
@@ -48,7 +48,7 @@ impl PaillierGroup {
     pub fn new(n: &BigNumber, ctx: &mut BigNumberContext) -> UrsaCryptoResult<Self> {
         let modulus = n.sqr(Some(ctx))?; // n^2
         let mut n_mul_2 = n.try_clone()?; // n*2
-        n_mul_2.mul_word(2)?;
+        n_mul_2 = n_mul_2.lshift1()?;
         let g_prime = modulus.rand_range()?;
         let g = g_prime.mod_exp(&n_mul_2, &modulus, Some(ctx))?;
         Ok(Self {
@@ -127,9 +127,19 @@ impl PaillierGroup {
     }
 }
 
+/// The entity that can decrypt the ciphertext is called Inspector. The term is borrowed from Idemix.
 impl CSInspector {
-    /// Create public and private key for encryption.
+    /// Create public and private key for encryption. Also initialize the Paillier group.
+    /// `num_messages` is the maximum number of messages that the public-private key will support.
+    /// Trying to encrypt more than `num_messages` messages will result in error. Encrypting less is fine.
+    /// Key Generation from section 3.2 of the Practical Verifiable Encryption ... paper
     pub fn new(num_messages: usize) -> UrsaCryptoResult<Self> {
+        if num_messages < 1 {
+            return Err(UrsaCryptoError::from_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "number of messages should be greater than 0",
+            ));
+        }
         let mut ctx = BigNumber::new_context()?;
 
         let p_safe = generate_safe_prime(LARGE_PRIME)?;
@@ -163,6 +173,7 @@ impl CSInspector {
         })
     }
 
+    /// Decryption from section 3.2
     pub fn decrypt(
         &self,
         label: &[u8],
@@ -181,6 +192,8 @@ impl CSInspector {
         let mut ctx = BigNumber::new_context()?;
 
         let paillier_group = &self.pub_key.paillier_group;
+
+        // Check if abs(v) == v?
         if ciphertext.v != paillier_group.abs(&ciphertext.v, Some(&mut ctx))? {
             return Err(UrsaCryptoError::from_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
@@ -203,9 +216,13 @@ impl CSInspector {
         for i in 0..ciphertext.e.len() {
             let u_x1 =
                 paillier_group.exponentiate(&ciphertext.u, &self.pri_key.x1[i], Some(&mut ctx))?;
+            // 1/u^{x_1}
             let u_x1_inv = u_x1.inverse(&paillier_group.modulus, Some(&mut ctx))?;
+            // (e/u^{x_1})
             let e_u_x1_inv =
                 &ciphertext.e[i].mod_mul(&u_x1_inv, &paillier_group.modulus, Some(&mut ctx))?;
+
+            // m_hat = (e/u^{x_1})^2*t
             let m_hat = paillier_group.exponentiate(
                 &e_u_x1_inv,
                 &self.pub_key.two_inv_times_2,
@@ -227,7 +244,8 @@ impl CSInspector {
         Ok(messages)
     }
 
-    /// Encrypt multiple messages
+    /// Encrypt multiple messages.
+    /// Encryption from section 3.2
     pub fn encrypt(
         messages: &[BigNumber],
         label: &[u8],
@@ -250,8 +268,10 @@ impl CSInspector {
         Self::encrypt_using_random_value(&r, messages, label, pub_key)
     }
 
-    /// 1st phase of sigmal protocol. Compute ciphertext and commitments (t values).
+    /// 1st phase of sigma protocol. Compute ciphertext and commitments (t values).
     /// Return ciphertext, commitments and random values created during encryption and t value
+    /// "The protocol" from section 5.2. Not using t = g^m*h^s as the idemix protocol does not use it.
+    /// Guess is that since the knowledge of m is proved in the credential attribute proving protocol.
     pub fn encrypt_and_prove_phase_1(
         messages: &[BigNumber],
         blindings: &[BigNumber],
@@ -281,7 +301,9 @@ impl CSInspector {
         }
 
         let paillier_group = &pub_key.paillier_group;
+        // random value for ciphertext
         let r = paillier_group.rand_for_enc()?;
+        // random value for commitment
         let r_tilde = paillier_group.rand_for_enc()?;
         let ciphertext = Self::encrypt_using_random_value(&r, messages, label, pub_key)?;
         let hash = Self::hash(&ciphertext.u, &ciphertext.e, label)?;
@@ -290,6 +312,7 @@ impl CSInspector {
     }
 
     /// Return r_hat = r_tilde - r.x
+    /// "The protocol" from section 5.2.
     pub fn encrypt_and_prove_phase_2(
         r: &BigNumber,
         r_tilde: &BigNumber,
@@ -301,6 +324,7 @@ impl CSInspector {
     }
 
     /// Used by verifier to reconstruct blindings.
+    /// "The protocol" from section 5.2.
     pub fn reconstruct_blindings_ciphertext(
         ciphertext: &CSCiphertext,
         message_s_values: &[BigNumber],
@@ -328,7 +352,10 @@ impl CSInspector {
 
         let u_c = paillier_group.exponentiate(&ciphertext.u, challenge, Some(&mut ctx))?;
         let g_r_hat = paillier_group.raise_to_g(r_hat, Some(&mut ctx))?;
+        // Reconstruct u blinding
         let u_blinded = u_c.mod_mul(&g_r_hat, &paillier_group.modulus, Some(&mut ctx))?;
+
+        // Reconstruct e blinding
         let mut e_blinded = vec![];
         for i in 0..message_s_values.len() {
             let e_c = paillier_group.exponentiate(&ciphertext.e[i], challenge, Some(&mut ctx))?;
@@ -340,6 +367,8 @@ impl CSInspector {
                     .mod_mul(&h_m_hat, &paillier_group.modulus, Some(&mut ctx))?,
             );
         }
+
+        // Reconstruct e blinding
         let v_c = paillier_group.exponentiate(&ciphertext.v, challenge, Some(&mut ctx))?;
         let y3_hs = paillier_group.exponentiate(
             &pub_key.y3,
@@ -358,6 +387,7 @@ impl CSInspector {
         })
     }
 
+    /// Compute e, e and v
     fn encrypt_using_random_value(
         random_value: &BigNumber,
         messages: &[BigNumber],
@@ -373,6 +403,8 @@ impl CSInspector {
         Ok(CSCiphertext { u, e, v })
     }
 
+    /// Compute commitments for ciphertext when proving encryption is correct.
+    ///
     fn ciphertext_t_values(
         random_value: &BigNumber,
         messages: &[BigNumber],
@@ -414,6 +446,9 @@ impl CSInspector {
         Ok(e)
     }
 
+    /// If `take_abs` is true, absolute value of v is taken else not. This switch is present for
+    /// code-reuse as during the proof for encryption, in the commitment step (1st step of sigma protocol)
+    /// absolute value is not taken.
     fn compute_v(
         random_value: &BigNumber,
         hash: &BigNumber,

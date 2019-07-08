@@ -12,3 +12,4 @@ crate-type = ["rlib", "staticlib", "cdylib"]
 amcl = { version = "0.2.0", features = ["bls381"] }
 serde_json = "1.0"
 rand = "0.6"
+ursa = { path = "../libursa" }
