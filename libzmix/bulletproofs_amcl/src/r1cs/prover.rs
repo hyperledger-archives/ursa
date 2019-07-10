@@ -317,7 +317,7 @@ impl<'a, 'b> Prover<'a, 'b> {
         // We cannot do this in advance because user can commit variables one-by-one,
         // but this suffix provides safe disambiguation because each variable
         // is prefixed with a separate label.
-        self.transcript.commit_u64(b"m", self.v.len() as u64);
+        self.transcript.append_u64(b"m", self.v.len() as u64);
 
         // Commit to the first-phase low-level witness variables.
         let n1 = self.a_L.len();
@@ -609,7 +609,7 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
         let r = self.eval(&right);
         let o = l * r;
 
-        let (l_var, r_var, o_var) = _allocate_vars(self, l, r, o);
+        let (l_var, r_var, o_var) = self._allocate_vars(l, r, o);
 
         // Constrain l,r,o:
         left.terms.push((l_var, FieldElement::minus_one()));
@@ -648,16 +648,7 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
         let (l, r) = input_assignments.ok_or(R1CSError::MissingAssignment)?;
         let o = l * r;
 
-        // Create variables for l,r,o ...
-        let l_var = Variable::MultiplierLeft(self.a_L.len());
-        let r_var = Variable::MultiplierRight(self.a_R.len());
-        let o_var = Variable::MultiplierOutput(self.a_O.len());
-        // ... and assign them
-        self.a_L.push(l);
-        self.a_R.push(r);
-        self.a_O.push(o);
-
-        Ok((l_var, r_var, o_var))
+        Ok(self._allocate_vars(l, r, o))
     }
 
     fn constrain(&mut self, lc: LinearCombination) {
@@ -691,6 +682,27 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
             )),
             _ => Err(R1CSError::FormatError),
         }
+    }
+}
+
+impl<'a, 'b> Prover<'a, 'b> {
+    // Allocate variables for l, r and o and assign values
+    fn _allocate_vars(
+        &mut self,
+        l: FieldElement,
+        r: FieldElement,
+        o: FieldElement,
+    ) -> (Variable, Variable, Variable) {
+        // Create variables for l,r,o ...
+        let l_var = Variable::MultiplierLeft(self.a_L.len());
+        let r_var = Variable::MultiplierRight(self.a_R.len());
+        let o_var = Variable::MultiplierOutput(self.a_O.len());
+        // ... and assign them
+        self.a_L.push(l);
+        self.a_R.push(r);
+        self.a_O.push(o);
+
+        (l_var, r_var, o_var)
     }
 }
 
@@ -743,23 +755,4 @@ impl<'a, 'b> RandomizedConstraintSystem for RandomizingProver<'a, 'b> {
     fn challenge_scalar(&mut self, label: &'static [u8]) -> FieldElement {
         self.prover.transcript.challenge_scalar(label)
     }
-}
-
-// Allocate variables for l, r and o and assign values
-fn _allocate_vars(
-    prover: &mut Prover,
-    l: FieldElement,
-    r: FieldElement,
-    o: FieldElement,
-) -> (Variable, Variable, Variable) {
-    // Create variables for l,r,o ...
-    let l_var = Variable::MultiplierLeft(prover.a_L.len());
-    let r_var = Variable::MultiplierRight(prover.a_R.len());
-    let o_var = Variable::MultiplierOutput(prover.a_O.len());
-    // ... and assign them
-    prover.a_L.push(l);
-    prover.a_R.push(r);
-    prover.a_O.push(o);
-
-    (l_var, r_var, o_var)
 }

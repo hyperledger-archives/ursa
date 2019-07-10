@@ -14,4 +14,3 @@ pub fn constrain_lc_with_scalar<CS: ConstraintSystem>(
     cs.constrain(lc - LinearCombination::from(*scalar));
 }
 
-pub mod mimc;
