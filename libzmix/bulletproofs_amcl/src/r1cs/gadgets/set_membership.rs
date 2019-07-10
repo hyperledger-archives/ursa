@@ -8,7 +8,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
-/// Constraints for checking set membership check
+/// Constraints for set membership check
 /// Create a new set with values being difference between the set value at that index and the value being proved a member.
 /// Now ensure that the product of members of this new set is 0
 /// eg. Original set is (a, b, c, d, e). It is to be proved that x is a member of set.

@@ -1,4 +1,6 @@
+use super::helper_constraints::bit::bit_gadget;
 use super::helper_constraints::constrain_lc_with_scalar;
+use super::helper_constraints::vector_sum::vector_sum_constraints;
 use crate::errors::R1CSError;
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
@@ -8,7 +10,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
-// Ensure `v` is a bit, hence 0 or 1
+/*// Ensure `v` is a bit, hence 0 or 1
 pub fn bit_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     v: AllocatedQuantity,
@@ -48,7 +50,7 @@ pub fn vector_sum_gadget<CS: ConstraintSystem>(
     cs.constrain(constraints.iter().collect());
 
     Ok(())
-}
+}*/
 
 // TODO: Find better name
 // Ensure items[i] * vector[i] = vector[i] * value
@@ -110,20 +112,22 @@ pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
     let mut prover = Prover::new(g, h, &mut prover_transcript);
 
     let mut bit_vars = vec![];
+    let mut bit_allocs = vec![];
     for b in bit_map {
         let _b = FieldElement::from(b);
         let (com, var) = prover.commit(_b.clone(), FieldElement::random());
+        bit_vars.push(var.clone());
         let quantity = AllocatedQuantity {
             variable: var,
             assignment: Some(_b),
         };
         bit_gadget(&mut prover, quantity)?;
         comms.push(com);
-        bit_vars.push(quantity);
+        bit_allocs.push(quantity);
     }
 
     // The bit vector sum should be 1
-    vector_sum_gadget(&mut prover, &bit_vars, 1)?;
+    vector_sum_constraints(&mut prover, bit_vars, 1)?;
 
     let _value = FieldElement::from(value);
     let (com_value, var_value) = prover.commit(
@@ -134,7 +138,7 @@ pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
         variable: var_value,
         assignment: Some(_value),
     };
-    vector_product_gadget(&mut prover, &set, &bit_vars, &quantity_value)?;
+    vector_product_gadget(&mut prover, &set, &bit_allocs, &quantity_value)?;
     comms.push(com_value);
 
     println!(
@@ -163,18 +167,20 @@ pub fn verify_proof_of_set_membership_alt(
     let set_length = set.len();
 
     let mut bit_vars = vec![];
+    let mut bit_allocs = vec![];
 
     for i in 0..set_length {
         let var = verifier.commit(commitments[i]);
+        bit_vars.push(var.clone());
         let quantity = AllocatedQuantity {
             variable: var,
             assignment: None,
         };
         bit_gadget(&mut verifier, quantity)?;
-        bit_vars.push(quantity);
+        bit_allocs.push(quantity);
     }
 
-    vector_sum_gadget(&mut verifier, &bit_vars, 1)?;
+    vector_sum_constraints(&mut verifier, bit_vars, 1)?;
 
     let var_val = verifier.commit(commitments[set_length]);
     let quantity_value = AllocatedQuantity {
@@ -182,7 +188,7 @@ pub fn verify_proof_of_set_membership_alt(
         assignment: None,
     };
 
-    vector_product_gadget(&mut verifier, &set, &bit_vars, &quantity_value)?;
+    vector_product_gadget(&mut verifier, &set, &bit_allocs, &quantity_value)?;
 
     verifier.verify(&proof, &g, &h, &G, &H)
 }

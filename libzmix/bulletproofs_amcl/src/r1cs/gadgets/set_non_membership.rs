@@ -9,11 +9,11 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
-/// Constraints for checking set membership check
+/// Constraints for set non-membership check
 /// Create a new set with values being difference between the set value at that index and the value being proved a member.
-/// Now ensure that the product of members of this new set is not 0
+/// Now ensure that each members of this new set is not 0
 /// eg. Original set is (a, b, c, d, e). It is to be proved that x is not a member of set.
-/// Create new set (a-x, b-x, c-x, d-x, e-x). Now ensure product (a-x).(b-x).(c-x).(d-x).(e-x) != 0
+/// Create new set (a-x, b-x, c-x, d-x, e-x). Now ensure none of a-x, b-x,...e-x is 0.
 pub fn set_non_membership_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     v: AllocatedQuantity,

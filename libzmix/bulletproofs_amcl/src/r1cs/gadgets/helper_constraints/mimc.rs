@@ -7,16 +7,18 @@ use merlin::Transcript;
 
 use super::super::helper_constraints::constrain_lc_with_scalar;
 
-//pub const MIMC_ROUNDS: usize = 322;
-pub const MIMC_ROUNDS: usize = 10;
-
-pub fn mimc(xl: &FieldElement, xr: &FieldElement, constants: &[FieldElement]) -> FieldElement {
-    assert_eq!(constants.len(), MIMC_ROUNDS);
+pub fn mimc(
+    xl: &FieldElement,
+    xr: &FieldElement,
+    constants: &[FieldElement],
+    mimc_rounds: usize,
+) -> FieldElement {
+    assert_eq!(constants.len(), mimc_rounds);
 
     let mut xl = xl.clone();
     let mut xr = xr.clone();
 
-    for i in 0..MIMC_ROUNDS {
+    for i in 0..mimc_rounds {
         let tmp1 = xl + constants[i];
         let mut tmp2 = (tmp1 * tmp1) * tmp1;
         tmp2 += xr;
@@ -58,7 +60,6 @@ pub fn enforce_mimc_2_inputs<CS: ConstraintSystem>(
 
     for j in 0..mimc_rounds {
         // xL, xR := xR + (xL + Ci)^3, xL
-        //let cs = &mut cs.namespace(|| format!("mimc round {}", j));
 
         let const_lc: LinearCombination =
             vec![(Variable::One(), mimc_constants[j])].iter().collect();
@@ -68,7 +69,7 @@ pub fn enforce_mimc_2_inputs<CS: ConstraintSystem>(
         let (l, _, l_sqr) = cs.multiply(left_plus_const.clone(), left_plus_const);
         let (_, _, l_cube) = cs.multiply(l_sqr.into(), l.into());
 
-        let tmp = LinearCombination::from(l_cube) + right_v;
+        let tmp = l_cube + right_v;
         right_v = left_v;
         left_v = tmp;
     }

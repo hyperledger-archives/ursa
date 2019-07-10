@@ -11,7 +11,7 @@ use merlin::Transcript;
 /// x*inv = y
 /// The idea is described in the Pinocchio paper and i first saw it in https://github.com/HarryR/ethsnarks/blob/master/src/gadgets/isnonzero.cpp
 
-/// Enforces that x is 0.
+/// Enforces that x is not 0.
 pub fn is_nonzero_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     x: AllocatedQuantity,

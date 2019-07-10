@@ -2,7 +2,7 @@ use amcl_wrapper::field_elem::FieldElement;
 
 use std::collections::HashMap;
 use std::iter::FromIterator;
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, Neg, Sub};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Variable {
@@ -60,6 +60,10 @@ impl LinearCombination {
             new_lc_terms.push((var, val));
         }
         new_lc_terms.iter().collect()
+    }
+
+    pub fn len(&self) -> usize {
+        self.terms.len()
     }
 }
 
@@ -148,6 +152,12 @@ impl<L: Into<LinearCombination>> Sub<L> for LinearCombination {
                 .map(|(var, coeff)| (*var, coeff.negation())),
         );
         LinearCombination { terms: self.terms }
+    }
+}
+
+impl<L: Into<LinearCombination>> AddAssign<L> for LinearCombination {
+    fn add_assign(&mut self, rhs: L) {
+        self.terms.extend(rhs.into().terms.iter().cloned());
     }
 }
 
