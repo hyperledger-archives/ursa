@@ -1,5 +1,6 @@
 # Anonymous Credentials (anoncreds) crypto support
-Initial version of anoncreds protocol was implemented as part of Indy SDK (https://github.com/hyperledger/indy-sdk). After some discussion and community requests we decided to move low level anoncreds crypto code to indy-crypto project. This should allow the crypto to be audited and shared with other projects.
+Initial version of anoncreds protocol was implemented as part of Indy SDK (https://github.com/hyperledger/indy-sdk). After some discussion and community requests we decided to move low level anoncreds crypto code to indy-crypto project. This should allow the crypto to be audited and shared with other projects.  
+The math for the crypto is described in the latex docs [here](https://github.com/hyperledger/ursa-docs/tree/master/specs/anoncreds1).
 
 ## Main ideas
 1. Indy-crypto will not provide high level anoncreds protocol details and persistence. It will support low level crypto entities only. 
