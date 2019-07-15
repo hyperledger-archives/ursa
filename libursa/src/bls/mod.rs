@@ -570,7 +570,8 @@ impl Bls {
         T: Digest,
     {
         let h = Bls::_hash(message, hasher)?;
-        Ok(Pair::pair(&signature, &gen.point)?.eq(&Pair::pair(&h, &ver_key)?))
+        // e(&signature, &gen.point) == e(&h, &ver_key) => 1 == e(&h, &ver_key)*e(&signature, &gen.point)^-1 == e(&h, &ver_key)*e(&signature, -&gen.point)
+        Pair::pair2(&signature, &gen.point.neg()?, &h, &ver_key)?.is_unity()
     }
 
     fn _hash<T>(message: &[u8], mut hasher: T) -> UrsaCryptoResult<PointG1>
