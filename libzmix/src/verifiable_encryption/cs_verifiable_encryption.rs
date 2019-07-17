@@ -1,3 +1,18 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
+
 /// Camenisch-Shoup verifiable encryption.
 /// Based on the paper Practical Verifiable Encryption and Decryption of Discrete Logarithms. https://www.shoup.net/papers/verenc.pdf
 /// Need to be used with Anonymous credentials as described in Specification of the Identity
@@ -10,6 +25,7 @@ use super::cl::constants::*;
 use super::cl::hash::get_hash_as_int;
 use super::cl::helpers::*;
 
+#[derive(Serialize, Deserialize)]
 pub struct PaillierGroup {
     pub g: BigNumber,
     pub h: BigNumber,
@@ -17,12 +33,14 @@ pub struct PaillierGroup {
     pub modulus: BigNumber,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct CSEncPrikey {
     pub x1: Vec<BigNumber>,
     pub x2: BigNumber,
     pub x3: BigNumber,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct CSEncPubkey {
     pub n: BigNumber,
     pub two_inv_times_2: BigNumber, // (2^-1 % n) * 2, precomputation
@@ -32,6 +50,7 @@ pub struct CSEncPubkey {
     pub y3: BigNumber,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct CSCiphertext {
     pub u: BigNumber,
     pub e: Vec<BigNumber>,
@@ -60,7 +79,7 @@ impl PaillierGroup {
     }
 
     /// self.g^exp % self.modulus
-    pub fn raise_to_g(
+    pub fn exponentiate_g(
         &self,
         exp: &BigNumber,
         ctx: Option<&mut BigNumberContext>,
@@ -69,7 +88,7 @@ impl PaillierGroup {
     }
 
     /// self.h^exp % self.modulus
-    pub fn raise_to_h(
+    pub fn exponentiate_h(
         &self,
         exp: &BigNumber,
         ctx: Option<&mut BigNumberContext>,
@@ -112,6 +131,7 @@ impl PaillierGroup {
     }
 
     /// if a > (n^2)/2 then n^2 - a else a
+    /// section 3.2 of paper
     pub fn abs(
         &self,
         a: &BigNumber,
@@ -152,14 +172,14 @@ impl CSInspector {
         let mut y1 = Vec::with_capacity(num_messages);
         for _ in 0..num_messages {
             let x = n_sqr_by_4.rand_range()?;
-            let y = paillier_group.raise_to_g(&x, Some(&mut ctx))?;
+            let y = paillier_group.exponentiate_g(&x, Some(&mut ctx))?;
             x1.push(x);
             y1.push(y);
         }
         let x2 = n_sqr_by_4.rand_range()?;
         let x3 = n_sqr_by_4.rand_range()?;
-        let y2 = paillier_group.raise_to_g(&x2, Some(&mut ctx))?;
-        let y3 = paillier_group.raise_to_g(&x3, Some(&mut ctx))?;
+        let y2 = paillier_group.exponentiate_g(&x2, Some(&mut ctx))?;
+        let y3 = paillier_group.exponentiate_g(&x3, Some(&mut ctx))?;
         Ok(Self {
             pri_key: CSEncPrikey { x1, x2, x3 },
             pub_key: CSEncPubkey {
@@ -351,7 +371,7 @@ impl CSInspector {
         let mut ctx = BigNumber::new_context()?;
 
         let u_c = paillier_group.exponentiate(&ciphertext.u, challenge, Some(&mut ctx))?;
-        let g_r_hat = paillier_group.raise_to_g(r_hat, Some(&mut ctx))?;
+        let g_r_hat = paillier_group.exponentiate_g(r_hat, Some(&mut ctx))?;
         // Reconstruct u blinding
         let u_blinded = u_c.mod_mul(&g_r_hat, &paillier_group.modulus, Some(&mut ctx))?;
 
@@ -361,14 +381,14 @@ impl CSInspector {
             let e_c = paillier_group.exponentiate(&ciphertext.e[i], challenge, Some(&mut ctx))?;
             let y_r_hat = paillier_group.exponentiate(&pub_key.y1[i], r_hat, Some(&mut ctx))?;
             let h_m_hat =
-                paillier_group.raise_to_h(&(message_s_values[i].lshift1()?), Some(&mut ctx))?;
+                paillier_group.exponentiate_h(&(message_s_values[i].lshift1()?), Some(&mut ctx))?;
             e_blinded.push(
                 e_c.mod_mul(&y_r_hat, &paillier_group.modulus, Some(&mut ctx))?
                     .mod_mul(&h_m_hat, &paillier_group.modulus, Some(&mut ctx))?,
             );
         }
 
-        // Reconstruct e blinding
+        // Reconstruct v blinding
         let v_c = paillier_group.exponentiate(&ciphertext.v, challenge, Some(&mut ctx))?;
         let y3_hs = paillier_group.exponentiate(
             &pub_key.y3,
@@ -387,7 +407,7 @@ impl CSInspector {
         })
     }
 
-    /// Compute e, e and v
+    /// Compute u, e and v
     fn encrypt_using_random_value(
         random_value: &BigNumber,
         messages: &[BigNumber],
@@ -404,7 +424,6 @@ impl CSInspector {
     }
 
     /// Compute commitments for ciphertext when proving encryption is correct.
-    ///
     fn ciphertext_t_values(
         random_value: &BigNumber,
         messages: &[BigNumber],
@@ -427,7 +446,7 @@ impl CSInspector {
     ) -> UrsaCryptoResult<BigNumber> {
         pub_key
             .paillier_group
-            .raise_to_g(random_value, Some(&mut ctx))
+            .exponentiate_g(random_value, Some(&mut ctx))
     }
 
     fn compute_e(
@@ -440,7 +459,7 @@ impl CSInspector {
         let mut e = Vec::with_capacity(messages.len());
         for i in 0..messages.len() {
             let y = paillier_group.exponentiate(&pub_key.y1[i], random_value, Some(&mut ctx))?;
-            let h_m = paillier_group.raise_to_h(&messages[i], Some(&mut ctx))?;
+            let h_m = paillier_group.exponentiate_h(&messages[i], Some(&mut ctx))?;
             e.push(y.mod_mul(&h_m, &paillier_group.modulus, Some(&mut ctx))?);
         }
         Ok(e)
@@ -521,8 +540,8 @@ mod test {
         let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
         let ciphertext =
             CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decryped_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
-        assert_eq!(decryped_messages, messages);
+        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+        assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
@@ -534,8 +553,8 @@ mod test {
             .collect();
         let ciphertext =
             CSInspector::encrypt(&messages, "test2".as_bytes(), &inspector.pub_key).unwrap();
-        let decryped_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
-        assert_eq!(decryped_messages, messages);
+        let decrypted_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
+        assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
@@ -545,8 +564,8 @@ mod test {
         let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
         let ciphertext =
             CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decryped_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
-        assert_eq!(decryped_messages, messages);
+        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+        assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
@@ -573,8 +592,8 @@ mod test {
         let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
         let ciphertext =
             CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decryped_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
-        assert_eq!(decryped_messages, messages);
+        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+        assert_eq!(decrypted_messages, messages);
 
         // Message blinding are m_tilde values and they will be created by the main proving protocol not this verifiable encryption module
         let blindings = vec![inspector.pub_key.n.rand_range().unwrap()];
@@ -707,8 +726,8 @@ mod test {
             .collect();
         let ciphertext =
             CSInspector::encrypt(&messages, "test2".as_bytes(), &inspector.pub_key).unwrap();
-        let decryped_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
-        assert_eq!(decryped_messages, messages);
+        let decrypted_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
+        assert_eq!(decrypted_messages, messages);
 
         let blindings: Vec<_> = (0..num_messages)
             .map(|_| inspector.pub_key.n.rand_range().unwrap())
