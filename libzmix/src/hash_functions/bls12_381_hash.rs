@@ -176,6 +176,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_msg_digest() {
         let hm: HashMap<String, &[u8]> = HashMap::new();
         let hf = Bls12381Sha256G1::new(Some(hm));
@@ -186,6 +187,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_hashing_on_groups() {
         hashing_on_groups_test!(Bls12381Sha256G1);
         hashing_on_groups_test!(Bls12381Sha256G2);
