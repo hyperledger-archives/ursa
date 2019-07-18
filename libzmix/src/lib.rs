@@ -1,6 +1,14 @@
+#[macro_use]
+extern crate lazy_static;
 extern crate amcl;
+extern crate hkdf;
 extern crate rand;
-extern crate serde_json;
+#[cfg(test)]
+extern crate rand_chacha;
+extern crate rand_core;
+extern crate serde;
+extern crate sha2;
+extern crate zeroize;
 
 pub mod commitments;
 pub mod ffi;
