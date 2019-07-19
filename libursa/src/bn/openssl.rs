@@ -327,17 +327,6 @@ impl BigNumber {
         ctx: Option<&mut BigNumberContext>,
     ) -> UrsaCryptoResult<BigNumber> {
         let mut gcd = BigNumber::new()?;
-        /*let mut context = ctx.map_or({
-        //            let mut ct = BigNumber::new_context()?;
-        //            &mut ct
-                                                 BigNumber::new_context()?
-                }, |c| *c);
-                BigNumRef::gcd(
-                    &mut gcd.openssl_bn,
-                    &a.openssl_bn,
-                    &b.openssl_bn,
-                    &mut context.openssl_bn_context,
-                )?;*/
         match ctx {
             Some(context) => BigNumRef::gcd(
                 &mut gcd.openssl_bn,
