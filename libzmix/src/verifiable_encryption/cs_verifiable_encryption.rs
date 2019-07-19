@@ -1,23 +1,12 @@
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * ------------------------------------------------------------------------------
- */
+// Copyright contributors to Hyperledger Ursa.
+// SPDX-License-Identifier: Apache-2.0
 
 /// Camenisch-Shoup verifiable encryption.
-/// Based on the paper Practical Verifiable Encryption and Decryption of Discrete Logarithms. https://www.shoup.net/papers/verenc.pdf
+/// Based on the paper Practical Verifiable Encryption and Decryption of Discrete Logarithms. https://www.shoup.net/papers/verenc.pdf.
+/// Various code comments refer this paper
 /// Need to be used with Anonymous credentials as described in Specification of the Identity
 /// Mixer Cryptographic Library, https://domino.research.ibm.com/library/cyberdig.nsf/papers/EEB54FF3B91C1D648525759B004FBBB1/$File/rz3730_revised.pdf
-/// sections 5.3, 6.2.10 and 6.2.19
+/// sections 5.3, 6.2.10 and 6.2.19.
 use super::bn::{BigNumber, BigNumberContext, BIGNUMBER_1, BIGNUMBER_2};
 use super::errors::prelude::*;
 
@@ -25,14 +14,16 @@ use super::cl::constants::*;
 use super::cl::hash::get_hash_as_int;
 use super::cl::helpers::*;
 
+// g and h correspond to the symbols with same name in paper "Practical Verifiable Encryption...."
 #[derive(Serialize, Deserialize)]
 pub struct PaillierGroup {
     pub g: BigNumber,
     pub h: BigNumber,
-    pub n_by_4: BigNumber, // n/4, precomputation
-    pub modulus: BigNumber,
+    pub n_by_4: BigNumber,  // n/4, precomputation
+    pub modulus: BigNumber, // n^2
 }
 
+// x1, x2 and x3 correspond to the symbols with same name in the paper
 #[derive(Serialize, Deserialize)]
 pub struct CSEncPrikey {
     pub x1: Vec<BigNumber>,
@@ -40,6 +31,7 @@ pub struct CSEncPrikey {
     pub x3: BigNumber,
 }
 
+// n, y1, y2 and y3 correspond to the symbols with same name in the paper
 #[derive(Serialize, Deserialize)]
 pub struct CSEncPubkey {
     pub n: BigNumber,
@@ -50,6 +42,7 @@ pub struct CSEncPubkey {
     pub y3: BigNumber,
 }
 
+// u, e and v correspond to the symbols with same name in the paper
 #[derive(Serialize, Deserialize)]
 pub struct CSCiphertext {
     pub u: BigNumber,
@@ -57,13 +50,13 @@ pub struct CSCiphertext {
     pub v: BigNumber,
 }
 
-pub struct CSInspector {
+pub struct CSKeypair {
     pub pri_key: CSEncPrikey,
     pub pub_key: CSEncPubkey,
 }
 
 impl PaillierGroup {
-    /// Order (modulus) is n^2
+    /// Order (modulus) is n^2. n, g_prime, g and h correspond to the symbols in the paper "Practical Verifiable Encryption...."
     pub fn new(n: &BigNumber, ctx: &mut BigNumberContext) -> UrsaCryptoResult<Self> {
         let modulus = n.sqr(Some(ctx))?; // n^2
         let mut n_mul_2 = n.try_clone()?; // n*2
@@ -147,8 +140,8 @@ impl PaillierGroup {
     }
 }
 
-/// The entity that can decrypt the ciphertext is called Inspector. The term is borrowed from Idemix.
-impl CSInspector {
+/// The public and private keys used for encryption and decryption.
+impl CSKeypair {
     /// Create public and private key for encryption. Also initialize the Paillier group.
     /// `num_messages` is the maximum number of messages that the public-private key will support.
     /// Trying to encrypt more than `num_messages` messages will result in error. Encrypting less is fine.
@@ -195,23 +188,24 @@ impl CSInspector {
 
     /// Decryption from section 3.2
     pub fn decrypt(
-        &self,
         label: &[u8],
         ciphertext: &CSCiphertext,
+        pub_key: &CSEncPubkey,
+        pri_key: &CSEncPrikey,
     ) -> UrsaCryptoResult<Vec<BigNumber>> {
-        if ciphertext.e.len() > self.pri_key.x1.len() {
+        if ciphertext.e.len() > pri_key.x1.len() {
             return Err(UrsaCryptoError::from_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 format!(
                     "number of messages {} is more than supported by public key {}",
                     ciphertext.e.len(),
-                    self.pri_key.x1.len()
+                    pri_key.x1.len()
                 ),
             ));
         }
         let mut ctx = BigNumber::new_context()?;
 
-        let paillier_group = &self.pub_key.paillier_group;
+        let paillier_group = &pub_key.paillier_group;
 
         // Check if abs(v) == v?
         if ciphertext.v != paillier_group.abs(&ciphertext.v, Some(&mut ctx))? {
@@ -221,8 +215,8 @@ impl CSInspector {
             ));
         }
         let hs = &Self::hash(&ciphertext.u, &ciphertext.e, label)?;
-        let hs_x3 = hs.mul(&self.pri_key.x3, Some(&mut ctx))?;
-        let hs_x3_x2_times_2 = hs_x3.add(&self.pri_key.x2)?.lshift1()?;
+        let hs_x3 = hs.mul(&pri_key.x3, Some(&mut ctx))?;
+        let hs_x3_x2_times_2 = hs_x3.add(&pri_key.x2)?.lshift1()?;
         let u_sqr =
             paillier_group.exponentiate(&ciphertext.u, &hs_x3_x2_times_2, Some(&mut ctx))?;
         let v_sqr = paillier_group.sqr(&ciphertext.v, Some(&mut ctx))?;
@@ -235,7 +229,7 @@ impl CSInspector {
         let mut messages = Vec::<BigNumber>::with_capacity(ciphertext.e.len());
         for i in 0..ciphertext.e.len() {
             let u_x1 =
-                paillier_group.exponentiate(&ciphertext.u, &self.pri_key.x1[i], Some(&mut ctx))?;
+                paillier_group.exponentiate(&ciphertext.u, &pri_key.x1[i], Some(&mut ctx))?;
             // 1/u^{x_1}
             let u_x1_inv = u_x1.inverse(&paillier_group.modulus, Some(&mut ctx))?;
             // (e/u^{x_1})
@@ -245,13 +239,13 @@ impl CSInspector {
             // m_hat = (e/u^{x_1})^2*t
             let m_hat = paillier_group.exponentiate(
                 &e_u_x1_inv,
-                &self.pub_key.two_inv_times_2,
+                &pub_key.two_inv_times_2,
                 Some(&mut ctx),
             )?;
-            if m_hat.modulus(&self.pub_key.n, Some(&mut ctx))? == *BIGNUMBER_1 {
+            if m_hat.modulus(&pub_key.n, Some(&mut ctx))? == *BIGNUMBER_1 {
                 let mut m = m_hat.modulus(&paillier_group.modulus, Some(&mut ctx))?;
                 m.sub_word(1)?;
-                m = m.div(&self.pub_key.n, Some(&mut ctx))?;
+                m = m.div(&pub_key.n, Some(&mut ctx))?;
                 messages.push(m);
             } else {
                 return Err(UrsaCryptoError::from_msg(
@@ -524,100 +518,155 @@ mod test {
     }
 
     #[test]
+    fn cs_encryption_serialization_deserialization() {
+        let keypair = CSKeypair::new(1).unwrap();
+        let (pub_key, pri_key) = (&keypair.pub_key, &keypair.pri_key);
+        let messages = vec![keypair.pub_key.n.rand_range().unwrap()];
+        let label = "test".as_bytes();
+
+        // Create ciphertext
+        let ciphertext = CSKeypair::encrypt(&messages, label, pub_key).unwrap();
+
+        // Serialize public and private keys
+        let serz_pub_key = serde_json::to_string(pub_key);
+        assert!(serz_pub_key.is_ok());
+        let serz_pri_key = serde_json::to_string(pri_key);
+        assert!(serz_pri_key.is_ok());
+
+        // Deserialize public and private keys
+        let desz_pub_key: CSEncPubkey = serde_json::from_str(&serz_pub_key.unwrap()).unwrap();
+        let desz_pri_key: CSEncPrikey = serde_json::from_str(&serz_pri_key.unwrap()).unwrap();
+
+        // Decrypt using deserialized public and private keys
+        let decrypted_messages =
+            CSKeypair::decrypt(label, &ciphertext, &desz_pub_key, &desz_pri_key).unwrap();
+        assert_eq!(decrypted_messages, messages);
+    }
+
+    #[test]
     fn cs_encryption_smaller_public_key() {
         // Public key supports encryption of only 1 message but encryption of 2 messages is attempted
-        let inspector = CSInspector::new(1).unwrap();
+        let keypair = CSKeypair::new(1).unwrap();
         let messages = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
-        assert!(CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).is_err())
+        assert!(CSKeypair::encrypt(&messages, "test".as_bytes(), &keypair.pub_key).is_err())
     }
 
     #[test]
     fn cs_encryption_single_message() {
-        let inspector = CSInspector::new(1).unwrap();
-        let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
+        let keypair = CSKeypair::new(1).unwrap();
+        let messages = vec![keypair.pub_key.n.rand_range().unwrap()];
         let ciphertext =
-            CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+            CSKeypair::encrypt(&messages, "test".as_bytes(), &keypair.pub_key).unwrap();
+        let decrypted_messages = CSKeypair::decrypt(
+            "test".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key,
+        )
+        .unwrap();
         assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
     fn cs_encryption_multiple_messages() {
         let num_messages = 10;
-        let inspector = CSInspector::new(num_messages).unwrap();
+        let keypair = CSKeypair::new(num_messages).unwrap();
         let messages: Vec<_> = (0..num_messages)
-            .map(|_| inspector.pub_key.n.rand_range().unwrap())
+            .map(|_| keypair.pub_key.n.rand_range().unwrap())
             .collect();
         let ciphertext =
-            CSInspector::encrypt(&messages, "test2".as_bytes(), &inspector.pub_key).unwrap();
-        let decrypted_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
+            CSKeypair::encrypt(&messages, "test2".as_bytes(), &keypair.pub_key).unwrap();
+        let decrypted_messages = CSKeypair::decrypt(
+            "test2".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key,
+        )
+        .unwrap();
         assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
     fn cs_encryption_single_message_bigger_public_key() {
         // Public key supports encryption of 2 messages but only 1 message is encrypted
-        let inspector = CSInspector::new(2).unwrap();
-        let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
+        let keypair = CSKeypair::new(2).unwrap();
+        let messages = vec![keypair.pub_key.n.rand_range().unwrap()];
         let ciphertext =
-            CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+            CSKeypair::encrypt(&messages, "test".as_bytes(), &keypair.pub_key).unwrap();
+        let decrypted_messages = CSKeypair::decrypt(
+            "test".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key,
+        )
+        .unwrap();
         assert_eq!(decrypted_messages, messages);
     }
 
     #[test]
     fn cs_decryption_smaller_public_key() {
         // // Public key supports encryption of only 1 message but decryption of 2 message ciphertext is attempted
-        let mut inspector = CSInspector::new(2).unwrap();
+        let mut keypair = CSKeypair::new(2).unwrap();
         let messages = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
         let ciphertext =
-            CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
+            CSKeypair::encrypt(&messages, "test".as_bytes(), &keypair.pub_key).unwrap();
 
         // Make public key smaller
-        inspector.pri_key.x1.pop();
-        assert!(inspector.decrypt("test".as_bytes(), &ciphertext).is_err());
+        keypair.pri_key.x1.pop();
+        assert!(CSKeypair::decrypt(
+            "test".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key
+        )
+        .is_err());
     }
 
     #[test]
     fn prove_cs_encryption_single_message() {
         let mut ctx = BigNumber::new_context().unwrap();
 
-        let inspector = CSInspector::new(1).unwrap();
-        let messages = vec![inspector.pub_key.n.rand_range().unwrap()];
+        let keypair = CSKeypair::new(1).unwrap();
+        let messages = vec![keypair.pub_key.n.rand_range().unwrap()];
         let ciphertext =
-            CSInspector::encrypt(&messages, "test".as_bytes(), &inspector.pub_key).unwrap();
-        let decrypted_messages = inspector.decrypt("test".as_bytes(), &ciphertext).unwrap();
+            CSKeypair::encrypt(&messages, "test".as_bytes(), &keypair.pub_key).unwrap();
+        let decrypted_messages = CSKeypair::decrypt(
+            "test".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key,
+        )
+        .unwrap();
         assert_eq!(decrypted_messages, messages);
 
         // Message blinding are m_tilde values and they will be created by the main proving protocol not this verifiable encryption module
-        let blindings = vec![inspector.pub_key.n.rand_range().unwrap()];
+        let blindings = vec![keypair.pub_key.n.rand_range().unwrap()];
 
         let start = Instant::now();
         // Proving starts, create t values
-        let (ciphertext, blindings_ciphertext, r, r_tilde) =
-            CSInspector::encrypt_and_prove_phase_1(
-                &messages,
-                &blindings,
-                "test2".as_bytes(),
-                &inspector.pub_key,
-            )
-            .unwrap();
+        let (ciphertext, blindings_ciphertext, r, r_tilde) = CSKeypair::encrypt_and_prove_phase_1(
+            &messages,
+            &blindings,
+            "test2".as_bytes(),
+            &keypair.pub_key,
+        )
+        .unwrap();
 
         // The verifier sends this challenge or this challenge can be created by hashing `blindings_ciphertext`
-        let challenge = inspector.pub_key.n.rand_range().unwrap();
+        let challenge = keypair.pub_key.n.rand_range().unwrap();
 
         // Proving finishes, create s values
-        let r_hat = CSInspector::encrypt_and_prove_phase_2(
+        let r_hat = CSKeypair::encrypt_and_prove_phase_2(
             &r,
             &r_tilde,
             &challenge,
-            &inspector.pub_key,
+            &keypair.pub_key,
             Some(&mut ctx),
         )
         .unwrap();
@@ -632,7 +681,7 @@ mod test {
                 &(messages[0]
                     .mod_mul(
                         &challenge,
-                        &inspector.pub_key.paillier_group.modulus,
+                        &keypair.pub_key.paillier_group.modulus,
                         Some(&mut ctx),
                     )
                     .unwrap()),
@@ -641,13 +690,13 @@ mod test {
 
         let start = Instant::now();
         // Next part is done by verifier
-        let blindings_ciphertext_1 = CSInspector::reconstruct_blindings_ciphertext(
+        let blindings_ciphertext_1 = CSKeypair::reconstruct_blindings_ciphertext(
             &ciphertext,
             &vec![m_hat],
             &r_hat,
             &challenge,
             "test2".as_bytes(),
-            &inspector.pub_key,
+            &keypair.pub_key,
         )
         .unwrap();
 
@@ -662,20 +711,20 @@ mod test {
 
     #[test]
     fn prove_cs_encryption_smaller_public_key() {
-        let inspector = CSInspector::new(1).unwrap();
+        let keypair = CSKeypair::new(1).unwrap();
         let messages = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
         let blindings = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
-        assert!(CSInspector::encrypt_and_prove_phase_1(
+        assert!(CSKeypair::encrypt_and_prove_phase_1(
             &messages,
             &blindings,
             "test2".as_bytes(),
-            &inspector.pub_key
+            &keypair.pub_key
         )
         .is_err());
     }
@@ -683,33 +732,33 @@ mod test {
     #[test]
     fn prove_cs_encryption_incorrect_number_of_blindings() {
         // No of blindings should be same as number of messages
-        let inspector = CSInspector::new(2).unwrap();
+        let keypair = CSKeypair::new(2).unwrap();
         let messages = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
 
         // Less blindings
-        let blindings_1 = vec![inspector.pub_key.n.rand_range().unwrap()];
-        assert!(CSInspector::encrypt_and_prove_phase_1(
+        let blindings_1 = vec![keypair.pub_key.n.rand_range().unwrap()];
+        assert!(CSKeypair::encrypt_and_prove_phase_1(
             &messages,
             &blindings_1,
             "test2".as_bytes(),
-            &inspector.pub_key
+            &keypair.pub_key
         )
         .is_err());
 
         // More blindings
         let blindings_2 = vec![
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
-            inspector.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
+            keypair.pub_key.n.rand_range().unwrap(),
         ];
-        assert!(CSInspector::encrypt_and_prove_phase_1(
+        assert!(CSKeypair::encrypt_and_prove_phase_1(
             &messages,
             &blindings_2,
             "test2".as_bytes(),
-            &inspector.pub_key
+            &keypair.pub_key
         )
         .is_err());
     }
@@ -720,36 +769,41 @@ mod test {
 
         let num_messages = 10;
 
-        let inspector = CSInspector::new(num_messages).unwrap();
+        let keypair = CSKeypair::new(num_messages).unwrap();
         let messages: Vec<_> = (0..num_messages)
-            .map(|_| inspector.pub_key.n.rand_range().unwrap())
+            .map(|_| keypair.pub_key.n.rand_range().unwrap())
             .collect();
         let ciphertext =
-            CSInspector::encrypt(&messages, "test2".as_bytes(), &inspector.pub_key).unwrap();
-        let decrypted_messages = inspector.decrypt("test2".as_bytes(), &ciphertext).unwrap();
+            CSKeypair::encrypt(&messages, "test2".as_bytes(), &keypair.pub_key).unwrap();
+        let decrypted_messages = CSKeypair::decrypt(
+            "test2".as_bytes(),
+            &ciphertext,
+            &keypair.pub_key,
+            &keypair.pri_key,
+        )
+        .unwrap();
         assert_eq!(decrypted_messages, messages);
 
         let blindings: Vec<_> = (0..num_messages)
-            .map(|_| inspector.pub_key.n.rand_range().unwrap())
+            .map(|_| keypair.pub_key.n.rand_range().unwrap())
             .collect();
 
         let start = Instant::now();
-        let (ciphertext, blindings_ciphertext, r, r_tilde) =
-            CSInspector::encrypt_and_prove_phase_1(
-                &messages,
-                &blindings,
-                "test2".as_bytes(),
-                &inspector.pub_key,
-            )
-            .unwrap();
+        let (ciphertext, blindings_ciphertext, r, r_tilde) = CSKeypair::encrypt_and_prove_phase_1(
+            &messages,
+            &blindings,
+            "test2".as_bytes(),
+            &keypair.pub_key,
+        )
+        .unwrap();
 
-        let challenge = inspector.pub_key.n.rand_range().unwrap();
+        let challenge = keypair.pub_key.n.rand_range().unwrap();
 
-        let r_hat = CSInspector::encrypt_and_prove_phase_2(
+        let r_hat = CSKeypair::encrypt_and_prove_phase_2(
             &r,
             &r_tilde,
             &challenge,
-            &inspector.pub_key,
+            &keypair.pub_key,
             Some(&mut ctx),
         )
         .unwrap();
@@ -766,7 +820,7 @@ mod test {
                     &(messages[i]
                         .mod_mul(
                             &challenge,
-                            &inspector.pub_key.paillier_group.modulus,
+                            &keypair.pub_key.paillier_group.modulus,
                             Some(&mut ctx),
                         )
                         .unwrap()),
@@ -776,13 +830,13 @@ mod test {
         }
 
         let start = Instant::now();
-        let blindings_ciphertext_1 = CSInspector::reconstruct_blindings_ciphertext(
+        let blindings_ciphertext_1 = CSKeypair::reconstruct_blindings_ciphertext(
             &ciphertext,
             &m_hats,
             &r_hat,
             &challenge,
             "test2".as_bytes(),
-            &inspector.pub_key,
+            &keypair.pub_key,
         )
         .unwrap();
 
