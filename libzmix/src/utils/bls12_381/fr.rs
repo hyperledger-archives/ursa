@@ -17,9 +17,7 @@ pub struct FieldOrderElement(BIG);
 impl FieldOrderElement {
     pub const BYTES_REPR_SIZE: usize = rom::MODBYTES;
 
-    pub fn new() -> Self {
-        FieldOrderElement(random_mod_order::<ThreadRng>(None))
-    }
+    constructor!(FieldOrderElement);
 
     pub fn zero() -> Self {
         FieldOrderElement(BIG::new())
@@ -39,11 +37,7 @@ impl FieldOrderElement {
         FieldOrderElement(hash_mod_order(data, salt, domain_sep_context))
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut res = vec![0u8; Self::BYTES_REPR_SIZE];
-        self.repr_bytes(&mut res);
-        res
-    }
+    to_bytes!();
 
     pub fn inverse(&mut self) {
         self.0.invmodp(&GROUP_ORDER);
@@ -61,6 +55,12 @@ impl FieldOrderElement {
     fn to_hex(&self) -> String {
         let mut t = self.0;
         t.to_hex()
+    }
+}
+
+impl Default for FieldOrderElement {
+    fn default() -> FieldOrderElement {
+        FieldOrderElement::new()
     }
 }
 
@@ -89,8 +89,9 @@ impl From<usize> for FieldOrderElement {
         FieldOrderElement(v)
     }
 }
-serialize_impl!(FieldOrderElement, BIG, FieldOrderElementVisitor);
+
 format_impl!(FieldOrderElement);
+serialize_impl!(FieldOrderElement, BIG, FieldOrderElementVisitor);
 
 impl Neg for FieldOrderElement {
     type Output = FieldOrderElement;
@@ -188,10 +189,32 @@ mod tests {
         assert_eq!(FieldOrderElement::from("01"), FieldOrderElement::one());
         let fr = FieldOrderElement::new();
         assert_eq!(fr, fr.clone());
+    }
+
+    #[test]
+    fn from_hash() {
+        let fr = FieldOrderElement::new();
         let salt = b"oiuhgruhqewriuh13k451938475oergnqeiruytkj1b34t098h978123jhk625gv";
         let domain_sep = b"1234rtgfcdewdfghjnbgt56rtyu3io09iurgiokdjfuighujwkemnj5uyiwhjekr";
         let foe = FieldOrderElement::from_hash(fr.to_bytes().as_slice(), salt, domain_sep);
         assert_ne!(foe, fr);
+        let salt = b"0";
+        let domain_sep = b"0";
+        let foe = FieldOrderElement::from_hash(fr.to_bytes().as_slice(), salt, domain_sep);
+    }
+
+    #[test]
+    fn serialization() {
+        let fr = FieldOrderElement::new();
+        assert_eq!(fr.to_bytes().len(), FieldOrderElement::BYTES_REPR_SIZE);
+        let fr1 = FieldOrderElement::from(fr.to_bytes().as_slice());
+        assert_eq!(fr, fr1);
+        let res = serde_json::to_string(&fr1);
+        assert!(res.is_ok());
+        let s_fr1 = res.unwrap();
+        let res = serde_json::from_str(&s_fr1);
+        assert!(res.is_ok());
+        assert_eq!(fr1, res.unwrap());
     }
 
     #[test]
