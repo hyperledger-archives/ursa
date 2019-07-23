@@ -53,7 +53,7 @@ macro_rules! serialize_impl {
             where
                 S: serde::ser::Serializer,
             {
-                serializer.serialize_newtype_struct("$name", &self.to_string())
+                serializer.serialize_newtype_struct(stringify!($name), &self.to_string())
             }
         }
 
@@ -68,14 +68,22 @@ macro_rules! serialize_impl {
                     type Value = $name;
 
                     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str("expected $name")
+                        formatter.write_str(stringify!($name))
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<$name, E>
                     where
                         E: serde::de::Error,
                     {
-                        Ok($name::from_str(value).map_err(serde::de::Error::custom)?)
+                        let name_str = stringify!($name);
+                        if value.starts_with(name_str) {
+                            Ok(
+                                $name::from_str(&value[(name_str.len() + 2)..(value.len() - 2)])
+                                    .map_err(serde::de::Error::custom)?,
+                            )
+                        } else {
+                            Err(E::custom(format!("Invalid string: {}", value)))
+                        }
                     }
                 }
 
@@ -89,14 +97,32 @@ macro_rules! format_impl {
     ($name:ident) => {
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "$name( {} )", self.to_hex())
+                write!(f, "{}( {} )", stringify!($name), self.to_hex())
             }
         }
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "$name( {} )", self.to_hex())
+                write!(f, "{}( {} )", stringify!($name), self.to_hex())
             }
+        }
+    };
+}
+
+macro_rules! to_bytes {
+    () => {
+        pub fn to_bytes(&self) -> Vec<u8> {
+            let mut res = vec![0u8; Self::BYTES_REPR_SIZE];
+            self.repr_bytes(&mut res);
+            res
+        }
+    };
+}
+
+macro_rules! constructor {
+    ($name:ident) => {
+        pub fn new() -> Self {
+            $name(random_mod_order::<ThreadRng>(None))
         }
     };
 }
