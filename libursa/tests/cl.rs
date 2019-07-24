@@ -3269,6 +3269,144 @@ mod cl_tests {
         }
 
         #[test]
+        fn anoncreds_works_for_proof_created_after_credential_revoked_issuance_by_default() {
+            HLCryptoDefaultLogger::init(None).ok();
+
+            // 1. Issuer creates credential schema
+            let credential_schema = helpers::gvt_credential_schema();
+            let non_credential_schema = helpers::non_credential_schema();
+
+            // 2. Issuer creates credential definition(with revocation keys)
+            let (credential_pub_key, credential_priv_key, credential_key_correctness_proof) =
+                Issuer::new_credential_def(&credential_schema, &non_credential_schema, true)
+                    .unwrap();
+
+            // 3. Issuer creates revocation registry
+            let max_cred_num = 5;
+            let issuance_by_default = true;
+            let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
+                Issuer::new_revocation_registry_def(
+                    &credential_pub_key,
+                    max_cred_num,
+                    issuance_by_default,
+                )
+                .unwrap();
+
+            let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
+
+            // 4. Prover creates master secret
+            let master_secret = Prover::new_master_secret().unwrap();
+            let credential_values = helpers::gvt_credential_values(&master_secret);
+
+            // 5. Issuer creates nonce used by Prover to create correctness proof for blinded secrets
+            let credential_nonce = new_nonce().unwrap();
+
+            // 6. Prover blinds master secret
+            let (
+                blinded_credential_secrets,
+                credential_secrets_blinding_factors,
+                blinded_credential_secrets_correctness_proof,
+            ) = Prover::blind_credential_secrets(
+                &credential_pub_key,
+                &credential_key_correctness_proof,
+                &credential_values,
+                &credential_nonce,
+            )
+            .unwrap();
+
+            // 7. Prover creates nonce used by Issuer to create correctness proof for signature
+            let credential_issuance_nonce = new_nonce().unwrap();
+
+            let rev_idx = 1;
+            let (mut credential_signature, signature_correctness_proof, rev_reg_delta) =
+                Issuer::sign_credential_with_revoc(
+                    PROVER_ID,
+                    &blinded_credential_secrets,
+                    &blinded_credential_secrets_correctness_proof,
+                    &credential_nonce,
+                    &credential_issuance_nonce,
+                    &credential_values,
+                    &credential_pub_key,
+                    &credential_priv_key,
+                    rev_idx,
+                    max_cred_num,
+                    issuance_by_default,
+                    &mut rev_reg,
+                    &rev_key_priv,
+                    &simple_tail_accessor,
+                )
+                .unwrap();
+
+            assert!(rev_reg_delta.is_none());
+            let rev_reg_delta = RegistryDelta::from_rev_reg(&rev_reg);
+
+            // 9. Prover creates witness
+            let witness = Witness::new(
+                rev_idx,
+                max_cred_num,
+                issuance_by_default,
+                &rev_reg_delta.to_delta(),
+                &simple_tail_accessor,
+            )
+            .unwrap();
+
+            // 10. Prover processes credential signature
+            Prover::process_credential_signature(
+                &mut credential_signature,
+                &credential_values,
+                &signature_correctness_proof,
+                &credential_secrets_blinding_factors,
+                &credential_pub_key,
+                &credential_issuance_nonce,
+                Some(&rev_key_pub),
+                Some(&rev_reg),
+                Some(&witness),
+            )
+            .unwrap();
+
+            // 11. Verifier creates nonce
+            let nonce = new_nonce().unwrap();
+
+            // 12. Verifier create sub proof request
+            let sub_proof_request = helpers::gvt_sub_proof_request();
+
+            // 13. Issuer revokes credential
+            Issuer::revoke_credential(&mut rev_reg, max_cred_num, rev_idx, &simple_tail_accessor)
+                .unwrap();
+
+            // 14. Prover creates proof
+            let mut proof_builder = Prover::new_proof_builder().unwrap();
+            proof_builder.add_common_attribute("master_secret").unwrap();
+            proof_builder
+                .add_sub_proof_request(
+                    &sub_proof_request,
+                    &credential_schema,
+                    &non_credential_schema,
+                    &credential_signature,
+                    &credential_values,
+                    &credential_pub_key,
+                    Some(&rev_reg),
+                    Some(&witness),
+                )
+                .unwrap();
+            let proof = proof_builder.finalize(&nonce).unwrap();
+
+            // 15. Verifier verifies proof
+            let mut proof_verifier = Verifier::new_proof_verifier().unwrap();
+            proof_verifier
+                .add_sub_proof_request(
+                    &sub_proof_request,
+                    &credential_schema,
+                    &non_credential_schema,
+                    &credential_pub_key,
+                    Some(&rev_key_pub),
+                    Some(&rev_reg),
+                )
+                .unwrap();
+            assert_eq!(false, proof_verifier.verify(&proof, &nonce).unwrap());
+        }
+
+        #[test]
         fn anoncreds_works_for_recovery_credential() {
             HLCryptoDefaultLogger::init(None).ok();
 

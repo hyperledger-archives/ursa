@@ -590,6 +590,22 @@ mod test {
     }
 
     #[test]
+    fn cs_encryption_label_mismatch() {
+        let num_messages = 2;
+        let keypair = CSKeypair::new(num_messages).unwrap();
+        let messages: Vec<_> = (0..num_messages)
+            .map(|_| keypair.pub_key.n.rand_range().unwrap())
+            .collect();
+        let label_enc = "test1".as_bytes();
+        let label_dec = "test2".as_bytes();
+        let ciphertext = CSKeypair::encrypt(&messages, label_enc, &keypair.pub_key).unwrap();
+        assert!(
+            CSKeypair::decrypt(label_dec, &ciphertext, &keypair.pub_key, &keypair.pri_key,)
+                .is_err()
+        )
+    }
+
+    #[test]
     fn cs_encryption_single_message_bigger_public_key() {
         // Public key supports encryption of 2 messages but only 1 message is encrypted
         let keypair = CSKeypair::new(2).unwrap();
