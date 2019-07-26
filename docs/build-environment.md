@@ -129,7 +129,7 @@ export SODIUM_LIB_DIR=/usr/local/lib
 1. Download the most recent Visual Studio Community Edition [here](https://visualstudio.microsoft.com/vs/).  This is currently the 2019 version.
     - Check the box for *Desktop development with C++*
     - In the small menu on the right hand side also check the box for *C++/CLI support*
-1.Download git-scm for windows [here](https://git-scm.com/download/win)
+1. Download git-scm for windows [here](https://git-scm.com/download/win)
     - Install git for windows using:
     - *Use Git from Git Bash Only* so it doesn't change any path settings of the command prompt
     - *Checkout as is, commit Unix-style line endings*
