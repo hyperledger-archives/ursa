@@ -9,7 +9,7 @@ name = "zmix"
 crate-type = ["rlib", "staticlib", "cdylib"]
 
 [dependencies]
-amcl = { version = "0.2.0", features = ["bls381"] }
+miracl_amcl = { version = "3.2.5", features = ["bls381"] }
 hkdf = "0.7.1"
 serde = "1.0.94"
 rand = "0.7.0"

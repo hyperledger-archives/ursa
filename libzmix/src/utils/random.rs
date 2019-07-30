@@ -1,6 +1,6 @@
-use amcl::arch::Chunk;
-use amcl::bls381::big::BIG;
-use amcl::rand::RAND;
+use amcl_miracl::arch::Chunk;
+use amcl_miracl::bls381::big::BIG;
+use amcl_miracl::rand::RAND;
 use rand::rngs::EntropyRng;
 use rand::RngCore;
 

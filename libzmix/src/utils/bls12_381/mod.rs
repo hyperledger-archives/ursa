@@ -1,8 +1,8 @@
-use amcl::bls381::big::BIG;
-use amcl::bls381::dbig::DBIG;
-use amcl::bls381::ecp::ECP;
-use amcl::bls381::ecp2::ECP2;
-use amcl::bls381::rom;
+use amcl_miracl::bls381::big::BIG;
+use amcl_miracl::bls381::dbig::DBIG;
+use amcl_miracl::bls381::ecp::ECP;
+use amcl_miracl::bls381::ecp2::ECP2;
+use amcl_miracl::bls381::rom;
 
 use sha2::Sha256;
 
@@ -109,20 +109,116 @@ macro_rules! format_impl {
     };
 }
 
+macro_rules! add_impl {
+    ($name: ident, $sel1:ident $rhs1:ident $add:block, $sel2:ident $rhs2:ident $assign:block) => {
+        impl Add for $name {
+            type Output = $name;
+
+            fn add(self, rhs: $name) -> $name {
+                &self + &rhs
+            }
+        }
+
+        impl<'a, 'b> Add<&'b $name> for &'a $name {
+            type Output = $name;
+
+            fn add($sel1, $rhs1: &'b $name) -> $name $add
+        }
+
+        impl AddAssign for $name {
+            fn add_assign(&mut $sel2, $rhs2: $name) $assign
+        }
+
+        impl AddAssign<&$name> for $name {
+            fn add_assign(&mut $sel2, $rhs2: &$name) $assign
+        }
+    };
+}
+
+macro_rules! sub_impl {
+    ($name: ident, $sel1:ident $rhs1:ident $sub:block, $sel2:ident $rhs2:ident $assign:block) => {
+        impl Sub for $name {
+            type Output = $name;
+
+            fn sub(self, rhs: $name) -> $name {
+                &self - &rhs
+            }
+        }
+
+        impl<'a, 'b> Sub<&'b $name> for &'a $name {
+            type Output = $name;
+
+            fn sub($sel1, $rhs1: &'b $name) -> $name $sub
+        }
+
+        impl SubAssign for $name {
+            fn sub_assign(&mut $sel2, $rhs2: $name) $assign
+        }
+
+        impl SubAssign<&$name> for $name {
+            fn sub_assign(&mut $sel2, $rhs2: &$name) $assign
+        }
+    };
+}
+
+macro_rules! mul_impl {
+    ($name:ident, $rhs:ident, $sel1:ident $rhs1:ident $mul:block, $sel2:ident $rhs2:ident $assign: block) => {
+        impl Mul<$rhs> for $name {
+            type Output = $name;
+
+            fn mul(self, rhs: $rhs) -> $name {
+                &self * &rhs
+            }
+        }
+
+        impl<'a, 'b> Mul<&'b $rhs>for &'a $name {
+            type Output = $name;
+
+            fn mul($sel1, $rhs1: &'b $rhs) -> $name $mul
+        }
+
+        impl MulAssign<$rhs> for $name {
+            fn mul_assign(&mut $sel2, $rhs2: $rhs) $assign
+        }
+
+        impl MulAssign<&$rhs> for $name {
+            fn mul_assign(&mut $sel2, $rhs2: &$rhs) $assign
+        }
+    };
+}
+
+macro_rules! neg_impl {
+    ($name:ident, $sel:ident $code:block) => {
+        impl Neg for $name {
+            type Output = $name;
+
+            fn neg($sel) -> $name $code
+        }
+
+        impl<'a> Neg for &'a $name {
+            type Output = $name;
+
+            fn neg($sel) -> $name $code
+        }
+    };
+}
+
+macro_rules! default_impl {
+    ($name:ident) => {
+        impl Default for $name {
+            fn default() -> $name {
+                $name::new()
+            }
+        }
+    };
+}
+
 macro_rules! to_bytes {
     () => {
         pub fn to_bytes(&self) -> Vec<u8> {
             let mut res = vec![0u8; Self::BYTES_REPR_SIZE];
             self.repr_bytes(&mut res);
             res
-        }
-    };
-}
-
-macro_rules! constructor {
-    ($name:ident) => {
-        pub fn new() -> Self {
-            $name(random_mod_order::<ThreadRng>(None))
         }
     };
 }
@@ -181,13 +277,13 @@ fn compute_big(seed1: &[u8], seed2: &[u8]) -> BIG {
     res.dmod(&GROUP_ORDER)
 }
 
-pub mod fr;
+pub mod curve;
 
 #[cfg(test)]
 mod tests {
     use super::{hash_mod_order, random_mod_order};
-    use amcl::bls381::big::BIG;
-    use amcl::bls381::rom;
+    use amcl_miracl::bls381::big::BIG;
+    use amcl_miracl::bls381::rom;
     use rand::prelude::*;
     use rand_chacha::ChaChaRng;
     use rand_core::SeedableRng;
