@@ -126,13 +126,11 @@ export SODIUM_LIB_DIR=/usr/local/lib
 
 ## Windows 10
 
-1. Setup a windows virtual machine. Free images are available [here](https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/)
-1. Download Visual Studio Community Edition 2017 [here](https://visualstudio.microsoft.com/downloads/)
-1. Check the boxes for *Desktop development with C++* and *Linux Development with C++*
-1. In the summary portion on the right hand side also check *C++/CLI support*
-1. Click install
-1. Download git-scm for windows [here](https://git-scm.com/downloads/win)
-1. Install git for windows using:
+1. Download the most recent Visual Studio Community Edition [here](https://visualstudio.microsoft.com/vs/).  This is currently the 2019 version.
+    - Check the box for *Desktop development with C++*
+    - In the small menu on the right hand side also check the box for *C++/CLI support*
+1. Download git-scm for windows [here](https://git-scm.com/download/win)
+    - Install git for windows using:
     - *Use Git from Git Bash Only* so it doesn't change any path settings of the command prompt
     - *Checkout as is, commit Unix-style line endings*
     - *Use MinTTY*
@@ -140,14 +138,16 @@ export SODIUM_LIB_DIR=/usr/local/lib
         1. Enable file system caching
         1. Enable Git Credential Manager
         1. Enable symbolic links
-1. Download rust for windows [here](https://win.rustup.rs)
-    - Choose option *1*
-1. Download openssl for windows [here](https://slproweb.com/download/Win64OpenSSL-1_1_1b.exe)
+1. Download rust for windows [here](https://rustup.rs)
+    - Choose option 1: proceed with installation (default)
+    - Note:  if you have antivirus software on your computer, you will likely have to disable it for Rust to correctly install.  In addition, it is advisable to install in a terminal that is "run as an administrator."
+1. Download the most recent OpenSSL for windows [here](https://slproweb.com/products/Win32OpenSSL.html)
     - Choose for "Copy OpenSSL DLLs to:" *The OpenSSL binaries (/bin) directory*
 1. Set the environment variables
+    - Note that these may vary.  If your Ursa build fails because it cannot find OpenSSL, check your environment variables!
     - Windows command prompt:
-        1. set OPENSSL_DIR "C:\OpenSSL-Win64"
+        1. set OPENSSL_DIR "C:\Program Files\OpenSSL-Win64"
         1. set SODIUM_BUILD_STATIC "1"
     - Git Bash
-        1. export OPENSSL_DIR=/c/OpenSSL-Win64
+        1. export OPENSSL_DIR=/c/Program Files/OpenSSL-Win64
         1. export SODIUM_BUILD_STATIC=1

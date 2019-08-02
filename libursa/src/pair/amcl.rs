@@ -10,7 +10,7 @@ use amcl::bn254::ecp::ECP;
 use amcl::bn254::ecp2::ECP2;
 use amcl::bn254::fp12::FP12;
 use amcl::bn254::fp2::FP2;
-use amcl::bn254::pair::{ate, fexp, g1mul, g2mul, gtpow};
+use amcl::bn254::pair::{ate, ate2, fexp, g1mul, g2mul, gtpow};
 use amcl::rand::RAND;
 
 use rand::rngs::OsRng;
@@ -274,6 +274,12 @@ impl PointG2 {
         let point = q.point;
         r.sub(&point);
 
+        Ok(PointG2 { point: r })
+    }
+
+    pub fn neg(&self) -> UrsaCryptoResult<PointG2> {
+        let mut r = self.point;
+        r.neg();
         Ok(PointG2 { point: r })
     }
 
@@ -555,6 +561,14 @@ impl Pair {
         Ok(Pair { pair: result })
     }
 
+    /// e(PointG1, PointG2, PointG1_1, PointG2_1)
+    pub fn pair2(p: &PointG1, q: &PointG2, r: &PointG1, s: &PointG2) -> UrsaCryptoResult<Pair> {
+        let mut result = fexp(&ate2(&q.point, &p.point, &s.point, &r.point));
+        result.reduce();
+
+        Ok(Pair { pair: result })
+    }
+
     /// e() * e()
     pub fn mul(&self, b: &Pair) -> UrsaCryptoResult<Pair> {
         let mut base = self.pair;
@@ -575,6 +589,10 @@ impl Pair {
         let mut r = self.pair;
         r.conj();
         Ok(Pair { pair: r })
+    }
+
+    pub fn is_unity(&self) -> UrsaCryptoResult<bool> {
+        Ok(self.pair.isunity())
     }
 
     pub fn to_string(&self) -> UrsaCryptoResult<String> {
