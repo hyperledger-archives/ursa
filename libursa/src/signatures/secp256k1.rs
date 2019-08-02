@@ -490,7 +490,7 @@ mod test {
 
                 //Check if libsecp256k1 signs the message and this module still can verify it
                 //And that private keys can sign with other libraries
-                let mut context = libsecp256k1::Secp256k1::new();
+                let context = libsecp256k1::Secp256k1::new();
                 let sk = libsecp256k1::key::SecretKey::from_slice(
                     hex::hex2bin(PRIVATE_KEY).unwrap().as_slice(),
                 )

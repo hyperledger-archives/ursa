@@ -28,7 +28,7 @@
 //     printf("Seed.len=%lld\n", seed->len);
 //     printf("Seed.data=%d,%d,%d,%d,%d\n", seed->data[0], seed->data[1], seed->data[2], seed->data[3], seed->data[4]);
 //
-//     if (!ursa_ed25519_keypair_from_seed(seed->data, seed->len, public_key, private_key, err)) {
+//     if (!ursa_ed25519_keypair_from_seed(seed, public_key, private_key, err)) {
 //         printf("Failed to generate keys\n");
 //         return 1;
 //     }
@@ -80,7 +80,7 @@
 //     }
 //     printf("\n");
 //
-//     if (!ursa_ed25519_sign(message->data, message->len, private_key->data, private_key->len, signature, err)) {
+//     if (!ursa_ed25519_sign(message, private_key, signature, err)) {
 //         printf("Failed to sign.\n");
 //
 //         ursa_ed25519_bytebuffer_free(*public_key);
@@ -100,7 +100,7 @@
 //
 //     printf("Signed!\n");
 //
-//     if (!ursa_ed25519_verify(message->data, message->len, signature->data, signature->len, public_key->data, public_key->len, err)) {
+//     if (!ursa_ed25519_verify(message, signature, public_key, err)) {
 //         printf("Verification failed.");
 //
 //         ursa_ed25519_bytebuffer_free(*public_key);
@@ -145,17 +145,12 @@
 //     return 0;
 // }
 
+use super::super::ByteArray;
 use keys::{KeyGenOption, PrivateKey, PublicKey};
 use signatures::ed25519;
 use signatures::SignatureScheme;
 
 use ffi_support::{ByteBuffer, ErrorCode, ExternError};
-
-macro_rules! rust_slice {
-    ($x:ident, $len:expr) => {
-        let $x = unsafe { std::slice::from_raw_parts($x, $len) };
-    };
-}
 
 pub mod ed25519_error_codes {
     pub const KEYPAIR_ERROR: i32 = 1;
@@ -204,16 +199,11 @@ pub extern "C" fn ursa_ed25519_keypair_new(
 /// on `err.message` to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_keypair_from_seed(
-    seed: *const u8,
-    seed_len: usize,
+    seed: &ByteArray,
     public_key: &mut ByteBuffer,
     private_key: &mut ByteBuffer,
     err: &mut ExternError,
 ) -> i32 {
-    if !check_useful_byte_array(seed, seed_len, err) {
-        return 0;
-    }
-    rust_slice!(seed, seed_len);
     ursa_ed25519_keypair_gen(
         Some(KeyGenOption::UseSeed(seed.to_vec())),
         public_key,
@@ -229,15 +219,10 @@ pub extern "C" fn ursa_ed25519_keypair_from_seed(
 /// on `err.message` to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_get_public_key(
-    private_key: *const u8,
-    private_key_len: usize,
+    private_key: &ByteArray,
     public_key: &mut ByteBuffer,
     err: &mut ExternError,
 ) -> i32 {
-    if !check_useful_byte_array(private_key, private_key_len, err) {
-        return 0;
-    }
-    rust_slice!(private_key, private_key_len);
     ursa_ed25519_keypair_gen(
         Some(KeyGenOption::FromSecretKey(PrivateKey(
             private_key.to_vec(),
@@ -255,26 +240,15 @@ pub extern "C" fn ursa_ed25519_get_public_key(
 /// on `err.message` to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_sign(
-    message: *const u8,
-    message_len: usize,
-    private_key: *const u8,
-    private_key_len: usize,
+    message: &ByteArray,
+    private_key: &ByteArray,
     signature: &mut ByteBuffer,
     err: &mut ExternError,
 ) -> i32 {
-    if !check_useful_byte_array(message, message_len, err) {
-        return 0;
-    }
-    if !check_useful_byte_array(private_key, private_key_len, err) {
-        return 0;
-    }
-    rust_slice!(message, message_len);
-    rust_slice!(private_key, private_key_len);
-
     let scheme = ed25519::Ed25519Sha512::new();
     let sk = PrivateKey(private_key.to_vec());
 
-    match scheme.sign(message, &sk) {
+    match scheme.sign(message.to_vec().as_slice(), &sk) {
         Ok(sig) => {
             *err = ExternError::success();
             *signature = ByteBuffer::from_vec(sig);
@@ -295,31 +269,19 @@ pub extern "C" fn ursa_ed25519_sign(
 /// on `err.message` to free the memory.
 #[no_mangle]
 pub extern "C" fn ursa_ed25519_verify(
-    message: *const u8,
-    message_len: usize,
-    signature: *const u8,
-    signature_len: usize,
-    public_key: *const u8,
-    public_key_len: usize,
+    message: &ByteArray,
+    signature: &ByteArray,
+    public_key: &ByteArray,
     err: &mut ExternError,
 ) -> i32 {
-    if !check_useful_byte_array(message, message_len, err) {
-        return 0;
-    }
-    if !check_useful_byte_array(signature, signature_len, err) {
-        return 0;
-    }
-    if !check_useful_byte_array(public_key, public_key_len, err) {
-        return 0;
-    }
-
     let scheme = ed25519::Ed25519Sha512::new();
-    rust_slice!(message, message_len);
-    rust_slice!(signature, signature_len);
-    rust_slice!(public_key, public_key_len);
     let pk = PublicKey(public_key.to_vec());
 
-    match scheme.verify(message, signature, &pk) {
+    match scheme.verify(
+        message.to_vec().as_slice(),
+        signature.to_vec().as_slice(),
+        &pk,
+    ) {
         Ok(b) => {
             if b {
                 *err = ExternError::success();
@@ -364,25 +326,6 @@ fn ursa_ed25519_keypair_gen(
     }
 }
 
-fn check_useful_byte_array(ptr: *const u8, len: usize, err: &mut ExternError) -> bool {
-    if ptr.is_null() {
-        *err = ExternError::new_error(
-            ErrorCode::new(ed25519_error_codes::INVALID_PARAM1),
-            "Invalid pointer has been passed".to_string(),
-        );
-        return false;
-    }
-
-    if len == 0 {
-        *err = ExternError::new_error(
-            ErrorCode::new(ed25519_error_codes::INVALID_PARAM2),
-            "Array length must be greater than 0".to_string(),
-        );
-        return false;
-    }
-    true
-}
-
 define_bytebuffer_destructor!(ursa_ed25519_bytebuffer_free);
 define_string_destructor!(ursa_ed25519_string_free);
 
@@ -413,9 +356,9 @@ mod tests {
         let mut private_key =
             ByteBuffer::new_with_size(ursa_ed25519_get_private_key_size() as usize);
         let seed = vec![1u8; 32];
+        let seed_wrapper = ByteArray::from(&seed);
         let res = ursa_ed25519_keypair_from_seed(
-            seed.as_ptr(),
-            seed.len(),
+            &seed_wrapper,
             &mut public_key,
             &mut private_key,
             &mut error,
@@ -431,7 +374,8 @@ mod tests {
         assert_eq!("b2ff47a7b9693f810e1b8c3dea9659628838977a4b08a8306cb56d1395c8cd153b77a042f1de02f6d5f418f36a20fd68c8329fe3bbfbecd26a2d72878cd827f8".to_string(), bin2hex(sk.as_slice()));
 
         let mut public_key = ByteBuffer::new_with_size(ursa_ed25519_get_public_key_size() as usize);
-        let res = ursa_ed25519_get_public_key(sk.as_ptr(), sk.len(), &mut public_key, &mut error);
+        let sk_wrapper = ByteArray::from(&sk);
+        let res = ursa_ed25519_get_public_key(&sk_wrapper, &mut public_key, &mut error);
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
         assert_eq!(pk, public_key.into_vec());
@@ -439,25 +383,17 @@ mod tests {
         let mut public_key = ByteBuffer::new_with_size(ursa_ed25519_get_public_key_size() as usize);
         let mut private_key =
             ByteBuffer::new_with_size(ursa_ed25519_get_private_key_size() as usize);
-        let res = ursa_ed25519_get_public_key(pk.as_ptr(), pk.len(), &mut public_key, &mut error);
+        let pk_wrapper = ByteArray::from(&pk);
+        let res = ursa_ed25519_get_public_key(&pk_wrapper, &mut public_key, &mut error);
         assert_eq!(res, 0);
         assert_eq!(
             error.get_message().into_string(),
             "KeyGenError(Keypair must be 64 bytes in length)".to_string()
         );
-        let seed = std::ptr::null();
-        let res = ursa_ed25519_keypair_from_seed(
-            seed as *const u8,
-            0,
-            &mut public_key,
-            &mut private_key,
-            &mut error,
-        );
-        assert_eq!(res, 0);
-        assert_eq!(
-            error.get_message().into_string(),
-            "Invalid pointer has been passed".to_string()
-        );
+        let seed = ByteArray::default();
+        let res =
+            ursa_ed25519_keypair_from_seed(&seed, &mut public_key, &mut private_key, &mut error);
+        assert_eq!(res, 1);
         public_key.destroy();
         private_key.destroy();
     }
@@ -469,9 +405,9 @@ mod tests {
             ByteBuffer::new_with_size(ursa_ed25519_get_private_key_size() as usize);
         let mut error = ExternError::success();
         let seed = vec![1u8; 32];
+        let seed_wrapper = ByteArray::from(&seed);
         let res = ursa_ed25519_keypair_from_seed(
-            seed.as_ptr(),
-            seed.len(),
+            &seed_wrapper,
             &mut public_key,
             &mut private_key,
             &mut error,
@@ -483,28 +419,18 @@ mod tests {
 
         let mut signature = ByteBuffer::new_with_size(ursa_ed25519_get_signature_size() as usize);
         let message = b"Wepa! This is a message that should be signed.";
-        let res = ursa_ed25519_sign(
-            message.as_ptr(),
-            message.len(),
-            sk.as_ptr(),
-            sk.len(),
-            &mut signature,
-            &mut error,
-        );
+        let message_wrapper = ByteArray::from(&message[..]);
+        let sk_wrapper = ByteArray::from(&sk);
+
+        let res = ursa_ed25519_sign(&message_wrapper, &sk_wrapper, &mut signature, &mut error);
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
 
         let sig = signature.into_vec();
+        let sig_wrapper = ByteArray::from(&sig);
+        let pk_wrapper = ByteArray::from(&pk);
         assert_eq!("f61dc466c3094522987cf9bdbadf8a455bc9401d0e56e1a7696483de85c646216648eb9f7f8003822d4c8702016ffe3b4a218ed776776ae5b53d5394bbadb509".to_string(), bin2hex(sig.as_slice()));
-        let res = ursa_ed25519_verify(
-            message.as_ptr(),
-            message.len(),
-            sig.as_ptr(),
-            sig.len(),
-            pk.as_ptr(),
-            pk.len(),
-            &mut error,
-        );
+        let res = ursa_ed25519_verify(&message_wrapper, &sig_wrapper, &pk_wrapper, &mut error);
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
     }

@@ -7,8 +7,6 @@ use ursa::cl::verifier::Verifier;
 use ursa::cl::*;
 
 use std::time::{Duration, Instant};
-use ursa::cl::prover::ProofBuilder;
-use ursa::errors::UrsaCryptoError;
 
 pub fn get_credential_schema() -> CredentialSchema {
     let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
@@ -205,7 +203,7 @@ fn gen_proofs(
     let mut total_witness_gen = Duration::new(0, 0);
     let mut total_proving = Duration::new(0, 0);
     for i in 0..nonces.len() {
-        let (rev_idx, ref credential_values, ref credential_signature, ref mut witness) =
+        let (rev_idx, ref credential_values, ref credential_signature, ref mut _witness) =
             prover_data[i as usize];
 
         let mut start = Instant::now();

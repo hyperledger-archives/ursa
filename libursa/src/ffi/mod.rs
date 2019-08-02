@@ -6,6 +6,54 @@ pub mod signatures;
 use errors::prelude::*;
 use std::os::raw::c_char;
 
+/// Used for receiving a ByteBuffer from C that was allocated by either C or Rust.
+/// If Rust allocated, then the outgoing struct is ffi_support::ByteBuffer
+/// Caller is responsible for calling free where applicable.
+///
+/// C will not notice a difference and can use the same struct
+#[repr(C)]
+pub struct ByteArray {
+    length: usize,
+    data: *const u8,
+}
+
+impl Default for ByteArray {
+    fn default() -> ByteArray {
+        ByteArray {
+            length: 0,
+            data: std::ptr::null(),
+        }
+    }
+}
+
+impl ByteArray {
+    pub fn to_vec(&self) -> Vec<u8> {
+        if self.data.is_null() || self.length == 0 {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.length).to_vec() }
+        }
+    }
+}
+
+impl From<&Vec<u8>> for ByteArray {
+    fn from(input: &Vec<u8>) -> ByteArray {
+        ByteArray {
+            length: input.len(),
+            data: input.as_slice().as_ptr() as *const u8,
+        }
+    }
+}
+
+impl From<&[u8]> for ByteArray {
+    fn from(input: &[u8]) -> ByteArray {
+        ByteArray {
+            length: input.len(),
+            data: input.as_ptr() as *const u8,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(usize)]
 pub enum ErrorCode {

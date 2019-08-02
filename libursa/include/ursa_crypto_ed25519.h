@@ -16,23 +16,23 @@ extern int32_t ursa_ed25519_keypair_new(const struct ByteBuffer* public_key,
                                         const struct ByteBuffer* private_key,
                                         const struct ExternError* err);
 
-extern int32_t ursa_ed25519_keypair_from_seed(const uint8_t* const seed, uint64_t seed_len,
+extern int32_t ursa_ed25519_keypair_from_seed(const struct ByteBuffer* const seed,
                                               const struct ByteBuffer* public_key,
                                               const struct ByteBuffer* private_key,
                                               const struct ExternError* err);
 
-extern int32_t ursa_ed25519_get_public_key(const uint8_t* const private_key, uint64_t private_key_len,
+extern int32_t ursa_ed25519_get_public_key(const struct ByteBuffer* const private_key,
                                            const struct ByteBuffer* public_key,
                                            const struct ExternError* err);
 
-extern int32_t ursa_ed25519_sign(const uint8_t* const message, uint64_t message_len,
-                                 const uint8_t* const private_key, uint64_t private_key_len,
+extern int32_t ursa_ed25519_sign(const struct ByteBuffer* const message,
+                                 const struct ByteBuffer* const private_key,
                                  const struct ByteBuffer* signature,
                                  const struct ExternError* err);
 
-extern int32_t ursa_ed25519_verify(const uint8_t* const message, uint64_t message_len,
-                                   const uint8_t* const signature, uint64_t signature_len,
-                                   const uint8_t* const public_key, uint64_t public_key_len,
+extern int32_t ursa_ed25519_verify(const struct ByteBuffer* const message,
+                                   const struct ByteBuffer* const signature,
+                                   const struct ByteBuffer* const public_key,
                                    const struct ExternError* err);
 #ifdef __cplusplus
 }
