@@ -1,0 +1,22 @@
+[package]
+name = "ps"
+version = "0.1.0"
+authors = ["lovesh <lovesh.bond@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rand = "0.6"
+lazy_static = "1.3.0"
+log = "*"
+merlin = "1.2.0"
+failure = "0.1.5"
+
+[dependencies.amcl_wrapper]
+version = "0.1.0"
+default-features = false
+features = ["bls381"]
+
+[features]
+default = ["G2G1"]
+G1G2 = []
+G2G1 = []
