@@ -30,7 +30,6 @@ impl Verkey {
 }
 
 pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
-    // TODO: Take PRNG as argument
     let g = SignatureGroup::from_msg_hash(&[label, " : g".as_bytes()].concat());
     let g_tilde = OtherGroup::from_msg_hash(&[label, " : g_tilde".as_bytes()].concat());
     let x = FieldElement::random();
@@ -69,4 +68,19 @@ mod tests {
         assert_eq!(vk.Y.len(), count_msgs);
         assert_eq!(vk.Y_tilde.len(), count_msgs);
     }
+
+    #[test]
+    fn test_verkey_validate() {
+        let (sk, vk) = keygen(5, "test".as_bytes());
+        assert!(vk.validate().is_ok());
+
+        let mut vk_1 = vk.clone();
+        vk_1.Y_tilde.push(OtherGroup::new());
+        assert!(vk_1.validate().is_err());
+
+        let mut vk_2 = vk.clone();
+        vk_2.Y.push(SignatureGroup::new());
+        assert!(vk_2.validate().is_err());
+    }
+
 }

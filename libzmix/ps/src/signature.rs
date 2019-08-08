@@ -19,7 +19,6 @@ impl Signature {
         sigkey: &Sigkey,
         verkey: &Verkey,
     ) -> Result<Self, PSError> {
-        // TODO: Take PRNG as argument. This will allow deterministic signatures as well
         Self::check_verkey_and_messages_compat(messages, verkey)?;
         let u = FieldElement::random();
         let sigma_1 = &verkey.g * &u;
@@ -31,7 +30,6 @@ impl Signature {
             scalars.push(messages[i].clone());
             points.push(verkey.Y[i].clone());
         }
-        // TODO: Remove unwrap by accommodating wrapper's error in PSError
         let sigma_2 = points.multi_scalar_mul_const_time(&scalars).unwrap() * &u;
         Ok(Signature { sigma_1, sigma_2 })
     }
@@ -47,7 +45,6 @@ impl Signature {
         verkey.validate()?;
         // There should be commitment to atleast one message
         if messages.len() >= verkey.Y.len() {
-            // TODO: Use a different error
             return Err(PSError::UnsupportedNoOfMessages {
                 expected: messages.len(),
                 given: verkey.Y.len(),
@@ -200,5 +197,39 @@ mod tests {
         }
     }
 
-    // TODO: Add tests for negative cases like more messages than supported by public key, etc
+    #[test]
+    fn test_sig_with_unequal_messages_and_verkey_elements() {
+        let (sk, vk) = keygen(5, "test".as_bytes());
+        let msgs_1 = FieldElementVector::random(6);
+        assert!(Signature::new(msgs_1.as_slice(), &sk, &vk).is_err());
+
+        let msgs_2 = FieldElementVector::random(4);
+        assert!(Signature::new(msgs_2.as_slice(), &sk, &vk).is_err());
+    }
+
+    #[test]
+    fn test_committed_sig_with_incorrect_no_of_messages_and_verkey_elements() {
+        let (sk, vk) = keygen(5, "test".as_bytes());
+        let msgs_1 = FieldElementVector::random(5);
+        let blinding = FieldElement::random();
+
+        // No of messages should be at least one less than size of vk.Y
+        assert!(Signature::new_with_committed_attributes(
+            &SignatureGroup::random(),
+            &msgs_1.as_slice(),
+            &sk,
+            &vk
+        )
+        .is_err());
+
+        let mut comm = SignatureGroup::new();
+        for i in 0..5 {
+            comm += (&vk.Y[i] * &msgs_1[i]);
+        }
+        comm += (&vk.g * &blinding);
+        let msgs_2 = FieldElementVector::random(6);
+        assert!(
+            Signature::new_with_committed_attributes(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
+        );
+    }
 }

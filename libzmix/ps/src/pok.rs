@@ -20,66 +20,25 @@ use std::collections::{HashMap, HashSet};
 // During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 // `Proof` can then be verified by the verifier.
 
-/*pub struct ProverCommitting<'a, T: GroupElement> {
-    gens: Vec<&'a T>,
-    blindings: Vec<FieldElement>,
-}
-
-pub struct ProverCommitted<'a, T: GroupElement> {
-    gens: Vec<&'a T>,
-    blindings: Vec<FieldElement>,
-    commitment: T
-}
-
-impl<'a, T> ProverCommitting<'a, T> where T: GroupElement {
-    pub fn new() -> Self {
-        Self {
-            gens: vec![],
-            blindings: vec![],
-        }
-    }
-
-    pub fn commit(&mut self, gen: &'a T, blinding: Option<FieldElement>) -> usize {
-        let blinding = match blinding {
-            Some(b) => b,
-            None => FieldElement::random()
-        };
-        let idx = self.gens.len();
-        self.gens.push(gen);
-        self.blindings.push(blinding);
-        idx
-    }
-
-    pub fn finish(self) -> ProverCommitted<'a, T> {
-        // XXX: Need multi-scalar multiplication to be implemented for GroupElementVector.
-        // XXX: Also implement operator overloading for GroupElement.
-        unimplemented!()
-    }
-
-    pub fn get_index(&self, idx: usize) -> Result<(&'a T, &FieldElement), PSError> {
-        if idx >= self.gens.len() {
-            return Err(PSError::GeneralError { msg: format!("index {} greater than size {}", idx, self.gens.len()) });
-        }
-        Ok((self.gens[idx], &self.blindings[idx]))
-    }
-}*/
-
 macro_rules! impl_PoK_VC {
     ( $prover_committing:ident, $prover_committed:ident, $proof:ident, $group_element:ident, $group_element_vec:ident ) => {
         /// Proof of knowledge of messages in a vector commitment.
         /// Commit for each message.
+        #[derive(Clone, Debug)]
         pub struct $prover_committing {
             gens: $group_element_vec,
             blindings: FieldElementVector,
         }
 
         /// Receive or generate challenge. Compute response and proof
+        #[derive(Clone, Debug)]
         pub struct $prover_committed {
             gens: $group_element_vec,
             blindings: FieldElementVector,
             commitment: $group_element,
         }
 
+        #[derive(Clone, Debug)]
         pub struct $proof {
             commitment: $group_element,
             responses: FieldElementVector,
@@ -217,6 +176,7 @@ The verifier now checks whether e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde)
 To reveal some of the messages from the signature but not all, in above protocol, construct J to be of the hidden values only, the verifier will
 then add the revealed values (raised to the respective generators) to get a final J which will then be used in the pairing check.
 */
+#[derive(Clone, Debug)]
 pub struct PoKOfSignature {
     pub secrets: FieldElementVector,
     pub sig: Signature,
@@ -224,6 +184,7 @@ pub struct PoKOfSignature {
     pub pok_vc: ProverCommittedOtherGroup,
 }
 
+#[derive(Clone, Debug)]
 pub struct PoKOfSignatureProof {
     pub sig: Signature,
     pub J: OtherGroup,
