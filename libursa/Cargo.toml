@@ -91,7 +91,7 @@ harness = false
 maintainer = "Hyperledger"
 license-file = ["../LICENSE", "0"]
 copyright = "2019, Hyperledger"
-depends = "$auto"
+depends = "$auto, libssl1.0.0"
 extended-description = """\
 Rust written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
 section = "admin"
