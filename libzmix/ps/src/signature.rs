@@ -36,7 +36,7 @@ impl Signature {
 
     /// 1 or more messages are captured in a commitment `commitment`. The remaining known messages are in `messages`.
     /// This is a blind signature.
-    pub fn new_with_committed_attributes(
+    pub fn new_with_committed_messages(
         commitment: &SignatureGroup,
         messages: &[FieldElement],
         sigkey: &Sigkey,
@@ -141,8 +141,7 @@ mod tests {
             // commitment = Y[0]^msg * g^blinding
             let comm = (&vk.Y[0] * &msg) + (&vk.g * &blinding);
 
-            let sig_blinded =
-                Signature::new_with_committed_attributes(&comm, &[], &sk, &vk).unwrap();
+            let sig_blinded = Signature::new_with_committed_messages(&comm, &[], &sk, &vk).unwrap();
             let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
             assert!(sig_unblinded.verify(&[msg], &vk).unwrap());
         }
@@ -162,8 +161,7 @@ mod tests {
                 comm += (&vk.Y[i] * &msgs[i]);
             }
             comm += (&vk.g * &blinding);
-            let sig_blinded =
-                Signature::new_with_committed_attributes(&comm, &[], &sk, &vk).unwrap();
+            let sig_blinded = Signature::new_with_committed_messages(&comm, &[], &sk, &vk).unwrap();
             let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
             assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
         }
@@ -185,7 +183,7 @@ mod tests {
             }
             comm += (&vk.g * &blinding);
 
-            let sig_blinded = Signature::new_with_committed_attributes(
+            let sig_blinded = Signature::new_with_committed_messages(
                 &comm,
                 &msgs.as_slice()[committed_msgs..count_msgs],
                 &sk,
@@ -214,7 +212,7 @@ mod tests {
         let blinding = FieldElement::random();
 
         // No of messages should be at least one less than size of vk.Y
-        assert!(Signature::new_with_committed_attributes(
+        assert!(Signature::new_with_committed_messages(
             &SignatureGroup::random(),
             &msgs_1.as_slice(),
             &sk,
@@ -229,7 +227,7 @@ mod tests {
         comm += (&vk.g * &blinding);
         let msgs_2 = FieldElementVector::random(6);
         assert!(
-            Signature::new_with_committed_attributes(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
+            Signature::new_with_committed_messages(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
         );
     }
 }
