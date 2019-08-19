@@ -95,6 +95,13 @@ include:
     libursa.dll (Windows)
     libursa.lib (Windows)
 
+
+## Packaging
+Libursa can be packaged for debian builds using [cargo-deb](https://github.com/mmstick/cargo-deb).
+To create a debian package, run the following command with cargo-deb installed
+
+`cargo deb -p ursa` 
+
 ### Libursa Documentation
 
 Libursa API documentation is now available as rust doc in code. See:
