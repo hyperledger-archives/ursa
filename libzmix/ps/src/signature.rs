@@ -5,7 +5,7 @@ use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureG
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Signature {
     pub sigma_1: SignatureGroup,
     pub sigma_2: SignatureGroup,

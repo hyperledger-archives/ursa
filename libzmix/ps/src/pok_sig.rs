@@ -37,6 +37,7 @@ The verifier now checks whether e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde)
 To reveal some of the messages from the signature but not all, in above protocol, construct J to be of the hidden values only, the verifier will
 then add the revealed values (raised to the respective generators) to get a final J which will then be used in the pairing check.
 */
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PoKOfSignature {
     pub secrets: FieldElementVector,
     pub sig: Signature,
@@ -44,6 +45,7 @@ pub struct PoKOfSignature {
     pub pok_vc: ProverCommittedOtherGroup,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
     pub sig: Signature,
     pub J: OtherGroup,
