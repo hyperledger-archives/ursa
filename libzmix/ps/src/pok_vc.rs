@@ -15,18 +15,21 @@ macro_rules! impl_PoK_VC {
     ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
         /// Proof of knowledge of messages in a vector commitment.
         /// Commit for each message.
+        #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $ProverCommitting {
             gens: $group_element_vec,
             blindings: FieldElementVector,
         }
 
         /// Receive or generate challenge. Compute response and proof
+        #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $ProverCommitted {
             gens: $group_element_vec,
             blindings: FieldElementVector,
             commitment: $group_element,
         }
 
+        #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $Proof {
             commitment: $group_element,
             responses: FieldElementVector,

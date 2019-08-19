@@ -4,11 +4,12 @@ use amcl_wrapper::group_elem::GroupElement;
 use crate::errors::PSError;
 use crate::{OtherGroup, SignatureGroup};
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Sigkey {
     pub X: SignatureGroup,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Verkey {
     pub g: SignatureGroup,
     pub g_tilde: OtherGroup,
