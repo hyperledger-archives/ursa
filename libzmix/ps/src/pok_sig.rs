@@ -237,7 +237,7 @@ mod tests {
         // Signer verifies the proof of knowledge.
         assert!(proof.verify(bases.as_slice(), &comm, &chal).unwrap());
 
-        let sig_blinded = Signature::new_with_committed_attributes(
+        let sig_blinded = Signature::new_with_committed_messages(
             &comm,
             &msgs.as_slice()[committed_msgs..count_msgs],
             &sk,

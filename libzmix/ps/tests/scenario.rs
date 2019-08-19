@@ -52,7 +52,7 @@ fn test_scenario_1() {
     }
 
     // Get signature, unblind it and then verify.
-    let sig_blinded = Signature::new_with_committed_attributes(
+    let sig_blinded = Signature::new_with_committed_messages(
         &comm,
         &msgs.as_slice()[committed_msgs..count_msgs],
         &sk,
