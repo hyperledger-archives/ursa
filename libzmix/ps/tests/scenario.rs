@@ -1,7 +1,7 @@
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use ps::keys::keygen;
-use ps::pok::*;
+use ps::pok_sig::*;
 use ps::signature::Signature;
 use ps::{OtherGroupVec, SignatureGroup};
 use std::collections::{HashMap, HashSet};

@@ -50,5 +50,7 @@ extern crate failure;
 
 pub mod errors;
 pub mod keys;
-pub mod pok;
+#[macro_use]
+pub mod pok_vc;
+pub mod pok_sig;
 pub mod signature;
