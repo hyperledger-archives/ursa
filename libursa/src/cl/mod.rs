@@ -889,7 +889,7 @@ pub enum PredicateType {
 /// 3) Credential contains attributes with valid predicates that verifier wants the prover to satisfy.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Proof {
-    proofs: Vec<SubProof>,
+    pub proofs: Vec<SubProof>,
     aggregated_proof: AggregatedProof,
 }
 
@@ -897,6 +897,16 @@ pub struct Proof {
 pub struct SubProof {
     primary_proof: PrimaryProof,
     non_revoc_proof: Option<NonRevocProof>,
+}
+
+impl SubProof {
+    pub fn revealed_attrs(&self) -> UrsaCryptoResult<HashMap<String, String>> {
+        let mut res = HashMap::new();
+        for (k, v) in self.primary_proof.eq_proof.revealed_attrs.iter() {
+            res.insert(k.clone(), v.to_dec()?);
+        }
+        Ok(res)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
