@@ -68,16 +68,6 @@ fn test_scenario_1() {
     revealed_msg_indices.insert(6);
     revealed_msg_indices.insert(9);
 
-    let mut bases = OtherGroupVec::with_capacity(vk.Y_tilde.len() + 2);
-    bases.push(vk.X_tilde.clone());
-    bases.push(vk.g_tilde.clone());
-    for i in 0..vk.Y_tilde.len() {
-        if revealed_msg_indices.contains(&i) {
-            continue;
-        }
-        bases.push(vk.Y_tilde[i].clone());
-    }
-
     let pok = PoKOfSignature::init(
         &sig_unblinded,
         &vk,

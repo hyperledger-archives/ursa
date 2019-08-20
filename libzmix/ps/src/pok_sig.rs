@@ -256,13 +256,6 @@ mod tests {
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
         assert!(sig.verify(msgs.as_slice(), &vk).unwrap());
 
-        let mut bases = OtherGroupVec::with_capacity(vk.Y_tilde.len() + 2);
-        bases.push(vk.X_tilde.clone());
-        bases.push(vk.g_tilde.clone());
-        for i in 0..vk.Y_tilde.len() {
-            bases.push(vk.Y_tilde[i].clone());
-        }
-
         let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
 
         let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
@@ -285,16 +278,6 @@ mod tests {
         revealed_msg_indices.insert(4);
         revealed_msg_indices.insert(9);
 
-        let mut bases = OtherGroupVec::with_capacity(vk.Y_tilde.len() + 2);
-        bases.push(vk.X_tilde.clone());
-        bases.push(vk.g_tilde.clone());
-        for i in 0..vk.Y_tilde.len() {
-            if revealed_msg_indices.contains(&i) {
-                continue;
-            }
-            bases.push(vk.Y_tilde[i].clone());
-        }
-
         let pok =
             PoKOfSignature::init(&sig, &vk, msgs.as_slice(), revealed_msg_indices.clone()).unwrap();
 
@@ -312,5 +295,37 @@ mod tests {
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
         assert!(!proof.verify(&vk, revealed_msgs_1.clone(), &chal).unwrap());
+    }
+
+    #[test]
+    fn timing_pok_signature() {
+        // Measure time to prove knowledge of signatures, both generation and verification of proof
+        let iterations = 100;
+        let count_msgs = 10;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+
+        let msgs = FieldElementVector::random(count_msgs);
+        let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
+
+        let mut total_generating = Duration::new(0, 0);
+        let mut total_verifying = Duration::new(0, 0);
+
+        for _ in 0..iterations {
+            let start = Instant::now();
+
+            let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
+
+            let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+
+            let proof = pok.gen_proof(&chal).unwrap();
+            total_generating += start.elapsed();
+
+            let start = Instant::now();
+            assert!(proof.verify(&vk, HashMap::new(), &chal).unwrap());
+            total_verifying += start.elapsed();
+        }
+
+        println!("Time to create {} proofs is {:?}", iterations, total_generating);
+        println!("Time to verify {} proofs is {:?}", iterations, total_verifying);
     }
 }
