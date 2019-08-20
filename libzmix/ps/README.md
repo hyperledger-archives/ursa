@@ -18,3 +18,13 @@ To run tests with signature in group G2. The proof of knowledge of signatures wi
 ```
 cargo test --release --no-default-features --features G1G2
 ```
+
+To benchmark, run tests prefixed with `timing` and the time taken for various actions will be printed.
+```
+cargo test --release --no-default-features --features G1G2 timing -- --nocapture
+```
+
+or 
+```
+cargo test --release --no-default-features --features G2G1 timing -- --nocapture
+```

@@ -114,8 +114,8 @@ impl Signature {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // For benchmarking
     use crate::keys::keygen;
+    // For benchmarking
     use std::time::{Duration, Instant};
 
     #[test]
@@ -229,5 +229,44 @@ mod tests {
         assert!(
             Signature::new_with_committed_messages(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
         );
+    }
+
+    #[test]
+    fn timing_signature_over_known_and_committed_messages() {
+        // Measure time to create and verify signatures. Verifying time will include time to unblind the signature as well.
+        let iterations = 100;
+        let count_msgs = 10;
+        let committed_msgs = 3;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let mut total_signing = Duration::new(0, 0);
+        let mut total_verifying = Duration::new(0, 0);
+        for _ in 0..iterations {
+            let msgs = FieldElementVector::random(count_msgs);
+            let blinding = FieldElement::random();
+            // XXX: In production always use multi-scalar multiplication
+            let mut comm = SignatureGroup::new();
+            for i in 0..committed_msgs {
+                comm += (&vk.Y[i] * &msgs[i]);
+            }
+            comm += (&vk.g * &blinding);
+
+            let start = Instant::now();
+            let sig_blinded = Signature::new_with_committed_messages(
+                &comm,
+                &msgs.as_slice()[committed_msgs..count_msgs],
+                &sk,
+                &vk,
+            )
+                .unwrap();
+            total_signing += start.elapsed();
+
+            let start = Instant::now();
+            let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
+            assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
+            total_verifying += start.elapsed();
+        }
+
+        println!("Time to create {} signatures is {:?}", iterations, total_signing);
+        println!("Time to verify {} signatures is {:?}", iterations, total_verifying);
     }
 }
