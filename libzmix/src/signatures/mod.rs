@@ -35,3 +35,4 @@ trait SignatureScheme {
 }
 
 pub mod ps;
+pub mod bbs;
