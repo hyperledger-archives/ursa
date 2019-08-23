@@ -90,17 +90,18 @@ harness = false
 [package.metadata.deb]
 maintainer = "Hyperledger"
 license-file = ["../LICENSE", "0"]
-copyright = "2018, Hyperledger"
-depends = "$auto"
+copyright = "2019, Hyperledger"
+depends = "$auto, libssl1.0.0"
 extended-description = """\
 Rust written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
 section = "admin"
 revision = "1"
 priority = "optional"
 assets = [
-    ["target/release/libursa.a", "usr/lib", "644"],
-    ["target/release/libursa.so", "usr/lib", "644"],
-    ["include/ursa.h", "usr/include", "644"]
+    ["../target/release/libursa.a", "usr/lib/ursa/libursa.a", "644"],
+    ["../target/release/libursa.so", "usr/lib/ursa/libursa.so", "644"],
+    ["include/ursa_crypto.h", "usr/include/ursa/ursa_crypto.h", "644"],
+    ["include/ursa_crypto_ed25519.h", "usr/include/ursa/ursa_crypto_ed25519.h", "644"]
 ]
 
 [package.metadata.rpm]
