@@ -43,7 +43,7 @@ impl Signature {
         verkey: &Verkey,
     ) -> Result<Self, PSError> {
         verkey.validate()?;
-        // There should be commitment to atleast one message
+        // There should be commitment to at least one message
         if messages.len() >= verkey.Y.len() {
             return Err(PSError::UnsupportedNoOfMessages {
                 expected: messages.len(),
@@ -257,7 +257,7 @@ mod tests {
                 &sk,
                 &vk,
             )
-                .unwrap();
+            .unwrap();
             total_signing += start.elapsed();
 
             let start = Instant::now();
@@ -266,7 +266,13 @@ mod tests {
             total_verifying += start.elapsed();
         }
 
-        println!("Time to create {} signatures is {:?}", iterations, total_signing);
-        println!("Time to verify {} signatures is {:?}", iterations, total_verifying);
+        println!(
+            "Time to create {} signatures is {:?}",
+            iterations, total_signing
+        );
+        println!(
+            "Time to verify {} signatures is {:?}",
+            iterations, total_verifying
+        );
     }
 }

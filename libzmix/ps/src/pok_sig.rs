@@ -298,6 +298,57 @@ mod tests {
     }
 
     #[test]
+    fn test_PoK_sig_with_unequal_messages_and_verkey_elements() {
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let msgs = FieldElementVector::random(count_msgs);
+        let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
+
+        let bigger_msgs = FieldElementVector::random(count_msgs + 1);
+        assert!(PoKOfSignature::init(&sig, &vk, bigger_msgs.as_slice(), HashSet::new()).is_err());
+    }
+
+    #[test]
+    fn test_PoK_sig_with_incorrect_reveal_indices() {
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let msgs = FieldElementVector::random(count_msgs);
+        let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
+
+        let mut hs = HashSet::new();
+        hs.insert(count_msgs);
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_err());
+
+        let mut hs = HashSet::new();
+        hs.insert(count_msgs + 1);
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_err());
+
+        let mut hs = HashSet::new();
+        hs.insert(count_msgs - 1);
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_ok());
+    }
+
+    #[test]
+    fn test_PoK_sig_with_verify_proof_error() {
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let msgs = FieldElementVector::random(count_msgs);
+        let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
+
+        let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
+        let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+        let proof = pok.gen_proof(&chal).unwrap();
+
+        // Verification fails with bad verkey
+        let mut vk_1 = vk.clone();
+        vk_1.Y_tilde.push(OtherGroup::new());
+        assert!(proof.verify(&vk_1, HashMap::new(), &chal).is_err());
+
+        // Verification passes with correct verkey
+        assert!(proof.verify(&vk, HashMap::new(), &chal).unwrap());
+    }
+
+    #[test]
     fn timing_pok_signature() {
         // Measure time to prove knowledge of signatures, both generation and verification of proof
         let iterations = 100;
@@ -325,7 +376,13 @@ mod tests {
             total_verifying += start.elapsed();
         }
 
-        println!("Time to create {} proofs is {:?}", iterations, total_generating);
-        println!("Time to verify {} proofs is {:?}", iterations, total_verifying);
+        println!(
+            "Time to create {} proofs is {:?}",
+            iterations, total_generating
+        );
+        println!(
+            "Time to verify {} proofs is {:?}",
+            iterations, total_verifying
+        );
     }
 }

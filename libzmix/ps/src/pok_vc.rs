@@ -166,6 +166,10 @@ macro_rules! test_PoK_VC {
         gens.push(g);
         secrets.push(FieldElement::random());
 
+        // Bound check for get_index
+        assert!(commiting.get_index($n).is_err());
+        assert!(commiting.get_index($n + 1).is_err());
+
         let committed = commiting.finish();
         let commitment = gens.multi_scalar_mul_const_time(&secrets).unwrap();
         let challenge = committed.gen_challenge(commitment.to_bytes());
@@ -196,7 +200,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_PoK_VC_G1() {
-        // Proof of knowledge of committed values in a vector commitment. The committment lies in group G1.
+        // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
         impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 
         let n = 5;
@@ -212,7 +216,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_PoK_VC_G2() {
-        // Proof of knowledge of committed values in a vector commitment. The committment lies in group G2.
+        // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
         impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector);
 
         let n = 5;
