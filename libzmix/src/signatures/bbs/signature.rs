@@ -3,13 +3,15 @@ use super::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
     group_elem_g1::G1,
     group_elem_g2::G2,
-    group_elem::GroupElement,
+    group_elem::{GroupElement, GroupElementVector},
     field_elem::FieldElement,
     extension_field_gt::GT,
     constants::{GROUP_G1_SIZE, MODBYTES}
 };
 
 use serde::{Serialize, Deserialize};
+use amcl_wrapper::group_elem_g1::G1Vector;
+use amcl_wrapper::field_elem::FieldElementVector;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Signature {
@@ -48,10 +50,10 @@ impl Signature {
         check_verkey_message(messages, verkey)?;
         let e = FieldElement::random();
         let s = FieldElement::random();
-        let b = compute_b(&G1::new(), verkey, messages, &s, 0);
+        let b = compute_b_const_time(&G1::new(), verkey, messages, &s, 0);
         let mut exp = signkey.clone();
         exp += &e;
-        exp.inverse();
+        exp.inverse_mut();
         let a = b * exp;
         Ok(Signature { a, e, s })
     }
@@ -62,10 +64,10 @@ impl Signature {
         check_verkey_message(messages, verkey)?;
         let e = FieldElement::random();
         let s = FieldElement::random();
-        let b = compute_b(commitment, verkey, messages, &s, verkey.message_count() - messages.len());
+        let b = compute_b_const_time(commitment, verkey, messages, &s, verkey.message_count() - messages.len());
         let mut exp = signkey.clone();
         exp += &e;
-        exp.inverse();
+        exp.inverse_mut();
         let a = b * exp;
         Ok(Signature { a, e, s })
     }
@@ -79,7 +81,7 @@ impl Signature {
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
     pub fn verify(&self, messages: &[FieldElement], verkey: &PublicKey) -> Result<bool, BBSError> {
         check_verkey_message(messages, verkey)?;
-        let b = compute_b(&G1::new(), verkey, messages, &self.s, 0);
+        let b = compute_b_var_time(&G1::new(), verkey, messages, &self.s, 0);
         let a = (&G2::generator() * &self.e) + &verkey.w;
         let res1 = GT::ate_pairing(&self.a, &a);
         let res2 = GT::ate_pairing(&b, &G2::generator());
@@ -89,37 +91,31 @@ impl Signature {
     }
 }
 
-fn compute_b(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
-    let mut b = G1::generator();
-    b += starting_value;
+fn prep_vec_for_b(public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> (G1Vector, FieldElementVector) {
+    let mut points = G1Vector::with_capacity(messages.len()+2);
+    let mut scalars = FieldElementVector::with_capacity(messages.len()+2);
+    // XXX: g1 should not be a generator but a setup param
+    // prep for g1*h0^blinding_factor*hi^mi.....
+    points.push(G1::generator());
+    scalars.push(FieldElement::one());
+    points.push(public_key.h0.clone());
+    scalars.push(blinding_factor.clone());
 
-    let mut j = 0;
-    let mut i = offset;
-
-
-    while i + 1 < public_key.h.len() {
-        let v1 = &messages[j];
-        let v2 = &messages[j + 1];
-
-        let p1 = &public_key.h[i];
-        let p2 = &public_key.h[i + 1];
-
-
-        b += p1.binary_scalar_mul(&p2, &v1, &v2);
-
-        i += 2;
-        j += 2;
+    for i in 0..messages.len() {
+        points.push(public_key.h[offset+i].clone());
+        scalars.push(messages[i].clone());
     }
+    (points, scalars)
+}
 
-    if i < public_key.h.len() {
-        let v = &messages[j];
-        let p = &public_key.h[i];
+fn compute_b_const_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
+    let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
+    starting_value + points.multi_scalar_mul_const_time(&scalars).unwrap()
+}
 
-        b += p.binary_scalar_mul(&public_key.h0, &v, &blinding_factor);
-    } else {
-        b += &public_key.h0 * blinding_factor;
-    }
-    b
+fn compute_b_var_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
+    let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
+    starting_value + points.multi_scalar_mul_var_time(&scalars).unwrap()
 }
 
 fn check_verkey_message(messages: &[FieldElement], verkey: &PublicKey) -> Result<(), BBSError> {

@@ -53,11 +53,13 @@ impl PublicKey {
 pub fn generate(message_count: usize) -> (PublicKey, SecretKey) {
     let secret = FieldElement::random();
 
+    // XXX: Choosing G2::generator() temporarily. The generator should be a setup parameter in practice
+    let w = &G2::generator() * &secret;
     let mut h = Vec::new();
     for _ in 0..message_count {
         h.push(G1::random());
     }
-    (PublicKey { w: G2::random(), h0: G1::random(), h }, secret)
+    (PublicKey { w, h0: G1::random(), h }, secret)
 }
 
 #[cfg(test)]
