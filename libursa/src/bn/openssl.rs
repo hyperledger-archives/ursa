@@ -190,6 +190,7 @@ impl BigNumber {
         Ok(bn)
     }
 
+    // TODO: There should be a mod_sqr using underlying math library's square modulo since squaring is faster.
     pub fn sqr(&self, ctx: Option<&mut BigNumberContext>) -> UrsaCryptoResult<BigNumber> {
         let mut bn = BigNumber::new()?;
         match ctx {
@@ -319,6 +320,34 @@ impl BigNumber {
         }
         Ok(bn)
     }
+
+    pub fn gcd(
+        a: &BigNumber,
+        b: &BigNumber,
+        ctx: Option<&mut BigNumberContext>,
+    ) -> UrsaCryptoResult<BigNumber> {
+        let mut gcd = BigNumber::new()?;
+        match ctx {
+            Some(context) => BigNumRef::gcd(
+                &mut gcd.openssl_bn,
+                &a.openssl_bn,
+                &b.openssl_bn,
+                &mut context.openssl_bn_context,
+            )?,
+            None => {
+                let mut ctx = BigNumber::new_context()?;
+                BigNumRef::gcd(
+                    &mut gcd.openssl_bn,
+                    &a.openssl_bn,
+                    &b.openssl_bn,
+                    &mut ctx.openssl_bn_context,
+                )?;
+            }
+        }
+        Ok(gcd)
+    }
+
+    // Question: The *_word APIs seem odd. When the method is already mutating, why return the reference?
 
     pub fn add_word(&mut self, w: u32) -> UrsaCryptoResult<&mut BigNumber> {
         BigNumRef::add_word(&mut self.openssl_bn, w)?;
@@ -540,6 +569,8 @@ impl BigNumber {
         Ok(qr)
     }
 
+    // Question: Why does this need to be a Result? When is creating a BigNumber same as another
+    // BigNumber not possible given sufficient memory?
     pub fn try_clone(&self) -> UrsaCryptoResult<BigNumber> {
         let mut openssl_bn = BigNum::from_slice(&self.openssl_bn.to_vec()[..])?;
         openssl_bn.set_negative(self.is_negative());

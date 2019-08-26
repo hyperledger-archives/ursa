@@ -1,9 +1,10 @@
-mod constants;
+pub mod constants;
 #[macro_use]
 mod datastructures;
+// TODO: Prime generation and random number generation in helpers module should be moved outside cl module since they are not CL sig specific.
 #[macro_use]
-mod helpers;
-mod hash;
+pub mod helpers;
+pub mod hash;
 pub mod issuer;
 pub mod prover;
 pub mod verifier;
