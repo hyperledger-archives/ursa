@@ -131,6 +131,12 @@ macro_rules! impl_PoK_VC {
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
                 // =>
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
+                if bases.len() != self.responses.len() {
+                    return Err(PSError::UnequalNoOfBasesExponents {
+                        bases: bases.len(),
+                        exponents: self.responses.len(),
+                    });
+                }
                 let mut points = $group_element_vec::from(bases);
                 let mut scalars = self.responses.clone();
                 points.push(commitment.clone());
@@ -178,10 +184,28 @@ macro_rules! test_PoK_VC {
         assert!(proof
             .verify(gens.as_slice(), &commitment, &challenge)
             .unwrap());
-        // Wrong challenge or commitment fails to verify
+
+        // Unequal number of generators and responses
+        let mut gens_1 = gens.clone();
+        let g1 = $group_element::random();
+        gens_1.push(g1);
+        // More generators
+        assert!(proof
+            .verify(gens_1.as_slice(), &commitment, &challenge)
+            .is_err());
+
+        let mut gens_2 = gens.clone();
+        gens_2.pop();
+        // Less generators
+        assert!(proof
+            .verify(gens_2.as_slice(), &commitment, &challenge)
+            .is_err());
+
+        // Wrong commitment fails to verify
         assert!(!proof
             .verify(gens.as_slice(), &$group_element::random(), &challenge)
             .unwrap());
+        // Wrong challenge fails to verify
         assert!(!proof
             .verify(gens.as_slice(), &commitment, &FieldElement::random())
             .unwrap());
