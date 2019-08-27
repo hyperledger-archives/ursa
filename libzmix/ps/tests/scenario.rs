@@ -8,8 +8,8 @@ use std::collections::{HashMap, HashSet};
 
 #[test]
 fn test_scenario_1() {
-    // User request signer to sign 10 messages where signer knows only 8 messages, the rest 2 are given in a form of commitment.
-    // Once user gets the signature, it engages in a proof of knowledge of signature with a verifier.
+    // User request signer to sign 10 messages where signer knows only 8 messages, the other 2 are given in a form of commitment.
+    // Once user receives the signature, it engages in a proof of knowledge of signature with a verifier.
     // The user also reveals to the verifier some of the messages.
     let count_msgs = 10;
     let committed_msgs = 2;
