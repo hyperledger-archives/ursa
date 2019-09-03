@@ -1,6 +1,10 @@
 use failure::{Backtrace, Context, Fail};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+pub mod prelude {
+    pub use super::{BBSError, BBSErrorKind, BBSErrorExt};
+}
+
+#[derive(Debug, Fail)]
 pub enum BBSErrorKind {
     #[fail(display = "Key Generation Error")]
     KeyGenError,
@@ -9,7 +13,9 @@ pub enum BBSErrorKind {
     #[fail(display = "Signature incorrect size. Expected 193, found {}", 0)]
     SignatureIncorrectSize(usize),
     #[fail(display = "Signature cannot be loaded due to a bad value")]
-    SignatureValueIncorrectSize
+    SignatureValueIncorrectSize,
+    #[fail(display = "{:?}", msg)]
+    GeneralError { msg: String },
 }
 
 #[derive(Debug)]
@@ -43,9 +49,9 @@ impl BBSError {
         }
     }
 
-    pub fn kind(&self) -> BBSErrorKind {
-        *self.inner.get_context()
-    }
+//    pub fn kind(&self) -> BBSErrorKind {
+//        *self.inner.get_context()
+//    }
 }
 
 impl std::fmt::Display for  BBSError {

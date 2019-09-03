@@ -1,4 +1,4 @@
-use super::errors::{BBSErrorKind, BBSError};
+use super::errors::prelude::*;
 use super::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
     group_elem_g1::G1,
@@ -15,11 +15,12 @@ use amcl_wrapper::field_elem::FieldElementVector;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Signature {
-    a: G1,
-    e: FieldElement,
-    s: FieldElement
+    pub a: G1,
+    pub e: FieldElement,
+    pub s: FieldElement
 }
 
+// https://eprint.iacr.org/2016/663.pdf Section 4.3
 impl Signature {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(GROUP_G1_SIZE + MODBYTES * 2);
@@ -81,12 +82,8 @@ impl Signature {
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
     pub fn verify(&self, messages: &[FieldElement], verkey: &PublicKey) -> Result<bool, BBSError> {
         check_verkey_message(messages, verkey)?;
-        let b = compute_b_var_time(&G1::new(), verkey, messages, &self.s, 0);
+        let b = compute_b_const_time(&G1::new(), verkey, messages, &self.s, 0);
         let a = (&G2::generator() * &self.e) + &verkey.w;
-        let res1 = GT::ate_pairing(&self.a, &a);
-        let res2 = GT::ate_pairing(&b, &G2::generator());
-        println!("res1 = {:?}", res1);
-        println!("res2 = {:?}", res2);
         Ok(GT::ate_2_pairing_cmp(&self.a, &a, &b, &G2::generator()))
     }
 }
@@ -108,12 +105,12 @@ fn prep_vec_for_b(public_key: &PublicKey, messages: &[FieldElement], blinding_fa
     (points, scalars)
 }
 
-fn compute_b_const_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
+pub fn compute_b_const_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
     starting_value + points.multi_scalar_mul_const_time(&scalars).unwrap()
 }
 
-fn compute_b_var_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
+pub fn compute_b_var_time(starting_value: &G1, public_key: &PublicKey, messages: &[FieldElement], blinding_factor: &FieldElement, offset: usize) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
     starting_value + points.multi_scalar_mul_var_time(&scalars).unwrap()
 }

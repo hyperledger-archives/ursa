@@ -9,6 +9,11 @@ use amcl_wrapper::{
 };
 use serde::{Serialize, Deserialize};
 
+pub mod prelude {
+    pub use super::{PublicKey, SecretKey, generate};
+}
+
+// https://eprint.iacr.org/2016/663.pdf Section 4.3
 pub type SecretKey = FieldElement;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
