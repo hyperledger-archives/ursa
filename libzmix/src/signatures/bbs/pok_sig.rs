@@ -1,24 +1,39 @@
 use super::signature::{Signature, compute_b_const_time};
 use super::keys::PublicKey;
-use super::errors::*;
+use crate::errors::prelude::*;
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
+use amcl_wrapper::extension_field_gt::GT;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofR {
+    a_prime: G1,
+    a_bar: G1,
+    d: G1
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofP {
+    e_responses: FieldElement,
+    s_responses: FieldElement,
+    r2_responses: FieldElement,
+    r3_responses: FieldElement,
+    message_responses: FieldElementVector
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignature {
-    a_prime: G1,
-    a_bar: G1,
-    d: G1,
-    bases: G1Vector,
+    proof_r: ProofR,
+    messages: FieldElementVector,
     secrets: FieldElementVector,
-    e: FieldElement,
-    s: FieldElement,
+    e_challenge: FieldElement,
+    s_challenge: FieldElement,
     s_prime: FieldElement,
     r2: FieldElement,
     r3: FieldElement,
@@ -26,11 +41,14 @@ pub struct PoKOfSignature {
     r3_challenge: FieldElement,
     t1: G1,
     t2: G1,
-    signature: Signature
+    e: FieldElement,
+    s: FieldElement
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
-
+    proof_r: ProofR,
+    proof_p: ProofP
 }
 
 impl PoKOfSignature {
@@ -51,10 +69,10 @@ impl PoKOfSignature {
 
         let r1 = FieldElement::random();
         let r2 = FieldElement::random();
-        let mut e = FieldElement::random();
-        let mut s = FieldElement::random();
-        let mut r2_challenge = FieldElement::random();
-        let mut r3_challenge = FieldElement::random();
+        let e_challenge = FieldElement::random();
+        let s_challenge = FieldElement::random();
+        let r2_challenge = FieldElement::random();
+        let r3_challenge = FieldElement::random();
 
         let b = compute_b_const_time(&G1::new(), vk, messages, &signature.s, 0);
 
@@ -66,13 +84,12 @@ impl PoKOfSignature {
         let mut s_prime = signature.s.clone();
         s_prime += &(&r2 * &r3);
 
-        let t1 = a_prime.binary_scalar_mul(&vk.h0, &e, &r2_challenge);
+        let t1 = a_prime.binary_scalar_mul(&vk.h0, &e_challenge, &r2_challenge);
 
         let mut bases = G1Vector::with_capacity(1 + vk.message_count() - revealed_msg_indices.len());
         let mut exponents = FieldElementVector::with_capacity(1 + vk.message_count() - revealed_msg_indices.len());
 
-        // d^r3~ / h0^s'~
-        bases.push(&vk.h0 * &s - &d * &r3_challenge);
+        bases.push(&vk.h0 * &s_challenge - &d * &r3_challenge);
         exponents.push(FieldElement::one());
 
         for i in 0..vk.message_count() {
@@ -87,13 +104,11 @@ impl PoKOfSignature {
         let t2 = bases.multi_scalar_mul_const_time(&exponents).unwrap();
 
         Ok(PoKOfSignature {
-            a_prime,
-            a_bar,
-            d,
-            bases,
+            proof_r: ProofR { a_prime, a_bar, d },
+            messages: messages.into(),
             secrets: exponents,
-            e,
-            s,
+            e_challenge,
+            s_challenge,
             s_prime,
             r2,
             r3,
@@ -101,15 +116,61 @@ impl PoKOfSignature {
             r3_challenge,
             t1,
             t2,
-            signature: signature.clone()
+            e: signature.e.clone(),
+            s: signature.s.clone()
         })
     }
 
     pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
-        if self.secrets.len() != self.bases.len() {
-            return Err(BBSError::from_kind(BBSErrorKind::GeneralError { msg: format!("Secrets length {} != {}", self.secrets.len(), self.bases.len()) }));
+        if self.secrets.len() != self.messages.len() {
+            return Err(BBSError::from_kind(BBSErrorKind::GeneralError { msg: format!("Secrets length {} != {}", self.secrets.len(), self.messages.len()) }));
         }
 
-        let e = self.e + self.signature.e * challenge_hash;
+        let e = self.e_challenge + self.e * challenge_hash;
+        let s = self.s_challenge + self.s_prime * challenge_hash;
+        let r2 = self.r2_challenge + self.r2 * challenge_hash;
+        let r3 = self.r3_challenge + self.r3 * challenge_hash;
+        let mut responses = Vec::new();
+        for i in 0..self.secrets.len() {
+            responses.push(&self.secrets[i] - &self.messages[i] * challenge_hash);
+        }
+
+        Ok(PoKOfSignatureProof {
+            proof_r: self.proof_r,
+            proof_p: ProofP {
+                e_responses: e,
+                s_responses: s,
+                r2_responses: r2,
+                r3_responses: r3,
+                message_responses: responses.into()
+            }
+        })
+    }
+}
+
+impl PoKOfSignatureProof {
+    pub fn verify(&self, vk: &PublicKey, revealed_msgs: &HashMap<usize, FieldElement>, challenge: &FieldElement) -> Result<bool, BBSError> {
+        for (i, _) in revealed_msgs {
+            if *i > vk.message_count() {
+                return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
+                    msg: format!("Index {} should be less than {}", i, vk.message_count()),
+                }));
+            }
+        }
+
+        if self.proof_r.a_prime.is_identity() {
+            return Ok(false);
+        }
+
+        if GT::ate_2_pairing_cmp(&self.proof_r.a_prime, &vk.w, &self.proof_r.a_bar, &G2::generator()) {
+            return Ok(false);
+        }
+
+        let mut r_value = revealed_msgs.iter().fold(G1::generator(), |b, (i, a)| b + &vk.h[*i] * a);
+
+        let t1 = self.proof_r.a_prime.binary_scalar_mul(&self.proof_p.e_responses, &(&self.proof_r.a_bar - &self.proof_r.d), challenge) + (&vk.h0 * &self.proof_p.r2_responses);
+        let mut t2 = r_value.binary_scalar_mul(challenge, &vk.h0, self.proof_p.s_responses) - &(self.proof_r.d * self.proof_p.r3_responses);
+
+
     }
 }

@@ -1,10 +1,34 @@
 use failure::{Backtrace, Context, Fail};
 
 pub mod prelude {
-    pub use super::{BBSError, BBSErrorKind, BBSErrorExt};
+    pub use super::{PSError, BBSError, BBSErrorKind, BBSErrorExt};
 }
 
 #[derive(Debug, Fail)]
+pub enum PSError {
+    #[fail(
+    display = "Verkey has unequal number of Y and Y_tilde elements. Y={} and Y_tilde={}",
+    y, y_tilde
+    )]
+    InvalidVerkey { y: usize, y_tilde: usize },
+
+    #[fail(
+    display = "Verkey valid for {} messages but given {} messages",
+    expected, given
+    )]
+    UnsupportedNoOfMessages { expected: usize, given: usize },
+
+    #[fail(
+    display = "Same no of bases and exponents required. {} bases and {} exponents",
+    bases, exponents
+    )]
+    UnequalNoOfBasesExponents { bases: usize, exponents: usize },
+
+    #[fail(display = "Error with message {:?}", msg)]
+    GeneralError { msg: String },
+}
+
+#[derive(Debug, Fail, Clone)]
 pub enum BBSErrorKind {
     #[fail(display = "Key Generation Error")]
     KeyGenError,
@@ -35,8 +59,8 @@ impl Fail for BBSError {
 
 impl BBSError {
     pub fn from_msg<D>(kind: BBSErrorKind, msg: D) -> BBSError
-    where
-        D: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+        where
+            D: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
     {
         BBSError {
             inner: Context::new(msg).context(kind),
@@ -49,9 +73,10 @@ impl BBSError {
         }
     }
 
-//    pub fn kind(&self) -> BBSErrorKind {
-//        *self.inner.get_context()
-//    }
+    pub fn kind(&self) -> BBSErrorKind {
+        let c = self.inner.get_context().clone();
+        c
+    }
 }
 
 impl std::fmt::Display for  BBSError {
@@ -72,8 +97,8 @@ impl std::fmt::Display for  BBSError {
 }
 
 pub fn err_msg<D>(kind: BBSErrorKind, msg: D) -> BBSError
-where
-    D: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
+    where
+        D: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static,
 {
     BBSError::from_msg(kind, msg)
 }
@@ -87,17 +112,17 @@ impl From<Context<BBSErrorKind>> for BBSError {
 /// Extension methods for `Error`.
 pub trait BBSErrorExt {
     fn to_bbs<D>(self, kind: BBSErrorKind, msg: D) -> BBSError
-    where
-        D: std::fmt::Display + Send + Sync + 'static;
+        where
+            D: std::fmt::Display + Send + Sync + 'static;
 }
 
 impl<E> BBSErrorExt for E
-where
-    E: Fail,
+    where
+        E: Fail,
 {
     fn to_bbs<D>(self, kind: BBSErrorKind, msg: D) -> BBSError
-    where
-        D: std::fmt::Display + Send + Sync + 'static,
+        where
+            D: std::fmt::Display + Send + Sync + 'static,
     {
         self.context(msg).context(kind).into()
     }

@@ -8,11 +8,14 @@ extern crate rand_chacha;
 extern crate rand_core;
 extern crate sha2;
 extern crate zeroize;
-extern crate serde;
-extern crate sha2;
-extern crate zeroize;
+extern crate ps;
 
-pub mod utils;
+#[macro_use]
+extern crate serde;
+
+extern crate serde_json;
+
+pub mod commitments;
 pub mod verifiable_encryption;
-pub mod zkl;
+pub mod errors;
 pub mod signatures;
