@@ -1,4 +1,4 @@
-use super::errors::prelude::*;
+use crate::errors::prelude::*;
 use super::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
     group_elem_g1::G1,
