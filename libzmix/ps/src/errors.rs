@@ -1,6 +1,6 @@
+use failure::{Backtrace, Context, Error, Fail};
 use std::fmt;
-use failure::{Backtrace, Context, Fail, Error};
-use zmix::commitments::pok_vc::{PoKVCErrorKind, PoKVCError};
+use zmix::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum PSErrorKind {
@@ -31,7 +31,7 @@ pub enum PSErrorKind {
 
 #[derive(Debug)]
 pub struct PSError {
-    inner: Context<PSErrorKind>
+    inner: Context<PSErrorKind>,
 }
 
 impl PSError {
@@ -42,14 +42,16 @@ impl PSError {
 
     pub fn from_kind(kind: PSErrorKind) -> Self {
         Self {
-            inner: Context::new("").context(kind)
+            inner: Context::new("").context(kind),
         }
     }
 }
 
 impl From<PSErrorKind> for PSError {
     fn from(kind: PSErrorKind) -> Self {
-        Self { inner: Context::new(kind) }
+        Self {
+            inner: Context::new(kind),
+        }
     }
 }
 
@@ -77,10 +79,15 @@ impl fmt::Display for PSError {
 
 impl From<PoKVCError> for PSError {
     fn from(err: PoKVCError) -> Self {
-        let message = format!("PoKVCError: {}", Fail::iter_causes(&err).map(|e| e.to_string()).collect::<String>());
+        let message = format!(
+            "PoKVCError: {}",
+            Fail::iter_causes(&err)
+                .map(|e| e.to_string())
+                .collect::<String>()
+        );
 
         match err.kind() {
-            _ => PSErrorKind::PoKVCError {msg: message}.into()
+            _ => PSErrorKind::PoKVCError { msg: message }.into(),
         }
     }
 }

@@ -65,7 +65,8 @@ impl PoKOfSignature {
             if *idx >= messages.len() {
                 return Err(PSErrorKind::GeneralError {
                     msg: format!("Index {} should be less than {}", idx, messages.len()),
-                }.into());
+                }
+                .into());
             }
         }
         Signature::check_verkey_and_messages_compat(messages, vk)?;

@@ -48,7 +48,8 @@ impl Signature {
             return Err(PSErrorKind::UnsupportedNoOfMessages {
                 expected: messages.len(),
                 given: verkey.Y.len(),
-            }.into());
+            }
+            .into());
         }
 
         let u = FieldElement::random();
@@ -105,7 +106,8 @@ impl Signature {
             return Err(PSErrorKind::UnsupportedNoOfMessages {
                 expected: messages.len(),
                 given: verkey.Y.len(),
-            }.into());
+            }
+            .into());
         }
         Ok(())
     }
