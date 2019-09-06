@@ -1,5 +1,5 @@
 use crate::amcl_wrapper::group_elem::GroupElementVector;
-use crate::errors::PSError;
+use crate::errors::{PSError, PSErrorKind};
 use crate::keys::{Sigkey, Verkey};
 use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
@@ -45,10 +45,10 @@ impl Signature {
         verkey.validate()?;
         // There should be commitment to at least one message
         if messages.len() >= verkey.Y.len() {
-            return Err(PSError::UnsupportedNoOfMessages {
+            return Err(PSErrorKind::UnsupportedNoOfMessages {
                 expected: messages.len(),
                 given: verkey.Y.len(),
-            });
+            }.into());
         }
 
         let u = FieldElement::random();
@@ -102,10 +102,10 @@ impl Signature {
     ) -> Result<(), PSError> {
         verkey.validate()?;
         if messages.len() != verkey.Y.len() {
-            return Err(PSError::UnsupportedNoOfMessages {
+            return Err(PSErrorKind::UnsupportedNoOfMessages {
                 expected: messages.len(),
                 given: verkey.Y.len(),
-            });
+            }.into());
         }
         Ok(())
     }
