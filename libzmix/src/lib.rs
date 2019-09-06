@@ -8,6 +8,12 @@ extern crate serde_derive;
 
 extern crate serde_json;
 
+#[macro_use]
+extern crate amcl_wrapper;
+
+#[macro_use]
+extern crate failure;
+
 pub mod commitments;
 pub mod ffi;
 pub mod hash_functions;

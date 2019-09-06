@@ -9,6 +9,7 @@ use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 use std::collections::{HashMap, HashSet};
+use zmix::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
 // Implement proof of knowledge of committed values in a vector commitment for `SignatureGroup` and `OtherGroup`
 
@@ -159,6 +160,69 @@ impl PoKOfSignatureProof {
         let res = ate_2_pairing(&self.sig.sigma_1, J, &self.sig.sigma_2, &neg_g_tilde);
         Ok(res.is_one())
     }
+}
+
+#[cfg(test)]
+macro_rules! test_PoK_VC {
+    ( $n:ident, $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
+        let mut gens = $group_element_vec::with_capacity($n);
+        let mut secrets = FieldElementVector::with_capacity($n);
+        let mut commiting = $ProverCommitting::new();
+        for _ in 0..$n - 1 {
+            let g = $group_element::random();
+            commiting.commit(&g, None);
+            gens.push(g);
+            secrets.push(FieldElement::random());
+        }
+
+        // Add one of the blindings externally
+        let g = $group_element::random();
+        let r = FieldElement::random();
+        commiting.commit(&g, Some(&r));
+        let (g_, r_) = commiting.get_index($n - 1).unwrap();
+        assert_eq!(g, *g_);
+        assert_eq!(r, *r_);
+        gens.push(g);
+        secrets.push(FieldElement::random());
+
+        // Bound check for get_index
+        assert!(commiting.get_index($n).is_err());
+        assert!(commiting.get_index($n + 1).is_err());
+
+        let committed = commiting.finish();
+        let commitment = gens.multi_scalar_mul_const_time(&secrets).unwrap();
+        let challenge = committed.gen_challenge(commitment.to_bytes());
+        let proof = committed.gen_proof(&challenge, secrets.as_slice()).unwrap();
+
+        assert!(proof
+            .verify(gens.as_slice(), &commitment, &challenge)
+            .unwrap());
+
+        // Unequal number of generators and responses
+        let mut gens_1 = gens.clone();
+        let g1 = $group_element::random();
+        gens_1.push(g1);
+        // More generators
+        assert!(proof
+            .verify(gens_1.as_slice(), &commitment, &challenge)
+            .is_err());
+
+        let mut gens_2 = gens.clone();
+        gens_2.pop();
+        // Less generators
+        assert!(proof
+            .verify(gens_2.as_slice(), &commitment, &challenge)
+            .is_err());
+
+        // Wrong commitment fails to verify
+        assert!(!proof
+            .verify(gens.as_slice(), &$group_element::random(), &challenge)
+            .unwrap());
+        // Wrong challenge fails to verify
+        assert!(!proof
+            .verify(gens.as_slice(), &commitment, &FieldElement::random())
+            .unwrap());
+    };
 }
 
 #[cfg(test)]

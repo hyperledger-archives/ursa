@@ -52,9 +52,12 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate zmix;
+
 pub mod errors;
 pub mod keys;
-#[macro_use]
-pub mod pok_vc;
+//#[macro_use]
+//pub mod pok_vc;
 pub mod pok_sig;
 pub mod signature;

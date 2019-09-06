@@ -10,6 +10,67 @@
 // During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 // `Proof` can then be verified by the verifier.
 
+use std::fmt;
+use failure::{Backtrace, Context, Fail, Error};
+
+#[derive(Clone, Eq, PartialEq, Debug, Fail)]
+pub enum PoKVCErrorKind {
+    #[fail(
+    display = "Same no of bases and exponents required. {} bases and {} exponents",
+    bases, exponents
+    )]
+    UnequalNoOfBasesExponents { bases: usize, exponents: usize },
+
+    #[fail(display = "Error with message {:?}", msg)]
+    GeneralError { msg: String },
+}
+
+#[derive(Debug)]
+pub struct PoKVCError {
+    inner: Context<PoKVCErrorKind>
+}
+
+impl PoKVCError {
+    pub fn kind(&self) -> PoKVCErrorKind {
+        let c = self.inner.get_context().clone();
+        c
+    }
+
+    pub fn from_kind(kind: PoKVCErrorKind) -> Self {
+        Self {
+            inner: Context::new("").context(kind)
+        }
+    }
+}
+
+impl From<PoKVCErrorKind> for PoKVCError {
+    fn from(kind: PoKVCErrorKind) -> Self {
+        Self { inner: Context::new(kind) }
+    }
+}
+
+impl From<Context<PoKVCErrorKind>> for PoKVCError {
+    fn from(inner: Context<PoKVCErrorKind>) -> Self {
+        Self { inner }
+    }
+}
+
+impl Fail for PoKVCError {
+    fn cause(&self) -> Option<&dyn Fail> {
+        self.inner.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.inner.backtrace()
+    }
+}
+
+impl fmt::Display for PoKVCError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.inner, f)
+    }
+}
+
 #[macro_export]
 macro_rules! impl_PoK_VC {
     ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
@@ -75,11 +136,11 @@ macro_rules! impl_PoK_VC {
             pub fn get_index(
                 &self,
                 idx: usize,
-            ) -> Result<(&$group_element, &FieldElement), PSError> {
+            ) -> Result<(&$group_element, &FieldElement), PoKVCError> {
                 if idx >= self.gens.len() {
-                    return Err(PSError::GeneralError {
+                    return Err(PoKVCError::from_kind(PoKVCErrorKind::GeneralError {
                         msg: format!("index {} greater than size {}", idx, self.gens.len()),
-                    });
+                    }));
                 }
                 Ok((&self.gens[idx], &self.blindings[idx]))
             }
@@ -102,12 +163,12 @@ macro_rules! impl_PoK_VC {
                 self,
                 challenge: &FieldElement,
                 secrets: &[FieldElement],
-            ) -> Result<$Proof, PSError> {
+            ) -> Result<$Proof, PoKVCError> {
                 if secrets.len() != self.gens.len() {
-                    return Err(PSError::UnequalNoOfBasesExponents {
+                    return Err(PoKVCError::from_kind(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: self.gens.len(),
                         exponents: secrets.len(),
-                    });
+                    }));
                 }
                 let mut responses = FieldElementVector::with_capacity(self.gens.len());
                 for i in 0..self.gens.len() {
@@ -127,15 +188,15 @@ macro_rules! impl_PoK_VC {
                 bases: &[$group_element],
                 commitment: &$group_element,
                 challenge: &FieldElement,
-            ) -> Result<bool, PSError> {
+            ) -> Result<bool, PoKVCError> {
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
                 // =>
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
                 if bases.len() != self.responses.len() {
-                    return Err(PSError::UnequalNoOfBasesExponents {
+                    return Err(PoKVCError::from_kind(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: bases.len(),
                         exponents: self.responses.len(),
-                    });
+                    }));
                 }
                 let mut points = $group_element_vec::from(bases);
                 let mut scalars = self.responses.clone();
@@ -149,7 +210,6 @@ macro_rules! impl_PoK_VC {
 }
 
 #[cfg(test)]
-#[macro_export]
 macro_rules! test_PoK_VC {
     ( $n:ident, $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
         let mut gens = $group_element_vec::with_capacity($n);
@@ -213,10 +273,8 @@ macro_rules! test_PoK_VC {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
-    // XXX: Error for VC should be independent of PS
-    use crate::errors::PSError;
     use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
     use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
     use amcl_wrapper::group_elem_g1::{G1Vector, G1};
