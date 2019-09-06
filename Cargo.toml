@@ -3,4 +3,5 @@ members = [
   "libursa",
   "libzmix",
   "libzmix/ps",
+  "libzmix/delg_cred_cdd"
 ]
