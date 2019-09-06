@@ -41,4 +41,3 @@ trait CommitmentScheme {
         messages: &[&[u8]],
     ) -> Result<bool, CommitmentError>;
 }
-

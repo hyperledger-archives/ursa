@@ -10,14 +10,14 @@
 // During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 // `Proof` can then be verified by the verifier.
 
+use failure::{Backtrace, Context, Error, Fail};
 use std::fmt;
-use failure::{Backtrace, Context, Fail, Error};
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum PoKVCErrorKind {
     #[fail(
-    display = "Same no of bases and exponents required. {} bases and {} exponents",
-    bases, exponents
+        display = "Same no of bases and exponents required. {} bases and {} exponents",
+        bases, exponents
     )]
     UnequalNoOfBasesExponents { bases: usize, exponents: usize },
 
@@ -27,7 +27,7 @@ pub enum PoKVCErrorKind {
 
 #[derive(Debug)]
 pub struct PoKVCError {
-    inner: Context<PoKVCErrorKind>
+    inner: Context<PoKVCErrorKind>,
 }
 
 impl PoKVCError {
@@ -38,14 +38,16 @@ impl PoKVCError {
 
     pub fn from_kind(kind: PoKVCErrorKind) -> Self {
         Self {
-            inner: Context::new("").context(kind)
+            inner: Context::new("").context(kind),
         }
     }
 }
 
 impl From<PoKVCErrorKind> for PoKVCError {
     fn from(kind: PoKVCErrorKind) -> Self {
-        Self { inner: Context::new(kind) }
+        Self {
+            inner: Context::new(kind),
+        }
     }
 }
 
@@ -140,7 +142,8 @@ macro_rules! impl_PoK_VC {
                 if idx >= self.gens.len() {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("index {} greater than size {}", idx, self.gens.len()),
-                    }.into());
+                    }
+                    .into());
                 }
                 Ok((&self.gens[idx], &self.blindings[idx]))
             }
@@ -168,7 +171,8 @@ macro_rules! impl_PoK_VC {
                     return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: self.gens.len(),
                         exponents: secrets.len(),
-                    }.into());
+                    }
+                    .into());
                 }
                 let mut responses = FieldElementVector::with_capacity(self.gens.len());
                 for i in 0..self.gens.len() {
@@ -196,7 +200,8 @@ macro_rules! impl_PoK_VC {
                     return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: bases.len(),
                         exponents: self.responses.len(),
-                    }.into());
+                    }
+                    .into());
                 }
                 let mut points = $group_element_vec::from(bases);
                 let mut scalars = self.responses.clone();

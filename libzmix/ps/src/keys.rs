@@ -24,7 +24,8 @@ impl Verkey {
             return Err(PSErrorKind::InvalidVerkey {
                 y: self.Y.len(),
                 y_tilde: self.Y_tilde.len(),
-            }.into());
+            }
+            .into());
         }
         Ok(())
     }
