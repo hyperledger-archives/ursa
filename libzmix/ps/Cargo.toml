@@ -10,9 +10,11 @@ log = "*"
 failure = "0.1.5"
 serde = "1.0"
 serde_derive = "1.0"
+ursa = { path = "../../libursa" }
+zmix = { path = ".." }
 
 [dependencies.amcl_wrapper]
-version = "0.1.2"
+version = "0.1.5"
 default-features = false
 features = ["bls381"]
 

@@ -1,5 +1,7 @@
 use hash_functions::HashError;
 
+pub mod pok_vc;
+
 #[derive(Debug)]
 pub enum CommitmentError {
     ZeroCountInPedersenSetup(String),
@@ -39,3 +41,4 @@ trait CommitmentScheme {
         messages: &[&[u8]],
     ) -> Result<bool, CommitmentError>;
 }
+

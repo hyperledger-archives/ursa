@@ -1,4 +1,5 @@
-use failure::Error;
+use failure::{Backtrace, Context, Fail, Error};
+use zmix::commitments::pok_vc::{PoKVCErrorKind, PoKVCError};
 
 #[derive(Debug, Fail)]
 pub enum PSError {
@@ -20,6 +21,19 @@ pub enum PSError {
     )]
     UnequalNoOfBasesExponents { bases: usize, exponents: usize },
 
+    #[fail(display = "Error from PoKVC module {:?}", msg)]
+    PoKVCError { msg: String },
+
     #[fail(display = "Error with message {:?}", msg)]
     GeneralError { msg: String },
+}
+
+impl From<PoKVCError> for PSError {
+    fn from(err: PoKVCError) -> Self {
+        let message = format!("PoKVCError: {}", Fail::iter_causes(&err).map(|e| e.to_string()).collect::<String>());
+
+        match err.kind() {
+            _ => PSError::PoKVCError {msg: message}
+        }
+    }
 }
