@@ -1,6 +1,6 @@
 // Proof of knowledge of signature
 
-use crate::errors::PSError;
+use crate::errors::{PSError, PSErrorKind};
 use crate::keys::Verkey;
 use crate::signature::Signature;
 use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
@@ -63,9 +63,9 @@ impl PoKOfSignature {
     ) -> Result<Self, PSError> {
         for idx in &revealed_msg_indices {
             if *idx >= messages.len() {
-                return Err(PSError::GeneralError {
+                return Err(PSErrorKind::GeneralError {
                     msg: format!("Index {} should be less than {}", idx, messages.len()),
-                });
+                }.into());
             }
         }
         Signature::check_verkey_and_messages_compat(messages, vk)?;

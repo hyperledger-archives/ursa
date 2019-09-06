@@ -1,7 +1,7 @@
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;
 
-use crate::errors::PSError;
+use crate::errors::{PSError, PSErrorKind};
 use crate::{OtherGroup, SignatureGroup};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -21,10 +21,10 @@ pub struct Verkey {
 impl Verkey {
     pub fn validate(&self) -> Result<(), PSError> {
         if self.Y.len() != self.Y_tilde.len() {
-            return Err(PSError::InvalidVerkey {
+            return Err(PSErrorKind::InvalidVerkey {
                 y: self.Y.len(),
                 y_tilde: self.Y_tilde.len(),
-            });
+            }.into());
         }
         Ok(())
     }

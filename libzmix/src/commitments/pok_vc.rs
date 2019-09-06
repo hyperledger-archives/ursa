@@ -138,9 +138,9 @@ macro_rules! impl_PoK_VC {
                 idx: usize,
             ) -> Result<(&$group_element, &FieldElement), PoKVCError> {
                 if idx >= self.gens.len() {
-                    return Err(PoKVCError::from_kind(PoKVCErrorKind::GeneralError {
+                    return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("index {} greater than size {}", idx, self.gens.len()),
-                    }));
+                    }.into());
                 }
                 Ok((&self.gens[idx], &self.blindings[idx]))
             }
@@ -165,10 +165,10 @@ macro_rules! impl_PoK_VC {
                 secrets: &[FieldElement],
             ) -> Result<$Proof, PoKVCError> {
                 if secrets.len() != self.gens.len() {
-                    return Err(PoKVCError::from_kind(PoKVCErrorKind::UnequalNoOfBasesExponents {
+                    return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: self.gens.len(),
                         exponents: secrets.len(),
-                    }));
+                    }.into());
                 }
                 let mut responses = FieldElementVector::with_capacity(self.gens.len());
                 for i in 0..self.gens.len() {
@@ -193,10 +193,10 @@ macro_rules! impl_PoK_VC {
                 // =>
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
                 if bases.len() != self.responses.len() {
-                    return Err(PoKVCError::from_kind(PoKVCErrorKind::UnequalNoOfBasesExponents {
+                    return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                         bases: bases.len(),
                         exponents: self.responses.len(),
-                    }));
+                    }.into());
                 }
                 let mut points = $group_element_vec::from(bases);
                 let mut scalars = self.responses.clone();
