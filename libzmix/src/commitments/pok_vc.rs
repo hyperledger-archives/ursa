@@ -80,22 +80,22 @@ macro_rules! impl_PoK_VC {
         /// Commit for each message.
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $ProverCommitting {
-            gens: $group_element_vec,
+            pub gens: $group_element_vec,
             blindings: FieldElementVector,
         }
 
         /// Receive or generate challenge. Compute response and proof
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $ProverCommitted {
-            gens: $group_element_vec,
+            pub gens: $group_element_vec,
             blindings: FieldElementVector,
-            commitment: $group_element,
+            pub commitment: $group_element,
         }
 
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $Proof {
-            commitment: $group_element,
-            responses: FieldElementVector,
+            pub commitment: $group_element,
+            pub responses: FieldElementVector,
         }
 
         impl $ProverCommitting {
