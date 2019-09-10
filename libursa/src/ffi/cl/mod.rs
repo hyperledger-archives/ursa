@@ -1086,7 +1086,7 @@ impl FFITailsAccessor {
 }
 
 impl RevocationTailsAccessor for FFITailsAccessor {
-    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> UrsaCryptoResult<()> {
+    fn access_tail(&self, tail_id: u32, accessor: &mut dyn FnMut(&Tail)) -> UrsaCryptoResult<()> {
         let mut tail_p = ptr::null();
 
         let res = (self.take)(self.ctx, tail_id, &mut tail_p);

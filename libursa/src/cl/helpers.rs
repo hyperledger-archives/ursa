@@ -292,9 +292,9 @@ pub fn transform_u32_to_array_of_u8(x: u32) -> Vec<u8> {
     result
 }
 
-pub fn get_mtilde(
-    unrevealed_attrs: &HashSet<String>,
-    mtilde: &mut HashMap<String, BigNumber>,
+pub fn get_mtilde<S: ::std::hash::BuildHasher>(
+    unrevealed_attrs: &HashSet<String, S>,
+    mtilde: &mut HashMap<String, BigNumber, S>,
 ) -> UrsaCryptoResult<()> {
     trace!(
         "Helpers::get_mtilde: >>> unrevealed_attrs: {:?}",
@@ -312,14 +312,14 @@ pub fn get_mtilde(
     Ok(())
 }
 
-pub fn calc_teq(
+pub fn calc_teq<S: ::std::hash::BuildHasher>(
     p_pub_key: &CredentialPrimaryPublicKey,
     a_prime: &BigNumber,
     e: &BigNumber,
     v: &BigNumber,
-    m_tilde: &HashMap<String, BigNumber>,
+    m_tilde: &HashMap<String, BigNumber, S>,
     m2tilde: &BigNumber,
-    unrevealed_attrs: &HashSet<String>,
+    unrevealed_attrs: &HashSet<String, S>,
 ) -> UrsaCryptoResult<BigNumber> {
     trace!("Helpers::calc_teq: >>> p_pub_key: {:?}, p_pub_key: {:?}, e: {:?}, v: {:?}, m_tilde: {:?}, m2tilde: {:?}, \
     unrevealed_attrs: {:?}", p_pub_key, a_prime, e, v, m_tilde, m2tilde, unrevealed_attrs);
@@ -363,13 +363,13 @@ pub fn calc_teq(
     Ok(result)
 }
 
-pub fn calc_tne(
+pub fn calc_tne<S: ::std::hash::BuildHasher>(
     p_pub_key: &CredentialPrimaryPublicKey,
-    u: &HashMap<String, BigNumber>,
-    r: &HashMap<String, BigNumber>,
+    u: &HashMap<String, BigNumber, S>,
+    r: &HashMap<String, BigNumber, S>,
     mj: &BigNumber,
     alpha: &BigNumber,
-    t: &HashMap<String, BigNumber>,
+    t: &HashMap<String, BigNumber, S>,
     is_less: bool,
 ) -> UrsaCryptoResult<Vec<BigNumber>> {
     trace!(

@@ -1,7 +1,7 @@
 use crate::amcl_wrapper::group_elem::GroupElementVector;
 use crate::errors::{PSError, PSErrorKind};
 use crate::keys::{Sigkey, Verkey};
-use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use crate::{ate_2_pairing, OtherGroupVec, SignatureGroup, SignatureGroupVec};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
 
@@ -60,7 +60,7 @@ impl Signature {
         scalars.push(FieldElement::one());
         points.push(commitment.clone());
         scalars.push(FieldElement::one());
-        let diff = (verkey.Y.len() - messages.len());
+        let diff = verkey.Y.len() - messages.len();
         for i in 0..messages.len() {
             scalars.push(messages[i].clone());
             points.push(verkey.Y[diff + i].clone());

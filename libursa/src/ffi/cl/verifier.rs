@@ -76,12 +76,10 @@ pub extern "C" fn ursa_cl_proof_verifier_add_common_attribute(
         attribute_name
     );
 
-    let res = match proof_verifier.add_common_attribute(&attribute_name) {
+    match proof_verifier.add_common_attribute(&attribute_name) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.into(),
-    };
-
-    res
+    }
 }
 
 #[no_mangle]

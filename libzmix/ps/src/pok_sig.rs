@@ -6,8 +6,6 @@ use crate::signature::Signature;
 use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use amcl_wrapper::group_elem_g1::{G1Vector, G1};
-use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 use std::collections::{HashMap, HashSet};
 use zmix::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
@@ -176,7 +174,7 @@ impl PoKOfSignatureProof {
         }
         // e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde) => e(sigma_prime_1, J) * e(sigma_prime_2, g_tilde^-1) == 1
         let neg_g_tilde = vk.g_tilde.negation();
-        let mut j = OtherGroup::new();
+        let mut j;
         let J = if revealed_msgs.is_empty() {
             &self.J
         } else {

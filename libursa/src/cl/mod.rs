@@ -533,7 +533,7 @@ impl RevocationTailsGenerator {
 }
 
 pub trait RevocationTailsAccessor {
-    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> UrsaCryptoResult<()>;
+    fn access_tail(&self, tail_id: u32, accessor: &mut dyn FnMut(&Tail)) -> UrsaCryptoResult<()>;
 }
 
 /// Simple implementation of `RevocationTailsAccessor` that stores all tails as BTreeMap.
@@ -543,7 +543,7 @@ pub struct SimpleTailsAccessor {
 }
 
 impl RevocationTailsAccessor for SimpleTailsAccessor {
-    fn access_tail(&self, tail_id: u32, accessor: &mut FnMut(&Tail)) -> UrsaCryptoResult<()> {
+    fn access_tail(&self, tail_id: u32, accessor: &mut dyn FnMut(&Tail)) -> UrsaCryptoResult<()> {
         accessor(&self.tails[tail_id as usize]);
         Ok(())
     }

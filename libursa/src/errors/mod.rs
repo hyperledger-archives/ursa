@@ -61,7 +61,7 @@ pub struct UrsaCryptoError {
 }
 
 impl Fail for UrsaCryptoError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.cause()
     }
 
