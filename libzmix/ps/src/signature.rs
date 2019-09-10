@@ -97,6 +97,13 @@ impl Signature {
         Self { sigma_1, sigma_2 }
     }
 
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.sigma_1.to_bytes());
+        bytes.append(&mut self.sigma_2.to_bytes());
+        bytes
+    }
+
     pub fn check_verkey_and_messages_compat(
         messages: &[FieldElement],
         verkey: &Verkey,

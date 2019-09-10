@@ -14,6 +14,7 @@ extern crate amcl_wrapper;
 #[macro_use]
 extern crate failure;
 
+#[macro_use]
 pub mod commitments;
 pub mod ffi;
 pub mod hash_functions;
