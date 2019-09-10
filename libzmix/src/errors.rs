@@ -1,4 +1,5 @@
 use failure::{Backtrace, Context, Fail};
+use commitments::pok_vc::PoKVCError;
 
 pub mod prelude {
     pub use super::{PSError, BBSError, BBSErrorKind, BBSErrorExt};
@@ -38,6 +39,8 @@ pub enum BBSErrorKind {
     SignatureIncorrectSize(usize),
     #[fail(display = "Signature cannot be loaded due to a bad value")]
     SignatureValueIncorrectSize,
+    #[fail(display = "Error from PoKVC module {:?}", msg)]
+    PoKVCError { msg: String },
     #[fail(display = "{:?}", msg)]
     GeneralError { msg: String },
 }
@@ -125,5 +128,20 @@ impl<E> BBSErrorExt for E
             D: std::fmt::Display + Send + Sync + 'static,
     {
         self.context(msg).context(kind).into()
+    }
+}
+
+impl From<PoKVCError> for BBSError {
+    fn from(err: PoKVCError) -> Self {
+        let message = format!(
+            "PoKVCError: {}",
+            Fail::iter_causes(&err)
+                .map(|e| e.to_string())
+                .collect::<String>()
+        );
+
+        match err.kind() {
+            _ => BBSError::from_kind(BBSErrorKind::PoKVCError { msg: message }),
+        }
     }
 }

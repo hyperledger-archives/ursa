@@ -1,6 +1,7 @@
 use super::signature::{Signature, compute_b_const_time};
 use super::keys::PublicKey;
 use crate::errors::prelude::*;
+use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
 use serde::{Serialize, Deserialize};
 use std::collections::{HashSet, HashMap};
@@ -11,44 +12,33 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 use amcl_wrapper::extension_field_gt::GT;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProofR {
-    a_prime: G1,
-    a_bar: G1,
-    d: G1
-}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProofP {
-    e_responses: FieldElement,
-    s_responses: FieldElement,
-    r2_responses: FieldElement,
-    r3_responses: FieldElement,
-    message_responses: FieldElementVector
-}
+impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 
+// XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignature {
-    proof_r: ProofR,
-    messages: FieldElementVector,
-    secrets: FieldElementVector,
-    e_challenge: FieldElement,
-    s_challenge: FieldElement,
-    s_prime: FieldElement,
-    r2: FieldElement,
-    r3: FieldElement,
-    r2_challenge: FieldElement,
-    r3_challenge: FieldElement,
-    t1: G1,
-    t2: G1,
-    e: FieldElement,
-    s: FieldElement
+    pub A_prime: G1,
+    pub A_bar: G1,
+    pub d: G1,
+    // For proving relation A_bar / d == A_prime^{-e} * h_0^r2
+    pub pok_vc_1: ProverCommittedG1,
+    secrets_1: FieldElementVector,
+    // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
+    pub pok_vc_2: ProverCommittedG1,
+    secrets_2: FieldElementVector,
 }
 
+// Contains the randmomized signature as well as the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
-    proof_r: ProofR,
-    proof_p: ProofP
+    pub A_prime: G1,
+    pub A_bar: G1,
+    pub d: G1,
+    // Proof of relation A_bar / d == A_prime^{-e} * h_0^r2
+    pub proof_vc_1: ProofG1,
+    // Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
+    pub proof_vc_2: ProofG1
 }
 
 impl PoKOfSignature {
@@ -69,108 +59,201 @@ impl PoKOfSignature {
 
         let r1 = FieldElement::random();
         let r2 = FieldElement::random();
-        let e_challenge = FieldElement::random();
-        let s_challenge = FieldElement::random();
-        let r2_challenge = FieldElement::random();
-        let r3_challenge = FieldElement::random();
 
         let b = compute_b_const_time(&G1::new(), vk, messages, &signature.s, 0);
-
         let a_prime = &signature.a * &r1;
-        let a_bar = (&b * &r1) - (&a_prime * &signature.e);
-        let d = b.binary_scalar_mul(&vk.h0, &r1, &r2);
+        let a_bar = &(&b * &r1) - &(&a_prime * &signature.e);
+        let d = b.binary_scalar_mul(&vk.h0, &r1, &(-&r2));
 
         let r3 = r1.inverse();
-        let mut s_prime = signature.s.clone();
-        s_prime += &(&r2 * &r3);
+        let s_prime = &signature.s - &(&r2 * &r3);
 
-        let t1 = a_prime.binary_scalar_mul(&vk.h0, &e_challenge, &r2_challenge);
+        // For proving relation A_bar / d == A_prime^{-e} * h_0^r2
+        let mut committing_1 = ProverCommittingG1::new();
+        let mut secrets_1 = FieldElementVector::with_capacity(2);
+        // For A_prime^{-e}
+        committing_1.commit(&a_prime, None);
+        secrets_1.push(-(&signature.e));
+        // For h_0^r2
+        committing_1.commit(&vk.h0, None);
+        secrets_1.push(r2);
+        let pok_vc_1 = committing_1.finish();
 
-        let mut bases = G1Vector::with_capacity(1 + vk.message_count() - revealed_msg_indices.len());
-        let mut exponents = FieldElementVector::with_capacity(1 + vk.message_count() - revealed_msg_indices.len());
+        // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
+        let mut committing_2 = ProverCommittingG1::new();
+        let mut secrets_2 = FieldElementVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
+        // For d^r3
+        committing_2.commit(&d, None);
+        secrets_2.push(r3);
+        // h_0^{-s_prime}
+        committing_2.commit(&vk.h0, None);
+        secrets_2.push(-s_prime);
 
-        bases.push(&vk.h0 * &s_challenge - &d * &r3_challenge);
+        // `bases` and `exponents` below are used to create g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
+        let mut bases = G1Vector::with_capacity(1 + revealed_msg_indices.len());
+        let mut exponents = FieldElementVector::with_capacity(1 + revealed_msg_indices.len());
+        // XXX: g1 should come from a setup param and not generator
+        bases.push(G1::generator());
         exponents.push(FieldElement::one());
 
         for i in 0..vk.message_count() {
             if revealed_msg_indices.contains(&i) {
-                continue;
+                continue
             }
-            let r = FieldElement::random();
-            exponents.push(r);
-            bases.push(vk.h[i].clone());
+            committing_2.commit(&vk.h[i], None);
+            secrets_2.push(-&messages[i]);
         }
+        let pok_vc_2 = committing_2.finish();
 
-        let t2 = bases.multi_scalar_mul_const_time(&exponents).unwrap();
-
-        Ok(PoKOfSignature {
-            proof_r: ProofR { a_prime, a_bar, d },
-            messages: messages.into(),
-            secrets: exponents,
-            e_challenge,
-            s_challenge,
-            s_prime,
-            r2,
-            r3,
-            r2_challenge,
-            r3_challenge,
-            t1,
-            t2,
-            e: signature.e.clone(),
-            s: signature.s.clone()
+        Ok(Self {
+            A_prime: a_prime,
+            A_bar: a_bar,
+            d,
+            pok_vc_1,
+            secrets_1,
+            pok_vc_2,
+            secrets_2
         })
     }
 
-    pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
-        if self.secrets.len() != self.messages.len() {
-            return Err(BBSError::from_kind(BBSErrorKind::GeneralError { msg: format!("Secrets length {} != {}", self.secrets.len(), self.messages.len()) }));
-        }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.A_prime.to_bytes());
+        bytes.append(&mut self.A_bar.to_bytes());
+        bytes.append(&mut self.d.to_bytes());
 
-        let e = self.e_challenge + self.e * challenge_hash;
-        let s = self.s_challenge + self.s_prime * challenge_hash;
-        let r2 = self.r2_challenge + self.r2 * challenge_hash;
-        let r3 = self.r3_challenge + self.r3 * challenge_hash;
-        let mut responses = Vec::new();
-        for i in 0..self.secrets.len() {
-            responses.push(&self.secrets[i] - &self.messages[i] * challenge_hash);
-        }
+        // For 1st PoKVC
+        bytes.append(&mut self.pok_vc_1.to_bytes());
+
+        // For 2nd PoKVC
+        bytes.append(&mut self.pok_vc_2.to_bytes());
+
+        bytes
+    }
+
+    pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
+        let proof_vc_1 = self.pok_vc_1.gen_proof(challenge_hash, self.secrets_1.as_slice())?;
+        let proof_vc_2 = self.pok_vc_2.gen_proof(challenge_hash, self.secrets_2.as_slice())?;
 
         Ok(PoKOfSignatureProof {
-            proof_r: self.proof_r,
-            proof_p: ProofP {
-                e_responses: e,
-                s_responses: s,
-                r2_responses: r2,
-                r3_responses: r3,
-                message_responses: responses.into()
-            }
+            A_prime: self.A_prime,
+            A_bar: self.A_bar,
+            d: self.d,
+            proof_vc_1,
+            proof_vc_2
         })
     }
 }
 
 impl PoKOfSignatureProof {
-    pub fn verify(&self, vk: &PublicKey, revealed_msgs: &HashMap<usize, FieldElement>, challenge: &FieldElement) -> Result<bool, BBSError> {
-        for (i, _) in revealed_msgs {
-            if *i > vk.message_count() {
+    pub fn verify(&self, vk: &PublicKey, revealed_msgs: HashMap<usize, FieldElement>, challenge: &FieldElement) -> Result<bool, BBSError> {
+        // TODO: Add validation for public key
+
+        for i in revealed_msgs.keys() {
+            if *i >= vk.message_count() {
                 return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
                     msg: format!("Index {} should be less than {}", i, vk.message_count()),
                 }));
             }
         }
 
-        if self.proof_r.a_prime.is_identity() {
+        if self.A_prime.is_identity() {
             return Ok(false);
         }
 
-        if GT::ate_2_pairing_cmp(&self.proof_r.a_prime, &vk.w, &self.proof_r.a_bar, &G2::generator()) {
+        if !GT::ate_2_pairing(&self.A_prime, &vk.w, &(-&self.A_bar), &G2::generator()).is_one() {
+            return Ok(false);
+        }
+        /*if GT::ate_2_pairing_cmp(&self.A_prime, &vk.w, &self.A_bar, &G2::generator()) {
+            return Ok(false);
+        }*/
+
+        let mut bases = vec![];
+        bases.push(self.A_prime.clone());
+        bases.push(vk.h0.clone());
+        // A_bar / d
+        let A_bar_d = &self.A_bar - &self.d;
+        if !self.proof_vc_1.verify(&bases, &A_bar_d, challenge)? {
             return Ok(false);
         }
 
-        let mut r_value = revealed_msgs.iter().fold(G1::generator(), |b, (i, a)| b + &vk.h[*i] * a);
+        let mut bases_pok_vc_2 = G1Vector::with_capacity(2 + vk.message_count() - revealed_msgs.len());
+        bases_pok_vc_2.push(self.d.clone());
+        bases_pok_vc_2.push(vk.h0.clone());
 
-        let t1 = self.proof_r.a_prime.binary_scalar_mul(&self.proof_p.e_responses, &(&self.proof_r.a_bar - &self.proof_r.d), challenge) + (&vk.h0 * &self.proof_p.r2_responses);
-        let mut t2 = r_value.binary_scalar_mul(challenge, &vk.h0, self.proof_p.s_responses) - &(self.proof_r.d * self.proof_p.r3_responses);
+        // `bases_disclosed` and `exponents` below are used to create g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
+        let mut bases_disclosed = G1Vector::with_capacity(1 + revealed_msgs.len());
+        let mut exponents = FieldElementVector::with_capacity(1 + revealed_msgs.len());
+        // XXX: g1 should come from a setup param and not generator
+        bases_disclosed.push(G1::generator());
+        exponents.push(FieldElement::one());
+        for i in 0..vk.message_count() {
+            if revealed_msgs.contains_key(&i) {
+                let message = revealed_msgs.get(&i).unwrap();
+                bases_disclosed.push(vk.h[i].clone());
+                exponents.push(message.clone());
+            } else {
+                bases_pok_vc_2.push(vk.h[i].clone());
+            }
+        }
+        // pr = g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
+        let pr = bases_disclosed.multi_scalar_mul_const_time(&exponents).unwrap();
+        if !self.proof_vc_2.verify(bases_pok_vc_2.as_slice(), &pr, challenge)? {
+            return Ok(false);
+        }
+        Ok(true)
+    }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use signatures::bbs::keys::generate;
 
+    #[test]
+    fn pok_signature_no_revealed_messages() {
+        let message_count = 5;
+        let messages = FieldElementVector::random(message_count);
+        let (verkey, signkey) = generate(message_count);
+
+        let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
+        let res = sig.verify(messages.as_slice(), &verkey);
+        assert!(res.unwrap());
+
+        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), HashSet::new()).unwrap();
+        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge).unwrap();
+        assert!(proof.verify(&verkey, HashMap::new(), &challenge).unwrap());
+    }
+
+    #[test]
+    fn pok_signature_revealed_amessage() {
+        let message_count = 5;
+        let messages = FieldElementVector::random(message_count);
+        let (verkey, signkey) = generate(message_count);
+
+        let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
+        let res = sig.verify(messages.as_slice(), &verkey);
+        assert!(res.unwrap());
+
+        let mut revealed_indices = HashSet::new();
+        revealed_indices.insert(0);
+        revealed_indices.insert(2);
+
+        let pok =
+            PoKOfSignature::init(&sig, &verkey, messages.as_slice(), revealed_indices.clone()).unwrap();
+        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge).unwrap();
+
+        let mut revealed_msgs = HashMap::new();
+        for i in &revealed_indices {
+            revealed_msgs.insert(i.clone(), messages[*i].clone());
+        }
+        assert!(proof.verify(&verkey, revealed_msgs.clone(), &challenge).unwrap());
+
+        // Reveal wrong message
+        let mut revealed_msgs_1 = revealed_msgs.clone();
+        revealed_msgs_1.insert(2, FieldElement::random());
+        assert!(!proof.verify(&verkey, revealed_msgs_1.clone(), &challenge).unwrap());
     }
 }

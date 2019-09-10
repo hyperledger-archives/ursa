@@ -15,7 +15,9 @@ extern crate serde;
 
 extern crate serde_json;
 
+#[macro_use]
 pub mod commitments;
+pub mod ffi;
 pub mod verifiable_encryption;
 pub mod errors;
 pub mod signatures;

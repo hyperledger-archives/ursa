@@ -1,4 +1,4 @@
-use hash_functions::HashError;
+//use hash_functions::HashError;
 
 #[macro_use]
 pub mod pok_vc;
@@ -10,14 +10,14 @@ pub enum CommitmentError {
     InvalidBigNumSize(usize, usize),
     ZeroMessageCount(String),
     InvalidGeneratorCount(usize, usize),
-    HashError(HashError),
+    //HashError(HashError),
 }
 
-impl From<HashError> for CommitmentError {
+/*impl From<HashError> for CommitmentError {
     fn from(err: HashError) -> CommitmentError {
         CommitmentError::HashError(err)
     }
-}
+}*/
 
 // QUESTION: It would be better if we use generic group element for this trait so it can be used
 // with Elliptic curves or IntegerMod groups like
