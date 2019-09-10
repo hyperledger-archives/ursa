@@ -368,7 +368,7 @@ impl ProofVerifier {
         if proof.proofs.len() != credentials.len() {
             return Err(err_msg(
                 UrsaCryptoErrorKind::ProofRejected,
-                format!("Invalid proof length"),
+                "Invalid proof length".to_string(),
             ));
         }
 

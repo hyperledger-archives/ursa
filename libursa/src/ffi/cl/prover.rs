@@ -971,12 +971,10 @@ pub extern "C" fn ursa_cl_proof_builder_add_common_attribute(
         attribute_name
     );
 
-    let res = match proof_builder.add_common_attribute(&attribute_name) {
+    match proof_builder.add_common_attribute(&attribute_name) {
         Ok(()) => ErrorCode::Success,
         Err(err) => err.into(),
-    };
-
-    res
+    }
 }
 
 /// Add a sub proof request to the proof builder

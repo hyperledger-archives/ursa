@@ -1193,7 +1193,7 @@ impl Issuer {
         issuance_by_default: bool,
         rev_reg: &mut RevocationRegistry,
         rev_key_priv: &RevocationKeyPrivate,
-        rev_tails_accessor: &RevocationTailsAccessor,
+        rev_tails_accessor: &dyn RevocationTailsAccessor,
     ) -> UrsaCryptoResult<(
         NonRevocationCredentialSignature,
         Option<RevocationRegistryDelta>,

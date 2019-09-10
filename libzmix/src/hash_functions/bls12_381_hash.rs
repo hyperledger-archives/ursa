@@ -98,9 +98,9 @@ fn return_digest(digest_bytes: &[u8], length: Option<usize>) -> Result<Vec<u8>, 
     match length {
         Some(l) => {
             if l > digest_bytes.len() {
-                return Err(HashError::InvalidDigestLength(String::from(
+                Err(HashError::InvalidDigestLength(String::from(
                     "Length greater than digest",
-                )));
+                )))
             } else {
                 Ok(digest_bytes[0..l].to_vec())
             }
