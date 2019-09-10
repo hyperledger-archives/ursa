@@ -363,7 +363,6 @@ impl<'a> AttributeToken<'a> {
         })
     }
 
-    // XXX: Add other instance data
     pub fn gen_challenge(at: &AttributeTokenComm, ipk: &Groth1Verkey) -> FieldElement {
         let mut bytes = Vec::<u8>::new();
         bytes.extend_from_slice(&ipk.0.to_bytes());

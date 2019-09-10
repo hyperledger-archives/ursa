@@ -5,17 +5,17 @@ use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GrothSigkey(pub FieldElement);
+
 macro_rules! impl_GrothS {
-    ( $GrothSetupParams:ident, $GrothSigkey:ident, $GrothVerkey:ident, $GrothSig:ident, $GrothS:ident, $vk_group:ident, $msg_group:ident, $GVector:ident ) => {
+    ( $GrothSetupParams:ident, $GrothVerkey:ident, $GrothSig:ident, $GrothS:ident, $vk_group:ident, $msg_group:ident, $GVector:ident ) => {
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $GrothSetupParams {
             pub g1: G1,
             pub g2: G2,
             pub y: $GVector,
         }
-
-        #[derive(Clone, Debug, Serialize, Deserialize)]
-        pub struct $GrothSigkey(pub FieldElement);
 
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $GrothVerkey(pub $vk_group);
@@ -88,7 +88,6 @@ macro_rules! impl_GrothSig_randomize {
 
 impl_GrothS!(
     Groth1SetupParams,
-    Groth1Sigkey,
     Groth1Verkey,
     Groth1Sig,
     GrothS1,
@@ -99,7 +98,6 @@ impl_GrothS!(
 
 impl_GrothS!(
     Groth2SetupParams,
-    Groth2Sigkey,
     Groth2Verkey,
     Groth2Sig,
     GrothS2,
@@ -124,17 +122,17 @@ macro_rules! var_time_mul_scl_mul_with_same_field_element {
 impl GrothS1 {
     impl_GrothS_setup!(Groth1SetupParams, G1, G1Vector);
 
-    pub fn keygen(setup_params: &Groth1SetupParams) -> (Groth1Sigkey, Groth1Verkey) {
+    pub fn keygen(setup_params: &Groth1SetupParams) -> (GrothSigkey, Groth1Verkey) {
         let sk = FieldElement::random();
         let vk = &setup_params.g2 * &sk;
-        (Groth1Sigkey(sk), Groth1Verkey(vk))
+        (GrothSigkey(sk), Groth1Verkey(vk))
     }
 }
 
 impl Groth1Sig {
     pub fn new(
         messages: &[G1],
-        sk: &Groth1Sigkey,
+        sk: &GrothSigkey,
         setup_params: &Groth1SetupParams,
     ) -> DelgResult<Self> {
         impl_GrothSig_new!(
@@ -252,17 +250,17 @@ impl Groth1Sig {
 impl GrothS2 {
     impl_GrothS_setup!(Groth2SetupParams, G2, G2Vector);
 
-    pub fn keygen(setup_params: &Groth2SetupParams) -> (Groth2Sigkey, Groth2Verkey) {
+    pub fn keygen(setup_params: &Groth2SetupParams) -> (GrothSigkey, Groth2Verkey) {
         let sk = FieldElement::random();
         let vk = &setup_params.g1 * &sk;
-        (Groth2Sigkey(sk), Groth2Verkey(vk))
+        (GrothSigkey(sk), Groth2Verkey(vk))
     }
 }
 
 impl Groth2Sig {
     pub fn new(
         messages: &[G2],
-        sk: &Groth2Sigkey,
+        sk: &GrothSigkey,
         setup_params: &Groth2SetupParams,
     ) -> DelgResult<Self> {
         impl_GrothSig_new!(
