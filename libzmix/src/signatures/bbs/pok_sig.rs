@@ -3,7 +3,6 @@ use super::keys::PublicKey;
 use crate::errors::prelude::*;
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
-use serde::{Serialize, Deserialize};
 use std::collections::{HashSet, HashMap};
 
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
@@ -18,10 +17,10 @@ impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 // XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignature {
-    pub A_prime: G1,
-    pub A_bar: G1,
+    pub a_prime: G1,
+    pub a_bar: G1,
     pub d: G1,
-    // For proving relation A_bar / d == A_prime^{-e} * h_0^r2
+    // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
     pub pok_vc_1: ProverCommittedG1,
     secrets_1: FieldElementVector,
     // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
@@ -32,10 +31,10 @@ pub struct PoKOfSignature {
 // Contains the randmomized signature as well as the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
-    pub A_prime: G1,
-    pub A_bar: G1,
+    pub a_prime: G1,
+    pub a_bar: G1,
     pub d: G1,
-    // Proof of relation A_bar / d == A_prime^{-e} * h_0^r2
+    // Proof of relation a_bar / d == a_prime^{-e} * h_0^r2
     pub proof_vc_1: ProofG1,
     // Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
     pub proof_vc_2: ProofG1
@@ -68,10 +67,10 @@ impl PoKOfSignature {
         let r3 = r1.inverse();
         let s_prime = &signature.s - &(&r2 * &r3);
 
-        // For proving relation A_bar / d == A_prime^{-e} * h_0^r2
+        // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
         let mut committing_1 = ProverCommittingG1::new();
         let mut secrets_1 = FieldElementVector::with_capacity(2);
-        // For A_prime^{-e}
+        // For a_prime^{-e}
         committing_1.commit(&a_prime, None);
         secrets_1.push(-(&signature.e));
         // For h_0^r2
@@ -106,8 +105,8 @@ impl PoKOfSignature {
         let pok_vc_2 = committing_2.finish();
 
         Ok(Self {
-            A_prime: a_prime,
-            A_bar: a_bar,
+            a_prime: a_prime,
+            a_bar: a_bar,
             d,
             pok_vc_1,
             secrets_1,
@@ -118,8 +117,8 @@ impl PoKOfSignature {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.A_prime.to_bytes());
-        bytes.append(&mut self.A_bar.to_bytes());
+        bytes.append(&mut self.a_prime.to_bytes());
+        bytes.append(&mut self.a_bar.to_bytes());
         bytes.append(&mut self.d.to_bytes());
 
         // For 1st PoKVC
@@ -136,8 +135,8 @@ impl PoKOfSignature {
         let proof_vc_2 = self.pok_vc_2.gen_proof(challenge_hash, self.secrets_2.as_slice())?;
 
         Ok(PoKOfSignatureProof {
-            A_prime: self.A_prime,
-            A_bar: self.A_bar,
+            a_prime: self.a_prime,
+            a_bar: self.a_bar,
             d: self.d,
             proof_vc_1,
             proof_vc_2
@@ -157,23 +156,23 @@ impl PoKOfSignatureProof {
             }
         }
 
-        if self.A_prime.is_identity() {
+        if self.a_prime.is_identity() {
             return Ok(false);
         }
 
-        if !GT::ate_2_pairing(&self.A_prime, &vk.w, &(-&self.A_bar), &G2::generator()).is_one() {
+        if !GT::ate_2_pairing(&self.a_prime, &vk.w, &(-&self.a_bar), &G2::generator()).is_one() {
             return Ok(false);
         }
-        /*if GT::ate_2_pairing_cmp(&self.A_prime, &vk.w, &self.A_bar, &G2::generator()) {
+        /*if GT::ate_2_pairing_cmp(&self.a_prime, &vk.w, &self.a_bar, &G2::generator()) {
             return Ok(false);
         }*/
 
         let mut bases = vec![];
-        bases.push(self.A_prime.clone());
+        bases.push(self.a_prime.clone());
         bases.push(vk.h0.clone());
-        // A_bar / d
-        let A_bar_d = &self.A_bar - &self.d;
-        if !self.proof_vc_1.verify(&bases, &A_bar_d, challenge)? {
+        // a_bar / d
+        let a_bar_d = &self.a_bar - &self.d;
+        if !self.proof_vc_1.verify(&bases, &a_bar_d, challenge)? {
             return Ok(false);
         }
 

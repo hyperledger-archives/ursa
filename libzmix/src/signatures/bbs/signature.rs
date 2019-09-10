@@ -9,7 +9,6 @@ use amcl_wrapper::{
     constants::{GROUP_G1_SIZE, MODBYTES}
 };
 
-use serde::{Serialize, Deserialize};
 use amcl_wrapper::group_elem_g1::G1Vector;
 use amcl_wrapper::field_elem::FieldElementVector;
 

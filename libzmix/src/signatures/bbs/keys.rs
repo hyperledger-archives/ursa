@@ -7,7 +7,6 @@ use amcl_wrapper::{
     types_g2::GROUP_G2_SIZE,
     errors::SerzDeserzError,
 };
-use serde::{Serialize, Deserialize};
 
 pub mod prelude {
     pub use super::{PublicKey, SecretKey, generate};
