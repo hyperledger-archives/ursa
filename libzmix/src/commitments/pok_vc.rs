@@ -150,13 +150,18 @@ macro_rules! impl_PoK_VC {
         }
 
         impl $ProverCommitted {
-            /// This step will be done by the main protocol for which this PoK is a sub-protocol
-            pub fn gen_challenge(&self, mut extra: Vec<u8>) -> FieldElement {
+            pub fn to_bytes(&self) -> Vec<u8> {
                 let mut bytes = vec![];
                 for b in self.gens.as_slice() {
                     bytes.append(&mut b.to_bytes());
                 }
                 bytes.append(&mut self.commitment.to_bytes());
+                bytes
+            }
+
+            /// This step will be done by the main protocol for which this PoK is a sub-protocol
+            pub fn gen_challenge(&self, mut extra: Vec<u8>) -> FieldElement {
+                let mut bytes = self.to_bytes();
                 bytes.append(&mut extra);
                 FieldElement::from_msg_hash(&bytes)
             }

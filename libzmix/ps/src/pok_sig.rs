@@ -112,6 +112,15 @@ impl PoKOfSignature {
         })
     }
 
+    /// Return byte representation of public elements so they can be used for challenge computation
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.sig.to_bytes());
+        bytes.append(&mut self.J.to_bytes());
+        bytes.append(&mut self.pok_vc.to_bytes());
+        bytes
+    }
+
     pub fn gen_proof(self, challenge: &FieldElement) -> Result<PoKOfSignatureProof, PSError> {
         let proof_vc = self.pok_vc.gen_proof(challenge, self.secrets.as_slice())?;
         Ok(PoKOfSignatureProof {
@@ -323,7 +332,7 @@ mod tests {
 
         let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
 
-        let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+        let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
         let proof = pok.gen_proof(&chal).unwrap();
 
@@ -346,7 +355,7 @@ mod tests {
         let pok =
             PoKOfSignature::init(&sig, &vk, msgs.as_slice(), revealed_msg_indices.clone()).unwrap();
 
-        let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+        let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
         let proof = pok.gen_proof(&chal).unwrap();
 
@@ -401,7 +410,7 @@ mod tests {
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
         let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
-        let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+        let chal = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&chal).unwrap();
 
         // Verification fails with bad verkey
@@ -431,7 +440,7 @@ mod tests {
 
             let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
 
-            let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+            let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
             let proof = pok.gen_proof(&chal).unwrap();
             total_generating += start.elapsed();

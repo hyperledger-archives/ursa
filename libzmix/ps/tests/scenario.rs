@@ -76,7 +76,7 @@ fn test_scenario_1() {
     )
     .unwrap();
 
-    let chal = pok.pok_vc.gen_challenge(pok.J.to_bytes());
+    let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
     let proof = pok.gen_proof(&chal).unwrap();
 

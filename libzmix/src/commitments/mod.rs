@@ -1,5 +1,6 @@
 use hash_functions::HashError;
 
+#[macro_use]
 pub mod pok_vc;
 
 #[derive(Debug)]
