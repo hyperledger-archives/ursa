@@ -1,15 +1,14 @@
 use crate::errors::{DelgError, DelgResult};
 use crate::groth_sig::{
-    Groth1SetupParams, Groth1Sig, Groth1Sigkey, Groth1Verkey, Groth2SetupParams, Groth2Sig,
-    Groth2Sigkey, Groth2Verkey, GrothS1, GrothS2,
+    Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig, Groth2Verkey,
+    GrothS1, GrothS2, GrothSigkey,
 };
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 
-pub type EvenLevelSigkey = Groth1Sigkey;
+pub type Sigkey = GrothSigkey;
 pub type EvenLevelVerkey = Groth1Verkey;
-pub type OddLevelSigkey = Groth2Sigkey;
 pub type OddLevelVerkey = Groth2Verkey;
 
 // (attributes, signature). The signature is over the attributes and the public key combined by appending public key to the attribute vector.
@@ -314,7 +313,7 @@ impl EvenLevelIssuer {
         Ok(Self { level })
     }
 
-    pub fn keygen(setup_params: &Groth1SetupParams) -> (EvenLevelSigkey, EvenLevelVerkey) {
+    pub fn keygen(setup_params: &Groth1SetupParams) -> (Sigkey, EvenLevelVerkey) {
         GrothS1::keygen(setup_params)
     }
 
@@ -322,7 +321,7 @@ impl EvenLevelIssuer {
         &self,
         mut delegatee_attributes: G1Vector,
         delegatee_vk: OddLevelVerkey,
-        sk: &EvenLevelSigkey,
+        sk: &Sigkey,
         setup_params: &Groth1SetupParams,
     ) -> DelgResult<CredLinkOdd> {
         if delegatee_attributes.len() >= setup_params.y.len() {
@@ -349,7 +348,7 @@ impl OddLevelIssuer {
         Ok(Self { level })
     }
 
-    pub fn keygen(setup_params: &Groth2SetupParams) -> (OddLevelSigkey, OddLevelVerkey) {
+    pub fn keygen(setup_params: &Groth2SetupParams) -> (Sigkey, OddLevelVerkey) {
         GrothS2::keygen(setup_params)
     }
 
@@ -357,7 +356,7 @@ impl OddLevelIssuer {
         &self,
         mut delegatee_attributes: G2Vector,
         delegatee_vk: EvenLevelVerkey,
-        sk: &OddLevelSigkey,
+        sk: &Sigkey,
         setup_params: &Groth2SetupParams,
     ) -> DelgResult<CredLinkEven> {
         if delegatee_attributes.len() >= setup_params.y.len() {
