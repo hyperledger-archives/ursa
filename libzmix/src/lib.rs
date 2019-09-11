@@ -1,23 +1,15 @@
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
 extern crate amcl_wrapper;
+#[macro_use]
 extern crate failure;
-extern crate rand;
-#[cfg(test)]
-extern crate rand_chacha;
-extern crate rand_core;
-extern crate sha2;
-extern crate zeroize;
-extern crate ps;
-
 #[macro_use]
 extern crate serde;
 
-extern crate serde_json;
-
 #[macro_use]
 pub mod commitments;
-pub mod ffi;
-pub mod verifiable_encryption;
 pub mod errors;
 pub mod signatures;
+#[cfg(feature = "ver_enc")]
+pub mod verifiable_encryption;

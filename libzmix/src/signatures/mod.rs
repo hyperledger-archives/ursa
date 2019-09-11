@@ -35,4 +35,5 @@ trait SignatureScheme {
 }
 
 pub mod ps;
+#[cfg(feature = "bbs")]
 pub mod bbs;
