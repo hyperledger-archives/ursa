@@ -39,7 +39,7 @@ pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
     let mut Y_tilde = vec![];
     let X = &g * &x;
     let X_tilde = &g_tilde * &x;
-    for i in 0..count_messages {
+    for _ in 0..count_messages {
         let y = FieldElement::random();
         Y.push(&g * &y);
         Y_tilde.push(&g_tilde * &y);
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_keygen() {
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (_, vk) = keygen(count_msgs, "test".as_bytes());
         assert!(vk.validate().is_ok());
         assert_eq!(vk.Y.len(), count_msgs);
         assert_eq!(vk.Y_tilde.len(), count_msgs);
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_verkey_validate() {
-        let (sk, vk) = keygen(5, "test".as_bytes());
+        let (_, vk) = keygen(5, "test".as_bytes());
         assert!(vk.validate().is_ok());
 
         let mut vk_1 = vk.clone();
