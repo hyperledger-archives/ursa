@@ -61,7 +61,9 @@ impl Signature {
     // 1 or more messages are captured in a commitment `commitment`. The remaining known messages are in `messages`.
     // This is a blind signature.
     pub fn new_with_committed_messages(commitment: &G1, messages: &[FieldElement], signkey: &SecretKey, verkey: &PublicKey) -> Result<Self, BBSError> {
-        check_verkey_message(messages, verkey)?;
+        if messages.len() >= verkey.message_count() {
+            return Err(BBSError::from_kind(BBSErrorKind::SigningErrorMessageCountMismatch(verkey.message_count(), messages.len())));
+        }
         let e = FieldElement::random();
         let s = FieldElement::random();
         let b = compute_b_const_time(commitment, verkey, messages, &s, verkey.message_count() - messages.len());
@@ -125,6 +127,7 @@ fn check_verkey_message(messages: &[FieldElement], verkey: &PublicKey) -> Result
 mod tests {
     use super::*;
     use super::super::keys::generate;
+    use super::super::pok_sig::ProverCommittingG1;
 
     #[test]
     fn signature_serialization() {
@@ -134,6 +137,7 @@ mod tests {
         let sig_2 = Signature::from_bytes(bytes.as_slice()).unwrap();
         assert_eq!(sig, sig_2);
     }
+
     #[test]
     fn gen_signature() {
         let message_count = 5;
@@ -171,5 +175,52 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.is_ok());
         assert!(!res.unwrap());
+    }
+
+    #[test]
+    fn signature_committed_messages() {
+        let message_count = 4;
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(FieldElement::random());
+        }
+        let (verkey, signkey) = generate(message_count);
+
+        //User blinds first attribute
+        let blinding = FieldElement::random();
+
+        //User creates a random commitment, computes challenges and response. The proof of knowledge consists of a commitment and responses
+        //User and signer engage in a proof of knowledge for `commitment`
+        let mut commitment = &verkey.h0 * &blinding + &verkey.h[0] * &messages[0];
+
+        let mut committing = ProverCommittingG1::new();
+        committing.commit(&verkey.h0, None);
+        committing.commit(&verkey.h[0], None);
+        let committed = committing.finish();
+
+        let mut hidden_msgs = Vec::new();
+        hidden_msgs.push(blinding.clone());
+        hidden_msgs.push(messages[0].clone());
+
+        let mut bases = Vec::new();
+        bases.push(verkey.h0.clone());
+        bases.push(verkey.h[0].clone());
+
+        let challenge_hash = committed.gen_challenge(commitment.to_bytes());
+        let proof = committed.gen_proof(&challenge_hash, hidden_msgs.as_slice()).unwrap();
+
+        assert!(proof.verify(bases.as_slice(), &commitment, &challenge_hash).unwrap());
+        let sig = Signature::new_with_committed_messages(&commitment, &messages[1..], &signkey, &verkey);
+        assert!(sig.is_ok());
+        let sig = sig.unwrap();
+        //First test should fail since the signature is blinded
+        let res = sig.verify(messages.as_slice(), &verkey);
+        assert!(res.is_ok());
+        assert!(!res.unwrap());
+
+        let sig = sig.get_unblinded_signature(&blinding);
+        let res = sig.verify(messages.as_slice(), &verkey);
+        assert!(res.is_ok());
+        assert!(res.unwrap());
     }
 }
