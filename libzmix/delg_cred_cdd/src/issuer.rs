@@ -42,6 +42,10 @@ pub struct OddLevelIssuer {
     pub level: usize,
 }
 
+pub struct RootIssuer {}
+
+pub type RootIssuerVerkey = EvenLevelVerkey;
+
 impl CredLinkOdd {
     pub fn attribute_count(&self) -> usize {
         self.attributes.len()
@@ -375,6 +379,22 @@ impl OddLevelIssuer {
     }
 }
 
+impl RootIssuer {
+    pub fn keygen(setup_params: &Groth1SetupParams) -> (Sigkey, RootIssuerVerkey) {
+        GrothS1::keygen(setup_params)
+    }
+
+    pub fn delegate(
+        mut delegatee_attributes: G1Vector,
+        delegatee_vk: OddLevelVerkey,
+        sk: &Sigkey,
+        setup_params: &Groth1SetupParams,
+    ) -> DelgResult<CredLinkOdd> {
+        let issuer = EvenLevelIssuer::new(0)?;
+        issuer.delegate(delegatee_attributes, delegatee_vk, sk, setup_params)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -449,6 +469,57 @@ mod tests {
 
         assert!(chain_2
             .verify_last_even_delegation(&l_2_issuer_vk, &l_1_issuer_vk, &params2)
+            .unwrap());
+    }
+
+    #[test]
+    fn test_root_issuer() {
+        let max_attributes = 5;
+        let label = "test".as_bytes();
+        let params1 = GrothS1::setup(max_attributes, label);
+        let params2 = GrothS2::setup(max_attributes, label);
+
+        let l_1_issuer = OddLevelIssuer::new(1).unwrap();
+        let l_2_issuer = EvenLevelIssuer::new(2).unwrap();
+
+        let (root_issuer_sk, root_issuer_vk) = RootIssuer::keygen(&params1);
+        let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
+        let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+
+        let attributes_1: G1Vector = (0..max_attributes - 1)
+            .map(|_| G1::random())
+            .collect::<Vec<G1>>()
+            .into();
+        let cred_link_1 = RootIssuer::delegate(
+                attributes_1.clone(),
+                l_1_issuer_vk.clone(),
+                &root_issuer_sk,
+                &params1,
+            )
+            .unwrap();
+
+        assert!(cred_link_1
+            .verify(&l_1_issuer_vk, &root_issuer_vk, &params1)
+            .unwrap());
+
+        let mut chain_1 = CredChain::new();
+        chain_1.extend_with_odd(cred_link_1).unwrap();
+
+        let attributes_2: G2Vector = (0..max_attributes - 1)
+            .map(|_| G2::random())
+            .collect::<Vec<G2>>()
+            .into();
+        let cred_link_2 = l_1_issuer
+            .delegate(
+                attributes_2.clone(),
+                l_2_issuer_vk.clone(),
+                &l_1_issuer_sk,
+                &params2,
+            )
+            .unwrap();
+
+        assert!(cred_link_2
+            .verify(&l_2_issuer_vk, &l_1_issuer_vk, &params2)
             .unwrap());
     }
 
