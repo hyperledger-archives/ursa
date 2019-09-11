@@ -363,10 +363,15 @@ impl<'a> AttributeToken<'a> {
         })
     }
 
-    pub fn gen_challenge(at: &AttributeTokenComm, ipk: &Groth1Verkey) -> FieldElement {
+    pub fn gen_challenge(
+        at: &AttributeTokenComm,
+        ipk: &Groth1Verkey,
+        mut extra: Vec<u8>,
+    ) -> FieldElement {
         let mut bytes = Vec::<u8>::new();
         bytes.extend_from_slice(&ipk.0.to_bytes());
         bytes.extend_from_slice(&at.to_bytes());
+        bytes.append(&mut extra);
         FieldElement::from_msg_hash(&bytes)
     }
 
@@ -1397,7 +1402,7 @@ mod tests {
 
         assert!(com_1.odd_level_revealed_attributes[0].is_empty());
 
-        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk);
+        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_1 = at_1
@@ -1420,7 +1425,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_1 = AttributeToken::gen_challenge(&recon_com_1, &l_0_issuer_vk);
+        let recon_c_1 = AttributeToken::gen_challenge(&recon_com_1, &l_0_issuer_vk, vec![]);
         assert_eq!(c_1, recon_c_1);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1448,7 +1453,7 @@ mod tests {
         assert!(com_2.odd_level_revealed_attributes[0].is_empty());
         assert!(com_2.even_level_revealed_attributes[0].is_empty());
 
-        let c_2 = AttributeToken::gen_challenge(&com_2, &l_0_issuer_vk);
+        let c_2 = AttributeToken::gen_challenge(&com_2, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_2 = at_2
@@ -1477,7 +1482,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_2 = AttributeToken::gen_challenge(&recon_com_2, &l_0_issuer_vk);
+        let recon_c_2 = AttributeToken::gen_challenge(&recon_com_2, &l_0_issuer_vk, vec![]);
         assert_eq!(c_2, recon_c_2);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1507,7 +1512,7 @@ mod tests {
         assert!(com_3.odd_level_revealed_attributes[1].is_empty());
         assert!(com_3.even_level_revealed_attributes[0].is_empty());
 
-        let c_3 = AttributeToken::gen_challenge(&com_3, &l_0_issuer_vk);
+        let c_3 = AttributeToken::gen_challenge(&com_3, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_3 = at_3
@@ -1535,7 +1540,7 @@ mod tests {
         )
         .unwrap();
         let recon_duration = start_recon.elapsed();
-        let recon_c_3 = AttributeToken::gen_challenge(&recon_com_3, &l_0_issuer_vk);
+        let recon_c_3 = AttributeToken::gen_challenge(&recon_com_3, &l_0_issuer_vk, vec![]);
         assert_eq!(c_3, recon_c_3);
 
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
@@ -1567,7 +1572,7 @@ mod tests {
         assert!(com_4.even_level_revealed_attributes[0].is_empty());
         assert!(com_4.even_level_revealed_attributes[1].is_empty());
 
-        let c_4 = AttributeToken::gen_challenge(&com_4, &l_0_issuer_vk);
+        let c_4 = AttributeToken::gen_challenge(&com_4, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_4 = at_4
@@ -1596,7 +1601,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_4 = AttributeToken::gen_challenge(&recon_com_4, &l_0_issuer_vk);
+        let recon_c_4 = AttributeToken::gen_challenge(&recon_com_4, &l_0_issuer_vk, vec![]);
         assert_eq!(c_4, recon_c_4);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1628,7 +1633,7 @@ mod tests {
         assert!(com_5.even_level_revealed_attributes[0].is_empty());
         assert!(com_5.even_level_revealed_attributes[1].is_empty());
 
-        let c_5 = AttributeToken::gen_challenge(&com_5, &l_0_issuer_vk);
+        let c_5 = AttributeToken::gen_challenge(&com_5, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_5 = at_5
@@ -1657,7 +1662,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_5 = AttributeToken::gen_challenge(&recon_com_5, &l_0_issuer_vk);
+        let recon_c_5 = AttributeToken::gen_challenge(&recon_com_5, &l_0_issuer_vk, vec![]);
         assert_eq!(c_5, recon_c_5);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1690,7 +1695,7 @@ mod tests {
         assert!(com_6.even_level_revealed_attributes[1].is_empty());
         assert!(com_6.even_level_revealed_attributes[2].is_empty());
 
-        let c_6 = AttributeToken::gen_challenge(&com_6, &l_0_issuer_vk);
+        let c_6 = AttributeToken::gen_challenge(&com_6, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_6 = at_6
@@ -1719,7 +1724,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_6 = AttributeToken::gen_challenge(&recon_com_6, &l_0_issuer_vk);
+        let recon_c_6 = AttributeToken::gen_challenge(&recon_com_6, &l_0_issuer_vk, vec![]);
         assert_eq!(c_6, recon_c_6);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1779,7 +1784,7 @@ mod tests {
         assert_eq!(com_1.odd_level_revealed_attributes[0][&1], attributes_1[1]);
         assert_eq!(com_1.odd_level_revealed_attributes[0][&3], attributes_1[3]);
 
-        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk);
+        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_1 = at_1
@@ -1802,7 +1807,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_1 = AttributeToken::gen_challenge(&recon_com_1, &l_0_issuer_vk);
+        let recon_c_1 = AttributeToken::gen_challenge(&recon_com_1, &l_0_issuer_vk, vec![]);
         assert_eq!(c_1, recon_c_1);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1848,7 +1853,7 @@ mod tests {
         assert_eq!(com_2.even_level_revealed_attributes[0][&3], attributes_2[3]);
         assert_eq!(com_2.even_level_revealed_attributes[0][&4], attributes_2[4]);
 
-        let c_2 = AttributeToken::gen_challenge(&com_2, &l_0_issuer_vk);
+        let c_2 = AttributeToken::gen_challenge(&com_2, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_2 = at_2
@@ -1880,7 +1885,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_2 = AttributeToken::gen_challenge(&recon_com_2, &l_0_issuer_vk);
+        let recon_c_2 = AttributeToken::gen_challenge(&recon_com_2, &l_0_issuer_vk, vec![]);
         assert_eq!(c_2, recon_c_2);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -1929,7 +1934,7 @@ mod tests {
         assert_eq!(com_3.even_level_revealed_attributes[0][&4], attributes_2[4]);
         assert_eq!(com_3.odd_level_revealed_attributes[1][&1], attributes_3[1]);
 
-        let c_3 = AttributeToken::gen_challenge(&com_3, &l_0_issuer_vk);
+        let c_3 = AttributeToken::gen_challenge(&com_3, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_3 = at_3
@@ -1961,7 +1966,7 @@ mod tests {
         )
         .unwrap();
         let recon_duration = start_recon.elapsed();
-        let recon_c_3 = AttributeToken::gen_challenge(&recon_com_3, &l_0_issuer_vk);
+        let recon_c_3 = AttributeToken::gen_challenge(&recon_com_3, &l_0_issuer_vk, vec![]);
         assert_eq!(c_3, recon_c_3);
 
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
@@ -2018,7 +2023,7 @@ mod tests {
         assert_eq!(com_4.even_level_revealed_attributes[1][&1], attributes_4[1]);
         assert_eq!(com_4.even_level_revealed_attributes[1][&4], attributes_4[4]);
 
-        let c_4 = AttributeToken::gen_challenge(&com_4, &l_0_issuer_vk);
+        let c_4 = AttributeToken::gen_challenge(&com_4, &l_0_issuer_vk, vec![]);
 
         let start_resp = Instant::now();
         let resp_4 = at_4
@@ -2052,7 +2057,7 @@ mod tests {
         .unwrap();
         let recon_duration = start_recon.elapsed();
 
-        let recon_c_4 = AttributeToken::gen_challenge(&recon_com_4, &l_0_issuer_vk);
+        let recon_c_4 = AttributeToken::gen_challenge(&recon_com_4, &l_0_issuer_vk, vec![]);
         assert_eq!(c_4, recon_c_4);
         println!("For delegation chain of length {}, commitment takes {:?}, response takes {:?}, commitment reconstitution takes {:?}. Total time taken by commitment and response is {:?}", L,
                  com_duration, resp_duration, recon_duration, com_duration + resp_duration);
@@ -2190,9 +2195,10 @@ mod tests {
                 .unwrap();
             let com_precomp_duration = start.elapsed();
 
-            let c = AttributeToken::gen_challenge(&com, &l_0_issuer_vk);
-            let c_precomp_setup = AttributeToken::gen_challenge(&com_precomp_setup, &l_0_issuer_vk);
-            let c_precomp = AttributeToken::gen_challenge(&com_precomp, &l_0_issuer_vk);
+            let c = AttributeToken::gen_challenge(&com, &l_0_issuer_vk, vec![]);
+            let c_precomp_setup =
+                AttributeToken::gen_challenge(&com_precomp_setup, &l_0_issuer_vk, vec![]);
+            let c_precomp = AttributeToken::gen_challenge(&com_precomp, &l_0_issuer_vk, vec![]);
 
             let sk = if i % 2 == 1 {
                 let sk = &odd_level_issuer_keys[i / 2].0;
@@ -2242,7 +2248,7 @@ mod tests {
             .unwrap();
             let recon_duration = start.elapsed();
 
-            let recon_c = AttributeToken::gen_challenge(&recon_com, &l_0_issuer_vk);
+            let recon_c = AttributeToken::gen_challenge(&recon_com, &l_0_issuer_vk, vec![]);
             assert_eq!(c, recon_c);
 
             let start = Instant::now();
@@ -2262,7 +2268,7 @@ mod tests {
             let recon_precomp_duration = start.elapsed();
 
             let recon_c_precomp_setup_com =
-                AttributeToken::gen_challenge(&recon_precomp_setup_com, &l_0_issuer_vk);
+                AttributeToken::gen_challenge(&recon_precomp_setup_com, &l_0_issuer_vk, vec![]);
             assert_eq!(c_precomp_setup, recon_c_precomp_setup_com);
 
             let recon_precomp_com = AttributeToken::reconstruct_commitment_with_precomputed_vals(
@@ -2279,7 +2285,7 @@ mod tests {
             .unwrap();
 
             let recon_c_precomp_com =
-                AttributeToken::gen_challenge(&recon_precomp_com, &l_0_issuer_vk);
+                AttributeToken::gen_challenge(&recon_precomp_com, &l_0_issuer_vk, vec![]);
             assert_eq!(c_precomp, recon_c_precomp_com);
 
             println!("For delegation chain of length {}", L);
@@ -2350,7 +2356,7 @@ mod tests {
         // Supplying same number of collections of revealed attributes as the chain size
         let com_1 = at_1.commitment(vec![HashSet::<usize>::new(); 1]).unwrap();
 
-        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk);
+        let c_1 = AttributeToken::gen_challenge(&com_1, &l_0_issuer_vk, vec![]);
 
         let mut morphed_commitment = com_1.clone();
         // Adding an element of comms_s to increase its size
