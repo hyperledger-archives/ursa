@@ -72,6 +72,7 @@ fn test_scenario_1() {
         &sig_unblinded,
         &vk,
         msgs.as_slice(),
+        None,
         revealed_msg_indices.clone(),
     )
     .unwrap();

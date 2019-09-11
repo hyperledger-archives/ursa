@@ -59,6 +59,7 @@ impl PoKOfSignature {
         sig: &Signature,
         vk: &Verkey,
         messages: &[FieldElement],
+        blindings: Option<&[FieldElement]>,
         revealed_msg_indices: HashSet<usize>,
     ) -> Result<Self, PSError> {
         for idx in &revealed_msg_indices {
@@ -70,6 +71,25 @@ impl PoKOfSignature {
             }
         }
         Signature::check_verkey_and_messages_compat(messages, vk)?;
+        let mut blindings: Vec<Option<&FieldElement>> = match blindings {
+            Some(b) => {
+                if (messages.len() - revealed_msg_indices.len()) != b.len() {
+                    return Err(PSErrorKind::GeneralError {
+                        msg: format!(
+                            "No of blindings {} not equal to number of hidden messages {}",
+                            b.len(),
+                            (messages.len() - revealed_msg_indices.len())
+                        ),
+                    }
+                    .into());
+                }
+                b.iter().map(|f| Some(f)).collect()
+            }
+            None => (0..(messages.len() - revealed_msg_indices.len()))
+                .map(|_| None)
+                .collect(),
+        };
+
         let r = FieldElement::random();
         let t = FieldElement::random();
 
@@ -94,9 +114,12 @@ impl PoKOfSignature {
         let J = bases.multi_scalar_mul_const_time(&exponents).unwrap();
 
         // For proving knowledge of messages in J.
+        // Choose the blindings for first X_tilde and g_tilde randomly
+        blindings.insert(0, None);
+        blindings.insert(0, None);
         let mut committing = ProverCommittingOtherGroup::new();
         for b in bases.as_slice() {
-            committing.commit(b, None);
+            committing.commit(b, blindings.remove(0));
         }
         let committed = committing.finish();
 
@@ -330,13 +353,27 @@ mod tests {
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
         assert!(sig.verify(msgs.as_slice(), &vk).unwrap());
 
-        let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
+        let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, HashSet::new()).unwrap();
 
         let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
         let proof = pok.gen_proof(&chal).unwrap();
 
         assert!(proof.verify(&vk, HashMap::new(), &chal).unwrap());
+        // PoK with supplied blindings
+        let blindings = FieldElementVector::random(count_msgs);
+        let pok_1 = PoKOfSignature::init(
+            &sig,
+            &vk,
+            msgs.as_slice(),
+            Some(blindings.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+        let chal_1 = FieldElement::from_msg_hash(&pok_1.to_bytes());
+        let proof_1 = pok_1.gen_proof(&chal_1).unwrap();
+
+        assert!(proof_1.verify(&vk, HashMap::new(), &chal_1).unwrap());
     }
 
     #[test]
@@ -352,8 +389,14 @@ mod tests {
         revealed_msg_indices.insert(4);
         revealed_msg_indices.insert(9);
 
-        let pok =
-            PoKOfSignature::init(&sig, &vk, msgs.as_slice(), revealed_msg_indices.clone()).unwrap();
+        let pok = PoKOfSignature::init(
+            &sig,
+            &vk,
+            msgs.as_slice(),
+            None,
+            revealed_msg_indices.clone(),
+        )
+        .unwrap();
 
         let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
@@ -369,6 +412,41 @@ mod tests {
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
         assert!(!proof.verify(&vk, revealed_msgs_1.clone(), &chal).unwrap());
+
+        // PoK with supplied blindings
+        let blindings = FieldElementVector::random(count_msgs - revealed_msg_indices.len());
+        let pok_1 = PoKOfSignature::init(
+            &sig,
+            &vk,
+            msgs.as_slice(),
+            Some(blindings.as_slice()),
+            revealed_msg_indices.clone(),
+        )
+        .unwrap();
+        let chal_1 = FieldElement::from_msg_hash(&pok_1.to_bytes());
+        let proof_1 = pok_1.gen_proof(&chal_1).unwrap();
+        assert!(proof_1.verify(&vk, revealed_msgs.clone(), &chal_1).unwrap());
+
+        let blindings_more =
+            FieldElementVector::random(count_msgs - revealed_msg_indices.len() + 1);
+        assert!(PoKOfSignature::init(
+            &sig,
+            &vk,
+            msgs.as_slice(),
+            Some(blindings_more.as_slice()),
+            revealed_msg_indices.clone()
+        )
+        .is_err());
+        let blindings_less =
+            FieldElementVector::random(count_msgs - revealed_msg_indices.len() - 1);
+        assert!(PoKOfSignature::init(
+            &sig,
+            &vk,
+            msgs.as_slice(),
+            Some(blindings_less.as_slice()),
+            revealed_msg_indices.clone()
+        )
+        .is_err());
     }
 
     #[test]
@@ -379,7 +457,9 @@ mod tests {
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
         let bigger_msgs = FieldElementVector::random(count_msgs + 1);
-        assert!(PoKOfSignature::init(&sig, &vk, bigger_msgs.as_slice(), HashSet::new()).is_err());
+        assert!(
+            PoKOfSignature::init(&sig, &vk, bigger_msgs.as_slice(), None, HashSet::new()).is_err()
+        );
     }
 
     #[test]
@@ -391,15 +471,15 @@ mod tests {
 
         let mut hs = HashSet::new();
         hs.insert(count_msgs);
-        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_err());
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, hs).is_err());
 
         let mut hs = HashSet::new();
         hs.insert(count_msgs + 1);
-        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_err());
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, hs).is_err());
 
         let mut hs = HashSet::new();
         hs.insert(count_msgs - 1);
-        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), hs).is_ok());
+        assert!(PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, hs).is_ok());
     }
 
     #[test]
@@ -409,7 +489,7 @@ mod tests {
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
-        let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
+        let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, HashSet::new()).unwrap();
         let chal = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&chal).unwrap();
 
@@ -438,7 +518,8 @@ mod tests {
         for _ in 0..iterations {
             let start = Instant::now();
 
-            let pok = PoKOfSignature::init(&sig, &vk, msgs.as_slice(), HashSet::new()).unwrap();
+            let pok =
+                PoKOfSignature::init(&sig, &vk, msgs.as_slice(), None, HashSet::new()).unwrap();
 
             let chal = FieldElement::from_msg_hash(&pok.to_bytes());
 
