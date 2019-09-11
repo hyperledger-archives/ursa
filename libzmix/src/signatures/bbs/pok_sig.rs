@@ -11,7 +11,6 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 use amcl_wrapper::extension_field_gt::GT;
 
-
 impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 
 // XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
@@ -28,7 +27,7 @@ pub struct PoKOfSignature {
     secrets_2: FieldElementVector,
 }
 
-// Contains the randmomized signature as well as the proof of 2 discrete log relations.
+// Contains the randomized signature as well as the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
     pub a_prime: G1,
