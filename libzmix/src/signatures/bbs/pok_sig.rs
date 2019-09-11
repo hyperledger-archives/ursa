@@ -1,15 +1,15 @@
-use super::signature::{Signature, compute_b_const_time};
 use super::keys::PublicKey;
-use crate::errors::prelude::*;
+use super::signature::{compute_b_const_time, Signature};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
+use crate::errors::prelude::*;
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
+use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
-use amcl_wrapper::extension_field_gt::GT;
 
 impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 
@@ -22,12 +22,12 @@ pub struct PoKOfSignature {
     // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
     pub pok_vc_1: ProverCommittedG1,
     secrets_1: FieldElementVector,
-    // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
+    // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
     pub pok_vc_2: ProverCommittedG1,
     secrets_2: FieldElementVector,
 }
 
-// Contains the randomized signature as well as the proof of 2 discrete log relations.
+// Contains the randmomized signature as well as the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
     pub a_prime: G1,
@@ -35,17 +35,22 @@ pub struct PoKOfSignatureProof {
     pub d: G1,
     // Proof of relation a_bar / d == a_prime^{-e} * h_0^r2
     pub proof_vc_1: ProofG1,
-    // Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
-    pub proof_vc_2: ProofG1
+    // Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
+    pub proof_vc_2: ProofG1,
 }
 
 impl PoKOfSignature {
-    pub fn init(signature: &Signature,
-                vk: &PublicKey,
-                messages: &[FieldElement],
-                revealed_msg_indices: HashSet<usize>) -> Result<Self, BBSError> {
+    pub fn init(
+        signature: &Signature,
+        vk: &PublicKey,
+        messages: &[FieldElement],
+        blindings: Option<&[FieldElement]>,
+        revealed_msg_indices: HashSet<usize>,
+    ) -> Result<Self, BBSError> {
         if messages.len() != vk.message_count() {
-            return Err(BBSError::from_kind(BBSErrorKind::SigningErrorMessageCountMismatch(vk.message_count(), messages.len())));
+            return Err(BBSError::from_kind(
+                BBSErrorKind::SigningErrorMessageCountMismatch(vk.message_count(), messages.len()),
+            ));
         }
         for idx in &revealed_msg_indices {
             if *idx >= messages.len() {
@@ -54,6 +59,24 @@ impl PoKOfSignature {
                 }));
             }
         }
+
+        let mut blindings: Vec<Option<&FieldElement>> = match blindings {
+            Some(b) => {
+                if messages.len() - revealed_msg_indices.len() != b.len() {
+                    return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
+                        msg: format!(
+                            "Blindings {} != Hidden messages {}",
+                            b.len(),
+                            messages.len() - revealed_msg_indices.len()
+                        ),
+                    }));
+                }
+                b.iter().map(Some).collect()
+            }
+            None => (0..(messages.len() - revealed_msg_indices.len()))
+                .map(|_| None)
+                .collect(),
+        };
 
         let r1 = FieldElement::random();
         let r2 = FieldElement::random();
@@ -77,40 +100,40 @@ impl PoKOfSignature {
         secrets_1.push(r2);
         let pok_vc_1 = committing_1.finish();
 
-        // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^m1 * h2^m2.... for all undisclosed messages m_i
+        // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
+        // Usually the number of disclosed messages is much less than the number of hidden messages, its better to avoid negations in hidden messages and do
+        // them in revealed messages. So transform the relation
+        // g1 * h1^m1 * h2^m2.... * h_i^m_i for disclosed messages m_i = d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... * h_j^-m_j for all undisclosed messages m_j
+        // into
+        // d^{-r3} * h_0^s_prime * h1^m1 * h2^m2.... * h_j^m_j = g1 * h1^-m1 * h2^-m2.... * h_i^-m_i. Moreover g1 * h1^-m1 * h2^-m2.... * h_i^-m_i is public
+        // and can be efficiently computed as (g1 * h1^m1 * h2^m2.... * h_i^m_i)^-1 and inverse in elliptic group is a point negation which is very cheap
         let mut committing_2 = ProverCommittingG1::new();
-        let mut secrets_2 = FieldElementVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
-        // For d^r3
+        let mut secrets_2 =
+            FieldElementVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
+        // For d^-r3
         committing_2.commit(&d, None);
-        secrets_2.push(r3);
-        // h_0^{-s_prime}
+        secrets_2.push(-r3);
+        // h_0^s_prime
         committing_2.commit(&vk.h0, None);
-        secrets_2.push(-s_prime);
-
-        // `bases` and `exponents` below are used to create g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
-        let mut bases = G1Vector::with_capacity(1 + revealed_msg_indices.len());
-        let mut exponents = FieldElementVector::with_capacity(1 + revealed_msg_indices.len());
-        // XXX: g1 should come from a setup param and not generator
-        bases.push(G1::generator());
-        exponents.push(FieldElement::one());
+        secrets_2.push(s_prime);
 
         for i in 0..vk.message_count() {
             if revealed_msg_indices.contains(&i) {
-                continue
+                continue;
             }
-            committing_2.commit(&vk.h[i], None);
-            secrets_2.push(-&messages[i]);
+            committing_2.commit(&vk.h[i], blindings.remove(0));
+            secrets_2.push(messages[i].clone());
         }
         let pok_vc_2 = committing_2.finish();
 
         Ok(Self {
-            a_prime: a_prime,
-            a_bar: a_bar,
+            a_prime,
+            a_bar,
             d,
             pok_vc_1,
             secrets_1,
             pok_vc_2,
-            secrets_2
+            secrets_2,
         })
     }
 
@@ -130,23 +153,31 @@ impl PoKOfSignature {
     }
 
     pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
-        let proof_vc_1 = self.pok_vc_1.gen_proof(challenge_hash, self.secrets_1.as_slice())?;
-        let proof_vc_2 = self.pok_vc_2.gen_proof(challenge_hash, self.secrets_2.as_slice())?;
+        let proof_vc_1 = self
+            .pok_vc_1
+            .gen_proof(challenge_hash, self.secrets_1.as_slice())?;
+        let proof_vc_2 = self
+            .pok_vc_2
+            .gen_proof(challenge_hash, self.secrets_2.as_slice())?;
 
         Ok(PoKOfSignatureProof {
             a_prime: self.a_prime,
             a_bar: self.a_bar,
             d: self.d,
             proof_vc_1,
-            proof_vc_2
+            proof_vc_2,
         })
     }
 }
 
 impl PoKOfSignatureProof {
-    pub fn verify(&self, vk: &PublicKey, revealed_msgs: HashMap<usize, FieldElement>, challenge: &FieldElement) -> Result<bool, BBSError> {
-        // TODO: Add validation for public key
-
+    pub fn verify(
+        &self,
+        vk: &PublicKey,
+        revealed_msgs: HashMap<usize, FieldElement>,
+        challenge: &FieldElement,
+    ) -> Result<bool, BBSError> {
+        vk.validate()?;
         for i in revealed_msgs.keys() {
             if *i >= vk.message_count() {
                 return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
@@ -162,9 +193,6 @@ impl PoKOfSignatureProof {
         if !GT::ate_2_pairing(&self.a_prime, &vk.w, &(-&self.a_bar), &G2::generator()).is_one() {
             return Ok(false);
         }
-        /*if GT::ate_2_pairing_cmp(&self.a_prime, &vk.w, &self.a_bar, &G2::generator()) {
-            return Ok(false);
-        }*/
 
         let mut bases = vec![];
         bases.push(self.a_prime.clone());
@@ -175,11 +203,12 @@ impl PoKOfSignatureProof {
             return Ok(false);
         }
 
-        let mut bases_pok_vc_2 = G1Vector::with_capacity(2 + vk.message_count() - revealed_msgs.len());
+        let mut bases_pok_vc_2 =
+            G1Vector::with_capacity(2 + vk.message_count() - revealed_msgs.len());
         bases_pok_vc_2.push(self.d.clone());
         bases_pok_vc_2.push(vk.h0.clone());
 
-        // `bases_disclosed` and `exponents` below are used to create g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
+        // `bases_disclosed` and `exponents` below are used to create g1 * h1^-m1 * h2^-m2.... for all disclosed messages m_i
         let mut bases_disclosed = G1Vector::with_capacity(1 + revealed_msgs.len());
         let mut exponents = FieldElementVector::with_capacity(1 + revealed_msgs.len());
         // XXX: g1 should come from a setup param and not generator
@@ -194,9 +223,14 @@ impl PoKOfSignatureProof {
                 bases_pok_vc_2.push(vk.h[i].clone());
             }
         }
-        // pr = g1 * h1^m1 * h2^m2.... for all disclosed messages m_i
-        let pr = bases_disclosed.multi_scalar_mul_const_time(&exponents).unwrap();
-        if !self.proof_vc_2.verify(bases_pok_vc_2.as_slice(), &pr, challenge)? {
+        // pr = g1 * h1^-m1 * h2^-m2.... = (g1 * h1^m1 * h2^m2....)^-1 for all disclosed messages m_i
+        let pr = -bases_disclosed
+            .multi_scalar_mul_var_time(&exponents)
+            .unwrap();
+        if !self
+            .proof_vc_2
+            .verify(bases_pok_vc_2.as_slice(), &pr, challenge)?
+        {
             return Ok(false);
         }
         Ok(true)
@@ -218,14 +252,15 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
 
-        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), HashSet::new()).unwrap();
+        let pok =
+            PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, HashSet::new()).unwrap();
         let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge).unwrap();
         assert!(proof.verify(&verkey, HashMap::new(), &challenge).unwrap());
     }
 
     #[test]
-    fn pok_signature_revealed_amessage() {
+    fn pok_signature_revealed_message() {
         let message_count = 5;
         let messages = FieldElementVector::random(message_count);
         let (verkey, signkey) = generate(message_count);
@@ -238,8 +273,14 @@ mod tests {
         revealed_indices.insert(0);
         revealed_indices.insert(2);
 
-        let pok =
-            PoKOfSignature::init(&sig, &verkey, messages.as_slice(), revealed_indices.clone()).unwrap();
+        let pok = PoKOfSignature::init(
+            &sig,
+            &verkey,
+            messages.as_slice(),
+            None,
+            revealed_indices.clone(),
+        )
+        .unwrap();
         let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge).unwrap();
 
@@ -247,11 +288,35 @@ mod tests {
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
-        assert!(proof.verify(&verkey, revealed_msgs.clone(), &challenge).unwrap());
+        assert!(proof
+            .verify(&verkey, revealed_msgs.clone(), &challenge)
+            .unwrap());
 
         // Reveal wrong message
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
-        assert!(!proof.verify(&verkey, revealed_msgs_1.clone(), &challenge).unwrap());
+        assert!(!proof
+            .verify(&verkey, revealed_msgs_1.clone(), &challenge)
+            .unwrap());
+
+        //PoK with supplied blindings
+        let blindings = FieldElementVector::random(message_count - revealed_indices.len());
+        let pok = PoKOfSignature::init(
+            &sig,
+            &verkey,
+            messages.as_slice(),
+            Some(blindings.as_slice()),
+            revealed_indices.clone(),
+        )
+        .unwrap();
+        let mut revealed_msgs = HashMap::new();
+        for i in &revealed_indices {
+            revealed_msgs.insert(i.clone(), messages[*i].clone());
+        }
+        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge).unwrap();
+        assert!(proof
+            .verify(&verkey, revealed_msgs.clone(), &challenge)
+            .unwrap());
     }
 }
