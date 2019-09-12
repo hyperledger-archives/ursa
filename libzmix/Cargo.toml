@@ -21,3 +21,8 @@ ursa = { path = "../libursa" }
 version = "0.1.5"
 default-features = false
 features = ["bls381"]
+
+[features]
+default = ["PS_G1G2"]
+PS_G1G2 = []
+PS_G2G1 = []

@@ -33,3 +33,5 @@ trait SignatureScheme {
     // Verify signature `signature` on a message `message` using verification key `ver_key`
     fn verify(&self, signature: &[u8], message: &[u8], ver_key: &[u8]) -> bool;
 }
+
+pub mod ps;

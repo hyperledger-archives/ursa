@@ -1,8 +1,8 @@
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;
 
-use crate::errors::{PSError, PSErrorKind};
-use crate::{OtherGroup, SignatureGroup};
+use super::errors::{PSError, PSErrorKind};
+use super::{OtherGroup, SignatureGroup};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Sigkey {

@@ -1,6 +1,6 @@
+use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use failure::{Backtrace, Context, Error, Fail};
 use std::fmt;
-use zmix::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum PSErrorKind {

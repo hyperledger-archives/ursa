@@ -7,24 +7,24 @@ A more comprehensive test where a user gets signature over a mix of messages whe
 others are committed to and then a proof of knowledge is done for signature with selectively revealing some messages. Demonstrated in the test `test_scenario_1`.  
 
   
-The groups for public key (*_tilde) and signatures can be flipped by compiling with feature `G1G2` or `G2G1`. These features are mutually exclusive. The default feature is `G2G1` meaning signatures are in group G1. 
+The groups for public key (*_tilde) and signatures can be flipped by compiling with feature `PS_G1G2` or `PS_G2G1`. These features are mutually exclusive. The default feature is `PS_G2G1` meaning signatures are in group G1. 
 
 To run tests with signature in group G1. The proof of knowledge of signatures will involve a multi-exponentiation in group G2.
 ```
-cargo test --release --no-default-features --features G2G1
+cargo test --release --no-default-features --features PS_G2G1
 ```
 
 To run tests with signature in group G2. The proof of knowledge of signatures will involve a multi-exponentiation in group G1.
 ```
-cargo test --release --no-default-features --features G1G2
+cargo test --release --no-default-features --features PS_G1G2
 ```
 
 To benchmark, run tests prefixed with `timing` and the time taken for various actions will be printed.
 ```
-cargo test --release --no-default-features --features G1G2 timing -- --nocapture
+cargo test --release --no-default-features --features PS_G1G2 timing -- --nocapture
 ```
 
 or 
 ```
-cargo test --release --no-default-features --features G2G1 timing -- --nocapture
+cargo test --release --no-default-features --features PS_G2G1 timing -- --nocapture
 ```
