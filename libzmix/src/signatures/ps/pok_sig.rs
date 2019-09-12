@@ -1,13 +1,13 @@
 // Proof of knowledge of signature
 
-use crate::errors::{PSError, PSErrorKind};
-use crate::keys::Verkey;
-use crate::signature::Signature;
-use crate::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::errors::{PSError, PSErrorKind};
+use super::keys::Verkey;
+use super::signature::Signature;
+use super::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use std::collections::{HashMap, HashSet};
-use zmix::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 
 // Implement proof of knowledge of committed values in a vector commitment for `SignatureGroup` and `OtherGroup`
 
@@ -260,7 +260,7 @@ macro_rules! test_PoK_VC {
 mod tests {
     use super::*;
     // For benchmarking
-    use crate::keys::keygen;
+    use super::super::keys::keygen;
     use std::time::{Duration, Instant};
 
     #[test]

@@ -1,10 +1,13 @@
+extern crate amcl_wrapper;
+extern crate zmix;
+
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use ps::keys::keygen;
-use ps::pok_sig::*;
-use ps::signature::Signature;
-use ps::{OtherGroupVec, SignatureGroup};
 use std::collections::{HashMap, HashSet};
+use zmix::signatures::ps::keys::keygen;
+use zmix::signatures::ps::pok_sig::*;
+use zmix::signatures::ps::signature::Signature;
+use zmix::signatures::ps::{OtherGroupVec, SignatureGroup};
 
 #[test]
 fn test_scenario_1() {
