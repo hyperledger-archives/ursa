@@ -91,15 +91,18 @@ mod tests {
 
     #[test]
     fn key_generate() {
+        //Check to make sure key has correct size
         let (public_key, _) = generate(0);
         let bytes = public_key.to_bytes();
         assert_eq!(bytes.len(), GroupG1_SIZE + 4 + GroupG2_SIZE);
 
         let (public_key, _) = generate(5);
         assert_eq!(public_key.message_count(), 5);
+        //Check key doesn't contain any invalid points
         assert!(public_key.validate().is_ok());
         let bytes = public_key.to_bytes();
         assert_eq!(bytes.len(), GroupG1_SIZE * 6 + 4 + GroupG2_SIZE);
+        //Check serialization is working
         let public_key_2 = PublicKey::from_bytes(bytes.as_slice()).unwrap();
         assert_eq!(public_key_2, public_key);
     }
