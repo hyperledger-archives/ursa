@@ -246,7 +246,7 @@ mod tests {
     fn pok_signature_no_revealed_messages() {
         let message_count = 5;
         let messages = FieldElementVector::random(message_count);
-        let (verkey, signkey) = generate(message_count);
+        let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
         let res = sig.verify(messages.as_slice(), &verkey);
@@ -263,7 +263,7 @@ mod tests {
     fn pok_signature_revealed_message() {
         let message_count = 5;
         let messages = FieldElementVector::random(message_count);
-        let (verkey, signkey) = generate(message_count);
+        let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
         let res = sig.verify(messages.as_slice(), &verkey);

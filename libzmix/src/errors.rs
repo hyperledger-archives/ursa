@@ -2,7 +2,7 @@ use commitments::pok_vc::PoKVCError;
 use failure::{Backtrace, Context, Fail};
 
 pub mod prelude {
-    pub use super::{BBSError, BBSErrorExt, BBSErrorKind, PSError};
+    pub use super::{BBSError, BBSErrorExt, BBSErrorKind};
 }
 
 #[derive(Debug, Fail, Clone)]
