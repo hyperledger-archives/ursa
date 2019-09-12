@@ -12,6 +12,19 @@ use amcl_wrapper::{
 use amcl_wrapper::field_elem::FieldElementVector;
 use amcl_wrapper::group_elem_g1::G1Vector;
 
+macro_rules! check_verkey_message {
+    ($statment:expr, $count1:expr, $count2:expr) => {
+        if $statment {
+           return Err(BBSError::from_kind(
+                BBSErrorKind::SigningErrorMessageCountMismatch(
+                    $count1,
+                    $count2,
+                ),
+            ));
+        }
+    };
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Signature {
     pub a: G1,
@@ -54,15 +67,8 @@ impl Signature {
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
-        check_verkey_message(messages, verkey)?;
-        let e = FieldElement::random();
-        let s = FieldElement::random();
-        let b = compute_b_const_time(&G1::new(), verkey, messages, &s, 0);
-        let mut exp = signkey.clone();
-        exp += &e;
-        exp.inverse_mut();
-        let a = b * exp;
-        Ok(Signature { a, e, s })
+        check_verkey_message!(messages.len() == 0, verkey.message_count(), messages.len());
+        Signature::new_with_committed_messages(&G1::new(), messages, signkey, verkey)
     }
 
     // 1 or more messages are captured in `commitment`. The remaining known messages are in `messages`.
@@ -73,14 +79,7 @@ impl Signature {
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
-        if messages.len() >= verkey.message_count() {
-            return Err(BBSError::from_kind(
-                BBSErrorKind::SigningErrorMessageCountMismatch(
-                    verkey.message_count(),
-                    messages.len(),
-                ),
-            ));
-        }
+        check_verkey_message!(messages.len() > verkey.message_count(), verkey.message_count(), messages.len());
         let e = FieldElement::random();
         let s = FieldElement::random();
         let b = compute_b_const_time(
@@ -109,7 +108,7 @@ impl Signature {
 
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
     pub fn verify(&self, messages: &[FieldElement], verkey: &PublicKey) -> Result<bool, BBSError> {
-        check_verkey_message(messages, verkey)?;
+        check_verkey_message!(messages.len() != verkey.message_count(), verkey.message_count(), messages.len());
         let b = compute_b_var_time(&G1::new(), verkey, messages, &self.s, 0);
         let a = (&G2::generator() * &self.e) + &verkey.w;
         Ok(GT::ate_2_pairing(&self.a, &a, &(-&b), &G2::generator()).is_one())
@@ -160,15 +159,6 @@ pub fn compute_b_var_time(
     starting_value + points.multi_scalar_mul_var_time(&scalars).unwrap()
 }
 
-fn check_verkey_message(messages: &[FieldElement], verkey: &PublicKey) -> Result<(), BBSError> {
-    if messages.len() != verkey.message_count() {
-        return Err(BBSError::from_kind(
-            BBSErrorKind::SigningErrorMessageCountMismatch(verkey.message_count(), messages.len()),
-        ));
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::keys::generate;
@@ -195,7 +185,7 @@ mod tests {
         for _ in 0..message_count {
             messages.push(FieldElement::random());
         }
-        let (verkey, signkey) = generate(message_count);
+        let (verkey, signkey) = generate(message_count).unwrap();
 
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
         assert!(res.is_ok());
@@ -211,7 +201,7 @@ mod tests {
         for _ in 0..message_count {
             messages.push(FieldElement::random());
         }
-        let (verkey, signkey) = generate(message_count);
+        let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
         let res = sig.verify(messages.as_slice(), &verkey);
@@ -234,7 +224,7 @@ mod tests {
         for _ in 0..message_count {
             messages.push(FieldElement::random());
         }
-        let (verkey, signkey) = generate(message_count);
+        let (verkey, signkey) = generate(message_count).unwrap();
 
         //User blinds first attribute
         let blinding = FieldElement::random();

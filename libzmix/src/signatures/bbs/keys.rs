@@ -66,7 +66,10 @@ impl PublicKey {
     }
 }
 
-pub fn generate(message_count: usize) -> (PublicKey, SecretKey) {
+pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError> {
+    if message_count == 0 {
+        return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
+    }
     let secret = FieldElement::random();
 
     // XXX: Choosing G2::generator() temporarily. The generator should be a setup parameter in practice
@@ -75,14 +78,14 @@ pub fn generate(message_count: usize) -> (PublicKey, SecretKey) {
     for _ in 0..message_count {
         h.push(G1::random());
     }
-    (
+    Ok((
         PublicKey {
             w,
             h0: G1::random(),
             h,
         },
         secret,
-    )
+    ))
 }
 
 #[cfg(test)]
@@ -91,12 +94,14 @@ mod tests {
 
     #[test]
     fn key_generate() {
+        let res = generate(0);
+        assert!(res.is_err());
         //Check to make sure key has correct size
-        let (public_key, _) = generate(0);
+        let (public_key, _) = generate(1).unwrap();
         let bytes = public_key.to_bytes();
-        assert_eq!(bytes.len(), GroupG1_SIZE + 4 + GroupG2_SIZE);
+        assert_eq!(bytes.len(), GroupG1_SIZE * 2 + 4 + GroupG2_SIZE);
 
-        let (public_key, _) = generate(5);
+        let (public_key, _) = generate(5).unwrap();
         assert_eq!(public_key.message_count(), 5);
         //Check key doesn't contain any invalid points
         assert!(public_key.validate().is_ok());
