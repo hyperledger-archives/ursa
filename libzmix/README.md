@@ -5,21 +5,6 @@ z-mix facilitates
 Multiple existing Hyperledger projects require Zero-Knowledge proofs, e.g., Fabric and Indy. The goal of this library is to provide a single flexible and secure implementation to construct such proofs.
 z-mix is a C callable library but there are also convenience wrappers for various programming languages.
 
-# Initial Committers
-* Manu Drijvers (manudrijvers)
-* Jan Camenisch (jancamenisch)
-* Nathan George (nage)
-* Daniel Hardman (dhh1128)
-* Angelo De Caro (adecaro)
-* Maria Dubovitskaya (dubovitskaya)
-* Jason Law (jasonalaw)
-* Michael Lodder (mikelodder7)
-* Lovesh Harchandani (lovesh)
-
-# Sponsors
-* Nathan George
-* Hart Montgomery
-
 # Spec
 z-mix uses JSON objects to provide a *zero knowledge language (ZKL)* to express
 
