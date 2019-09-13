@@ -1,4 +1,8 @@
 use std::collections::HashMap;
+use amcl_wrapper::field_elem::FieldElement;
+
+pub type SignatureNonce = FieldElement;
+pub type SignatureBlinding = FieldElement;
 
 /*
 Say you want to have an ECDSA signature using curve secp256k1, and the implementation is called
