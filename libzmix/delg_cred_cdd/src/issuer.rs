@@ -385,7 +385,7 @@ impl RootIssuer {
     }
 
     pub fn delegate(
-        mut delegatee_attributes: G1Vector,
+        delegatee_attributes: G1Vector,
         delegatee_vk: OddLevelVerkey,
         sk: &Sigkey,
         setup_params: &Groth1SetupParams,
@@ -491,12 +491,12 @@ mod tests {
             .collect::<Vec<G1>>()
             .into();
         let cred_link_1 = RootIssuer::delegate(
-                attributes_1.clone(),
-                l_1_issuer_vk.clone(),
-                &root_issuer_sk,
-                &params1,
-            )
-            .unwrap();
+            attributes_1.clone(),
+            l_1_issuer_vk.clone(),
+            &root_issuer_sk,
+            &params1,
+        )
+        .unwrap();
 
         assert!(cred_link_1
             .verify(&l_1_issuer_vk, &root_issuer_vk, &params1)
