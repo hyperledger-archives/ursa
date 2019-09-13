@@ -4,10 +4,6 @@
 compile_error!("features `PS_G1G2` and `PS_G2G1` are mutually exclusive");
 
 use amcl_wrapper::extension_field_gt::GT;
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-
-pub type PSMessage = FieldElement;
-pub type PSMessageVector = FieldElementVector;
 
 #[cfg(feature = "PS_G1G2")]
 pub type SignatureGroup = amcl_wrapper::group_elem_g2::G2;
@@ -57,6 +53,5 @@ pub mod prelude {
         ProverCommittingSignatureGroup,
     };
     pub use super::signature::Signature;
-    pub use super::{PSMessage, PSMessageVector};
     pub use super::{SignatureGroup, SignatureGroupVec};
 }

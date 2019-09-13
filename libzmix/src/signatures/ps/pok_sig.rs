@@ -307,7 +307,7 @@ mod tests {
     fn test_sig_committed_messages() {
         let count_msgs = 5;
         let committed_msgs = 2;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let blinding = FieldElement::random();
 
@@ -358,7 +358,7 @@ mod tests {
     #[test]
     fn test_PoK_sig() {
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
         assert!(sig.verify(msgs.as_slice(), &vk).unwrap());
@@ -396,7 +396,7 @@ mod tests {
     #[test]
     fn test_PoK_sig_reveal_messages() {
         let count_msgs = 10;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
         assert!(sig.verify(msgs.as_slice(), &vk).unwrap());
@@ -469,7 +469,7 @@ mod tests {
     #[test]
     fn test_PoK_sig_with_unequal_messages_and_verkey_elements() {
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_PoK_sig_with_incorrect_reveal_indices() {
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
@@ -502,7 +502,7 @@ mod tests {
     #[test]
     fn test_PoK_sig_with_verify_proof_error() {
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();
 
@@ -628,7 +628,7 @@ mod tests {
         // Measure time to prove knowledge of signatures, both generation and verification of proof
         let iterations = 100;
         let count_msgs = 10;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
 
         let msgs = FieldElementVector::random(count_msgs);
         let sig = Signature::new(msgs.as_slice(), &sk, &vk).unwrap();

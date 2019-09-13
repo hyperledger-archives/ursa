@@ -1,8 +1,3 @@
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-
-pub type BBSMessage = FieldElement;
-pub type BBSMessageVector = FieldElementVector;
-
 pub mod keys;
 pub mod pok_sig;
 pub mod signature;
@@ -13,7 +8,6 @@ pub mod prelude {
         PoKOfSignature, PoKOfSignatureProof, ProofG1, ProverCommittedG1, ProverCommittingG1,
     };
     pub use super::signature::Signature;
-    pub use super::{BBSMessage, BBSMessageVector};
 }
 
 // TODO: Add "setup" to generate g1 and g2 and use them in-place of G1::generator() and G2::generator()
