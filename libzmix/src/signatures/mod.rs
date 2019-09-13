@@ -38,10 +38,10 @@ trait SignatureScheme {
     fn verify(&self, signature: &[u8], message: &[u8], ver_key: &[u8]) -> bool;
 }
 
-#[cfg(any(feature = "PS_G1G2", feature = "PS_G2G1"))]
-pub mod ps;
 #[cfg(feature = "bbs")]
 pub mod bbs;
+#[cfg(any(feature = "PS_G1G2", feature = "PS_G2G1"))]
+pub mod ps;
 
 /// Convenience class for handling a new signature with committed messages by the User
 /// and the Signer. The User selects messages to be blinded that the Signer will include in the

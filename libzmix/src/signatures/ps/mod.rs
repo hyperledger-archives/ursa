@@ -4,6 +4,10 @@
 compile_error!("features `PS_G1G2` and `PS_G2G1` are mutually exclusive");
 
 use amcl_wrapper::extension_field_gt::GT;
+use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
+
+pub type PSMessage = FieldElement;
+pub type PSMessageVector = FieldElementVector;
 
 #[cfg(feature = "PS_G1G2")]
 pub type SignatureGroup = amcl_wrapper::group_elem_g2::G2;
@@ -45,3 +49,14 @@ pub mod errors;
 pub mod keys;
 pub mod pok_sig;
 pub mod signature;
+
+pub mod prelude {
+    pub use super::keys::{keygen as generate, Sigkey as SecretKey, Verkey as PublicKey};
+    pub use super::pok_sig::{
+        PoKOfSignature, PoKOfSignatureProof, ProofSignatureGroup, ProverCommittedSignatureGroup,
+        ProverCommittingSignatureGroup,
+    };
+    pub use super::signature::Signature;
+    pub use super::{PSMessage, PSMessageVector};
+    pub use super::{SignatureGroup, SignatureGroupVec};
+}
