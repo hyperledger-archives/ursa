@@ -192,15 +192,12 @@ mod tests {
     #[test]
     fn gen_signature() {
         let message_count = 5;
-        let mut messages = Vec::new();
-        for _ in 0..message_count {
-            messages.push(FieldElement::random());
-        }
+        let messages = FieldElementVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
         assert!(res.is_ok());
-        messages = Vec::new();
+        let messages = Vec::new();
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
         assert!(res.is_err());
     }
@@ -208,10 +205,7 @@ mod tests {
     #[test]
     fn signature_validation() {
         let message_count = 5;
-        let mut messages = Vec::new();
-        for _ in 0..message_count {
-            messages.push(FieldElement::random());
-        }
+        let messages = FieldElementVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -219,7 +213,7 @@ mod tests {
         assert!(res.is_ok());
         assert!(res.unwrap());
 
-        messages = Vec::new();
+        let mut messages = Vec::new();
         for _ in 0..message_count {
             messages.push(FieldElement::random());
         }
@@ -231,10 +225,7 @@ mod tests {
     #[test]
     fn signature_committed_messages() {
         let message_count = 4;
-        let mut messages = Vec::new();
-        for _ in 0..message_count {
-            messages.push(FieldElement::random());
-        }
+        let messages = FieldElementVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         //User blinds first attribute
@@ -265,8 +256,12 @@ mod tests {
         assert!(proof
             .verify(bases.as_slice(), &commitment, &challenge_hash)
             .unwrap());
-        let sig =
-            Signature::new_with_committed_messages(&commitment, &messages[1..], &signkey, &verkey);
+        let sig = Signature::new_with_committed_messages(
+            &commitment,
+            &messages.as_slice()[1..],
+            &signkey,
+            &verkey,
+        );
         assert!(sig.is_ok());
         let sig = sig.unwrap();
         //First test should fail since the signature is blinded
