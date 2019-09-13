@@ -32,8 +32,8 @@ impl Verkey {
 }
 
 pub fn keygen(count_messages: usize, label: &[u8]) -> (Verkey, Sigkey) {
-    let g = SignatureGroup::from_msg_hash(&[label, " : g".as_bytes()].concat());
-    let g_tilde = OtherGroup::from_msg_hash(&[label, " : g_tilde".as_bytes()].concat());
+    let g = SignatureGroup::from_msg_hash(&[label, b" : g"].concat());
+    let g_tilde = OtherGroup::from_msg_hash(&[label, b" : g_tilde"].concat());
     let x = FieldElement::random();
     let mut Y = vec![];
     let mut Y_tilde = vec![];

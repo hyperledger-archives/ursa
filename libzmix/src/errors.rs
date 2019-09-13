@@ -55,8 +55,7 @@ impl BBSError {
     }
 
     pub fn kind(&self) -> BBSErrorKind {
-        let c = self.inner.get_context().clone();
-        c
+        self.inner.get_context().clone()
     }
 }
 
