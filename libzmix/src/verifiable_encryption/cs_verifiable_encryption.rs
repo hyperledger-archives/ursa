@@ -490,7 +490,6 @@ fn hash(u: &BigNumber, e: &[BigNumber], label: &[u8]) -> UrsaCryptoResult<BigNum
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::time::{Duration, Instant};
 
     #[test]
     fn paillier_abs() {
@@ -650,7 +649,7 @@ mod test {
         // Message blinding are m_tilde values and they will be created by the main proving protocol not this verifiable encryption module
         let blindings = vec![keypair.pub_key.n.rand_range().unwrap()];
 
-        let start = Instant::now();
+        let start = ::std::time::Instant::now();
         // Proving starts, create t values
         let (ciphertext, blindings_ciphertext, r, r_tilde) =
             encrypt_and_prove_phase_1(&messages, &blindings, "test2".as_bytes(), &keypair.pub_key)
@@ -681,7 +680,7 @@ mod test {
             )
             .unwrap();
 
-        let start = Instant::now();
+        let start = ::std::time::Instant::now();
         // Next part is done by verifier
         let blindings_ciphertext_1 = reconstruct_blindings_ciphertext(
             &ciphertext,
@@ -780,7 +779,7 @@ mod test {
             .map(|_| keypair.pub_key.n.rand_range().unwrap())
             .collect();
 
-        let start = Instant::now();
+        let start = ::std::time::Instant::now();
         let (ciphertext, blindings_ciphertext, r, r_tilde) =
             encrypt_and_prove_phase_1(&messages, &blindings, "test2".as_bytes(), &keypair.pub_key)
                 .unwrap();
@@ -812,7 +811,7 @@ mod test {
             m_hats.push(m_hat);
         }
 
-        let start = Instant::now();
+        let start = ::std::time::Instant::now();
         let blindings_ciphertext_1 = reconstruct_blindings_ciphertext(
             &ciphertext,
             &m_hats,

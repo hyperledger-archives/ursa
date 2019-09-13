@@ -2,12 +2,12 @@ extern crate amcl_wrapper;
 extern crate zmix;
 
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use amcl_wrapper::group_elem::GroupElement;
 use std::collections::{HashMap, HashSet};
 use zmix::signatures::ps::keys::keygen;
 use zmix::signatures::ps::pok_sig::*;
 use zmix::signatures::ps::signature::Signature;
-use zmix::signatures::ps::{OtherGroupVec, SignatureGroup};
+use zmix::signatures::ps::SignatureGroup;
 
 #[test]
 fn test_scenario_1() {
@@ -23,9 +23,9 @@ fn test_scenario_1() {
     // User commits to some messages
     let mut comm = SignatureGroup::new();
     for i in 0..committed_msgs {
-        comm += (&vk.Y[i] * &msgs[i]);
+        comm += &vk.Y[i] * &msgs[i];
     }
-    comm += (&vk.g * &blinding);
+    comm += &vk.g * &blinding;
 
     {
         // User and signer engage in a proof of knowledge for the above commitment `comm`
