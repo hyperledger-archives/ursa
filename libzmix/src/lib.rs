@@ -1,8 +1,6 @@
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
+//#[macro_use]
+//extern crate lazy_static;
 extern crate amcl_wrapper;
-#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate serde;
