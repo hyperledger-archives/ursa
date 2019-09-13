@@ -137,7 +137,7 @@ mod tests {
     fn test_signature_all_known_messages() {
         for i in 0..10 {
             let count_msgs = (i % 5) + 1;
-            let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
             let msgs = FieldElementVector::random(count_msgs);
             let msgs = msgs.as_slice();
             let sig = Signature::new(msgs, &sk, &vk).unwrap();
@@ -149,7 +149,7 @@ mod tests {
     fn test_signature_single_committed_message() {
         for _ in 0..10 {
             let count_msgs = 1;
-            let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
             let msg = FieldElement::random();
             let blinding = FieldElement::random();
 
@@ -166,7 +166,7 @@ mod tests {
     fn test_signature_many_committed_messages() {
         for i in 0..10 {
             let count_msgs = (i % 5) + 1;
-            let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
             let msgs = FieldElementVector::random(count_msgs);
             let blinding = FieldElement::random();
 
@@ -187,7 +187,7 @@ mod tests {
         for i in 0..10 {
             let count_msgs = (i % 6) + 1;
             let committed_msgs = (i % count_msgs) + 1;
-            let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
             let msgs = FieldElementVector::random(count_msgs);
             let blinding = FieldElement::random();
 
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_sig_with_unequal_messages_and_verkey_elements() {
-        let (sk, vk) = keygen(5, "test".as_bytes());
+        let (vk, sk) = keygen(5, "test".as_bytes());
         let msgs_1 = FieldElementVector::random(6);
         assert!(Signature::new(msgs_1.as_slice(), &sk, &vk).is_err());
 
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_committed_sig_with_incorrect_no_of_messages_and_verkey_elements() {
-        let (sk, vk) = keygen(5, "test".as_bytes());
+        let (vk, sk) = keygen(5, "test".as_bytes());
         let msgs_1 = FieldElementVector::random(5);
         let blinding = FieldElement::random();
 
@@ -266,7 +266,7 @@ mod tests {
         let iterations = 100;
         let count_msgs = 10;
         let committed_msgs = 3;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
         let mut total_signing = Duration::new(0, 0);
         let mut total_verifying = Duration::new(0, 0);
         for _ in 0..iterations {

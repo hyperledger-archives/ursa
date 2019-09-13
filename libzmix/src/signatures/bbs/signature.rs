@@ -1,6 +1,6 @@
 use super::super::SignatureBlinding;
 use super::keys::{PublicKey, SecretKey};
-use super::BBSMessage;
+use super::super::SignatureMessage;
 use crate::errors::prelude::*;
 use amcl_wrapper::{
     constants::{GroupG1_SIZE, MODBYTES},
@@ -62,7 +62,7 @@ impl Signature {
 
     // No committed messages, All messages known to signer.
     pub fn new(
-        messages: &[BBSMessage],
+        messages: &[SignatureMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
@@ -74,7 +74,7 @@ impl Signature {
     // This is a blind signature.
     pub fn new_with_committed_messages(
         commitment: &G1,
-        messages: &[BBSMessage],
+        messages: &[SignatureMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
@@ -114,7 +114,7 @@ impl Signature {
     }
 
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
-    pub fn verify(&self, messages: &[BBSMessage], verkey: &PublicKey) -> Result<bool, BBSError> {
+    pub fn verify(&self, messages: &[SignatureMessage], verkey: &PublicKey) -> Result<bool, BBSError> {
         check_verkey_message!(
             messages.len() != verkey.message_count(),
             verkey.message_count(),

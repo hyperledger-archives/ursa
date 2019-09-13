@@ -1,13 +1,10 @@
 extern crate amcl_wrapper;
 extern crate zmix;
 
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
 use std::collections::{HashMap, HashSet};
-use zmix::signatures::ps::keys::keygen;
-use zmix::signatures::ps::pok_sig::*;
-use zmix::signatures::ps::signature::Signature;
-use zmix::signatures::ps::SignatureGroup;
+use zmix::signatures::prelude::*;
+use zmix::signatures::ps::prelude::*;
 
 #[test]
 fn test_scenario_1() {
@@ -16,9 +13,9 @@ fn test_scenario_1() {
     // The user also reveals to the verifier some of the messages.
     let count_msgs = 10;
     let committed_msgs = 2;
-    let (sk, vk) = keygen(count_msgs, "test".as_bytes());
-    let msgs = FieldElementVector::random(count_msgs);
-    let blinding = FieldElement::random();
+    let (vk, sk) = generate(count_msgs, "test".as_bytes());
+    let msgs = SignatureMessageVector::random(count_msgs);
+    let blinding = SignatureMessage::random();
 
     // User commits to some messages
     let mut comm = SignatureGroup::new();
@@ -30,7 +27,7 @@ fn test_scenario_1() {
     {
         // User and signer engage in a proof of knowledge for the above commitment `comm`
         let mut bases = Vec::<SignatureGroup>::new();
-        let mut hidden_msgs = Vec::<FieldElement>::new();
+        let mut hidden_msgs = Vec::<SignatureMessage>::new();
         for i in 0..committed_msgs {
             bases.push(vk.Y[i].clone());
             hidden_msgs.push(msgs[i].clone());
@@ -80,7 +77,7 @@ fn test_scenario_1() {
     )
     .unwrap();
 
-    let chal = FieldElement::from_msg_hash(&pok.to_bytes());
+    let chal = SignatureMessage::from_msg_hash(&pok.to_bytes());
 
     let proof = pok.gen_proof(&chal).unwrap();
 

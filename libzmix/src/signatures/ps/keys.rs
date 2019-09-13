@@ -31,7 +31,7 @@ impl Verkey {
     }
 }
 
-pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
+pub fn keygen(count_messages: usize, label: &[u8]) -> (Verkey, Sigkey) {
     let g = SignatureGroup::from_msg_hash(&[label, " : g".as_bytes()].concat());
     let g_tilde = OtherGroup::from_msg_hash(&[label, " : g_tilde".as_bytes()].concat());
     let x = FieldElement::random();
@@ -47,7 +47,6 @@ pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
         Y_tilde.push(&g_tilde * &y);
     }
     (
-        Sigkey { X },
         Verkey {
             g,
             g_tilde,
@@ -55,6 +54,7 @@ pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
             Y,
             Y_tilde,
         },
+        Sigkey { X },
     )
 }
 
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_keygen() {
         let count_msgs = 5;
-        let (_, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, _) = keygen(count_msgs, "test".as_bytes());
         assert!(vk.validate().is_ok());
         assert_eq!(vk.Y.len(), count_msgs);
         assert_eq!(vk.Y_tilde.len(), count_msgs);
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_verkey_validate() {
-        let (_, vk) = keygen(5, "test".as_bytes());
+        let (vk, _) = keygen(5, "test".as_bytes());
         assert!(vk.validate().is_ok());
 
         let mut vk_1 = vk.clone();

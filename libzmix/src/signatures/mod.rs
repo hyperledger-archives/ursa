@@ -1,6 +1,13 @@
-use amcl_wrapper::field_elem::FieldElement;
+use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use std::collections::HashMap;
 
+
+pub mod prelude {
+    pub use super::{SignatureMessage, SignatureBlinding, SignatureNonce, SignatureMessageVector};
+}
+
+pub type SignatureMessage = FieldElement;
+pub type SignatureMessageVector = FieldElementVector;
 pub type SignatureNonce = FieldElement;
 pub type SignatureBlinding = FieldElement;
 
