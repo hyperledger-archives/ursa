@@ -315,9 +315,9 @@ mod tests {
         // XXX: In production always use multi-scalar multiplication
         let mut comm = SignatureGroup::new();
         for i in 0..committed_msgs {
-            comm += (&vk.Y[i] * &msgs[i]);
+            comm += &vk.Y[i] * &msgs[i];
         }
-        comm += (&vk.g * &blinding);
+        comm += &vk.g * &blinding;
 
         // User and signer engage in a proof of knowledge for the above commitment `comm`
         let mut bases = Vec::<SignatureGroup>::new();

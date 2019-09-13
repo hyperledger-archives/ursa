@@ -242,7 +242,7 @@ mod tests {
 
         //User creates a random commitment, computes challenges and response. The proof of knowledge consists of a commitment and responses
         //User and signer engage in a proof of knowledge for `commitment`
-        let mut commitment = &verkey.h0 * &blinding + &verkey.h[0] * &messages[0];
+        let commitment = &verkey.h0 * &blinding + &verkey.h[0] * &messages[0];
 
         let mut committing = ProverCommittingG1::new();
         committing.commit(&verkey.h0, None);

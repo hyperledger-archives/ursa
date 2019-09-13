@@ -291,7 +291,7 @@ mod tests {
     use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 
     #[test]
-    fn test_PoK_VC_G1() {
+    fn test_pok_vc_g1() {
         // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
         impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
 
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_PoK_VC_G2() {
+    fn test_pok_vc_g2() {
         // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
         impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector);
 

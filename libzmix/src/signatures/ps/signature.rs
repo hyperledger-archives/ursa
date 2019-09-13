@@ -173,9 +173,9 @@ mod tests {
             // XXX: In production always use multi-scalar multiplication
             let mut comm = SignatureGroup::new();
             for i in 0..count_msgs {
-                comm += (&vk.Y[i] * &msgs[i]);
+                comm += &vk.Y[i] * &msgs[i];
             }
-            comm += (&vk.g * &blinding);
+            comm += &vk.g * &blinding;
             let sig_blinded = Signature::new_with_committed_messages(&comm, &[], &sk, &vk).unwrap();
             let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
             assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
@@ -194,9 +194,9 @@ mod tests {
             // XXX: In production always use multi-scalar multiplication
             let mut comm = SignatureGroup::new();
             for i in 0..committed_msgs {
-                comm += (&vk.Y[i] * &msgs[i]);
+                comm += &vk.Y[i] * &msgs[i];
             }
-            comm += (&vk.g * &blinding);
+            comm += &vk.g * &blinding;
 
             let sig_blinded = Signature::new_with_committed_messages(
                 &comm,
@@ -237,9 +237,9 @@ mod tests {
 
         let mut comm = SignatureGroup::new();
         for i in 0..5 {
-            comm += (&vk.Y[i] * &msgs_1[i]);
+            comm += &vk.Y[i] * &msgs_1[i];
         }
-        comm += (&vk.g * &blinding);
+        comm += &vk.g * &blinding;
         let msgs_2 = FieldElementVector::random(6);
         assert!(
             Signature::new_with_committed_messages(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
@@ -275,9 +275,9 @@ mod tests {
             // XXX: In production always use multi-scalar multiplication
             let mut comm = SignatureGroup::new();
             for i in 0..committed_msgs {
-                comm += (&vk.Y[i] * &msgs[i]);
+                comm += &vk.Y[i] * &msgs[i];
             }
-            comm += (&vk.g * &blinding);
+            comm += &vk.g * &blinding;
 
             let start = Instant::now();
             let sig_blinded = Signature::new_with_committed_messages(
