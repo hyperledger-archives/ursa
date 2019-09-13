@@ -1,6 +1,6 @@
 use super::super::SignatureBlinding;
-use super::keys::{PublicKey, SecretKey};
 use super::super::SignatureMessage;
+use super::keys::{PublicKey, SecretKey};
 use crate::errors::prelude::*;
 use amcl_wrapper::{
     constants::{GroupG1_SIZE, MODBYTES},
@@ -114,7 +114,11 @@ impl Signature {
     }
 
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
-    pub fn verify(&self, messages: &[SignatureMessage], verkey: &PublicKey) -> Result<bool, BBSError> {
+    pub fn verify(
+        &self,
+        messages: &[SignatureMessage],
+        verkey: &PublicKey,
+    ) -> Result<bool, BBSError> {
         check_verkey_message!(
             messages.len() != verkey.message_count(),
             verkey.message_count(),
