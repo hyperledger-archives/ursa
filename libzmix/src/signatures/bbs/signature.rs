@@ -1,4 +1,6 @@
+use super::super::SignatureBlinding;
 use super::keys::{PublicKey, SecretKey};
+use super::BBSMessage;
 use crate::errors::prelude::*;
 use amcl_wrapper::{
     constants::{GroupG1_SIZE, MODBYTES},
@@ -15,11 +17,8 @@ use amcl_wrapper::group_elem_g1::G1Vector;
 macro_rules! check_verkey_message {
     ($statment:expr, $count1:expr, $count2:expr) => {
         if $statment {
-           return Err(BBSError::from_kind(
-                BBSErrorKind::SigningErrorMessageCountMismatch(
-                    $count1,
-                    $count2,
-                ),
+            return Err(BBSError::from_kind(
+                BBSErrorKind::SigningErrorMessageCountMismatch($count1, $count2),
             ));
         }
     };
@@ -63,7 +62,7 @@ impl Signature {
 
     // No committed messages, All messages known to signer.
     pub fn new(
-        messages: &[FieldElement],
+        messages: &[BBSMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
@@ -75,11 +74,15 @@ impl Signature {
     // This is a blind signature.
     pub fn new_with_committed_messages(
         commitment: &G1,
-        messages: &[FieldElement],
+        messages: &[BBSMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
-        check_verkey_message!(messages.len() > verkey.message_count(), verkey.message_count(), messages.len());
+        check_verkey_message!(
+            messages.len() > verkey.message_count(),
+            verkey.message_count(),
+            messages.len()
+        );
         let e = FieldElement::random();
         let s = FieldElement::random();
         let b = compute_b_const_time(
@@ -96,9 +99,13 @@ impl Signature {
         Ok(Signature { a, e, s })
     }
 
+    pub fn generate_blinding() -> SignatureBlinding {
+        SignatureBlinding::random()
+    }
+
     // Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
     // Takes the blinding used in the commitment.
-    pub fn get_unblinded_signature(&self, blinding: &FieldElement) -> Self {
+    pub fn get_unblinded_signature(&self, blinding: &SignatureBlinding) -> Self {
         Signature {
             a: self.a.clone(),
             s: self.s.clone() + blinding,
@@ -107,8 +114,12 @@ impl Signature {
     }
 
     // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
-    pub fn verify(&self, messages: &[FieldElement], verkey: &PublicKey) -> Result<bool, BBSError> {
-        check_verkey_message!(messages.len() != verkey.message_count(), verkey.message_count(), messages.len());
+    pub fn verify(&self, messages: &[BBSMessage], verkey: &PublicKey) -> Result<bool, BBSError> {
+        check_verkey_message!(
+            messages.len() != verkey.message_count(),
+            verkey.message_count(),
+            messages.len()
+        );
         let b = compute_b_var_time(&G1::new(), verkey, messages, &self.s, 0);
         let a = (&G2::generator() * &self.e) + &verkey.w;
         Ok(GT::ate_2_pairing(&self.a, &a, &(-&b), &G2::generator()).is_one())
@@ -227,7 +238,7 @@ mod tests {
         let (verkey, signkey) = generate(message_count).unwrap();
 
         //User blinds first attribute
-        let blinding = FieldElement::random();
+        let blinding = Signature::generate_blinding();
 
         //User creates a random commitment, computes challenges and response. The proof of knowledge consists of a commitment and responses
         //User and signer engage in a proof of knowledge for `commitment`
