@@ -32,8 +32,7 @@ pub struct PoKVCError {
 
 impl PoKVCError {
     pub fn kind(&self) -> PoKVCErrorKind {
-        let c = self.inner.get_context().clone();
-        c
+        self.inner.get_context().clone()
     }
 
     pub fn from_kind(kind: PoKVCErrorKind) -> Self {
@@ -146,6 +145,12 @@ macro_rules! impl_PoK_VC {
                     .into());
                 }
                 Ok((&self.gens[idx], &self.blindings[idx]))
+            }
+        }
+
+        impl Default for $ProverCommitting {
+            fn default() -> Self {
+                Self::new()
             }
         }
 

@@ -83,7 +83,7 @@ impl PoKOfSignature {
                     }
                     .into());
                 }
-                b.iter().map(|f| Some(f)).collect()
+                b.iter().map(Some).collect()
             }
             None => (0..(messages.len() - revealed_msg_indices.len()))
                 .map(|_| None)

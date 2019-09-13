@@ -66,7 +66,7 @@ impl Signature {
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
-        check_verkey_message!(messages.len() == 0, verkey.message_count(), messages.len());
+        check_verkey_message!(messages.is_empty(), verkey.message_count(), messages.len());
         Signature::new_with_committed_messages(&G1::new(), messages, signkey, verkey)
     }
 

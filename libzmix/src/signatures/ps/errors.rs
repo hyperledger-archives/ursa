@@ -36,8 +36,7 @@ pub struct PSError {
 
 impl PSError {
     pub fn kind(&self) -> PSErrorKind {
-        let c = self.inner.get_context().clone();
-        c
+        self.inner.get_context().clone()
     }
 
     pub fn from_kind(kind: PSErrorKind) -> Self {
