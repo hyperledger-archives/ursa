@@ -1,5 +1,5 @@
-use crate::errors::{DelgError, DelgResult};
-use crate::groth_sig::{
+use super::errors::{DelgError, DelgResult};
+use super::groth_sig::{
     Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig, Groth2Verkey,
     GrothS1, GrothS2, GrothSigkey,
 };

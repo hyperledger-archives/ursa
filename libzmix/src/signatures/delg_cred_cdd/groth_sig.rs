@@ -1,4 +1,4 @@
-use crate::errors::{DelgError, DelgResult};
+use super::errors::{DelgError, DelgResult};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};

@@ -1,8 +1,8 @@
 // A presenter is an entity holding a CredChain which does proof of attribute tokens
 
-use crate::errors::{DelgError, DelgResult};
-use crate::groth_sig::{Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig};
-use crate::issuer::{CredChain, EvenLevelVerkey, OddLevelVerkey};
+use super::errors::{DelgError, DelgResult};
+use super::groth_sig::{Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig};
+use super::issuer::{CredChain, EvenLevelVerkey, OddLevelVerkey};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -1343,12 +1343,12 @@ fn binary_scalar_mul_g2(g2: &G2, h2: &G2, r1: &FieldElement, r2: &FieldElement) 
 
 #[cfg(test)]
 mod tests {
+    use super::super::groth_sig::{GrothS1, GrothS2};
+    use super::super::issuer::{EvenLevelIssuer, OddLevelIssuer};
     use super::*;
-    // For benchmarking
-    use crate::groth_sig::{GrothS1, GrothS2};
-    use crate::issuer::{EvenLevelIssuer, OddLevelIssuer};
     use amcl_wrapper::group_elem_g1::G1Vector;
     use amcl_wrapper::group_elem_g2::G2Vector;
+    // For benchmarking
     use std::time::{Duration, Instant};
 
     #[test]
