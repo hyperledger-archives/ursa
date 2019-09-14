@@ -83,8 +83,9 @@ impl Signature {
         // pr = X_tilde * Y_tilde[0]^messages[0] * Y_tilde[1]^messages[1] * .... Y_tilde[i]^messages[i]
         let pr = points.multi_scalar_mul_var_time(&scalars).unwrap();
         // check e(sigma_1, pr) == e(sigma_2, g_tilde) => e(sigma_1, pr) * e(sigma_2, g_tilde)^-1 == 1
-        let neg_g_tilde = verkey.g_tilde.negation();
-        let res = ate_2_pairing(&self.sigma_1, &pr, &self.sigma_2, &neg_g_tilde);
+        // e(sigma_1, pr) * e(sigma_2, g_tilde)^-1 = e(sigma_1, pr) * e(sigma_2^-1, g_tilde), if precomputation can be used, then
+        // inverse in sigma_2 can be avoided since inverse of g_tilde can be precomputed
+        let res = ate_2_pairing(&self.sigma_1, &pr, &(-&self.sigma_2), &verkey.g_tilde);
         Ok(res.is_one())
     }
 

@@ -31,7 +31,9 @@ As section 6.2 describes, for proving knowledge of a signature, the signature si
 transformed into a sequential aggregate signature with extra message t for public key g_tilde (and secret key 1).
 1. Say the signature sigma is transformed to sigma_prime = (sigma_prime_1, sigma_prime_2) like step 1 in 6.2
 1. The prover then sends sigma_prime and the value J = X_tilde * Y_tilde_1^m1 * Y_tilde_2^m2 * ..... * g_tilde^t and the proof J is formed correctly.
-The verifier now checks whether e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde)
+The verifier now checks whether e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde). Since X_tilde is known,
+the verifier can send following a modified value J' where J' = Y_tilde_1^m_1 * Y_tilde_2^m_2 * ..... * g_tilde^t with the proof of knowledge of elements of J'.
+The verifier will then check the pairing e(sigma_prime_1, J'*X_tilde) == e(sigma_prime_2, g_tilde).
 
 To reveal some of the messages from the signature but not all, in above protocol, construct J to be of the hidden values only, the verifier will
 then add the revealed values (raised to the respective generators) to get a final J which will then be used in the pairing check.
@@ -95,10 +97,10 @@ impl PoKOfSignature {
         let sigma_prime_1 = &sig.sigma_1 * &r;
         let sigma_prime_2 = (&sig.sigma_2 + (&sig.sigma_1 * &t)) * &r;
 
-        let mut bases = OtherGroupVec::with_capacity(vk.Y_tilde.len() + 2);
-        let mut exponents = FieldElementVector::with_capacity(vk.Y_tilde.len() + 2);
-        bases.push(vk.X_tilde.clone());
-        exponents.push(FieldElement::one());
+        // +1 for `t`
+        let hidden_msg_count = vk.Y_tilde.len() - revealed_msg_indices.len() + 1;
+        let mut bases = OtherGroupVec::with_capacity(hidden_msg_count);
+        let mut exponents = FieldElementVector::with_capacity(hidden_msg_count);
         bases.push(vk.g_tilde.clone());
         exponents.push(t.clone());
         for i in 0..vk.Y_tilde.len() {
@@ -108,12 +110,11 @@ impl PoKOfSignature {
             bases.push(vk.Y_tilde[i].clone());
             exponents.push(messages[i].clone());
         }
-        // J = X_tilde * Y_tilde_1^m1 * Y_tilde_2^m2 * ..... * g_tilde^t
+        // Prove knowledge of m_1, m_2, ... for all hidden m_i and t in J = Y_tilde_1^m_1 * Y_tilde_2^m_2 * ..... * g_tilde^t
         let J = bases.multi_scalar_mul_const_time(&exponents).unwrap();
 
         // For proving knowledge of messages in J.
-        // Choose the blindings for first X_tilde and g_tilde randomly
-        blindings.insert(0, None);
+        // Choose blinding for g_tilde randomly
         blindings.insert(0, None);
         let mut committing = ProverCommittingOtherGroup::new();
         for b in bases.as_slice() {
@@ -160,8 +161,9 @@ impl PoKOfSignatureProof {
         challenge: &FieldElement,
     ) -> Result<bool, PSError> {
         vk.validate()?;
-        let mut bases = OtherGroupVec::with_capacity(vk.Y_tilde.len() + 2);
-        bases.push(vk.X_tilde.clone());
+        // +1 for `t`
+        let hidden_msg_count = vk.Y_tilde.len() - revealed_msgs.len() + 1;
+        let mut bases = OtherGroupVec::with_capacity(hidden_msg_count);
         bases.push(vk.g_tilde.clone());
         for i in 0..vk.Y_tilde.len() {
             if revealed_msgs.contains_key(&i) {
@@ -172,8 +174,7 @@ impl PoKOfSignatureProof {
         if !self.proof_vc.verify(bases.as_slice(), &self.J, challenge)? {
             return Ok(false);
         }
-        // e(sigma_prime_1, J) == e(sigma_prime_2, g_tilde) => e(sigma_prime_1, J) * e(sigma_prime_2, g_tilde^-1) == 1
-        let neg_g_tilde = vk.g_tilde.negation();
+        // e(sigma_prime_1, J*X_tilde) == e(sigma_prime_2, g_tilde) => e(sigma_prime_1, J*X_tilde) * e(sigma_prime_2^-1, g_tilde) == 1
         let mut j;
         let J = if revealed_msgs.is_empty() {
             &self.J
@@ -188,7 +189,13 @@ impl PoKOfSignatureProof {
             j += b.multi_scalar_mul_var_time(&e).unwrap();
             &j
         };
-        let res = ate_2_pairing(&self.sig.sigma_1, J, &self.sig.sigma_2, &neg_g_tilde);
+        // Slight optimization possible by precomputing inverse of g_tilde and storing to avoid inverse of sig.sigma_2
+        let res = ate_2_pairing(
+            &self.sig.sigma_1,
+            &(J + &vk.X_tilde),
+            &(-&self.sig.sigma_2),
+            &vk.g_tilde,
+        );
         Ok(res.is_one())
     }
 }
