@@ -508,6 +508,110 @@ mod tests {
     }
 
     #[test]
+    fn test_PoK_multiple_sigs() {
+        // Prove knowledge of multiple signatures together (using the same challenge)
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+
+        let msgs_1 = FieldElementVector::random(count_msgs);
+        let sig_1 = Signature::new(msgs_1.as_slice(), &sk, &vk).unwrap();
+        assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
+
+        let msgs_2 = FieldElementVector::random(count_msgs);
+        let sig_2 = Signature::new(msgs_2.as_slice(), &sk, &vk).unwrap();
+        assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
+
+        let pok_1 =
+            PoKOfSignature::init(&sig_1, &vk, msgs_1.as_slice(), None, HashSet::new()).unwrap();
+        let pok_2 =
+            PoKOfSignature::init(&sig_2, &vk, msgs_2.as_slice(), None, HashSet::new()).unwrap();
+
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut pok_1.to_bytes());
+        chal_bytes.append(&mut pok_2.to_bytes());
+
+        let chal = FieldElement::from_msg_hash(&chal_bytes);
+
+        let proof_1 = pok_1.gen_proof(&chal).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal).unwrap();
+
+        assert!(proof_1.verify(&vk, HashMap::new(), &chal).unwrap());
+        assert!(proof_2.verify(&vk, HashMap::new(), &chal).unwrap());
+    }
+
+    #[test]
+    fn test_PoK_multiple_sigs_with_same_msg() {
+        // Prove knowledge of multiple signatures and the equality of a specific message under both signatures.
+        // Knowledge of 2 signatures and their corresponding messages is being proven.
+        // 2nd message in the 1st signature and 5th message in the 2nd signature are to be proven equal without revealing them
+
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+
+        let same_msg = FieldElement::random();
+        let mut msgs_1 = FieldElementVector::random(count_msgs - 1);
+        msgs_1.insert(1, same_msg.clone());
+        let sig_1 = Signature::new(msgs_1.as_slice(), &sk, &vk).unwrap();
+        assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
+
+        let mut msgs_2 = FieldElementVector::random(count_msgs - 1);
+        msgs_2.insert(4, same_msg.clone());
+        let sig_2 = Signature::new(msgs_2.as_slice(), &sk, &vk).unwrap();
+        assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
+
+        // A particular message is same
+        assert_eq!(msgs_1[1], msgs_2[4]);
+
+        let same_blinding = FieldElement::random();
+
+        let mut blindings_1 = FieldElementVector::random(count_msgs - 1);
+        blindings_1.insert(1, same_blinding.clone());
+
+        let mut blindings_2 = FieldElementVector::random(count_msgs - 1);
+        blindings_2.insert(4, same_blinding.clone());
+
+        // Blinding for the same message is kept same
+        assert_eq!(blindings_1[1], blindings_2[4]);
+
+        let pok_1 = PoKOfSignature::init(
+            &sig_1,
+            &vk,
+            msgs_1.as_slice(),
+            Some(blindings_1.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+        let pok_2 = PoKOfSignature::init(
+            &sig_2,
+            &vk,
+            msgs_2.as_slice(),
+            Some(blindings_2.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut pok_1.to_bytes());
+        chal_bytes.append(&mut pok_2.to_bytes());
+
+        let chal = FieldElement::from_msg_hash(&chal_bytes);
+
+        let proof_1 = pok_1.gen_proof(&chal).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal).unwrap();
+
+        // Response for the same message should be same (this check is made by the verifier)
+        // 1 added to the index, since 0th index is reserved for randomization (`t`)
+        // XXX: Does adding a `get_resp_for_message` to `proof` make sense to abstract this detail of +1.
+        assert_eq!(
+            proof_1.proof_vc.responses[1 + 1],
+            proof_2.proof_vc.responses[1 + 4]
+        );
+
+        assert!(proof_1.verify(&vk, HashMap::new(), &chal).unwrap());
+        assert!(proof_2.verify(&vk, HashMap::new(), &chal).unwrap());
+    }
+
+    #[test]
     fn timing_pok_signature() {
         // Measure time to prove knowledge of signatures, both generation and verification of proof
         let iterations = 100;
