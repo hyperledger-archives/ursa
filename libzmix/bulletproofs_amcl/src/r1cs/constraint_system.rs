@@ -1,3 +1,7 @@
+/*
+    SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 //! Definition of the constraint system trait.
 
 use crate::errors::R1CSError;
@@ -8,7 +12,7 @@ use amcl_wrapper::field_elem::FieldElement;
 /// The interface for a constraint system, abstracting over the prover
 /// and verifier's roles.
 ///
-/// Statements to be proved by an [`R1CSProof`](::r1cs::R1CSProof) are specified by
+/// Statements to be proved by an `R1CSProof` are specified by
 /// programmatically constructing constraints.  These constraints need
 /// to be identical between the prover and verifier, since the prover
 /// and verifier need to construct the same statement.
@@ -82,7 +86,7 @@ pub trait ConstraintSystem {
     ///
     /// ### Usage
     ///
-    /// Inside the closure you can generate one or more challenges using `challenge_FieldElement` method.
+    /// Inside the closure you can generate one or more challenges using `challenge_scalar` method.
     ///
     /// ```text
     /// cs.specify_randomized_constraints(move |cs| {

@@ -1,9 +1,6 @@
 use crate::errors::R1CSError;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
-
-use crate::r1cs::linear_combination::AllocatedQuantity;
-use merlin::Transcript;
 
 /// if x == 0 then y = 0 else y = 1
 /// if x != 0 then inv = x^-1 else inv = 0
@@ -14,10 +11,10 @@ use merlin::Transcript;
 /// Enforces that x is not 0.
 pub fn is_nonzero_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
-    x: AllocatedQuantity,
-    x_inv: AllocatedQuantity,
+    x: Variable,
+    x_inv: Variable,
 ) -> Result<(), R1CSError> {
-    let x_lc = LinearCombination::from(x.variable);
+    let x_lc = LinearCombination::from(x);
     let y_lc = LinearCombination::from(FieldElement::one());
     let one_minus_y_lc = LinearCombination::from(Variable::One()) - y_lc.clone();
 
@@ -26,7 +23,7 @@ pub fn is_nonzero_gadget<CS: ConstraintSystem>(
     cs.constrain(o1.into());
 
     // x * x_inv = y
-    let inv_lc: LinearCombination = vec![(x_inv.variable, FieldElement::one())].iter().collect();
+    let inv_lc: LinearCombination = vec![(x_inv, FieldElement::one())].iter().collect();
     let (_, _, o2) = cs.multiply(x_lc.clone(), inv_lc.clone());
     // Output wire should have value `y`
     cs.constrain(o2 - y_lc);

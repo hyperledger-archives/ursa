@@ -3,16 +3,93 @@ use crate::errors::R1CSError;
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
-use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
 use super::helper_constraints::mimc::{mimc, mimc_gadget};
 
+pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
+    mut inputs: Vec<FieldElement>,
+    randomness: Option<Vec<FieldElement>>,
+    expected_output: &FieldElement,
+    constants: &[FieldElement],
+    mimc_rounds: usize,
+    rng: Option<&mut R>,
+    prover: &mut Prover,
+) -> Result<Vec<G1>, R1CSError> {
+    check_for_randomness_or_rng!(randomness, rng)?;
+
+    let mut rands = randomness.unwrap_or_else(|| {
+        let r = rng.unwrap();
+        vec![
+            FieldElement::random_using_rng(r),
+            FieldElement::random_using_rng(r),
+        ]
+    });
+
+    check_for_input_and_randomness_length!(inputs, rands, 2)?;
+
+    let (com_l, var_l) = prover.commit(inputs[0].clone(), rands.remove(0));
+    let (com_r, var_r) = prover.commit(inputs[1].clone(), rands.remove(0));
+
+    let left_alloc_scalar = AllocatedQuantity {
+        variable: var_l,
+        assignment: Some(inputs.remove(0)),
+    };
+
+    let right_alloc_scalar = AllocatedQuantity {
+        variable: var_r,
+        assignment: Some(inputs.remove(0)),
+    };
+
+    mimc_gadget(
+        prover,
+        left_alloc_scalar,
+        right_alloc_scalar,
+        mimc_rounds,
+        &constants,
+        &expected_output,
+    )?;
+
+    Ok(vec![com_l, com_r])
+}
+
+pub fn verify_mimc_preimage(
+    expected_output: &FieldElement,
+    constants: &[FieldElement],
+    mimc_rounds: usize,
+    mut commitments: Vec<G1>,
+    verifier: &mut Verifier,
+) -> Result<(), R1CSError> {
+    let var_l = verifier.commit(commitments.remove(0));
+    let var_r = verifier.commit(commitments.remove(0));
+
+    let left_alloc_scalar = AllocatedQuantity {
+        variable: var_l,
+        assignment: None,
+    };
+
+    let right_alloc_scalar = AllocatedQuantity {
+        variable: var_r,
+        assignment: None,
+    };
+
+    mimc_gadget(
+        verifier,
+        left_alloc_scalar,
+        right_alloc_scalar,
+        mimc_rounds,
+        &constants,
+        &expected_output,
+    )?;
+
+    Ok(())
+}
+
 pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
-    inputs: [FieldElement; 2],
-    randomness: Option<[FieldElement; 2]>,
+    inputs: Vec<FieldElement>,
+    randomness: Option<Vec<FieldElement>>,
     expected_output: &FieldElement,
     constants: &[FieldElement],
     mimc_rounds: usize,
@@ -23,39 +100,17 @@ pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
     G: &G1Vector,
     H: &G1Vector,
 ) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
-
-    let rands: [FieldElement; 2] = randomness.unwrap_or_else(|| {
-        let r = rng.unwrap();
-        [
-            FieldElement::random_using_rng(r),
-            FieldElement::random_using_rng(r),
-        ]
-    });
-
     let mut prover_transcript = Transcript::new(transcript_label);
     let mut prover = Prover::new(&g, &h, &mut prover_transcript);
 
-    let (com_l, var_l) = prover.commit(inputs[0], rands[0]);
-    let (com_r, var_r) = prover.commit(inputs[1], rands[1]);
-
-    let left_alloc_scalar = AllocatedQuantity {
-        variable: var_l,
-        assignment: Some(inputs[0]),
-    };
-
-    let right_alloc_scalar = AllocatedQuantity {
-        variable: var_r,
-        assignment: Some(inputs[1]),
-    };
-
-    mimc_gadget(
-        &mut prover,
-        left_alloc_scalar,
-        right_alloc_scalar,
+    let comms = prove_mimc_preimage(
+        inputs,
+        randomness,
+        expected_output,
+        constants,
         mimc_rounds,
-        &constants,
-        &expected_output,
+        rng,
+        &mut prover,
     )?;
 
     println!(
@@ -64,9 +119,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
         &prover.num_multipliers(),
         &prover.num_constraints()
     );
-    let proof = prover.prove(&G, &H).unwrap();
+    let proof = prover.prove(G, H)?;
 
-    Ok((proof, vec![com_l, com_r]))
+    Ok((proof, comms))
 }
 
 pub fn verify_knowledge_of_preimage_of_mimc(
@@ -84,29 +139,14 @@ pub fn verify_knowledge_of_preimage_of_mimc(
     let mut verifier_transcript = Transcript::new(transcript_label);
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
-    let var_l = verifier.commit(commitments[0]);
-    let var_r = verifier.commit(commitments[1]);
-
-    let left_alloc_scalar = AllocatedQuantity {
-        variable: var_l,
-        assignment: None,
-    };
-
-    let right_alloc_scalar = AllocatedQuantity {
-        variable: var_r,
-        assignment: None,
-    };
-
-    mimc_gadget(
-        &mut verifier,
-        left_alloc_scalar,
-        right_alloc_scalar,
+    verify_mimc_preimage(
+        expected_output,
+        constants,
         mimc_rounds,
-        &constants,
-        &expected_output,
+        commitments,
+        &mut verifier,
     )?;
-
-    verifier.verify(&proof, &g, &h, &G, &H)?;
+    verifier.verify(&proof, g, h, G, H)?;
 
     Ok(())
 }
@@ -115,6 +155,7 @@ pub fn verify_knowledge_of_preimage_of_mimc(
 mod tests {
     use super::*;
     use crate::utils::get_generators;
+    use amcl_wrapper::group_elem::GroupElement;
     use rand::rngs::OsRng;
     use rand::Rng;
     use std::time::{Duration, Instant};
@@ -141,7 +182,7 @@ mod tests {
 
         let start = Instant::now();
         let (proof, commitments) = gen_proof_of_knowledge_of_preimage_of_mimc(
-            [xl, xr],
+            vec![xl, xr],
             None,
             &expected_output,
             &constants,

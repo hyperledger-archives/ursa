@@ -1,3 +1,7 @@
+/*
+    SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 //! Defines a `TranscriptProtocol` trait for using a Merlin transcript.
 use amcl_wrapper::constants::MODBYTES;
 use amcl_wrapper::field_elem::FieldElement;

@@ -1,3 +1,7 @@
+/*
+    SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 use crate::errors::R1CSError;
 use crate::transcript::TranscriptProtocol;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
@@ -6,7 +10,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use core::iter;
 use merlin::Transcript;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct InnerProductArgumentProof {
     pub L: G1Vector,
@@ -19,15 +23,15 @@ pub struct IPP {}
 impl IPP {
     /// Create an inner-product proof.
     ///
-    /// The proof is created with respect to the bases \\(G\\), \\(H'\\),
-    /// where \\(H'\_i = H\_i \cdot \texttt{Hprime\\_factors}\_i\\).
+    /// The proof is created with respect to the bases G', H',
+    /// where G'_i = G_i.G_factors_i and H'_i = H_i.H_factors_i.
     ///
-    /// The `verifier` is passed in as a parameter so that the
+    /// The `transcript` is passed in as a parameter so that the
     /// challenges depend on the *entire* transcript (including parent
     /// protocols).
     ///
     /// The lengths of the vectors must all be the same, and must all be
-    /// either 0 or a power of 2.
+    /// power of 2.
     pub fn create_ipp(
         transcript: &mut Transcript,
         Q: &G1,
@@ -50,9 +54,6 @@ impl IPP {
         assert_eq!(G_factors.len(), n);
         assert_eq!(H_factors.len(), n);
 
-        // Create slices G, H, a, b backed by their respective
-        // vectors.  This lets us reslice as we compress the lengths
-        // of the vectors in the main loop below.
         let mut G = G_vec.clone();
         let mut H = H_vec.clone();
         let mut a = a_vec.clone();
@@ -64,8 +65,6 @@ impl IPP {
         let mut L_vec = G1Vector::with_capacity(lg_n);
         let mut R_vec = G1Vector::with_capacity(lg_n);
 
-        // If it's the first iteration, unroll the Hprime = H*y_inv scalar mults
-        // into multiscalar muls, for performance.
         if n != 1 {
             n = n / 2;
             let (mut a_L, a_R) = a.split_at(n);
@@ -86,13 +85,12 @@ impl IPP {
             let mut L_1 = vec![];
             L_1.extend(G_R.iter());
             L_1.extend(H_L.iter());
-            L_1.push(Q.clone());
+            L_1.push(&Q);
 
-            let L = G1Vector::from(L_1)
-                .multi_scalar_mul_var_time(&L_0.into())
-                .unwrap();
+            let L_0: Vec<&FieldElement> = L_0.iter().map(|f| f).collect();
+            let L = G1Vector::inner_product_var_time_with_ref_vecs(L_1, L_0).unwrap();
 
-            let mut R_0 = vec![];
+            let mut R_0: Vec<FieldElement> = vec![];
             R_0.extend(a_R.hadamard_product(&G_factors_L).unwrap());
             R_0.extend(b_L.hadamard_product(&H_factors_R).unwrap());
             R_0.push(c_R);
@@ -100,35 +98,34 @@ impl IPP {
             let mut R_1 = vec![];
             R_1.extend(G_L.iter());
             R_1.extend(H_R.iter());
-            R_1.push(Q.clone());
+            R_1.push(&Q);
 
-            let R = G1Vector::from(R_1)
-                .multi_scalar_mul_var_time(&R_0.into())
-                .unwrap();
-
-            L_vec.push(L);
-            R_vec.push(R);
+            let R_0: Vec<&FieldElement> = R_0.iter().map(|f| f).collect();
+            let R = G1Vector::inner_product_var_time_with_ref_vecs(R_1, R_0).unwrap();
 
             transcript.commit_point(b"L", &L);
             transcript.commit_point(b"R", &R);
+
+            L_vec.push(L);
+            R_vec.push(R);
 
             let u = transcript.challenge_scalar(b"u");
             let u_inv = u.inverse();
 
             for i in 0..n {
-                a_L[i] = a_L[i] * u + u_inv * a_R[i];
-                b_L[i] = b_L[i] * u_inv + u * b_R[i];
+                a_L[i] = &a_L[i] * &u + &u_inv * &a_R[i];
+                b_L[i] = &b_L[i] * &u_inv + &u * &b_R[i];
                 // G_L[i] = (u_inv * G_factors_L[i])*G_L[i] + (u * G_factors_R[i])* G_R[i];
                 G_L[i] = G_L[i].binary_scalar_mul(
                     &G_R[i],
-                    &(u_inv * G_factors_L[i]),
-                    &(u * G_factors_R[i]),
+                    &(&u_inv * &G_factors_L[i]),
+                    &(&u * &G_factors_R[i]),
                 );
                 // H_L[i] = (u * H_factors_L[i])*H_L[i] + (u_inv * H_factors_R[i])*H_R[i];
                 H_L[i] = H_L[i].binary_scalar_mul(
                     &H_R[i],
-                    &(u * H_factors_L[i]),
-                    &(u_inv * H_factors_R[i]),
+                    &(&u * &H_factors_L[i]),
+                    &(&u_inv * &H_factors_R[i]),
                 );
             }
 
@@ -151,41 +148,39 @@ impl IPP {
             let mut L_1 = vec![];
             L_1.extend(G_R.iter());
             L_1.extend(H_L.iter());
-            L_1.push(Q.clone());
+            L_1.push(&Q);
             let mut L_0 = vec![];
             L_0.extend(a_L.iter());
             L_0.extend(b_R.iter());
-            L_0.push(c_L);
+            L_0.push(&c_L);
 
-            let L = G1Vector::from(L_1)
-                .multi_scalar_mul_var_time(&L_0.into())
-                .unwrap();
+            // Inner product of L_1, L_0
+            let L = G1Vector::inner_product_var_time_with_ref_vecs(L_1, L_0).unwrap();
 
             let mut R_1 = vec![];
             R_1.extend(G_L.iter());
             R_1.extend(H_R.iter());
-            R_1.push(Q.clone());
+            R_1.push(&Q);
             let mut R_0 = vec![];
             R_0.extend(a_R.iter());
             R_0.extend(b_L.iter());
-            R_0.push(c_R);
+            R_0.push(&c_R);
 
-            let R = G1Vector::from(R_1)
-                .multi_scalar_mul_var_time(&R_0.into())
-                .unwrap();
-
-            L_vec.push(L);
-            R_vec.push(R);
+            // Inner product of R_1, R_0
+            let R = G1Vector::inner_product_var_time_with_ref_vecs(R_1, R_0).unwrap();
 
             transcript.commit_point(b"L", &L);
             transcript.commit_point(b"R", &R);
+
+            L_vec.push(L);
+            R_vec.push(R);
 
             let u = transcript.challenge_scalar(b"u");
             let u_inv = u.inverse();
 
             for i in 0..n {
-                a_L[i] = a_L[i] * u + u_inv * a_R[i];
-                b_L[i] = b_L[i] * u_inv + u * b_R[i];
+                a_L[i] = &a_L[i] * &u + &u_inv * &a_R[i];
+                b_L[i] = &b_L[i] * &u_inv + &u * &b_R[i];
                 // G_L[i] = (u_inv * G_L[i]) + (u * G_R[i]);
                 G_L[i] = G_L[i].binary_scalar_mul(&G_R[i], &u_inv, &u);
                 // H_L[i] = (u * H_L[i]) + (u_inv * H_R[i]);
@@ -201,8 +196,8 @@ impl IPP {
         InnerProductArgumentProof {
             L: L_vec,
             R: R_vec,
-            a: a[0],
-            b: b[0],
+            a: a[0].clone(),
+            b: b[0].clone(),
         }
     }
 
@@ -246,12 +241,12 @@ impl IPP {
             .chain(neg_u_inv_sq)
             .collect();
 
-        let mut _2: Vec<G1> = vec![];
-        _2.push(*Q);
-        _2.extend(G.iter());
-        _2.extend(H.iter());
-        _2.extend(L_vec.iter());
-        _2.extend(R_vec.iter());
+        let mut _2 = G1Vector::new(0);
+        _2.push(Q.clone());
+        _2.append(&mut G.clone());
+        _2.append(&mut H.clone());
+        _2.append(&mut L_vec.clone());
+        _2.append(&mut R_vec.clone());
 
         let expected_P = G1Vector::from(_2)
             .multi_scalar_mul_var_time(&_1.into())
@@ -312,8 +307,8 @@ impl IPP {
             let k = 1 << lg_i;
             // The challenges are stored in "creation order" as [u_k,...,u_1],
             // so u_{lg(i)+1} = is indexed by (lg_n-1) - lg_i
-            let u_lg_i_sq = challenges_sq[(lg_n - 1) - lg_i];
-            s.push(s[i - k] * u_lg_i_sq);
+            let u_lg_i_sq = &challenges_sq[(lg_n - 1) - lg_i];
+            s.push(&s[i - k] * u_lg_i_sq);
         }
 
         Ok((challenges_sq, challenges_inv_sq, s))
@@ -333,7 +328,7 @@ mod tests {
         let H: G1Vector = get_generators("h", n).into();
         let Q = G1::from_msg_hash("Q".as_bytes());
 
-        let a: FieldElementVector = vec![1, 2, 3, 4]
+        let mut a: FieldElementVector = vec![1, 2, 3, 4]
             .iter()
             .map(|i| FieldElement::from(*i as u8))
             .collect::<Vec<FieldElement>>()
@@ -359,17 +354,17 @@ mod tests {
             .map(|(bi, yi)| bi * yi)
             .collect();
         let c = a.inner_product(&b).unwrap();
-        let mut _1 = vec![];
-        _1.extend(a.iter());
-        _1.extend(b_prime.iter());
+
+        let mut _1 = FieldElementVector::new(0);
+        _1.append(&mut a);
+        _1.append(&mut b_prime.into());
         _1.push(c);
-        let mut _2 = vec![];
-        _2.extend(G.iter());
-        _2.extend(H.iter());
-        _2.push(Q);
-        let P = G1Vector::from(_2)
-            .multi_scalar_mul_var_time(&_1.into())
-            .unwrap();
+
+        let mut _2 = G1Vector::new(0);
+        _2.append(&mut G.clone());
+        _2.append(&mut H.clone());
+        _2.push(Q.clone());
+        let P = G1Vector::from(_2).multi_scalar_mul_var_time(&_1).unwrap();
 
         let mut new_trans1 = Transcript::new(b"innerproduct");
         IPP::verify_ipp(

@@ -1,5 +1,5 @@
 use crate::errors::R1CSError;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
+use crate::r1cs::{ConstraintSystem, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
 // Ensure sum of items of `vector` is `sum`
