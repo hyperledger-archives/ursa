@@ -1,3 +1,7 @@
+/*
+    SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 use amcl_wrapper::field_elem::FieldElement;
 
 use std::collections::HashMap;
@@ -18,15 +22,15 @@ pub enum Variable {
     One(),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct AllocatedQuantity {
     pub variable: Variable,
     pub assignment: Option<FieldElement>,
 }
 
 /// Represents a linear combination of
-/// [`Variables`](::r1cs::Variable).  Each term is represented by a
-/// `(Variable, Scalar)` pair.
+/// `Variables`.  Each term is represented by a
+/// `(Variable, FieldElement)` pair.
 #[derive(Clone, Debug)]
 pub struct LinearCombination {
     pub terms: Vec<(Variable, FieldElement)>,
@@ -109,6 +113,19 @@ impl<'a> FromIterator<&'a (Variable, FieldElement)> for LinearCombination {
 // Arithmetic on linear combinations
 
 impl Mul<LinearCombination> for FieldElement {
+    type Output = LinearCombination;
+
+    fn mul(self, other: LinearCombination) -> Self::Output {
+        let out_terms = other
+            .terms
+            .into_iter()
+            .map(|(var, scalar)| (var, scalar * &self))
+            .collect();
+        LinearCombination { terms: out_terms }
+    }
+}
+
+impl Mul<LinearCombination> for &FieldElement {
     type Output = LinearCombination;
 
     fn mul(self, other: LinearCombination) -> Self::Output {

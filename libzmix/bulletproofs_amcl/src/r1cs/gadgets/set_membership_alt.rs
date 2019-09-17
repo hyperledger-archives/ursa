@@ -5,7 +5,6 @@ use crate::errors::R1CSError;
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
-use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
@@ -64,8 +63,12 @@ pub fn vector_product_gadget<CS: ConstraintSystem>(
 
     for i in 0..items.len() {
         // TODO: Possible to save reallocation of elements of `vector` in `bit`? If circuit variables for vector are passed, then yes.
-        let (bit_var, item_var, o1) =
-            cs.allocate_multiplier(vector[i].assignment.map(|bit| (bit, items[i].into())))?;
+        let (bit_var, item_var, o1) = cs.allocate_multiplier(
+            vector[i]
+                .assignment
+                .as_ref()
+                .map(|bit| (bit.clone(), items[i].into())),
+        )?;
         constrain_lc_with_scalar::<CS>(cs, item_var.into(), &items[i].into());
 
         let (_, _, o2) = cs.multiply(bit_var.into(), value.variable.into());
@@ -85,20 +88,14 @@ pub fn vector_product_gadget<CS: ConstraintSystem>(
 /// and prove that each element is either 0 or 1, sum of elements of this bitmap is 1 (as there is only 1 element)
 /// and the relation set[i] * bitmap[i] = bitmap[i] * value.
 /// Taken from https://github.com/HarryR/ethsnarks/blob/master/src/gadgets/one_of_n.hpp
-pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
+pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
     value: u64,
     randomness: Option<FieldElement>,
     set: &[u64],
     rng: Option<&mut R>,
-    transcript_label: &'static [u8],
-    g: &G1,
-    h: &G1,
-    G: &G1Vector,
-    H: &G1Vector,
-) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    prover: &mut Prover,
+) -> Result<Vec<G1>, R1CSError> {
     check_for_randomness_or_rng!(randomness, rng)?;
-
-    let set_length = set.len();
 
     // Set all indices to 0 except the one where `value` is
     let bit_map: Vec<u64> = set
@@ -107,9 +104,6 @@ pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
         .collect();
 
     let mut comms = vec![];
-
-    let mut prover_transcript = Transcript::new(transcript_label);
-    let mut prover = Prover::new(g, h, &mut prover_transcript);
 
     let mut bit_vars = vec![];
     let mut bit_allocs = vec![];
@@ -121,32 +115,87 @@ pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
             variable: var,
             assignment: Some(_b),
         };
-        bit_gadget(&mut prover, quantity)?;
+        bit_gadget(prover, &quantity)?;
         comms.push(com);
         bit_allocs.push(quantity);
     }
 
     // The bit vector sum should be 1
-    vector_sum_constraints(&mut prover, bit_vars, 1)?;
+    vector_sum_constraints(prover, bit_vars, 1)?;
 
     let _value = FieldElement::from(value);
     let (com_value, var_value) = prover.commit(
-        _value,
+        _value.clone(),
         randomness.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
     );
     let quantity_value = AllocatedQuantity {
         variable: var_value,
         assignment: Some(_value),
     };
-    vector_product_gadget(&mut prover, &set, &bit_allocs, &quantity_value)?;
+    vector_product_gadget(prover, &set, &bit_allocs, &quantity_value)?;
     comms.push(com_value);
+
+    Ok(comms)
+}
+
+pub fn verify_set_membership_alt(
+    set: &[u64],
+    mut commitments: Vec<G1>,
+    verifier: &mut Verifier,
+) -> Result<(), R1CSError> {
+    let set_length = set.len();
+
+    let mut bit_vars = vec![];
+    let mut bit_allocs = vec![];
+
+    for _ in 0..set_length {
+        let var = verifier.commit(commitments.remove(0));
+        bit_vars.push(var.clone());
+        let quantity = AllocatedQuantity {
+            variable: var,
+            assignment: None,
+        };
+        bit_gadget(verifier, &quantity)?;
+        bit_allocs.push(quantity);
+    }
+
+    vector_sum_constraints(verifier, bit_vars, 1)?;
+
+    let var_val = verifier.commit(commitments.remove(0));
+    let quantity_value = AllocatedQuantity {
+        variable: var_val,
+        assignment: None,
+    };
+
+    vector_product_gadget(verifier, &set, &bit_allocs, &quantity_value)?;
+
+    Ok(())
+}
+
+pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
+    value: u64,
+    randomness: Option<FieldElement>,
+    set: &[u64],
+    rng: Option<&mut R>,
+    transcript_label: &'static [u8],
+    g: &G1,
+    h: &G1,
+    G: &G1Vector,
+    H: &G1Vector,
+) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    let mut prover_transcript = Transcript::new(transcript_label);
+    let mut prover = Prover::new(g, h, &mut prover_transcript);
+
+    let set_length = set.len();
+
+    let comms = prove_set_membership_alt(value, randomness, set, rng, &mut prover)?;
 
     println!(
         "For set size {}, no of constraints is {}",
         &set_length,
         &prover.num_constraints()
     );
-    let proof = prover.prove(&G, &H)?;
+    let proof = prover.prove(G, H)?;
 
     Ok((proof, comms))
 }
@@ -164,39 +213,16 @@ pub fn verify_proof_of_set_membership_alt(
     let mut verifier_transcript = Transcript::new(transcript_label);
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
-    let set_length = set.len();
+    verify_set_membership_alt(set, commitments, &mut verifier)?;
 
-    let mut bit_vars = vec![];
-    let mut bit_allocs = vec![];
-
-    for i in 0..set_length {
-        let var = verifier.commit(commitments[i]);
-        bit_vars.push(var.clone());
-        let quantity = AllocatedQuantity {
-            variable: var,
-            assignment: None,
-        };
-        bit_gadget(&mut verifier, quantity)?;
-        bit_allocs.push(quantity);
-    }
-
-    vector_sum_constraints(&mut verifier, bit_vars, 1)?;
-
-    let var_val = verifier.commit(commitments[set_length]);
-    let quantity_value = AllocatedQuantity {
-        variable: var_val,
-        assignment: None,
-    };
-
-    vector_product_gadget(&mut verifier, &set, &bit_allocs, &quantity_value)?;
-
-    verifier.verify(&proof, &g, &h, &G, &H)
+    verifier.verify(&proof, g, h, G, H)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::utils::get_generators;
+    use amcl_wrapper::group_elem::GroupElement;
 
     #[test]
     fn test_set_membership_alt() {

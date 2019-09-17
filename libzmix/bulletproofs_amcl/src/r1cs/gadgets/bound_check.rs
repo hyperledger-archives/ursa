@@ -4,7 +4,6 @@ use crate::errors::R1CSError;
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
-use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
@@ -39,31 +38,21 @@ pub fn bound_check_gadget<CS: ConstraintSystem>(
     Ok(())
 }
 
-/// Accepts the num for which the bounds have to proved and optionally the randomness used in committing to that number.
-/// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
-pub fn gen_proof_of_bounded_num<R: RngCore + CryptoRng>(
+pub fn prove_bounded_num<R: RngCore + CryptoRng>(
     val: u64,
     randomness: Option<FieldElement>,
     lower: u64,
     upper: u64,
     max_bits_in_val: usize,
     rng: Option<&mut R>,
-    transcript_label: &'static [u8],
-    g: &G1,
-    h: &G1,
-    G: &G1Vector,
-    H: &G1Vector,
-) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    prover: &mut Prover,
+) -> Result<Vec<G1>, R1CSError> {
     check_for_randomness_or_rng!(randomness, rng)?;
 
     let a = val - lower;
     let b = upper - val;
 
     let mut comms = vec![];
-
-    // Prover makes a `ConstraintSystem` instance representing a range proof gadget
-    let mut prover_transcript = Transcript::new(transcript_label);
-    let mut prover = Prover::new(g, h, &mut prover_transcript);
 
     let (com_v, var_v) = prover.commit(
         val.into(),
@@ -90,7 +79,7 @@ pub fn gen_proof_of_bounded_num<R: RngCore + CryptoRng>(
     comms.push(com_b);
 
     bound_check_gadget(
-        &mut prover,
+        prover,
         quantity_v,
         quantity_a,
         quantity_b,
@@ -99,6 +88,73 @@ pub fn gen_proof_of_bounded_num<R: RngCore + CryptoRng>(
         max_bits_in_val,
     )?;
 
+    Ok(comms)
+}
+
+pub fn verify_bounded_num(
+    lower: u64,
+    upper: u64,
+    max_bits_in_val: usize,
+    mut commitments: Vec<G1>,
+    verifier: &mut Verifier,
+) -> Result<(), R1CSError> {
+    let var_v = verifier.commit(commitments.remove(0));
+    let quantity_v = AllocatedQuantity {
+        variable: var_v,
+        assignment: None,
+    };
+
+    let var_a = verifier.commit(commitments.remove(0));
+    let quantity_a = AllocatedQuantity {
+        variable: var_a,
+        assignment: None,
+    };
+
+    let var_b = verifier.commit(commitments.remove(0));
+    let quantity_b = AllocatedQuantity {
+        variable: var_b,
+        assignment: None,
+    };
+
+    bound_check_gadget(
+        verifier,
+        quantity_v,
+        quantity_a,
+        quantity_b,
+        upper,
+        lower,
+        max_bits_in_val,
+    )?;
+    Ok(())
+}
+
+/// Accepts the num for which the bounds have to proved and optionally the randomness used in committing to that number.
+/// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
+pub fn gen_proof_of_bounded_num<R: RngCore + CryptoRng>(
+    val: u64,
+    randomness: Option<FieldElement>,
+    lower: u64,
+    upper: u64,
+    max_bits_in_val: usize,
+    rng: Option<&mut R>,
+    transcript_label: &'static [u8],
+    g: &G1,
+    h: &G1,
+    G: &G1Vector,
+    H: &G1Vector,
+) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    let mut prover_transcript = Transcript::new(transcript_label);
+    let mut prover = Prover::new(g, h, &mut prover_transcript);
+
+    let comms = prove_bounded_num(
+        val,
+        randomness,
+        lower,
+        upper,
+        max_bits_in_val,
+        rng,
+        &mut prover,
+    )?;
     let proof = prover.prove(G, H)?;
 
     Ok((proof, comms))
@@ -118,35 +174,7 @@ pub fn verify_proof_of_bounded_num(
 ) -> Result<(), R1CSError> {
     let mut verifier_transcript = Transcript::new(transcript_label);
     let mut verifier = Verifier::new(&mut verifier_transcript);
-
-    let var_v = verifier.commit(commitments[0]);
-    let quantity_v = AllocatedQuantity {
-        variable: var_v,
-        assignment: None,
-    };
-
-    let var_a = verifier.commit(commitments[1]);
-    let quantity_a = AllocatedQuantity {
-        variable: var_a,
-        assignment: None,
-    };
-
-    let var_b = verifier.commit(commitments[2]);
-    let quantity_b = AllocatedQuantity {
-        variable: var_b,
-        assignment: None,
-    };
-
-    bound_check_gadget(
-        &mut verifier,
-        quantity_v,
-        quantity_a,
-        quantity_b,
-        upper,
-        lower,
-        max_bits_in_val,
-    )?;
-
+    verify_bounded_num(lower, upper, max_bits_in_val, commitments, &mut verifier)?;
     verifier.verify(&proof, g, h, G, H)
 }
 
@@ -154,6 +182,7 @@ pub fn verify_proof_of_bounded_num(
 mod tests {
     use super::*;
     use crate::utils::get_generators;
+    use amcl_wrapper::group_elem::GroupElement;
 
     #[test]
     fn test_bound_check_gadget() {

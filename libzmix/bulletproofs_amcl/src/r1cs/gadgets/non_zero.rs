@@ -4,30 +4,20 @@ use crate::errors::R1CSError;
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
-use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
-/// Accepts the num which is to be proved non-zero and optionally the randomness used in committing to that number.
-/// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
-pub fn gen_proof_of_non_zero_val<R: RngCore + CryptoRng>(
+pub fn prove_non_zero_val<R: RngCore + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     rng: Option<&mut R>,
-    transcript_label: &'static [u8],
-    g: &G1,
-    h: &G1,
-    G: &G1Vector,
-    H: &G1Vector,
-) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    prover: &mut Prover,
+) -> Result<Vec<G1>, R1CSError> {
     check_for_randomness_or_rng!(randomness, rng)?;
 
     let inv = value.inverse();
     let mut comms = vec![];
-
-    let mut prover_transcript = Transcript::new(transcript_label);
-    let mut prover = Prover::new(g, h, &mut prover_transcript);
 
     let (com_val, var_val) = prover.commit(
         value.clone(),
@@ -46,8 +36,48 @@ pub fn gen_proof_of_non_zero_val<R: RngCore + CryptoRng>(
     };
     comms.push(com_val_inv);
 
-    is_nonzero_gadget(&mut prover, alloc_scal, alloc_scal_inv)?;
+    is_nonzero_gadget(prover, alloc_scal.variable, alloc_scal_inv.variable)?;
 
+    Ok(comms)
+}
+
+pub fn verify_non_zero_val(
+    mut commitments: Vec<G1>,
+    verifier: &mut Verifier,
+) -> Result<(), R1CSError> {
+    let var_val = verifier.commit(commitments.remove(0));
+    let alloc_scal = AllocatedQuantity {
+        variable: var_val,
+        assignment: None,
+    };
+
+    let var_val_inv = verifier.commit(commitments.remove(0));
+    let alloc_scal_inv = AllocatedQuantity {
+        variable: var_val_inv,
+        assignment: None,
+    };
+
+    is_nonzero_gadget(verifier, alloc_scal.variable, alloc_scal_inv.variable)?;
+
+    Ok(())
+}
+
+/// Accepts the num which is to be proved non-zero and optionally the randomness used in committing to that number.
+/// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
+pub fn gen_proof_of_non_zero_val<R: RngCore + CryptoRng>(
+    value: FieldElement,
+    randomness: Option<FieldElement>,
+    rng: Option<&mut R>,
+    transcript_label: &'static [u8],
+    g: &G1,
+    h: &G1,
+    G: &G1Vector,
+    H: &G1Vector,
+) -> Result<(R1CSProof, Vec<G1>), R1CSError> {
+    let mut prover_transcript = Transcript::new(transcript_label);
+    let mut prover = Prover::new(g, h, &mut prover_transcript);
+
+    let comms = prove_non_zero_val(value, randomness, rng, &mut prover)?;
     let proof = prover.prove(G, H)?;
 
     Ok((proof, comms))
@@ -65,27 +95,15 @@ pub fn verify_proof_of_non_zero_val(
     let mut verifier_transcript = Transcript::new(transcript_label);
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
-    let var_val = verifier.commit(commitments[0]);
-    let alloc_scal = AllocatedQuantity {
-        variable: var_val,
-        assignment: None,
-    };
-
-    let var_val_inv = verifier.commit(commitments[1]);
-    let alloc_scal_inv = AllocatedQuantity {
-        variable: var_val_inv,
-        assignment: None,
-    };
-
-    is_nonzero_gadget(&mut verifier, alloc_scal, alloc_scal_inv)?;
-
-    verifier.verify(&proof, &g, &h, &G, &H)
+    verify_non_zero_val(commitments, &mut verifier)?;
+    verifier.verify(&proof, g, h, G, H)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::utils::get_generators;
+    use amcl_wrapper::group_elem::GroupElement;
 
     #[test]
     fn test_non_zero_gadget() {
