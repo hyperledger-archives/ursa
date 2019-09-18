@@ -72,7 +72,8 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     }
     let secret = FieldElement::random();
 
-    // XXX: Choosing G2::generator() temporarily. The generator should be a setup parameter in practice
+    // Super paranoid could allow a context to generate the generator from a well known value
+    // Not doing this for now since any generator in a prime field should be okay.
     let w = &G2::generator() * &secret;
     let mut h = Vec::new();
     for _ in 0..message_count {
