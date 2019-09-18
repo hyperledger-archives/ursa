@@ -523,7 +523,7 @@ mod tests {
     fn test_PoK_multiple_sigs() {
         // Prove knowledge of multiple signatures together (using the same challenge)
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
 
         let msgs_1 = FieldElementVector::random(count_msgs);
         let sig_1 = Signature::new(msgs_1.as_slice(), &sk, &vk).unwrap();
@@ -558,7 +558,7 @@ mod tests {
         // 2nd message in the 1st signature and 5th message in the 2nd signature are to be proven equal without revealing them
 
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
 
         let same_msg = FieldElement::random();
         let mut msgs_1 = FieldElementVector::random(count_msgs - 1);
