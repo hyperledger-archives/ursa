@@ -7,7 +7,8 @@ A more comprehensive test where a user gets signature over a mix of messages whe
 others are committed to and then a proof of knowledge is done for signature with selectively revealing some messages. Demonstrated in the test `test_scenario_1`.  
 
   
-The groups for public key (*_tilde) and signatures can be flipped by compiling with feature `PS_G1G2` or `PS_G2G1`. These features are mutually exclusive. The default feature is `PS_G2G1` meaning signatures are in group G1. 
+The groups for public key (*_tilde) and signatures can be flipped by compiling with feature `PS_G1G2` or `PS_G2G1`. These features are mutually exclusive. 
+The default feature is `PS_G1G2` meaning signatures are in group G2. This makes signing expensive but proof of knowledge efficient.  
 
 To run tests with signature in group G1. The proof of knowledge of signatures will involve a multi-exponentiation in group G2.
 ```

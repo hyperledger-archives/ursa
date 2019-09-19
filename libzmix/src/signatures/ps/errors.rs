@@ -1,5 +1,5 @@
-use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
-use failure::{Backtrace, Context, Error, Fail};
+use crate::commitments::pok_vc::PoKVCError;
+use failure::{Backtrace, Context, Fail};
 use std::fmt;
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
