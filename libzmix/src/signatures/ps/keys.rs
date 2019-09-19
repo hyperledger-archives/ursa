@@ -40,6 +40,8 @@ pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
     let X = &g * &x;
     let X_tilde = &g_tilde * &x;
     for _ in 0..count_messages {
+        // It is mandatory that all Y and Y_tilde have same discrete log wrt. g and g_tilde respectively.
+        // But once Y and Y_tilde are generated, y is not needed.
         let y = FieldElement::random();
         Y.push(&g * &y);
         Y_tilde.push(&g_tilde * &y);
@@ -59,8 +61,6 @@ pub fn keygen(count_messages: usize, label: &[u8]) -> (Sigkey, Verkey) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // For benchmarking
-    use std::time::{Duration, Instant};
 
     #[test]
     fn test_keygen() {

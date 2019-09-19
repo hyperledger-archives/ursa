@@ -1,6 +1,6 @@
 use super::errors::{PSError, PSErrorKind};
 use super::keys::{Sigkey, Verkey};
-use super::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{ate_2_pairing, OtherGroupVec, SignatureGroup, SignatureGroupVec};
 use crate::amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
@@ -20,17 +20,7 @@ impl Signature {
         verkey: &Verkey,
     ) -> Result<Self, PSError> {
         Self::check_verkey_and_messages_compat(messages, verkey)?;
-        let u = FieldElement::random();
-        let sigma_1 = &verkey.g * &u;
-        let mut points = SignatureGroupVec::new(0);
-        let mut scalars = FieldElementVector::new(0);
-        points.push(sigkey.X.clone());
-        scalars.push(FieldElement::one());
-        for i in 0..messages.len() {
-            scalars.push(messages[i].clone());
-            points.push(verkey.Y[i].clone());
-        }
-        let sigma_2 = points.multi_scalar_mul_const_time(&scalars).unwrap() * &u;
+        let (sigma_1, sigma_2) = Self::_sign(messages, sigkey, verkey, None);
         Ok(Signature { sigma_1, sigma_2 })
     }
 
@@ -52,20 +42,7 @@ impl Signature {
             .into());
         }
 
-        let u = FieldElement::random();
-        let sigma_1 = &verkey.g * &u;
-        let mut points = SignatureGroupVec::new(0);
-        let mut scalars = FieldElementVector::new(0);
-        points.push(sigkey.X.clone());
-        scalars.push(FieldElement::one());
-        points.push(commitment.clone());
-        scalars.push(FieldElement::one());
-        let diff = verkey.Y.len() - messages.len();
-        for i in 0..messages.len() {
-            scalars.push(messages[i].clone());
-            points.push(verkey.Y[diff + i].clone());
-        }
-        let sigma_2 = points.multi_scalar_mul_const_time(&scalars).unwrap() * &u;
+        let (sigma_1, sigma_2) = Self::_sign(messages, sigkey, verkey, Some(commitment));
         Ok(Signature { sigma_1, sigma_2 })
     }
 
@@ -118,6 +95,31 @@ impl Signature {
             .into());
         }
         Ok(())
+    }
+
+    pub fn _sign(
+        messages: &[FieldElement],
+        sigkey: &Sigkey,
+        verkey: &Verkey,
+        commitment: Option<&SignatureGroup>,
+    ) -> (SignatureGroup, SignatureGroup) {
+        let u = FieldElement::random();
+        // sigma_1 = g^u
+        let sigma_1 = &verkey.g * &u;
+        let mut points = SignatureGroupVec::new(0);
+        let mut scalars = FieldElementVector::new(0);
+        let offset = verkey.Y.len() - messages.len();
+        for i in 0..messages.len() {
+            scalars.push(messages[i].clone());
+            points.push(verkey.Y[offset + i].clone());
+        }
+        // sigma_2 = {X + Y_i^{m_i} + commitment}^u
+        let mut sigma_2 = &sigkey.X + &points.multi_scalar_mul_const_time(&scalars).unwrap();
+        if commitment.is_some() {
+            sigma_2 += commitment.unwrap()
+        }
+        sigma_2 = &sigma_2 * &u;
+        (sigma_1, sigma_2)
     }
 }
 

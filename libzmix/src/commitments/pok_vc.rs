@@ -10,7 +10,7 @@
 // During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 // `Proof` can then be verified by the verifier.
 
-use failure::{Backtrace, Context, Error, Fail};
+use failure::{Backtrace, Context, Fail};
 use std::fmt;
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
