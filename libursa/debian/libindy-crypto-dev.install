@@ -1,2 +1,0 @@
-include/*.h usr/include/ursa/
-target/release/libursa.a usr/lib/
