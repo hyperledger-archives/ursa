@@ -161,6 +161,11 @@ impl PoKOfSignatureProof {
         challenge: &FieldElement,
     ) -> Result<bool, PSError> {
         vk.validate()?;
+
+        if self.sig.sigma_1.is_identity() || self.sig.sigma_2.is_identity() {
+            return Ok(false);
+        }
+
         // +1 for `t`
         let hidden_msg_count = vk.Y_tilde.len() - revealed_msgs.len() + 1;
         let mut bases = OtherGroupVec::with_capacity(hidden_msg_count);
@@ -365,6 +370,13 @@ mod tests {
         let proof = pok.gen_proof(&chal).unwrap();
 
         assert!(proof.verify(&vk, HashMap::new(), &chal).unwrap());
+
+        // Set signature elements to identity. Such signature should fail verification
+        let mut proof_bad = proof.clone();
+        proof_bad.sig.sigma_1 = SignatureGroup::identity();
+        proof_bad.sig.sigma_2 = SignatureGroup::identity();
+        assert!(!proof_bad.verify(&vk, HashMap::new(), &chal).unwrap());
+
         // PoK with supplied blindings
         let blindings = FieldElementVector::random(count_msgs);
         let pok_1 = PoKOfSignature::init(

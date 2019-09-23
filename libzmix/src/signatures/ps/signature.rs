@@ -48,6 +48,9 @@ impl Signature {
 
     /// Verify a signature. During proof of knowledge also, this method is used after extending the verkey
     pub fn verify(&self, messages: &[FieldElement], verkey: &Verkey) -> Result<bool, PSError> {
+        if self.sigma_1.is_identity() || self.sigma_2.is_identity() {
+            return Ok(false);
+        }
         Self::check_verkey_and_messages_compat(messages, verkey)?;
         let mut points = OtherGroupVec::new(0);
         let mut scalars = FieldElementVector::new(0);
@@ -241,6 +244,20 @@ mod tests {
         assert!(
             Signature::new_with_committed_messages(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
         );
+    }
+
+    #[test]
+    fn test_signature_as_identity() {
+        // When signature consists of identity elements, proof verification fails.
+        let count_msgs = 5;
+        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+
+        let msgs = FieldElementVector::random(count_msgs);
+        let mut sig_bad = Signature {
+            sigma_1: SignatureGroup::identity(),
+            sigma_2: SignatureGroup::identity(),
+        };
+        assert!(!sig_bad.verify(msgs.as_slice(), &vk).unwrap());
     }
 
     #[test]
