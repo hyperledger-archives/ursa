@@ -250,10 +250,10 @@ mod tests {
     fn test_signature_as_identity() {
         // When signature consists of identity elements, proof verification fails.
         let count_msgs = 5;
-        let (sk, vk) = keygen(count_msgs, "test".as_bytes());
+        let (vk, _) = keygen(count_msgs, "test".as_bytes());
 
         let msgs = FieldElementVector::random(count_msgs);
-        let mut sig_bad = Signature {
+        let sig_bad = Signature {
             sigma_1: SignatureGroup::identity(),
             sigma_2: SignatureGroup::identity(),
         };
