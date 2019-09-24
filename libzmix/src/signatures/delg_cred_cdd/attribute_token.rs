@@ -1,6 +1,6 @@
 // A presenter is an entity holding a CredChain which does proof of attribute tokens
 
-use super::errors::{DelgError, DelgResult};
+use super::errors::{DelgCredCDDError, DelgCredCDDResult};
 use super::groth_sig::{Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig};
 use super::issuer::{CredChain, EvenLevelVerkey, OddLevelVerkey};
 use amcl_wrapper::extension_field_gt::GT;
@@ -117,7 +117,7 @@ impl PrecompOnCredChain {
         cred_chain: &CredChain,
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
-    ) -> DelgResult<Self> {
+    ) -> DelgCredCDDResult<Self> {
         let mut pairing_g_r = vec![];
         for i in 1..=cred_chain.size() {
             if i % 2 == 1 {
@@ -167,15 +167,15 @@ impl PrecompForCommitmentReconstitution {
 macro_rules! check_blindings_count {
     ( $self:ident, $i: ident, $link:ident, $unrevealed_attr_count:ident ) => {{
         if $self.blindings_t[$i - 1].len() != $link.signature.T.len() {
-            Err(DelgError::GeneralError {
+            Err(DelgCredCDDError::GeneralError {
                 msg: format!("t blindings count unequal to t count"),
             })
         } else if $link.attribute_count() != $link.signature.T.len() {
-            Err(DelgError::GeneralError {
+            Err(DelgCredCDDError::GeneralError {
                 msg: format!("attribute count unequal to t count"),
             })
         } else if $self.blindings_a[$i - 1].len() != $unrevealed_attr_count {
-            Err(DelgError::GeneralError {
+            Err(DelgCredCDDError::GeneralError {
                 msg: format!("attribute blidnding count unequal to unrevealed attribute count"),
             })
         } else {
@@ -207,7 +207,10 @@ impl<'a> AttributeToken<'a> {
     }
 
     // Assuming that chain has already been verified using `CredChain::verify_delegations`
-    pub fn commitment(&mut self, revealed: Vec<HashSet<usize>>) -> DelgResult<AttributeTokenComm> {
+    pub fn commitment(
+        &mut self,
+        revealed: Vec<HashSet<usize>>,
+    ) -> DelgCredCDDResult<AttributeTokenComm> {
         let precomputed_setup_vals =
             PrecompOnSetupParams::new(&self.setup_params_1, &self.setup_params_2);
         let precomputed_sig_vals =
@@ -226,7 +229,7 @@ impl<'a> AttributeToken<'a> {
         challenge: &FieldElement,
         even_level_vks: Vec<&EvenLevelVerkey>,
         odd_level_vks: Vec<&OddLevelVerkey>,
-    ) -> DelgResult<AttributeTokenResp> {
+    ) -> DelgCredCDDResult<AttributeTokenResp> {
         at.validate(self.L)?;
 
         let mut resp_csk = FieldElement::zero();
@@ -384,7 +387,7 @@ impl<'a> AttributeToken<'a> {
         ipk: &Groth1Verkey,
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
-    ) -> DelgResult<AttributeTokenComm> {
+    ) -> DelgCredCDDResult<AttributeTokenComm> {
         comm.validate(L)?;
         resp.validate(L)?;
 
@@ -423,14 +426,14 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_1.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: setup_params_1.y.len() + 1,
                         given: attr_count,
                     });
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.odd_level_resp_a[i / 2].len() {
-                    return Err(DelgError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
                         expected: resp.odd_level_resp_a[i / 2].len(),
                         given: unrevealed_attr_count,
                     });
@@ -572,14 +575,14 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_2.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: setup_params_2.y.len() + 1,
                         given: attr_count,
                     });
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.even_level_resp_a[(i / 2) - 1].len() {
-                    return Err(DelgError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
                         expected: resp.even_level_resp_a[(i / 2) - 1].len(),
                         given: unrevealed_attr_count,
                     });
@@ -675,7 +678,7 @@ impl<'a> AttributeToken<'a> {
         &mut self,
         revealed: Vec<HashSet<usize>>,
         precomputed: &PrecompOnSetupParams,
-    ) -> DelgResult<AttributeTokenComm> {
+    ) -> DelgCredCDDResult<AttributeTokenComm> {
         let precomputed_sig_vals =
             PrecompOnCredChain::new(&self.cred_chain, &self.setup_params_1, &self.setup_params_2)?;
         self.commitment_with_precomputation(revealed, precomputed, &precomputed_sig_vals)
@@ -686,9 +689,9 @@ impl<'a> AttributeToken<'a> {
         revealed: Vec<HashSet<usize>>,
         precomp_setup: &PrecompOnSetupParams,
         precomp_chain: &PrecompOnCredChain,
-    ) -> DelgResult<AttributeTokenComm> {
+    ) -> DelgCredCDDResult<AttributeTokenComm> {
         if revealed.len() != self.L {
-            return Err(DelgError::IncorrectNumberOfRevealedAttributeSets {
+            return Err(DelgCredCDDError::IncorrectNumberOfRevealedAttributeSets {
                 expected: self.L,
                 given: revealed.len(),
             });
@@ -737,7 +740,7 @@ impl<'a> AttributeToken<'a> {
                 };
 
                 if revealed[i - 1].len() > self.setup_params_1.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: self.setup_params_1.y.len(),
                         given: revealed[i - 1].len(),
                     });
@@ -820,7 +823,7 @@ impl<'a> AttributeToken<'a> {
                 let com_i_s = GT::mul(&e_1, &e_2);
 
                 if revealed[i - 1].len() > self.setup_params_2.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: self.setup_params_2.y.len(),
                         given: revealed[i - 1].len(),
                     });
@@ -916,7 +919,7 @@ impl<'a> AttributeToken<'a> {
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
         precomputed: &PrecompForCommitmentReconstitution,
-    ) -> DelgResult<AttributeTokenComm> {
+    ) -> DelgCredCDDResult<AttributeTokenComm> {
         comm.validate(L)?;
         resp.validate(L)?;
 
@@ -948,14 +951,14 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_1.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: setup_params_1.y.len() + 1,
                         given: attr_count,
                     });
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.odd_level_resp_a[i / 2].len() {
-                    return Err(DelgError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
                         expected: resp.odd_level_resp_a[i / 2].len(),
                         given: unrevealed_attr_count,
                     });
@@ -1095,14 +1098,14 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_2.y.len() {
-                    return Err(DelgError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
                         expected: setup_params_2.y.len() + 1,
                         given: attr_count,
                     });
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.even_level_resp_a[(i / 2) - 1].len() {
-                    return Err(DelgError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
                         expected: resp.even_level_resp_a[(i / 2) - 1].len(),
                         given: unrevealed_attr_count,
                     });
@@ -1196,7 +1199,7 @@ macro_rules! check_odd_collection_length {
     ( $collection:expr, $L: ident, $entity_type:expr ) => {{
         if $L % 2 == 1 {
             if $collection.len() != (($L / 2) + 1) {
-                Err(DelgError::IncorrectNumberOfOddValues {
+                Err(DelgCredCDDError::IncorrectNumberOfOddValues {
                     expected: ($L / 2) + 1,
                     given: $collection.len(),
                     entity_type: $entity_type,
@@ -1206,7 +1209,7 @@ macro_rules! check_odd_collection_length {
             }
         } else {
             if $collection.len() != ($L / 2) {
-                return Err(DelgError::IncorrectNumberOfOddValues {
+                return Err(DelgCredCDDError::IncorrectNumberOfOddValues {
                     expected: $L / 2,
                     given: $collection.len(),
                     entity_type: $entity_type,
@@ -1221,7 +1224,7 @@ macro_rules! check_odd_collection_length {
 macro_rules! check_even_collection_length {
     ( $collection:expr, $L: ident, $entity_type:expr ) => {{
         if $collection.len() != ($L / 2) {
-            Err(DelgError::IncorrectNumberOfEvenValues {
+            Err(DelgCredCDDError::IncorrectNumberOfEvenValues {
                 expected: $L / 2,
                 given: $collection.len(),
                 entity_type: $entity_type,
@@ -1233,15 +1236,15 @@ macro_rules! check_even_collection_length {
 }
 
 impl AttributeTokenComm {
-    pub fn validate(&self, L: usize) -> DelgResult<()> {
+    pub fn validate(&self, L: usize) -> DelgCredCDDResult<()> {
         if self.comms_t.len() != L {
-            return Err(DelgError::IncorrectNumberOfTCommitments {
+            return Err(DelgCredCDDError::IncorrectNumberOfTCommitments {
                 expected: L,
                 given: self.comms_t.len(),
             });
         }
         if self.comms_s.len() != L {
-            return Err(DelgError::IncorrectNumberOfSCommitments {
+            return Err(DelgCredCDDError::IncorrectNumberOfSCommitments {
                 expected: L,
                 given: self.comms_s.len(),
             });
@@ -1249,14 +1252,14 @@ impl AttributeTokenComm {
         if (self.odd_level_revealed_attributes.len() + self.even_level_revealed_attributes.len())
             != L
         {
-            return Err(DelgError::IncorrectNumberOfRevealedAttributeSets {
+            return Err(DelgCredCDDError::IncorrectNumberOfRevealedAttributeSets {
                 expected: L,
                 given: self.odd_level_revealed_attributes.len()
                     + self.even_level_revealed_attributes.len(),
             });
         }
         if (self.odd_level_blinded_r.len() + self.even_level_blinded_r.len()) != L {
-            return Err(DelgError::IncorrectNumberOfBlindedR {
+            return Err(DelgCredCDDError::IncorrectNumberOfBlindedR {
                 expected: L,
                 given: self.odd_level_blinded_r.len() + self.even_level_blinded_r.len(),
             });
@@ -1310,9 +1313,9 @@ impl AttributeTokenComm {
 }
 
 impl AttributeTokenResp {
-    pub fn validate(&self, L: usize) -> DelgResult<()> {
+    pub fn validate(&self, L: usize) -> DelgCredCDDResult<()> {
         if (self.odd_level_resp_s.len() + self.even_level_resp_s.len()) != L {
-            return Err(DelgError::UnequalNoOfCommitmentAndResponses {
+            return Err(DelgCredCDDError::UnequalNoOfCommitmentAndResponses {
                 count_commitments: L,
                 count_responses: self.odd_level_resp_s.len() + self.even_level_resp_s.len(),
                 entity_type: "s from signature".to_string(),
@@ -1320,7 +1323,7 @@ impl AttributeTokenResp {
         }
 
         if (self.odd_level_resp_t.len() + self.even_level_resp_t.len()) != L {
-            return Err(DelgError::UnequalNoOfCommitmentAndResponses {
+            return Err(DelgCredCDDError::UnequalNoOfCommitmentAndResponses {
                 count_commitments: L,
                 count_responses: self.odd_level_resp_t.len() + self.even_level_resp_t.len(),
                 entity_type: "t from signature".to_string(),

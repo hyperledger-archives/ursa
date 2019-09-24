@@ -1,7 +1,7 @@
 use failure::Error;
 
 #[derive(Debug, Fail)]
-pub enum DelgError {
+pub enum DelgCredCDDError {
     #[fail(
         display = "Setup parameters valid for {} messages but given {} messages",
         expected, given
@@ -132,4 +132,4 @@ pub enum DelgError {
     GeneralError { msg: String },
 }
 
-pub type DelgResult<T> = Result<T, DelgError>;
+pub type DelgCredCDDResult<T> = Result<T, DelgCredCDDError>;
