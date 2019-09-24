@@ -24,6 +24,7 @@ macro_rules! check_verkey_message {
     };
 }
 
+/// A BBS+ signature.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Signature {
     pub a: G1,
@@ -152,6 +153,7 @@ fn prep_vec_for_b(
     (points, scalars)
 }
 
+/// Helper function for computing the `b` value. Internal helper function
 pub fn compute_b_const_time(
     starting_value: &G1,
     public_key: &PublicKey,
@@ -163,6 +165,7 @@ pub fn compute_b_const_time(
     starting_value + points.multi_scalar_mul_const_time(&scalars).unwrap()
 }
 
+/// Helper function for computing the `b` value. Internal helper function
 pub fn compute_b_var_time(
     starting_value: &G1,
     public_key: &PublicKey,
