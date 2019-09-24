@@ -1,4 +1,4 @@
-use super::errors::{DelgError, DelgResult};
+use super::errors::{DelgCredCDDError, DelgCredCDDResult};
 use super::groth_sig::{
     Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig, Groth2Verkey,
     GrothS1, GrothS2, GrothSigkey,
@@ -60,15 +60,15 @@ impl CredLinkOdd {
         delegatee_vk: &OddLevelVerkey,
         delegator_vk: &EvenLevelVerkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if self.attributes.len() > setup_params.y.len() {
-            return Err(DelgError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDError::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: self.attributes.len(),
             });
         }
         if !self.has_verkey(delegatee_vk) {
-            return Err(DelgError::VerkeyNotFoundInDelegationLink {});
+            return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
         }
         /*link.signature
         .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
@@ -91,15 +91,15 @@ impl CredLinkEven {
         delegatee_vk: &EvenLevelVerkey,
         delegator_vk: &OddLevelVerkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if self.attributes.len() > setup_params.y.len() {
-            return Err(DelgError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDError::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: self.attributes.len(),
             });
         }
         if !self.has_verkey(delegatee_vk) {
-            return Err(DelgError::VerkeyNotFoundInDelegationLink {});
+            return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
         }
         /*link.signature
         .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
@@ -128,9 +128,9 @@ impl CredChain {
         self.odd_size() + self.even_size()
     }
 
-    pub fn get_odd_link(&self, idx: usize) -> DelgResult<&CredLinkOdd> {
+    pub fn get_odd_link(&self, idx: usize) -> DelgCredCDDResult<&CredLinkOdd> {
         if self.odd_size() <= idx {
-            return Err(DelgError::NoOddLinkInChainAtGivenIndex {
+            return Err(DelgCredCDDError::NoOddLinkInChainAtGivenIndex {
                 given_index: idx,
                 size: self.odd_size(),
             });
@@ -138,9 +138,9 @@ impl CredChain {
         Ok(&self.odd_links[idx])
     }
 
-    pub fn get_even_link(&self, idx: usize) -> DelgResult<&CredLinkEven> {
+    pub fn get_even_link(&self, idx: usize) -> DelgCredCDDResult<&CredLinkEven> {
         if self.even_size() <= idx {
-            return Err(DelgError::NoEvenLinkInChainAtGivenIndex {
+            return Err(DelgCredCDDError::NoEvenLinkInChainAtGivenIndex {
                 given_index: idx,
                 size: self.even_size(),
             });
@@ -148,19 +148,19 @@ impl CredChain {
         Ok(&self.even_links[idx])
     }
 
-    pub fn extend_with_odd(&mut self, link: CredLinkOdd) -> DelgResult<()> {
+    pub fn extend_with_odd(&mut self, link: CredLinkOdd) -> DelgCredCDDResult<()> {
         if link.level % 2 == 0 {
-            return Err(DelgError::ExpectedOddLevel { given: link.level });
+            return Err(DelgCredCDDError::ExpectedOddLevel { given: link.level });
         }
         if self.odd_size() == 0 && link.level != 1 {
-            return Err(DelgError::UnexpectedLevel {
+            return Err(DelgCredCDDError::UnexpectedLevel {
                 expected: 1,
                 given: link.level,
             });
         } else if self.odd_size() != 0
             && ((link.level - self.odd_links[self.odd_size() - 1].level) != 2)
         {
-            return Err(DelgError::UnexpectedLevel {
+            return Err(DelgCredCDDError::UnexpectedLevel {
                 expected: self.odd_links[self.odd_size() - 1].level + 2,
                 given: link.level,
             });
@@ -169,19 +169,19 @@ impl CredChain {
         Ok(())
     }
 
-    pub fn extend_with_even(&mut self, link: CredLinkEven) -> DelgResult<()> {
+    pub fn extend_with_even(&mut self, link: CredLinkEven) -> DelgCredCDDResult<()> {
         if link.level % 2 != 0 {
-            return Err(DelgError::ExpectedEvenLevel { given: link.level });
+            return Err(DelgCredCDDError::ExpectedEvenLevel { given: link.level });
         }
         if self.even_size() == 0 && link.level != 2 {
-            return Err(DelgError::UnexpectedLevel {
+            return Err(DelgCredCDDError::UnexpectedLevel {
                 expected: 2,
                 given: link.level,
             });
         } else if self.even_size() != 0
             && ((link.level - self.even_links[self.even_size() - 1].level) != 2)
         {
-            return Err(DelgError::UnexpectedLevel {
+            return Err(DelgCredCDDError::UnexpectedLevel {
                 expected: self.even_links[self.even_size() - 1].level + 2,
                 given: link.level,
             });
@@ -195,9 +195,9 @@ impl CredChain {
         delegatee_vk: &OddLevelVerkey,
         delegator_vk: &EvenLevelVerkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if self.odd_size() == 0 {
-            return Err(DelgError::NoOddLinksInChain {});
+            return Err(DelgCredCDDError::NoOddLinksInChain {});
         }
         let link = &self.odd_links[self.odd_size() - 1];
         link.verify(delegatee_vk, delegator_vk, setup_params)
@@ -208,9 +208,9 @@ impl CredChain {
         delegatee_vk: &EvenLevelVerkey,
         delegator_vk: &OddLevelVerkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if self.even_size() == 0 {
-            return Err(DelgError::NoEvenLinksInChain {});
+            return Err(DelgCredCDDError::NoEvenLinksInChain {});
         }
         let link = &self.even_links[self.even_size() - 1];
         link.verify(delegatee_vk, delegator_vk, setup_params)
@@ -223,32 +223,32 @@ impl CredChain {
         odd_level_vks: Vec<&OddLevelVerkey>,
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if self.size() == 0 {
-            return Err(DelgError::ChainEmpty {});
+            return Err(DelgCredCDDError::ChainEmpty {});
         }
         if (even_level_vks.len() + odd_level_vks.len()) != (self.size() + 1) {
-            return Err(DelgError::IncorrectNumberOfVerkeys {
+            return Err(DelgCredCDDError::IncorrectNumberOfVerkeys {
                 expected: self.size() + 1,
                 given: even_level_vks.len() + odd_level_vks.len(),
             });
         }
         if even_level_vks.len() != ((self.size() / 2) + 1) {
-            return Err(DelgError::IncorrectNumberOfEvenLevelVerkeys {
+            return Err(DelgCredCDDError::IncorrectNumberOfEvenLevelVerkeys {
                 expected: (self.size() / 2) + 1,
                 given: even_level_vks.len(),
             });
         }
         if self.size() % 2 == 1 {
             if odd_level_vks.len() != ((self.size() / 2) + 1) {
-                return Err(DelgError::IncorrectNumberOfOddLevelVerkeys {
+                return Err(DelgCredCDDError::IncorrectNumberOfOddLevelVerkeys {
                     expected: (self.size() / 2) + 1,
                     given: odd_level_vks.len(),
                 });
             }
         } else {
             if odd_level_vks.len() != (self.size() / 2) {
-                return Err(DelgError::IncorrectNumberOfOddLevelVerkeys {
+                return Err(DelgCredCDDError::IncorrectNumberOfOddLevelVerkeys {
                     expected: self.size() / 2,
                     given: odd_level_vks.len(),
                 });
@@ -260,7 +260,7 @@ impl CredChain {
                 let idx = i / 2;
                 let link = &self.odd_links[idx];
                 if link.level != i {
-                    return return Err(DelgError::UnexpectedLevel {
+                    return return Err(DelgCredCDDError::UnexpectedLevel {
                         expected: i,
                         given: link.level,
                     });
@@ -269,7 +269,7 @@ impl CredChain {
             } else {
                 let link = &self.even_links[(i / 2) - 1];
                 if link.level != i {
-                    return return Err(DelgError::UnexpectedLevel {
+                    return return Err(DelgCredCDDError::UnexpectedLevel {
                         expected: i,
                         given: link.level,
                     });
@@ -288,9 +288,9 @@ impl CredChain {
     }
 
     /// Returns a truncated version of the current chain. Does not modify the current chain but clones the links.
-    pub fn get_truncated(&self, size: usize) -> DelgResult<Self> {
+    pub fn get_truncated(&self, size: usize) -> DelgCredCDDResult<Self> {
         if size > self.size() {
-            return Err(DelgError::ChainIsShorterThanExpected {
+            return Err(DelgCredCDDError::ChainIsShorterThanExpected {
                 actual_size: self.size(),
                 expected_size: size,
             });
@@ -310,9 +310,9 @@ impl CredChain {
 }
 
 impl EvenLevelIssuer {
-    pub fn new(level: usize) -> DelgResult<Self> {
+    pub fn new(level: usize) -> DelgCredCDDResult<Self> {
         if level % 2 != 0 {
-            return Err(DelgError::ExpectedEvenLevel { given: level });
+            return Err(DelgCredCDDError::ExpectedEvenLevel { given: level });
         }
         Ok(Self { level })
     }
@@ -327,9 +327,9 @@ impl EvenLevelIssuer {
         delegatee_vk: OddLevelVerkey,
         sk: &Sigkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<CredLinkOdd> {
+    ) -> DelgCredCDDResult<CredLinkOdd> {
         if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDError::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: delegatee_attributes.len(),
             });
@@ -345,9 +345,9 @@ impl EvenLevelIssuer {
 }
 
 impl OddLevelIssuer {
-    pub fn new(level: usize) -> DelgResult<Self> {
+    pub fn new(level: usize) -> DelgCredCDDResult<Self> {
         if level % 2 == 0 {
-            return Err(DelgError::ExpectedOddLevel { given: level });
+            return Err(DelgCredCDDError::ExpectedOddLevel { given: level });
         }
         Ok(Self { level })
     }
@@ -362,9 +362,9 @@ impl OddLevelIssuer {
         delegatee_vk: EvenLevelVerkey,
         sk: &Sigkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<CredLinkEven> {
+    ) -> DelgCredCDDResult<CredLinkEven> {
         if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDError::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: delegatee_attributes.len(),
             });
@@ -389,7 +389,7 @@ impl RootIssuer {
         delegatee_vk: OddLevelVerkey,
         sk: &Sigkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<CredLinkOdd> {
+    ) -> DelgCredCDDResult<CredLinkOdd> {
         let issuer = EvenLevelIssuer::new(0)?;
         issuer.delegate(delegatee_attributes, delegatee_vk, sk, setup_params)
     }

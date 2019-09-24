@@ -1,4 +1,4 @@
-use super::errors::{DelgError, DelgResult};
+use super::errors::{DelgCredCDDError, DelgCredCDDResult};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -53,7 +53,7 @@ macro_rules! impl_GrothS_setup {
 macro_rules! impl_GrothSig_new {
     ( $messages:ident, $sk:ident, $y:expr, $g_r:expr, $g_s:expr, $msg_group_vec:ident ) => {{
         if $messages.len() > $y.len() {
-            return Err(DelgError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
                 expected: $y.len(),
                 given: $messages.len(),
             });
@@ -134,7 +134,7 @@ impl Groth1Sig {
         messages: &[G1],
         sk: &GrothSigkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<Self> {
+    ) -> DelgCredCDDResult<Self> {
         impl_GrothSig_new!(
             messages,
             sk,
@@ -152,9 +152,9 @@ impl Groth1Sig {
         messages: &[G1],
         verkey: &Groth1Verkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if messages.len() > setup_params.y.len() {
-            return Err(DelgError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
             });
@@ -191,7 +191,7 @@ impl Groth1Sig {
         messages: &[G1],
         verkey: &Groth1Verkey,
         setup_params: &Groth1SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         // Verify n pairing checks with a single one.
         // if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
         // in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
@@ -203,7 +203,7 @@ impl Groth1Sig {
         // e(-S, R)*e(y1, g2)*e(g1, V) * e(m1^r, g2)*e(y1^r, V)*e(T1^r, -R) * e(m2^{r^2}, g1)*e(y2^{r^2}, V)*e(T2^{r^2}, -R) * ... == 1
 
         if messages.len() > setup_params.y.len() {
-            return Err(DelgError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
             });
@@ -262,7 +262,7 @@ impl Groth2Sig {
         messages: &[G2],
         sk: &GrothSigkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<Self> {
+    ) -> DelgCredCDDResult<Self> {
         impl_GrothSig_new!(
             messages,
             sk,
@@ -280,9 +280,9 @@ impl Groth2Sig {
         messages: &[G2],
         verkey: &Groth2Verkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         if messages.len() > setup_params.y.len() {
-            return Err(DelgError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
             });
@@ -318,7 +318,7 @@ impl Groth2Sig {
         messages: &[G2],
         verkey: &Groth2Verkey,
         setup_params: &Groth2SetupParams,
-    ) -> DelgResult<bool> {
+    ) -> DelgCredCDDResult<bool> {
         // Verify n pairing checks with a single one.
         // if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
         // in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
@@ -330,7 +330,7 @@ impl Groth2Sig {
         // e(-R, S)*e(g1, y1)*e(V, g2) * e(g1^r, m1)*e(V^r, y1)*e(-R^r, T1) * e(g1^{r^2}, m2)*e(V^{r^2}, y2)*e(-R^{r^2}, T2) * ... == 1
 
         if messages.len() > setup_params.y.len() {
-            return Err(DelgError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
             });
