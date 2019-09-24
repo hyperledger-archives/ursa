@@ -752,7 +752,6 @@ mod tests {
         }
     }
 
-    #[cfg(not(target_env = "msvc"))]
     #[test]
     fn test_modular_exponentiation() {
         let base = BigNumber::from_dec("12714671911903680502393098440562958150461307840092575886187217264492970515611166458444182780904860535776274190597528985988632488194981204988199325501696648896748368401254829974173258613724800116424602180755019588176641580062215499750550535543002990347313784260314641340394494547935943176226649412526659864646068220114536172189443925908781755710141006387091748541976715633668919725277837668568166444731358541327097786024076841158424402136565558677098853060675674958695935207345864359540948421232816012865873346545455513695413921957708811080877422273777355768568166638843699798663264533662595755767287970642902713301649").unwrap();
@@ -766,21 +765,6 @@ mod tests {
         let modulus = BigNumber::from_u32(13).unwrap();
         assert_eq!(
             BigNumber::from_u32(7).unwrap(),
-            base.mod_exp(&exp, &modulus, None).unwrap()
-        );
-
-        let modulus = BigNumber::from_u32(1).unwrap();
-        assert_eq!(
-            BigNumber::new().unwrap(),
-            base.mod_exp(&exp, &modulus, None).unwrap()
-        );
-
-        let modulus = BigNumber::from_u32(0).unwrap();
-        assert!(base.mod_exp(&exp, &modulus, None).is_err());
-
-        let modulus = BigNumber::from_u32(1).unwrap().set_negative(true).unwrap();
-        assert_eq!(
-            BigNumber::new().unwrap(),
             base.mod_exp(&exp, &modulus, None).unwrap()
         );
 
