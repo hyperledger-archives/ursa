@@ -12,6 +12,8 @@ pub mod prelude {
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
 pub type SecretKey = FieldElement;
 
+/// `PublicKey` consists of a blinding generator `h0`, a commitment to the secret key `w`
+/// and a generator for each message in `h`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PublicKey {
     pub h0: G1,     //blinding factor base
@@ -57,6 +59,7 @@ impl PublicKey {
         Ok(PublicKey { w, h0, h })
     }
 
+    // Make sure no generator is identity
     pub fn validate(&self) -> Result<(), BBSError> {
         if self.h0.is_identity() || self.w.is_identity() || self.h.iter().any(|v| v.is_identity()) {
             Err(BBSError::from_kind(BBSErrorKind::MalformedPublicKey))
@@ -66,6 +69,7 @@ impl PublicKey {
     }
 }
 
+/// Create a new BBS+ keypair
 pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError> {
     if message_count == 0 {
         return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));

@@ -9,5 +9,3 @@ pub mod prelude {
     };
     pub use super::signature::Signature;
 }
-
-// TODO: Add "setup" to generate g1 and g2 and use them in-place of G1::generator() and G2::generator()
