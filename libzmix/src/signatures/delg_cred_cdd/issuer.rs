@@ -11,20 +11,66 @@ pub type Sigkey = GrothSigkey;
 pub type EvenLevelVerkey = Groth1Verkey;
 pub type OddLevelVerkey = Groth2Verkey;
 
-// (attributes, signature). The signature is over the attributes and the public key combined by appending public key to the attribute vector.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CredLinkOdd {
-    pub level: usize,
-    pub attributes: G1Vector,
-    pub signature: Groth1Sig,
+macro_rules! impl_CredLink {
+    ( $CredLink:ident, $GrothSetupParams:ident, $GrothSig:ident, $delegatee_vk:ident, $delegator_vk:ident, $GVector:ident ) => {
+        // (attributes, signature). The signature is over the attributes and the public key combined by appending public key to the attribute vector.
+        #[derive(Clone, Debug, Serialize, Deserialize)]
+        pub struct $CredLink {
+            pub level: usize,
+            pub attributes: $GVector,
+            pub signature: $GrothSig,
+        }
+
+        impl $CredLink {
+            pub fn attribute_count(&self) -> usize {
+                self.attributes.len()
+            }
+
+            pub fn has_verkey(&self, vk: &$delegatee_vk) -> bool {
+                self.attributes[self.attributes.len() - 1] == vk.0
+            }
+
+            pub fn verify(
+                &self,
+                delegatee_vk: &$delegatee_vk,
+                delegator_vk: &$delegator_vk,
+                setup_params: &$GrothSetupParams,
+            ) -> DelgCredCDDResult<bool> {
+                if self.attributes.len() > setup_params.y.len() {
+                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                        expected: setup_params.y.len(),
+                        given: self.attributes.len(),
+                    });
+                }
+                if !self.has_verkey(delegatee_vk) {
+                    return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
+                }
+                /*link.signature
+                .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
+                self.signature
+                    .verify_fast(self.attributes.as_slice(), delegator_vk, setup_params)
+            }
+        }
+    };
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CredLinkEven {
-    pub level: usize,
-    pub attributes: G2Vector,
-    pub signature: Groth2Sig,
-}
+impl_CredLink!(
+    CredLinkOdd,
+    Groth1SetupParams,
+    Groth1Sig,
+    OddLevelVerkey,
+    EvenLevelVerkey,
+    G1Vector
+);
+
+impl_CredLink!(
+    CredLinkEven,
+    Groth2SetupParams,
+    Groth2Sig,
+    EvenLevelVerkey,
+    OddLevelVerkey,
+    G2Vector
+);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CredChain {
@@ -45,68 +91,6 @@ pub struct OddLevelIssuer {
 pub struct RootIssuer {}
 
 pub type RootIssuerVerkey = EvenLevelVerkey;
-
-impl CredLinkOdd {
-    pub fn attribute_count(&self) -> usize {
-        self.attributes.len()
-    }
-
-    pub fn has_verkey(&self, vk: &OddLevelVerkey) -> bool {
-        self.attributes[self.attributes.len() - 1] == vk.0
-    }
-
-    pub fn verify(
-        &self,
-        delegatee_vk: &OddLevelVerkey,
-        delegator_vk: &EvenLevelVerkey,
-        setup_params: &Groth1SetupParams,
-    ) -> DelgCredCDDResult<bool> {
-        if self.attributes.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::MoreAttributesThanExpected {
-                expected: setup_params.y.len(),
-                given: self.attributes.len(),
-            });
-        }
-        if !self.has_verkey(delegatee_vk) {
-            return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
-        }
-        /*link.signature
-        .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
-        self.signature
-            .verify_fast(self.attributes.as_slice(), delegator_vk, setup_params)
-    }
-}
-
-impl CredLinkEven {
-    pub fn attribute_count(&self) -> usize {
-        self.attributes.len()
-    }
-
-    pub fn has_verkey(&self, vk: &EvenLevelVerkey) -> bool {
-        self.attributes[self.attributes.len() - 1] == vk.0
-    }
-
-    pub fn verify(
-        &self,
-        delegatee_vk: &EvenLevelVerkey,
-        delegator_vk: &OddLevelVerkey,
-        setup_params: &Groth2SetupParams,
-    ) -> DelgCredCDDResult<bool> {
-        if self.attributes.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::MoreAttributesThanExpected {
-                expected: setup_params.y.len(),
-                given: self.attributes.len(),
-            });
-        }
-        if !self.has_verkey(delegatee_vk) {
-            return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
-        }
-        /*link.signature
-        .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
-        self.signature
-            .verify_fast(self.attributes.as_slice(), delegator_vk, setup_params)
-    }
-}
 
 impl CredChain {
     pub fn new() -> Self {
