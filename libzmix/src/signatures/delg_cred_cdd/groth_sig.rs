@@ -1,4 +1,4 @@
-use super::errors::{DelgCredCDDError, DelgCredCDDResult};
+use super::errors::{DelgCredCDDErrorKind, DelgCredCDDResult};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -53,10 +53,11 @@ macro_rules! impl_GrothS_setup {
 macro_rules! impl_GrothSig_new {
     ( $messages:ident, $sk:ident, $y:expr, $g_r:expr, $g_s:expr, $msg_group_vec:ident ) => {{
         if $messages.len() > $y.len() {
-            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: $y.len(),
                 given: $messages.len(),
-            });
+            }
+            .into());
         }
         let r = FieldElement::random();
         let r_inv = r.inverse();
@@ -154,10 +155,11 @@ impl Groth1Sig {
         setup_params: &Groth1SetupParams,
     ) -> DelgCredCDDResult<bool> {
         if messages.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
-            });
+            }
+            .into());
         }
 
         // e(S, R) == e(y_0, g2) * (g1, V) => e(y_0, g2) * (g1, V) * e(S, R)^-1 == 1 => e(y_0, g2) * (g1, V) * e(S^-1, R) == 1
@@ -203,10 +205,11 @@ impl Groth1Sig {
         // e(-S, R)*e(y1, g2)*e(g1, V) * e(m1^r, g2)*e(y1^r, V)*e(T1^r, -R) * e(m2^{r^2}, g1)*e(y2^{r^2}, V)*e(T2^{r^2}, -R) * ... == 1
 
         if messages.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
-            });
+            }
+            .into());
         }
 
         let r = FieldElement::random();
@@ -282,10 +285,11 @@ impl Groth2Sig {
         setup_params: &Groth2SetupParams,
     ) -> DelgCredCDDResult<bool> {
         if messages.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
-            });
+            }
+            .into());
         }
 
         // e(R, S) == e(g1, y_0) * (V, g2) => 1 == e(g1, y_0) * (V, g2) * e(R, S)^-1 => 1 == e(g1, y_0) * (V, g2) * e(R^-1, S)
@@ -330,10 +334,11 @@ impl Groth2Sig {
         // e(-R, S)*e(g1, y1)*e(V, g2) * e(g1^r, m1)*e(V^r, y1)*e(-R^r, T1) * e(g1^{r^2}, m2)*e(V^{r^2}, y2)*e(-R^{r^2}, T2) * ... == 1
 
         if messages.len() > setup_params.y.len() {
-            return Err(DelgCredCDDError::UnsupportedNoOfMessages {
+            return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
                 given: messages.len(),
-            });
+            }
+            .into());
         }
 
         let r = FieldElement::random();

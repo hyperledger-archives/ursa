@@ -1,6 +1,6 @@
 // A presenter is an entity holding a CredChain which does proof of attribute tokens
 
-use super::errors::{DelgCredCDDError, DelgCredCDDResult};
+use super::errors::{DelgCredCDDError, DelgCredCDDErrorKind, DelgCredCDDResult};
 use super::groth_sig::{Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig};
 use super::issuer::{CredChain, EvenLevelVerkey, OddLevelVerkey};
 use amcl_wrapper::extension_field_gt::GT;
@@ -167,17 +167,23 @@ impl PrecompForCommitmentReconstitution {
 macro_rules! check_blindings_count {
     ( $self:ident, $i: ident, $link:ident, $unrevealed_attr_count:ident ) => {{
         if $self.blindings_t[$i - 1].len() != $link.signature.T.len() {
-            Err(DelgCredCDDError::GeneralError {
-                msg: format!("t blindings count unequal to t count"),
-            })
+            Err(DelgCredCDDError::from_kind(
+                DelgCredCDDErrorKind::GeneralError {
+                    msg: format!("t blindings count unequal to t count"),
+                },
+            ))
         } else if $link.attribute_count() != $link.signature.T.len() {
-            Err(DelgCredCDDError::GeneralError {
-                msg: format!("attribute count unequal to t count"),
-            })
+            Err(DelgCredCDDError::from_kind(
+                DelgCredCDDErrorKind::GeneralError {
+                    msg: format!("attribute count unequal to t count"),
+                },
+            ))
         } else if $self.blindings_a[$i - 1].len() != $unrevealed_attr_count {
-            Err(DelgCredCDDError::GeneralError {
-                msg: format!("attribute blidnding count unequal to unrevealed attribute count"),
-            })
+            Err(DelgCredCDDError::from_kind(
+                DelgCredCDDErrorKind::GeneralError {
+                    msg: format!("attribute blidnding count unequal to unrevealed attribute count"),
+                },
+            ))
         } else {
             Ok(())
         }
@@ -426,17 +432,19 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_1.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params_1.y.len() + 1,
                         given: attr_count,
-                    });
+                    }
+                    .into());
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.odd_level_resp_a[i / 2].len() {
-                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreUnrevealedAttributesThanExpected {
                         expected: resp.odd_level_resp_a[i / 2].len(),
                         given: unrevealed_attr_count,
-                    });
+                    }
+                    .into());
                 }
 
                 // e(y[j], ipk)^-c can be changed to e(y[j], ipk^-c) and ipk^-c can be computed once for all odd levels.
@@ -575,17 +583,19 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_2.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params_2.y.len() + 1,
                         given: attr_count,
-                    });
+                    }
+                    .into());
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.even_level_resp_a[(i / 2) - 1].len() {
-                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreUnrevealedAttributesThanExpected {
                         expected: resp.even_level_resp_a[(i / 2) - 1].len(),
                         given: unrevealed_attr_count,
-                    });
+                    }
+                    .into());
                 }
 
                 let e_1 = GT::ate_2_pairing(
@@ -691,10 +701,13 @@ impl<'a> AttributeToken<'a> {
         precomp_chain: &PrecompOnCredChain,
     ) -> DelgCredCDDResult<AttributeTokenComm> {
         if revealed.len() != self.L {
-            return Err(DelgCredCDDError::IncorrectNumberOfRevealedAttributeSets {
-                expected: self.L,
-                given: revealed.len(),
-            });
+            return Err(
+                DelgCredCDDErrorKind::IncorrectNumberOfRevealedAttributeSets {
+                    expected: self.L,
+                    given: revealed.len(),
+                }
+                .into(),
+            );
         }
 
         // In practice, g1 and g2 in both Groth1 and Groth2 can be same
@@ -740,10 +753,11 @@ impl<'a> AttributeToken<'a> {
                 };
 
                 if revealed[i - 1].len() > self.setup_params_1.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: self.setup_params_1.y.len(),
                         given: revealed[i - 1].len(),
-                    });
+                    }
+                    .into());
                 }
 
                 let unrevealed_attr_count = link.attribute_count() - revealed[i - 1].len();
@@ -823,10 +837,11 @@ impl<'a> AttributeToken<'a> {
                 let com_i_s = GT::mul(&e_1, &e_2);
 
                 if revealed[i - 1].len() > self.setup_params_2.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: self.setup_params_2.y.len(),
                         given: revealed[i - 1].len(),
-                    });
+                    }
+                    .into());
                 }
 
                 let unrevealed_attr_count = link.attribute_count() - revealed[i - 1].len();
@@ -951,17 +966,19 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_1.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params_1.y.len() + 1,
                         given: attr_count,
-                    });
+                    }
+                    .into());
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.odd_level_resp_a[i / 2].len() {
-                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreUnrevealedAttributesThanExpected {
                         expected: resp.odd_level_resp_a[i / 2].len(),
                         given: unrevealed_attr_count,
-                    });
+                    }
+                    .into());
                 }
 
                 // Use precomputed e(y[j], ipk) for all j
@@ -1098,17 +1115,19 @@ impl<'a> AttributeToken<'a> {
                 let attr_count = comm.comms_t[i - 1].len();
                 let unrevealed_attr_count = attr_count - revealed[i - 1].len();
                 if attr_count > setup_params_2.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params_2.y.len() + 1,
                         given: attr_count,
-                    });
+                    }
+                    .into());
                 }
                 // Skipping 1 for verkey
                 if (unrevealed_attr_count - 1) > resp.even_level_resp_a[(i / 2) - 1].len() {
-                    return Err(DelgCredCDDError::MoreUnrevealedAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreUnrevealedAttributesThanExpected {
                         expected: resp.even_level_resp_a[(i / 2) - 1].len(),
                         given: unrevealed_attr_count,
-                    });
+                    }
+                    .into());
                 }
 
                 let e_1 = GT::ate_2_pairing(
@@ -1199,21 +1218,25 @@ macro_rules! check_odd_collection_length {
     ( $collection:expr, $L: ident, $entity_type:expr ) => {{
         if $L % 2 == 1 {
             if $collection.len() != (($L / 2) + 1) {
-                Err(DelgCredCDDError::IncorrectNumberOfOddValues {
-                    expected: ($L / 2) + 1,
-                    given: $collection.len(),
-                    entity_type: $entity_type,
-                })
+                Err(DelgCredCDDError::from_kind(
+                    DelgCredCDDErrorKind::IncorrectNumberOfOddValues {
+                        expected: ($L / 2) + 1,
+                        given: $collection.len(),
+                        entity_type: $entity_type,
+                    },
+                ))
             } else {
                 Ok(())
             }
         } else {
             if $collection.len() != ($L / 2) {
-                return Err(DelgCredCDDError::IncorrectNumberOfOddValues {
-                    expected: $L / 2,
-                    given: $collection.len(),
-                    entity_type: $entity_type,
-                });
+                return Err(DelgCredCDDError::from_kind(
+                    DelgCredCDDErrorKind::IncorrectNumberOfOddValues {
+                        expected: $L / 2,
+                        given: $collection.len(),
+                        entity_type: $entity_type,
+                    },
+                ));
             } else {
                 Ok(())
             }
@@ -1224,11 +1247,13 @@ macro_rules! check_odd_collection_length {
 macro_rules! check_even_collection_length {
     ( $collection:expr, $L: ident, $entity_type:expr ) => {{
         if $collection.len() != ($L / 2) {
-            Err(DelgCredCDDError::IncorrectNumberOfEvenValues {
-                expected: $L / 2,
-                given: $collection.len(),
-                entity_type: $entity_type,
-            })
+            Err(DelgCredCDDError::from_kind(
+                DelgCredCDDErrorKind::IncorrectNumberOfEvenValues {
+                    expected: $L / 2,
+                    given: $collection.len(),
+                    entity_type: $entity_type,
+                },
+            ))
         } else {
             Ok(())
         }
@@ -1238,31 +1263,37 @@ macro_rules! check_even_collection_length {
 impl AttributeTokenComm {
     pub fn validate(&self, L: usize) -> DelgCredCDDResult<()> {
         if self.comms_t.len() != L {
-            return Err(DelgCredCDDError::IncorrectNumberOfTCommitments {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfTCommitments {
                 expected: L,
                 given: self.comms_t.len(),
-            });
+            }
+            .into());
         }
         if self.comms_s.len() != L {
-            return Err(DelgCredCDDError::IncorrectNumberOfSCommitments {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfSCommitments {
                 expected: L,
                 given: self.comms_s.len(),
-            });
+            }
+            .into());
         }
         if (self.odd_level_revealed_attributes.len() + self.even_level_revealed_attributes.len())
             != L
         {
-            return Err(DelgCredCDDError::IncorrectNumberOfRevealedAttributeSets {
-                expected: L,
-                given: self.odd_level_revealed_attributes.len()
-                    + self.even_level_revealed_attributes.len(),
-            });
+            return Err(
+                DelgCredCDDErrorKind::IncorrectNumberOfRevealedAttributeSets {
+                    expected: L,
+                    given: self.odd_level_revealed_attributes.len()
+                        + self.even_level_revealed_attributes.len(),
+                }
+                .into(),
+            );
         }
         if (self.odd_level_blinded_r.len() + self.even_level_blinded_r.len()) != L {
-            return Err(DelgCredCDDError::IncorrectNumberOfBlindedR {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfBlindedR {
                 expected: L,
                 given: self.odd_level_blinded_r.len() + self.even_level_blinded_r.len(),
-            });
+            }
+            .into());
         }
 
         check_odd_collection_length!(
@@ -1315,19 +1346,21 @@ impl AttributeTokenComm {
 impl AttributeTokenResp {
     pub fn validate(&self, L: usize) -> DelgCredCDDResult<()> {
         if (self.odd_level_resp_s.len() + self.even_level_resp_s.len()) != L {
-            return Err(DelgCredCDDError::UnequalNoOfCommitmentAndResponses {
+            return Err(DelgCredCDDErrorKind::UnequalNoOfCommitmentAndResponses {
                 count_commitments: L,
                 count_responses: self.odd_level_resp_s.len() + self.even_level_resp_s.len(),
                 entity_type: "s from signature".to_string(),
-            });
+            }
+            .into());
         }
 
         if (self.odd_level_resp_t.len() + self.even_level_resp_t.len()) != L {
-            return Err(DelgCredCDDError::UnequalNoOfCommitmentAndResponses {
+            return Err(DelgCredCDDErrorKind::UnequalNoOfCommitmentAndResponses {
                 count_commitments: L,
                 count_responses: self.odd_level_resp_t.len() + self.even_level_resp_t.len(),
                 entity_type: "t from signature".to_string(),
-            });
+            }
+            .into());
         }
         Ok(())
     }

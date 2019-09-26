@@ -1,7 +1,9 @@
-use failure::Error;
+use crate::commitments::pok_vc::PoKVCError;
+use failure::{Error, Backtrace, Context, Fail};
+use std::fmt;
 
-#[derive(Debug, Fail)]
-pub enum DelgCredCDDError {
+#[derive(Clone, Eq, PartialEq, Debug, Fail)]
+pub enum DelgCredCDDErrorKind {
     #[fail(
         display = "Setup parameters valid for {} messages but given {} messages",
         expected, given
@@ -128,8 +130,14 @@ pub enum DelgCredCDDError {
         entity_type: String,
     },
 
+    #[fail(display = "Error from PoKVC module {:?}", msg)]
+    PoKVCError { msg: String },
+
     #[fail(display = "Error with message {:?}", msg)]
     GeneralError { msg: String },
 }
+
+impl_Errors!(DelgCredCDDErrorKind, DelgCredCDDError);
+impl_PoKVCError_conversion!(DelgCredCDDErrorKind, DelgCredCDDError);
 
 pub type DelgCredCDDResult<T> = Result<T, DelgCredCDDError>;

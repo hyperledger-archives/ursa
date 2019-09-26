@@ -1,4 +1,4 @@
-use super::errors::{DelgCredCDDError, DelgCredCDDResult};
+use super::errors::{DelgCredCDDErrorKind, DelgCredCDDResult};
 use super::groth_sig::{
     Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig, Groth2Verkey,
     GrothS1, GrothS2, GrothSigkey,
@@ -37,13 +37,14 @@ macro_rules! impl_CredLink {
                 setup_params: &$GrothSetupParams,
             ) -> DelgCredCDDResult<bool> {
                 if self.attributes.len() > setup_params.y.len() {
-                    return Err(DelgCredCDDError::MoreAttributesThanExpected {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params.y.len(),
                         given: self.attributes.len(),
-                    });
+                    }
+                    .into());
                 }
                 if !self.has_verkey(delegatee_vk) {
-                    return Err(DelgCredCDDError::VerkeyNotFoundInDelegationLink {});
+                    return Err(DelgCredCDDErrorKind::VerkeyNotFoundInDelegationLink {}.into());
                 }
                 /*link.signature
                 .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
@@ -114,40 +115,44 @@ impl CredChain {
 
     pub fn get_odd_link(&self, idx: usize) -> DelgCredCDDResult<&CredLinkOdd> {
         if self.odd_size() <= idx {
-            return Err(DelgCredCDDError::NoOddLinkInChainAtGivenIndex {
+            return Err(DelgCredCDDErrorKind::NoOddLinkInChainAtGivenIndex {
                 given_index: idx,
                 size: self.odd_size(),
-            });
+            }
+            .into());
         }
         Ok(&self.odd_links[idx])
     }
 
     pub fn get_even_link(&self, idx: usize) -> DelgCredCDDResult<&CredLinkEven> {
         if self.even_size() <= idx {
-            return Err(DelgCredCDDError::NoEvenLinkInChainAtGivenIndex {
+            return Err(DelgCredCDDErrorKind::NoEvenLinkInChainAtGivenIndex {
                 given_index: idx,
                 size: self.even_size(),
-            });
+            }
+            .into());
         }
         Ok(&self.even_links[idx])
     }
 
     pub fn extend_with_odd(&mut self, link: CredLinkOdd) -> DelgCredCDDResult<()> {
         if link.level % 2 == 0 {
-            return Err(DelgCredCDDError::ExpectedOddLevel { given: link.level });
+            return Err(DelgCredCDDErrorKind::ExpectedOddLevel { given: link.level }.into());
         }
         if self.odd_size() == 0 && link.level != 1 {
-            return Err(DelgCredCDDError::UnexpectedLevel {
+            return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                 expected: 1,
                 given: link.level,
-            });
+            }
+            .into());
         } else if self.odd_size() != 0
             && ((link.level - self.odd_links[self.odd_size() - 1].level) != 2)
         {
-            return Err(DelgCredCDDError::UnexpectedLevel {
+            return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                 expected: self.odd_links[self.odd_size() - 1].level + 2,
                 given: link.level,
-            });
+            }
+            .into());
         }
         self.odd_links.push(link);
         Ok(())
@@ -155,20 +160,22 @@ impl CredChain {
 
     pub fn extend_with_even(&mut self, link: CredLinkEven) -> DelgCredCDDResult<()> {
         if link.level % 2 != 0 {
-            return Err(DelgCredCDDError::ExpectedEvenLevel { given: link.level });
+            return Err(DelgCredCDDErrorKind::ExpectedEvenLevel { given: link.level }.into());
         }
         if self.even_size() == 0 && link.level != 2 {
-            return Err(DelgCredCDDError::UnexpectedLevel {
+            return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                 expected: 2,
                 given: link.level,
-            });
+            }
+            .into());
         } else if self.even_size() != 0
             && ((link.level - self.even_links[self.even_size() - 1].level) != 2)
         {
-            return Err(DelgCredCDDError::UnexpectedLevel {
+            return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                 expected: self.even_links[self.even_size() - 1].level + 2,
                 given: link.level,
-            });
+            }
+            .into());
         }
         self.even_links.push(link);
         Ok(())
@@ -181,7 +188,7 @@ impl CredChain {
         setup_params: &Groth1SetupParams,
     ) -> DelgCredCDDResult<bool> {
         if self.odd_size() == 0 {
-            return Err(DelgCredCDDError::NoOddLinksInChain {});
+            return Err(DelgCredCDDErrorKind::NoOddLinksInChain {}.into());
         }
         let link = &self.odd_links[self.odd_size() - 1];
         link.verify(delegatee_vk, delegator_vk, setup_params)
@@ -194,7 +201,7 @@ impl CredChain {
         setup_params: &Groth2SetupParams,
     ) -> DelgCredCDDResult<bool> {
         if self.even_size() == 0 {
-            return Err(DelgCredCDDError::NoEvenLinksInChain {});
+            return Err(DelgCredCDDErrorKind::NoEvenLinksInChain {}.into());
         }
         let link = &self.even_links[self.even_size() - 1];
         link.verify(delegatee_vk, delegator_vk, setup_params)
@@ -209,33 +216,37 @@ impl CredChain {
         setup_params_2: &Groth2SetupParams,
     ) -> DelgCredCDDResult<bool> {
         if self.size() == 0 {
-            return Err(DelgCredCDDError::ChainEmpty {});
+            return Err(DelgCredCDDErrorKind::ChainEmpty {}.into());
         }
         if (even_level_vks.len() + odd_level_vks.len()) != (self.size() + 1) {
-            return Err(DelgCredCDDError::IncorrectNumberOfVerkeys {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfVerkeys {
                 expected: self.size() + 1,
                 given: even_level_vks.len() + odd_level_vks.len(),
-            });
+            }
+            .into());
         }
         if even_level_vks.len() != ((self.size() / 2) + 1) {
-            return Err(DelgCredCDDError::IncorrectNumberOfEvenLevelVerkeys {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfEvenLevelVerkeys {
                 expected: (self.size() / 2) + 1,
                 given: even_level_vks.len(),
-            });
+            }
+            .into());
         }
         if self.size() % 2 == 1 {
             if odd_level_vks.len() != ((self.size() / 2) + 1) {
-                return Err(DelgCredCDDError::IncorrectNumberOfOddLevelVerkeys {
+                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
                     expected: (self.size() / 2) + 1,
                     given: odd_level_vks.len(),
-                });
+                }
+                .into());
             }
         } else {
             if odd_level_vks.len() != (self.size() / 2) {
-                return Err(DelgCredCDDError::IncorrectNumberOfOddLevelVerkeys {
+                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
                     expected: self.size() / 2,
                     given: odd_level_vks.len(),
-                });
+                }
+                .into());
             }
         }
 
@@ -244,19 +255,21 @@ impl CredChain {
                 let idx = i / 2;
                 let link = &self.odd_links[idx];
                 if link.level != i {
-                    return return Err(DelgCredCDDError::UnexpectedLevel {
+                    return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                         expected: i,
                         given: link.level,
-                    });
+                    }
+                    .into());
                 }
                 link.verify(odd_level_vks[idx], even_level_vks[idx], setup_params_1)?
             } else {
                 let link = &self.even_links[(i / 2) - 1];
                 if link.level != i {
-                    return return Err(DelgCredCDDError::UnexpectedLevel {
+                    return Err(DelgCredCDDErrorKind::UnexpectedLevel {
                         expected: i,
                         given: link.level,
-                    });
+                    }
+                    .into());
                 }
                 link.verify(
                     even_level_vks[i / 2],
@@ -274,10 +287,11 @@ impl CredChain {
     /// Returns a truncated version of the current chain. Does not modify the current chain but clones the links.
     pub fn get_truncated(&self, size: usize) -> DelgCredCDDResult<Self> {
         if size > self.size() {
-            return Err(DelgCredCDDError::ChainIsShorterThanExpected {
+            return Err(DelgCredCDDErrorKind::ChainIsShorterThanExpected {
                 actual_size: self.size(),
                 expected_size: size,
-            });
+            }
+            .into());
         }
         let mut new_chain = CredChain::new();
         for i in 1..=size {
@@ -296,7 +310,7 @@ impl CredChain {
 impl EvenLevelIssuer {
     pub fn new(level: usize) -> DelgCredCDDResult<Self> {
         if level % 2 != 0 {
-            return Err(DelgCredCDDError::ExpectedEvenLevel { given: level });
+            return Err(DelgCredCDDErrorKind::ExpectedEvenLevel { given: level }.into());
         }
         Ok(Self { level })
     }
@@ -313,10 +327,11 @@ impl EvenLevelIssuer {
         setup_params: &Groth1SetupParams,
     ) -> DelgCredCDDResult<CredLinkOdd> {
         if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgCredCDDError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: delegatee_attributes.len(),
-            });
+            }
+            .into());
         }
         delegatee_attributes.push(delegatee_vk.0);
         let signature = Groth1Sig::new(delegatee_attributes.as_slice(), sk, setup_params)?;
@@ -331,7 +346,7 @@ impl EvenLevelIssuer {
 impl OddLevelIssuer {
     pub fn new(level: usize) -> DelgCredCDDResult<Self> {
         if level % 2 == 0 {
-            return Err(DelgCredCDDError::ExpectedOddLevel { given: level });
+            return Err(DelgCredCDDErrorKind::ExpectedOddLevel { given: level }.into());
         }
         Ok(Self { level })
     }
@@ -348,10 +363,11 @@ impl OddLevelIssuer {
         setup_params: &Groth2SetupParams,
     ) -> DelgCredCDDResult<CredLinkEven> {
         if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgCredCDDError::MoreAttributesThanExpected {
+            return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                 expected: setup_params.y.len(),
                 given: delegatee_attributes.len(),
-            });
+            }
+            .into());
         }
         delegatee_attributes.push(delegatee_vk.0);
         let signature = Groth2Sig::new(delegatee_attributes.as_slice(), sk, setup_params)?;
