@@ -50,7 +50,7 @@ pub fn hamming_distance_gadget<CS: ConstraintSystem>(
         result.push(var_1_or_0);
     }
 
-    vector_sum_constraints::<CS>(cs, result, count_different)?;
+    vector_sum_constraints::<CS>(cs, result, count_different);
 
     Ok(())
 }
@@ -214,5 +214,4 @@ mod tests {
         )
         .unwrap();
     }
-
 }

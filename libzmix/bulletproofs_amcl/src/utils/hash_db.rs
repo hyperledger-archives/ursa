@@ -1,3 +1,6 @@
+// Interface and an in-memory for key-value database where the key is bytes and is intended to be hash.
+// Used to store merkle tree nodes.
+
 use crate::errors::R1CSError;
 use std::collections::HashMap;
 

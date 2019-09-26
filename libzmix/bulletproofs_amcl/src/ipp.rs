@@ -21,7 +21,7 @@ pub struct InnerProductArgumentProof {
 
 pub struct IPP {}
 impl IPP {
-    /// Create an inner-product proof.
+    /// Create an inner-product proof. Adaptation of Protocol 2 from the paper.
     ///
     /// The proof is created with respect to the bases G', H',
     /// where G'_i = G_i.G_factors_i and H'_i = H_i.H_factors_i.
@@ -67,6 +67,9 @@ impl IPP {
 
         if n != 1 {
             n = n / 2;
+
+            // Split vectors `a`, `b`, `G`, `H`, `G_factors`, `H_factors` in half, first half has suffix
+            // `_L`, second half has suffix `_R`, so `a_L`, `a_R` would be the 2 halves of vector `a`.
             let (mut a_L, a_R) = a.split_at(n);
             let (mut b_L, b_R) = b.split_at(n);
             let (mut G_L, G_R) = G.split_at(n);
@@ -74,11 +77,15 @@ impl IPP {
             let (G_factors_L, G_factors_R) = G_factors.split_at(n);
             let (H_factors_L, H_factors_R) = H_factors.split_at(n);
 
+            // c_L = a_L * b_R
             let c_L = a_L.inner_product(&b_R).unwrap();
+            // c_R = a_R * b_L
             let c_R = a_R.inner_product(&b_L).unwrap();
 
             let mut L_0 = vec![];
+            // a_L o G_factors_R
             L_0.extend(a_L.hadamard_product(&G_factors_R).unwrap());
+            // b_R o H_factors_L
             L_0.extend(b_R.hadamard_product(&H_factors_L).unwrap());
             L_0.push(c_L);
 
@@ -88,10 +95,13 @@ impl IPP {
             L_1.push(&Q);
 
             let L_0: Vec<&FieldElement> = L_0.iter().map(|f| f).collect();
+            // L = G_R^(a_L o G_factors_R) * H_L^(b_R o H_factors_L) * Q^c_L
             let L = G1Vector::inner_product_var_time_with_ref_vecs(L_1, L_0).unwrap();
 
             let mut R_0: Vec<FieldElement> = vec![];
+            // a_R o G_factors_L
             R_0.extend(a_R.hadamard_product(&G_factors_L).unwrap());
+            // b_L o H_factors_R
             R_0.extend(b_L.hadamard_product(&H_factors_R).unwrap());
             R_0.push(c_R);
 
@@ -101,6 +111,7 @@ impl IPP {
             R_1.push(&Q);
 
             let R_0: Vec<&FieldElement> = R_0.iter().map(|f| f).collect();
+            // R = G_R^(a_R o G_factors_L) * H_R^(b_L o H_factors_R) * Q^c_R
             let R = G1Vector::inner_product_var_time_with_ref_vecs(R_1, R_0).unwrap();
 
             transcript.commit_point(b"L", &L);
@@ -137,6 +148,9 @@ impl IPP {
 
         while n != 1 {
             n = n / 2;
+
+            // Split vectors `a`, `b`, `G`, `H`, in half, first half has suffix `_L`,
+            // second half has suffix `_R`, so `a_L`, `a_R` would be the 2 halves of vector `a`.
             let (mut a_L, a_R) = a.split_at(n);
             let (mut b_L, b_R) = b.split_at(n);
             let (mut G_L, G_R) = G.split_at(n);

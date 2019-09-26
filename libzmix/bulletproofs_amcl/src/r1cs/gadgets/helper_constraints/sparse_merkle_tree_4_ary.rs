@@ -427,10 +427,10 @@ mod tests {
         let kvs: Vec<(FieldElement, FieldElement)> = (0..10)
             .map(|_| (FieldElement::random(), FieldElement::random()))
             .collect();
+
         for i in 0..kvs.len() {
             tree.update(&kvs[i].0, kvs[i].1.clone(), &mut db).unwrap();
         }
-
         for i in 0..kvs.len() {
             assert_eq!(kvs[i].1, tree.get(&kvs[i].0, &mut None, &db).unwrap());
         }

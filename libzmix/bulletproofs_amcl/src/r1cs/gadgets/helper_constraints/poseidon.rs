@@ -606,7 +606,6 @@ pub fn Poseidon_hash_8_constraints<'a, CS: ConstraintSystem>(
     sbox_type: &SboxType,
 ) -> Result<LinearCombination, R1CSError> {
     assert_eq!(input.len(), 8);
-    let width = params.width;
     // zero corresponds to committed variable with value as ZERO_CONST and randomness as 0
 
     // Always keep the 1st input as 0
