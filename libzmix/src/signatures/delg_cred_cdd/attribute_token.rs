@@ -710,13 +710,6 @@ impl<'a> AttributeToken<'a> {
             );
         }
 
-        // In practice, g1 and g2 in both Groth1 and Groth2 can be same
-        // The following can be precomputed if performance is critical
-        let groth1_neg_g1 = -&self.setup_params_1.g1;
-        let groth1_neg_g2 = -&self.setup_params_1.g2;
-        let groth2_neg_g1 = -&self.setup_params_2.g1;
-        let groth2_neg_g2 = -&self.setup_params_2.g2;
-
         let mut odd_level_revealed_attributes =
             Vec::<HashMap<usize, OddLevelAttribute>>::with_capacity(self.L);
         let mut even_level_revealed_attributes =
@@ -930,7 +923,6 @@ impl<'a> AttributeToken<'a> {
         resp: &AttributeTokenResp,
         challenge: &FieldElement,
         revealed: Vec<HashSet<usize>>,
-        ipk: &Groth1Verkey,
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
         precomputed: &PrecompForCommitmentReconstitution,
@@ -953,8 +945,6 @@ impl<'a> AttributeToken<'a> {
         let groth2_g1_c = &setup_params_2.g1 * &challenge_neg;
         // g2^-c
         let groth1_g2_c = &setup_params_1.g2 * &challenge_neg;
-        // ipk^-c
-        let ipk_c = &ipk.0 * &challenge_neg;
         // e(y0, g2)^{-c}
         let y0_g2_c = precomputed.groth1_y0_g2.pow(&challenge_neg);
         // e(g1, y0)^{-c}
@@ -2295,7 +2285,6 @@ mod tests {
                     &resp_precomp_setup,
                     &c_precomp_setup,
                     vec![HashSet::<usize>::new(); i],
-                    &l_0_issuer_vk,
                     &params1,
                     &params2,
                     &precomp_for_commit_recons,
@@ -2313,7 +2302,6 @@ mod tests {
                 &resp_precomp,
                 &c_precomp,
                 vec![HashSet::<usize>::new(); i],
-                &l_0_issuer_vk,
                 &params1,
                 &params2,
                 &precomp_for_commit_recons,
