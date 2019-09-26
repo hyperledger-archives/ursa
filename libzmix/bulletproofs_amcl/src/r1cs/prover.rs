@@ -455,7 +455,9 @@ impl<'a, 'b> Prover<'a, 'b> {
         assert_eq!(wO, wO_);
         assert_eq!(wV, wV_);*/
 
+        // l_poly has no constant term
         let mut l_poly = VecPoly3::zero(n);
+        // r_poly has no 2nd degree term
         let mut r_poly = VecPoly3::zero(n);
 
         let mut exp_y = FieldElement::one(); // y^n starting at n=0

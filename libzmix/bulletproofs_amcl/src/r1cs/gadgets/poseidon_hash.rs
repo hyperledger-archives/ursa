@@ -129,8 +129,6 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
     let lv = verifier.commit(commitments.remove(0));
     let rv = verifier.commit(commitments.remove(0));
 
-    let width = hash_params.width;
-
     let statics = allocate_statics_for_verifier(verifier, 1, g, h);
 
     Poseidon_hash_2_gadget(
@@ -161,7 +159,6 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
     let mut prover_transcript = Transcript::new(transcript_label);
     let mut prover = Prover::new(&g, &h, &mut prover_transcript);
 
-    let width = hash_params.width;
     let total_rounds = hash_params.full_rounds_beginning
         + hash_params.partial_rounds
         + hash_params.full_rounds_end;

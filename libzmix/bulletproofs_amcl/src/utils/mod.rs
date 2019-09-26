@@ -37,12 +37,3 @@ pub fn gen_challenges(input: &[&G1], state: &mut Vec<u8>, n: usize) -> Vec<Field
     }
     r
 }
-
-#[macro_export]
-macro_rules! vec_to_array {
-    ( $typ:ident, $size:expr, $vec: ident) => {{
-        let mut input: [$typ; $size];
-        input.copy_from_slice($vec.as_slice());
-        input
-    }};
-}

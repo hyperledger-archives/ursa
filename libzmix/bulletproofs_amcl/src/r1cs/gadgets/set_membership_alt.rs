@@ -121,7 +121,7 @@ pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
     }
 
     // The bit vector sum should be 1
-    vector_sum_constraints(prover, bit_vars, 1)?;
+    vector_sum_constraints(prover, bit_vars, 1);
 
     let _value = FieldElement::from(value);
     let (com_value, var_value) = prover.commit(
@@ -159,7 +159,7 @@ pub fn verify_set_membership_alt(
         bit_allocs.push(quantity);
     }
 
-    vector_sum_constraints(verifier, bit_vars, 1)?;
+    vector_sum_constraints(verifier, bit_vars, 1);
 
     let var_val = verifier.commit(commitments.remove(0));
     let quantity_value = AllocatedQuantity {
