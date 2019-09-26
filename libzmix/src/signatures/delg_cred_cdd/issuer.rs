@@ -55,6 +55,51 @@ macro_rules! impl_CredLink {
     };
 }
 
+macro_rules! impl_Issuer {
+    ( $Issuer:ident, $GrothSetupParams:ident, $GrothS:ident, $GrothSig:ident, $CredLink:ident, $delegatee_vk:ident, $delegator_vk:ident, $GVector:ident, $opr:tt, $ExpectedLevelError:ident ) => {
+        #[derive(Clone, Debug, Serialize, Deserialize)]
+        pub struct $Issuer {
+            pub level: usize,
+        }
+
+        impl $Issuer {
+            pub fn new(level: usize) -> DelgCredCDDResult<Self> {
+                if level % 2 $opr 0 {
+                    return Err(DelgCredCDDErrorKind::$ExpectedLevelError { given: level }.into());
+                }
+                Ok(Self { level })
+            }
+
+            pub fn keygen(setup_params: &$GrothSetupParams) -> (Sigkey, $delegator_vk) {
+                $GrothS::keygen(setup_params)
+            }
+
+            pub fn delegate(
+                &self,
+                mut delegatee_attributes: $GVector,
+                delegatee_vk: $delegatee_vk,
+                sk: &Sigkey,
+                setup_params: &$GrothSetupParams,
+            ) -> DelgCredCDDResult<$CredLink> {
+                if delegatee_attributes.len() >= setup_params.y.len() {
+                    return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
+                        expected: setup_params.y.len(),
+                        given: delegatee_attributes.len(),
+                    }
+                    .into());
+                }
+                delegatee_attributes.push(delegatee_vk.0);
+                let signature = $GrothSig::new(delegatee_attributes.as_slice(), sk, setup_params)?;
+                Ok($CredLink {
+                    level: &self.level + 1,
+                    attributes: delegatee_attributes,
+                    signature,
+                })
+            }
+        }
+    }
+}
+
 impl_CredLink!(
     CredLinkOdd,
     Groth1SetupParams,
@@ -79,15 +124,9 @@ pub struct CredChain {
     pub even_links: Vec<CredLinkEven>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct EvenLevelIssuer {
-    pub level: usize,
-}
+impl_Issuer!(EvenLevelIssuer, Groth1SetupParams, GrothS1, Groth1Sig, CredLinkOdd, OddLevelVerkey, EvenLevelVerkey, G1Vector, !=, ExpectedEvenLevel);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct OddLevelIssuer {
-    pub level: usize,
-}
+impl_Issuer!(OddLevelIssuer, Groth2SetupParams, GrothS2, Groth2Sig, CredLinkEven, EvenLevelVerkey, OddLevelVerkey, G2Vector, ==, ExpectedOddLevel);
 
 pub struct RootIssuer {}
 
@@ -304,78 +343,6 @@ impl CredChain {
             }
         }
         Ok(new_chain)
-    }
-}
-
-impl EvenLevelIssuer {
-    pub fn new(level: usize) -> DelgCredCDDResult<Self> {
-        if level % 2 != 0 {
-            return Err(DelgCredCDDErrorKind::ExpectedEvenLevel { given: level }.into());
-        }
-        Ok(Self { level })
-    }
-
-    pub fn keygen(setup_params: &Groth1SetupParams) -> (Sigkey, EvenLevelVerkey) {
-        GrothS1::keygen(setup_params)
-    }
-
-    pub fn delegate(
-        &self,
-        mut delegatee_attributes: G1Vector,
-        delegatee_vk: OddLevelVerkey,
-        sk: &Sigkey,
-        setup_params: &Groth1SetupParams,
-    ) -> DelgCredCDDResult<CredLinkOdd> {
-        if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
-                expected: setup_params.y.len(),
-                given: delegatee_attributes.len(),
-            }
-            .into());
-        }
-        delegatee_attributes.push(delegatee_vk.0);
-        let signature = Groth1Sig::new(delegatee_attributes.as_slice(), sk, setup_params)?;
-        Ok(CredLinkOdd {
-            level: &self.level + 1,
-            attributes: delegatee_attributes,
-            signature,
-        })
-    }
-}
-
-impl OddLevelIssuer {
-    pub fn new(level: usize) -> DelgCredCDDResult<Self> {
-        if level % 2 == 0 {
-            return Err(DelgCredCDDErrorKind::ExpectedOddLevel { given: level }.into());
-        }
-        Ok(Self { level })
-    }
-
-    pub fn keygen(setup_params: &Groth2SetupParams) -> (Sigkey, OddLevelVerkey) {
-        GrothS2::keygen(setup_params)
-    }
-
-    pub fn delegate(
-        &self,
-        mut delegatee_attributes: G2Vector,
-        delegatee_vk: EvenLevelVerkey,
-        sk: &Sigkey,
-        setup_params: &Groth2SetupParams,
-    ) -> DelgCredCDDResult<CredLinkEven> {
-        if delegatee_attributes.len() >= setup_params.y.len() {
-            return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
-                expected: setup_params.y.len(),
-                given: delegatee_attributes.len(),
-            }
-            .into());
-        }
-        delegatee_attributes.push(delegatee_vk.0);
-        let signature = Groth2Sig::new(delegatee_attributes.as_slice(), sk, setup_params)?;
-        Ok(CredLinkEven {
-            level: &self.level + 1,
-            attributes: delegatee_attributes,
-            signature,
-        })
     }
 }
 
