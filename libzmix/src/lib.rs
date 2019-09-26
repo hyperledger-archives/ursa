@@ -12,6 +12,7 @@ extern crate rand;
 
 #[macro_use]
 pub mod commitments;
+#[macro_use]
 pub mod errors;
 pub mod signatures;
 #[cfg(feature = "ver_enc")]

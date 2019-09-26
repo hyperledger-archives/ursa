@@ -122,3 +122,73 @@ impl From<PoKVCError> for BBSError {
         }
     }
 }
+
+macro_rules! impl_Errors {
+    ( $ErrorKind:ident, $Error:ident ) => {
+        #[derive(Debug)]
+        pub struct $Error {
+            inner: Context<$ErrorKind>,
+        }
+
+        impl $Error {
+            pub fn kind(&self) -> $ErrorKind {
+                self.inner.get_context().clone()
+            }
+
+            pub fn from_kind(kind: $ErrorKind) -> Self {
+                Self {
+                    inner: Context::new("").context(kind),
+                }
+            }
+        }
+
+        impl From<$ErrorKind> for $Error {
+            fn from(kind: $ErrorKind) -> Self {
+                Self {
+                    inner: Context::new(kind),
+                }
+            }
+        }
+
+        impl From<Context<$ErrorKind>> for $Error {
+            fn from(inner: Context<$ErrorKind>) -> Self {
+                Self { inner }
+            }
+        }
+
+        impl Fail for $Error {
+            fn cause(&self) -> Option<&dyn Fail> {
+                self.inner.cause()
+            }
+
+            fn backtrace(&self) -> Option<&Backtrace> {
+                self.inner.backtrace()
+            }
+        }
+
+        impl fmt::Display for $Error {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                fmt::Display::fmt(&self.inner, f)
+            }
+        }
+    };
+}
+
+macro_rules! impl_PoKVCError_conversion {
+    ( $ErrorKind:ident, $Error:ident ) => {
+        impl From<PoKVCError> for $Error {
+            fn from(err: PoKVCError) -> Self {
+                let message = format!(
+                    "PoKVCError: {}",
+                    Fail::iter_causes(&err)
+                        .map(|e| e.to_string())
+                        .collect::<String>()
+                );
+
+                match err.kind() {
+                    _ => $ErrorKind::PoKVCError { msg: message }.into(),
+                }
+            }
+        }
+    };
+}
