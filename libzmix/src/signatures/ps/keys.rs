@@ -84,5 +84,4 @@ mod tests {
         vk_2.Y.push(SignatureGroup::new());
         assert!(vk_2.validate().is_err());
     }
-
 }
