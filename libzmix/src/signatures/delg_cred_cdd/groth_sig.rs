@@ -1,15 +1,20 @@
 use super::errors::{DelgCredCDDErrorKind, DelgCredCDDResult};
+use crate::commitments::pok_vc::{
+    ProofG1, ProofG2, ProverCommittedG1, ProverCommittedG2, ProverCommittingG1, ProverCommittingG2,
+};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
+use signatures::delg_cred_cdd::issuer::Sigkey;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GrothSigkey(pub FieldElement);
 
 macro_rules! impl_GrothS {
-    ( $GrothSetupParams:ident, $GrothVerkey:ident, $GrothSig:ident, $GrothS:ident, $vk_group:ident, $msg_group:ident, $GVector:ident ) => {
+    ( $GrothSetupParams:ident, $GrothVerkey:ident, $GrothSig:ident, $GrothS:ident, $vk_group:ident, $msg_group:ident,
+        $GVector:ident, $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $g:ident ) => {
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $GrothSetupParams {
             pub g1: G1,
@@ -28,6 +33,34 @@ macro_rules! impl_GrothS {
         }
 
         pub struct $GrothS {}
+
+        impl $GrothVerkey {
+            pub fn initiate_proof_of_knowledge_of_sigkey(
+                setup_params: &$GrothSetupParams,
+            ) -> $ProverCommitted {
+                let mut commiting = $ProverCommitting::new();
+                commiting.commit(&setup_params.$g, None);
+                commiting.finish()
+            }
+
+            pub fn finish_proof_of_knowledge_of_sigkey(
+                committed: $ProverCommitted,
+                sig_key: Sigkey,
+                challenge: &FieldElement,
+            ) -> $Proof {
+                committed.gen_proof(&challenge, &[sig_key.0]).unwrap()
+            }
+
+            pub fn verify_proof_of_knowledge_of_sigkey(
+                proof: &$Proof,
+                verkey: &$GrothVerkey,
+                setup_params: &$GrothSetupParams,
+                challenge: &FieldElement,
+            ) -> DelgCredCDDResult<bool> {
+                let r = proof.verify(&[setup_params.$g.clone()], &verkey.0, &challenge)?;
+                Ok(r)
+            }
+        }
     };
 }
 
@@ -94,7 +127,11 @@ impl_GrothS!(
     GrothS1,
     G2,
     G1,
-    G1Vector
+    G1Vector,
+    ProverCommittingG2,
+    ProverCommittedG2,
+    ProofG2,
+    g2
 );
 
 impl_GrothS!(
@@ -104,7 +141,11 @@ impl_GrothS!(
     GrothS2,
     G1,
     G2,
-    G2Vector
+    G2Vector,
+    ProverCommittingG1,
+    ProverCommittedG1,
+    ProofG1,
+    g1
 );
 
 /// Returns tuple of groups elements where the elements are result of scalar multiplication involving the same field element. Uses w-NAF
@@ -440,5 +481,39 @@ mod tests {
         assert!(sig_randomized
             .verify_fast(msgs.as_slice(), &vk, &params)
             .unwrap());
+    }
+
+    #[test]
+    fn test_proof_of_knowledge_of_groth1_sigkey() {
+        let count_msgs = 3;
+        let label = "test".as_bytes();
+        let params = GrothS1::setup(count_msgs, label);
+        let (sk, vk) = GrothS1::keygen(&params);
+
+        let committed = Groth1Verkey::initiate_proof_of_knowledge_of_sigkey(&params);
+        let challenge = FieldElement::from_msg_hash(&vk.0.to_bytes());
+        let proof =
+            Groth1Verkey::finish_proof_of_knowledge_of_sigkey(committed, sk.clone(), &challenge);
+        assert!(
+            Groth1Verkey::verify_proof_of_knowledge_of_sigkey(&proof, &vk, &params, &challenge)
+                .unwrap()
+        )
+    }
+
+    #[test]
+    fn test_proof_of_knowledge_of_groth2_sigkey() {
+        let count_msgs = 3;
+        let label = "test".as_bytes();
+        let params = GrothS2::setup(count_msgs, label);
+        let (sk, vk) = GrothS2::keygen(&params);
+
+        let committed = Groth2Verkey::initiate_proof_of_knowledge_of_sigkey(&params);
+        let challenge = FieldElement::from_msg_hash(&vk.0.to_bytes());
+        let proof =
+            Groth2Verkey::finish_proof_of_knowledge_of_sigkey(committed, sk.clone(), &challenge);
+        assert!(
+            Groth2Verkey::verify_proof_of_knowledge_of_sigkey(&proof, &vk, &params, &challenge)
+                .unwrap()
+        )
     }
 }
