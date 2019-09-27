@@ -9,11 +9,11 @@ name = "zmix"
 crate-type = ["rlib", "staticlib", "cdylib"]
 
 [features]
-default = ["bbs", "ver_enc", "PS_G1G2"]
+default = ["bbs", "ver_enc", "PS_Signature_G2"]
 bbs = []
 ver_enc = []
-PS_G1G2 = []
-PS_G2G1 = []
+PS_Signature_G2 = []
+PS_Signature_G1 = []
 
 [dependencies]
 rand = "0.7.0"

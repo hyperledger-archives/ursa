@@ -46,7 +46,7 @@ trait SignatureScheme {
 
 #[cfg(feature = "bbs")]
 pub mod bbs;
-#[cfg(any(feature = "PS_G1G2", feature = "PS_G2G1"))]
+#[cfg(any(feature = "PS_Signature_G2", feature = "PS_Signature_G1"))]
 pub mod ps;
 
 /// Convenience class for handling a new signature with committed messages by the User
