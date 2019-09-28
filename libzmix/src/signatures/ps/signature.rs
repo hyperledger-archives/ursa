@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn timing_signature_over_known_and_committed_messages() {
         // Measure time to create and verify signatures. Verifying time will include time to unblind the signature as well.
-        let iterations = 100;
+        let iterations = 10;
         let count_msgs = 10;
         let committed_msgs = 3;
         let (vk, sk) = keygen(count_msgs, "test".as_bytes());
