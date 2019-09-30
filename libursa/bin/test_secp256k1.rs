@@ -6,7 +6,7 @@ use openssl::bn::{BigNum, BigNumContext};
 use openssl::ec::{EcGroup, EcKey, EcPoint};
 use openssl::ecdsa::EcdsaSig;
 use openssl::nid::Nid;
-use ursa::hash::{digest, DigestAlgorithm};
+use ursa::hash::sha2::{Digest, Sha256};
 use ursa::signatures::secp256k1::EcdsaSecp256k1Sha256;
 use ursa::signatures::{EcdsaPublicKeyHandler, SignatureScheme};
 
@@ -42,7 +42,7 @@ fn main() {
 
     now = Instant::now();
     for _ in 0..trials {
-        let hash = digest(DigestAlgorithm::Sha2_256, &letters[..]).unwrap();
+        let hash = Sha256::digest(&letters[..]);
         let msg = secp256k1::Message::from_slice(&hash[..]).unwrap();
         let sig_1 = context.sign(&msg, &sk);
         context.verify(&msg, &sig_1, &pk).unwrap();
@@ -57,7 +57,7 @@ fn main() {
     let mut ctx = BigNumContext::new().unwrap();
     let openssl_point = EcPoint::from_bytes(
         &openssl_group,
-        &scheme.serialize_uncompressed(&p)[..],
+        &scheme.public_key_uncompressed(&p)[..],
         &mut ctx,
     )
     .unwrap();
@@ -71,7 +71,7 @@ fn main() {
 
     now = Instant::now();
     for _ in 0..trials {
-        let hash = digest(DigestAlgorithm::Sha2_256, &letters[..]).unwrap();
+        let hash = Sha256::digest(&letters[..]);
         let openssl_sig = EcdsaSig::sign(&hash, &openssl_skey).unwrap();
         openssl_sig.verify(&hash, &openssl_pkey).unwrap();
     }
