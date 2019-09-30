@@ -38,4 +38,6 @@ script:
   - cargo build
   - cargo build --no-default-features --features=portable
   - cargo test
+  - cargo run --manifest-path ./libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+  - cargo run --manifest-path ./libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
   - cargo doc --no-deps
