@@ -15,7 +15,7 @@ my $src_dir = "";
 if ($dirs eq "./") {
     $src_dir = Cwd::getcwd();
 } else {
-    if ( Cwd::abs_path( $dirs ) ) {
+    if ( $dirs =~ m/^\// ) {
         $src_dir = $dirs;
     } else {
         $src_dir = File::Spec->join( Cwd::getcwd(), $dirs );
