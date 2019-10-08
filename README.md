@@ -150,7 +150,7 @@ https://zoom.us/my/hyperledger.community. The meeting notes are available
 Major modifications to ursa are submitted as RFCs to the [Ursa RFC
 repo](https://github.com/hyperledger/ursa-rfcs). 
 
-For more details on contributing see the Community section of the Ursa project docs:
+For more details on contributing see [CONTRIBUTING](CONTRIBUTING.md)
 
 Install sphinx:
 ```
