@@ -46,9 +46,9 @@ trait SignatureScheme {
 
 #[cfg(feature = "bbs")]
 pub mod bbs;
+pub mod delg_cred_cdd;
 #[cfg(any(feature = "PS_Signature_G2", feature = "PS_Signature_G1"))]
 pub mod ps;
-pub mod delg_cred_cdd;
 
 /// Convenience class for handling a new signature with committed messages by the User
 /// and the Signer. The User selects messages to be blinded that the Signer will include in the
