@@ -26,4 +26,4 @@ cache:
 build: false
 
 test_script:
-  - cargo test --no-fail-fast
+  - cargo test --release --no-fail-fast
