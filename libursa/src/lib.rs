@@ -19,6 +19,7 @@ extern crate wasm_bindgen;
 /// Native uses external C libraries that have had a security audit performed
 #[cfg(feature = "pair_amcl")]
 extern crate amcl;
+extern crate amcl_wrapper;
 #[macro_use]
 extern crate arrayref;
 extern crate env_logger;

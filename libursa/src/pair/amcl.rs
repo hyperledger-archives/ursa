@@ -13,8 +13,6 @@ use amcl::bn254::fp2::FP2;
 use amcl::bn254::pair::{ate, ate2, fexp, g1mul, g2mul, gtpow};
 use amcl::rand::RAND;
 
-use rand::rngs::OsRng;
-use rand::RngCore;
 use std::fmt::{Debug, Error, Formatter};
 
 #[cfg(feature = "serialization")]
@@ -23,6 +21,8 @@ use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
 use serde::ser::{Error as SError, Serialize, Serializer};
 #[cfg(feature = "serialization")]
 use std::fmt;
+
+use rand::prelude::*;
 
 #[cfg(test)]
 use std::cell::RefCell;
@@ -69,8 +69,8 @@ fn random_mod_order() -> UrsaCryptoResult<BIG> {
 fn _random_mod_order() -> UrsaCryptoResult<BIG> {
     let entropy_bytes = 128;
     let mut seed = vec![0; entropy_bytes];
-    let mut os_rng = OsRng::new().unwrap();
-    os_rng.fill_bytes(&mut seed.as_mut_slice());
+    let mut rng = rand::thread_rng();
+    rng.fill_bytes(&mut seed.as_mut_slice());
     let mut rng = RAND::new();
     rng.clean();
     // AMCL recommends to initialise from at least 128 bytes, check doc for `RAND.seed`
