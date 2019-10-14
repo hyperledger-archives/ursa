@@ -46,14 +46,17 @@ found in Libursa.
 
 # Dependencies
 
-Ursa and zmix use the following external dependencies:
+Ursa uses the following external dependencies:
 
-- [libsodium
-  1.0.16](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
-  (Written in C)
-- [openssl 1.1.0j](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
+- [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
   newer (Written in C)
 - [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (Written in C)
+
+Ursa uses the following external dependencies for testing:
+
+- [libsodium
+  1.0.18](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
+  (Written in C)
 
 These dependencies are used when building in the default secure mode. These
 libraries are widely known.  There is a goal to be able to compile Ursa from
@@ -151,13 +154,3 @@ Major modifications to ursa are submitted as RFCs to the [Ursa RFC
 repo](https://github.com/hyperledger/ursa-rfcs). 
 
 For more details on contributing see [CONTRIBUTING](CONTRIBUTING.md)
-
-Install sphinx:
-```
-pip3 install -U Sphinx
-```
-Build the project docs:
-```
-cd docs/
-make html
-```
