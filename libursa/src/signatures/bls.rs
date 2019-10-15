@@ -2,13 +2,13 @@
 /// https://eprint.iacr.org/2018/483 and
 /// https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
 use amcl_wrapper::{
+    constants::{GroupG1_SIZE, MODBYTES},
+    extension_field_gt::GT,
     field_elem::FieldElement,
     group_elem::GroupElement,
     group_elem_g1::G1,
     group_elem_g2::G2,
-    extension_field_gt::GT,
-    constants::{MODBYTES, GroupG1_SIZE},
-    types_g2::GroupG2_SIZE
+    types_g2::GroupG2_SIZE,
 };
 use CryptoError;
 
@@ -27,152 +27,168 @@ macro_rules! bls_tests_impl {
             const MESSAGE_1: &[u8; 22] = b"This is a test message";
             const MESSAGE_2: &[u8; 20] = b"Another test message";
 
-                #[test]
-                fn signature_verification() {
+            #[test]
+            fn signature_verification() {
+                let (pk, sk) = generate();
+
+                let signature_1 = Signature::new(&MESSAGE_1[..], &sk);
+                assert!(signature_1.verify(&MESSAGE_1[..], &pk));
+
+                let signature_2 = Signature::new(&MESSAGE_2[..], &sk);
+                assert!(signature_2.verify(&MESSAGE_2[..], &pk));
+
+                // Should fail for different messages
+                assert!(!signature_1.verify(&MESSAGE_2[..], &pk));
+                assert!(!signature_2.verify(&MESSAGE_1[..], &pk));
+            }
+
+            #[test]
+            fn aggregate_signature_verification_rk() {
+                const KEY_COUNT: usize = 10;
+
+                let mut pks = Vec::new();
+                let mut sks = Vec::new();
+                let mut asigs = Vec::new();
+                for _ in 0..KEY_COUNT {
                     let (pk, sk) = generate();
 
-                    let signature_1 = Signature::new(&MESSAGE_1[..], &sk);
-                    assert!(signature_1.verify(&MESSAGE_1[..], &pk));
-
-                    let signature_2 = Signature::new(&MESSAGE_2[..], &sk);
-                    assert!(signature_2.verify(&MESSAGE_2[..], &pk));
-
-                    // Should fail for different messages
-                    assert!(!signature_1.verify(&MESSAGE_2[..], &pk));
-                    assert!(!signature_2.verify(&MESSAGE_1[..], &pk));
+                    pks.push(pk);
+                    sks.push(sk);
                 }
 
-                #[test]
-                fn aggregate_signature_verification_rk() {
-                    const KEY_COUNT: usize = 10;
-
-                    let mut pks = Vec::new();
-                    let mut sks = Vec::new();
-                    let mut asigs = Vec::new();
-                    for _ in 0..KEY_COUNT {
-                        let (pk, sk) = generate();
-
-                        pks.push(pk);
-                        sks.push(sk);
-                    }
-
-                    for i in 0..KEY_COUNT {
-                        let sig = Signature::new_with_rk_mitigation(&MESSAGE_1[..], &sks[i], i, pks.as_slice());
-                        asigs.push(sig);
-                    }
-
-                    let apk = AggregatedPublicKey::new(pks.as_slice());
-                    let asg = AggregatedSignature::new(asigs.as_slice());
-                    assert!(asg.verify(&MESSAGE_1[..], &apk));
-
-                    // Can't verify individually because of rogue key mitigation
-                    for i in 0..KEY_COUNT {
-                        assert!(!asigs[i].verify(&MESSAGE_1[..], &pks[i]));
-                    }
+                for i in 0..KEY_COUNT {
+                    let sig = Signature::new_with_rk_mitigation(
+                        &MESSAGE_1[..],
+                        &sks[i],
+                        i,
+                        pks.as_slice(),
+                    );
+                    asigs.push(sig);
                 }
 
-                #[test]
-                fn aggregate_signature_verification_no_rk() {
-                    const KEY_COUNT: usize = 10;
+                let apk = AggregatedPublicKey::new(pks.as_slice());
+                let asg = AggregatedSignature::new(asigs.as_slice());
+                assert!(asg.verify(&MESSAGE_1[..], &apk));
 
-                    let mut pks = Vec::new();
+                // Can't verify individually because of rogue key mitigation
+                for i in 0..KEY_COUNT {
+                    assert!(!asigs[i].verify(&MESSAGE_1[..], &pks[i]));
+                }
+            }
+
+            #[test]
+            fn aggregate_signature_verification_no_rk() {
+                const KEY_COUNT: usize = 10;
+
+                let mut pks = Vec::new();
+                let mut sks = Vec::new();
+                let mut sigs = Vec::new();
+                for _ in 0..KEY_COUNT {
+                    let (pk, sk) = generate();
+
+                    pks.push(pk);
+                    sks.push(sk);
+                }
+
+                for i in 0..KEY_COUNT {
+                    let sig = Signature::new(&MESSAGE_1[..], &sks[i]);
+                    sigs.push(sig);
+                }
+
+                let asg = AggregatedSignature::new(sigs.as_slice());
+                assert!(asg.verify_no_rk(&MESSAGE_1[..], pks.as_slice()));
+
+                // Check that simple aggregation without rogue key mitigation fails
+                let apk = AggregatedPublicKey::new(pks.as_slice());
+                assert!(!asg.verify(&MESSAGE_1[..], &apk));
+
+                // Can verify individually because of no rogue key mitigation
+                for i in 0..KEY_COUNT {
+                    assert!(sigs[i].verify(&MESSAGE_1[..], &pks[i]));
+                }
+            }
+
+            #[test]
+            fn batch_signature_verification() {
+                const KEY_COUNT: usize = 10;
+                const SIG_COUNT: usize = 5;
+
+                // First batch verification with rogue key mitigation
+                let mut groups_1 = Vec::new();
+                for _ in 0..SIG_COUNT {
                     let mut sks = Vec::new();
+                    let mut pks = Vec::new();
                     let mut sigs = Vec::new();
+                    let msg = FieldElement::random();
                     for _ in 0..KEY_COUNT {
                         let (pk, sk) = generate();
-
                         pks.push(pk);
                         sks.push(sk);
                     }
 
                     for i in 0..KEY_COUNT {
-                        let sig = Signature::new(&MESSAGE_1[..], &sks[i]);
+                        let sig = Signature::new_with_rk_mitigation(
+                            msg.to_bytes().as_slice(),
+                            &sks[i],
+                            i,
+                            pks.as_slice(),
+                        );
                         sigs.push(sig);
                     }
 
                     let asg = AggregatedSignature::new(sigs.as_slice());
-                    assert!(asg.verify_no_rk(&MESSAGE_1[..], pks.as_slice()));
-
-                    // Check that simple aggregation without rogue key mitigation fails
                     let apk = AggregatedPublicKey::new(pks.as_slice());
-                    assert!(!asg.verify(&MESSAGE_1[..], &apk));
+                    //sanity check
+                    assert!(asg.verify(msg.to_bytes().as_slice(), &apk));
+                    groups_1.push((msg.to_bytes(), asg, apk));
+                }
 
-                    // Can verify individually because of no rogue key mitigation
+                let refs = groups_1
+                    .iter()
+                    .map(|(m, s, p)| (m.as_slice(), s, p))
+                    .collect::<Vec<(&[u8], &AggregatedSignature, &AggregatedPublicKey)>>();
+                assert!(AggregatedSignature::batch_verify(refs.as_slice()));
+
+                // Second batch verification without rogue key mitigation
+                let mut groups_2 = Vec::new();
+                for _ in 0..SIG_COUNT {
+                    let mut sks = Vec::new();
+                    let mut pks = Vec::new();
+                    let mut sigs = Vec::new();
+                    let msg = FieldElement::random();
+                    for _ in 0..KEY_COUNT {
+                        let (pk, sk) = generate();
+                        pks.push(pk);
+                        sks.push(sk);
+                    }
+
                     for i in 0..KEY_COUNT {
-                        assert!(sigs[i].verify(&MESSAGE_1[..], &pks[i]));
+                        let sig = Signature::new(msg.to_bytes().as_slice(), &sks[i]);
+                        sigs.push(sig);
                     }
+
+                    let mut asg = sigs[0].clone();
+                    asg.aggregate(&sigs[1..]);
+
+                    let mut apk = pks[0].clone();
+                    apk.aggregate(&pks[1..]);
+
+                    //sanity check
+                    assert!(asg.verify(msg.to_bytes().as_slice(), &apk));
+                    groups_2.push((msg.to_bytes(), asg, apk));
                 }
 
-                #[test]
-                fn batch_signature_verification() {
-                    const KEY_COUNT: usize = 10;
-                    const SIG_COUNT: usize = 5;
+                let refs = groups_2
+                    .iter()
+                    .map(|(m, s, p)| (m.as_slice(), s, p))
+                    .collect::<Vec<(&[u8], &Signature, &PublicKey)>>();
+                assert!(Signature::batch_verify(refs.as_slice()));
 
-                    // First batch verification with rogue key mitigation
-                    let mut groups_1 = Vec::new();
-                    for _ in 0..SIG_COUNT {
-                        let mut sks = Vec::new();
-                        let mut pks = Vec::new();
-                        let mut sigs = Vec::new();
-                        let msg = FieldElement::random();
-                        for _ in 0..KEY_COUNT {
-                            let (pk, sk) = generate();
-                            pks.push(pk);
-                            sks.push(sk);
-                        }
+                //Create a duplicate message in both cases
+            }
 
-                        for i in 0..KEY_COUNT {
-                            let sig = Signature::new_with_rk_mitigation(msg.to_bytes().as_slice(), &sks[i], i, pks.as_slice());
-                            sigs.push(sig);
-                        }
-
-                        let asg = AggregatedSignature::new(sigs.as_slice());
-                        let apk = AggregatedPublicKey::new(pks.as_slice());
-                        //sanity check
-                        assert!(asg.verify(msg.to_bytes().as_slice(), &apk));
-                        groups_1.push((msg.to_bytes(), asg, apk));
-                    }
-
-                    let refs = groups_1.iter().map(|(m, s, p)| (m.as_slice(), s, p)).collect::<Vec<(&[u8], &AggregatedSignature, &AggregatedPublicKey)>>();
-                    assert!(AggregatedSignature::batch_verify(refs.as_slice()));
-
-                    // Second batch verification without rogue key mitigation
-                    let mut groups_2 = Vec::new();
-                    for _ in 0..SIG_COUNT {
-                        let mut sks = Vec::new();
-                        let mut pks = Vec::new();
-                        let mut sigs = Vec::new();
-                        let msg = FieldElement::random();
-                        for _ in 0..KEY_COUNT {
-                            let (pk, sk) = generate();
-                            pks.push(pk);
-                            sks.push(sk);
-                        }
-
-                        for i in 0..KEY_COUNT {
-                            let sig = Signature::new(msg.to_bytes().as_slice(), &sks[i]);
-                            sigs.push(sig);
-                        }
-
-                        let mut asg = sigs[0].clone();
-                        asg.aggregate(&sigs[1..]);
-
-                        let mut apk = pks[0].clone();
-                        apk.aggregate(&pks[1..]);
-
-                        //sanity check
-                        assert!(asg.verify(msg.to_bytes().as_slice(), &apk));
-                        groups_2.push((msg.to_bytes(), asg, apk));
-                    }
-
-                    let refs = groups_2.iter().map(|(m, s, p)| (m.as_slice(), s, p)).collect::<Vec<(&[u8], &Signature, &PublicKey)>>();
-                    assert!(Signature::batch_verify(refs.as_slice()));
-
-                    //Create a duplicate message in both cases
-                }
-
-                #[test]
-                fn multi_signature_verification() {
+            #[test]
+            fn multi_signature_verification() {
                 const KEY_COUNT: usize = 10;
 
                 let mut pks = Vec::new();
@@ -192,23 +208,27 @@ macro_rules! bls_tests_impl {
                 }
                 let mut sig = sigs[0].clone();
                 sig.aggregate(&sigs[1..]);
-                let inputs = msgs.iter().zip(pks.iter()).map(|(msg, pk)| (msg.as_slice(), pk)).collect::<Vec<(&[u8], &PublicKey)>>();
+                let inputs = msgs
+                    .iter()
+                    .zip(pks.iter())
+                    .map(|(msg, pk)| (msg.as_slice(), pk))
+                    .collect::<Vec<(&[u8], &PublicKey)>>();
 
                 assert!(sig.verify_multi(inputs.as_slice()));
                 msgs[0] = msgs[1].clone();
-                let inputs = msgs.iter().zip(pks.iter()).map(|(msg, pk)| (msg.as_slice(), pk)).collect::<Vec<(&[u8], &PublicKey)>>();
+                let inputs = msgs
+                    .iter()
+                    .zip(pks.iter())
+                    .map(|(msg, pk)| (msg.as_slice(), pk))
+                    .collect::<Vec<(&[u8], &PublicKey)>>();
                 assert!(!sig.verify_multi(inputs.as_slice()));
             }
         }
-
     };
 }
 
 pub mod prelude {
-    pub use super::{
-        PrivateKey,
-        small::*
-    };
+    pub use super::{small::*, PrivateKey};
 }
 
 /// This version is the small BLS signature scheme
@@ -228,7 +248,7 @@ pub mod normal {
             sk.into()
         }
 
-        // Create an aggregate public key without rogue mitigation
+        // Create an aggregate public key without rogue key mitigation
         pub fn aggregate(&mut self, pks: &[PublicKey]) {
             for pk in pks {
                 self.0 += &pk.0;
@@ -240,7 +260,9 @@ pub mod normal {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(PublicKey(G1::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(PublicKey(G1::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -263,7 +285,7 @@ pub mod normal {
             // as described in section 3.1 from https://eprint.iacr.org/2018/483
             let mut bytes = Vec::new();
             for k in keys {
-                bytes.extend_from_slice(k.0.to_bytes().as_slice());
+                bytes.extend_from_slice(k.to_bytes().as_slice());
             }
             AggregatedPublicKey(keys.iter().fold(G1::identity(), |apk, k| {
                 // The position of the ith public key in the byte array
@@ -286,7 +308,9 @@ pub mod normal {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(AggregatedPublicKey(G1::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(AggregatedPublicKey(G1::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -298,16 +322,21 @@ pub mod normal {
             Signature(&G2::from_msg_hash(message) * sk)
         }
 
-        pub fn new_with_rk_mitigation(message: &[u8], sk: &PrivateKey, pk_index: usize, pks: &[PublicKey]) -> Self {
+        pub fn new_with_rk_mitigation(
+            message: &[u8],
+            sk: &PrivateKey,
+            pk_index: usize,
+            pks: &[PublicKey],
+        ) -> Self {
             // To combat the rogue key attack,
             // compute (t_1,…,t_n)←H1(pk_1,…,pk_n) ∈ R_n
             // output the aggregated public key
             // as described in section 3.1 from https://eprint.iacr.org/2018/483
             let mut bytes = Vec::new();
             for k in pks {
-                bytes.extend_from_slice(k.0.to_bytes().as_slice());
+                bytes.extend_from_slice(k.to_bytes().as_slice());
             }
-            bytes.extend_from_slice(pks[pk_index].0.to_bytes().as_slice());
+            bytes.extend_from_slice(pks[pk_index].to_bytes().as_slice());
             let a = FieldElement::from_msg_hash(bytes.as_slice());
             Signature(G2::from_msg_hash(message) * sk * &a)
         }
@@ -375,7 +404,9 @@ pub mod normal {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(Signature(G2::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(Signature(G2::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -407,8 +438,14 @@ pub mod normal {
         }
 
         /// This should be used to verify quickly multiple BLS aggregated signatures by batching
-    /// versus verifying them one by one as it reduces the number of computed pairings
-        pub fn batch_verify(inputs: &[(&[u8] /* message */, &AggregatedSignature, &AggregatedPublicKey)]) -> bool {
+        /// versus verifying them one by one as it reduces the number of computed pairings
+        pub fn batch_verify(
+            inputs: &[(
+                &[u8], /* message */
+                &AggregatedSignature,
+                &AggregatedPublicKey,
+            )],
+        ) -> bool {
             // To combat the rogue key attack and avoid checking for distinct messages
             // use batch verification as described in the end of section 3.1 from https://eprint.iacr.org/2018/483
             let mut pairs = Vec::new();
@@ -469,7 +506,9 @@ pub mod small {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(PublicKey(G2::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(PublicKey(G2::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -515,7 +554,9 @@ pub mod small {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(AggregatedPublicKey(G2::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(AggregatedPublicKey(G2::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -527,7 +568,12 @@ pub mod small {
             Signature(&G1::from_msg_hash(message) * sk)
         }
 
-        pub fn new_with_rk_mitigation(message: &[u8], sk: &PrivateKey, pk_index: usize, pks: &[PublicKey]) -> Self {
+        pub fn new_with_rk_mitigation(
+            message: &[u8],
+            sk: &PrivateKey,
+            pk_index: usize,
+            pks: &[PublicKey],
+        ) -> Self {
             // To combat the rogue key attack,
             // compute (t_1,…,t_n)←H1(pk_1,…,pk_n) ∈ R_n
             // output the aggregated public key
@@ -604,7 +650,9 @@ pub mod small {
         }
 
         pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
-            Ok(Signature(G1::from_bytes(bytes).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?))
+            Ok(Signature(G1::from_bytes(bytes).map_err(|e| {
+                CryptoError::ParseError(format!("{:?}", e))
+            })?))
         }
     }
 
@@ -636,8 +684,14 @@ pub mod small {
         }
 
         /// This should be used to verify quickly multiple BLS aggregated signatures by batching
-    /// versus verifying them one by one as it reduces the number of computed pairings
-        pub fn batch_verify(inputs: &[(&[u8] /* message */, &AggregatedSignature, &AggregatedPublicKey)]) -> bool {
+        /// versus verifying them one by one as it reduces the number of computed pairings
+        pub fn batch_verify(
+            inputs: &[(
+                &[u8], /* message */
+                &AggregatedSignature,
+                &AggregatedPublicKey,
+            )],
+        ) -> bool {
             // To combat the rogue key attack and avoid checking for distinct messages
             // use batch verification as described in the end of section 3.1 from https://eprint.iacr.org/2018/483
             let mut pairs = Vec::new();
@@ -668,11 +722,11 @@ pub mod small {
 
 #[cfg(test)]
 mod tests {
-    use amcl_wrapper::field_elem::FieldElement;
-    use amcl_wrapper::constants::{MODBYTES, GroupG1_SIZE};
-    use amcl_wrapper::types_g2::GroupG2_SIZE;
     use super::normal::{generate as normal_generate, Signature as NormalSignature};
     use super::small::{generate as small_generate, Signature as SmallSignature};
+    use amcl_wrapper::constants::{GroupG1_SIZE, MODBYTES};
+    use amcl_wrapper::field_elem::FieldElement;
+    use amcl_wrapper::types_g2::GroupG2_SIZE;
 
     #[test]
     fn size_check() {
@@ -690,4 +744,3 @@ mod tests {
         assert_eq!(sig.to_bytes().len(), GroupG1_SIZE);
     }
 }
-
