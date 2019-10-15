@@ -321,10 +321,8 @@ mod ecdsa_secp256k1 {
             let secret =
                 rustlibsecp256k1::SecretKey::parse(array_ref!(sk[..], 0, PRIVATE_KEY_SIZE))
                     .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
-            match rustlibsecp256k1::sign(&msg, &secret) {
-                Ok((sig, _)) => Ok(sig.serialize().to_vec()),
-                Err(_) => Err(CryptoError::SigningError("".to_string())),
-            }
+            let (sig, _) = rustlibsecp256k1::sign(&msg, &secret);
+            Ok(sig.serialize().to_vec())
         }
         pub fn verify<D>(
             &self,
