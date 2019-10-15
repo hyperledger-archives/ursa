@@ -1,14 +1,22 @@
 #[macro_use]
 extern crate criterion;
-extern crate ursa;
 extern crate amcl_wrapper;
+extern crate ursa;
 
-use criterion::Criterion;
 use amcl_wrapper::field_elem::FieldElement;
+use criterion::Criterion;
 
 use ursa::signatures::bls::{
-    normal::{PublicKey as UsualPublicKey, AggregatedPublicKey as UsualAggregatedPublicKey, Signature as UsualSignature, AggregatedSignature as UsualAggregatedSignature, generate as usual_generate},
-    small::{PublicKey as SmallPublicKey, AggregatedPublicKey as SmallAggregatedPublicKey, Signature as SmallSignature, AggregatedSignature as SmallAggregatedSignature, generate as small_generate}
+    normal::{
+        generate as usual_generate, AggregatedPublicKey as UsualAggregatedPublicKey,
+        AggregatedSignature as UsualAggregatedSignature, PublicKey as UsualPublicKey,
+        Signature as UsualSignature,
+    },
+    small::{
+        generate as small_generate, AggregatedPublicKey as SmallAggregatedPublicKey,
+        AggregatedSignature as SmallAggregatedSignature, PublicKey as SmallPublicKey,
+        Signature as SmallSignature,
+    },
 };
 
 fn keypair_benchmark(c: &mut Criterion) {
@@ -62,13 +70,19 @@ fn verify_aggregate_no_rk_benchmark(c: &mut Criterion) {
 
     let uasg = UsualAggregatedSignature::new(usig.as_slice());
 
-    c.bench_function(format!("Usual bls aggregate signatures no rogue key protection").as_str(), move |b| {
-        b.iter(|| UsualAggregatedSignature::new(usig.as_slice()));
-    });
+    c.bench_function(
+        format!("Usual bls aggregate signatures no rogue key protection").as_str(),
+        move |b| {
+            b.iter(|| UsualAggregatedSignature::new(usig.as_slice()));
+        },
+    );
 
-    c.bench_function(format!("Usual bls aggregate signatures no rogue key protection verify").as_str(), move |b| {
-        b.iter(|| assert!(uasg.verify_no_rk(&msg[..], upks.as_slice())));
-    });
+    c.bench_function(
+        format!("Usual bls aggregate signatures no rogue key protection verify").as_str(),
+        move |b| {
+            b.iter(|| assert!(uasg.verify_no_rk(&msg[..], upks.as_slice())));
+        },
+    );
 
     let mut spks = Vec::new();
     let mut ssig = Vec::new();
@@ -80,13 +94,19 @@ fn verify_aggregate_no_rk_benchmark(c: &mut Criterion) {
     }
     let sasg = SmallAggregatedSignature::new(ssig.as_slice());
 
-    c.bench_function(format!("Small bls aggregate signatures no rogue key protection").as_str(), move |b| {
-        b.iter(|| SmallAggregatedSignature::new(ssig.as_slice()));
-    });
+    c.bench_function(
+        format!("Small bls aggregate signatures no rogue key protection").as_str(),
+        move |b| {
+            b.iter(|| SmallAggregatedSignature::new(ssig.as_slice()));
+        },
+    );
 
-    c.bench_function(format!("Small bls aggregate signatures no rogue key protection verify").as_str(), move |b| {
-        b.iter(|| assert!(sasg.verify_no_rk(&msg[..], spks.as_slice())));
-    });
+    c.bench_function(
+        format!("Small bls aggregate signatures no rogue key protection verify").as_str(),
+        move |b| {
+            b.iter(|| assert!(sasg.verify_no_rk(&msg[..], spks.as_slice())));
+        },
+    );
 }
 
 fn verify_aggregate_rk_benchmark(c: &mut Criterion) {
@@ -107,15 +127,23 @@ fn verify_aggregate_rk_benchmark(c: &mut Criterion) {
         usig.push(sig);
     }
 
-    c.bench_function(format!("Usual bls sign with rogue key protection").as_str(), move |b| {
-       b.iter(|| UsualSignature::new_with_rk_mitigation(&msg[..], &usks[0], 0, upks.as_slice()));
-    });
+    c.bench_function(
+        format!("Usual bls sign with rogue key protection").as_str(),
+        move |b| {
+            b.iter(|| {
+                UsualSignature::new_with_rk_mitigation(&msg[..], &usks[0], 0, upks.as_slice())
+            });
+        },
+    );
 
     let uasg = UsualAggregatedSignature::new(usig.as_slice());
 
-    c.bench_function(format!("Usual bls aggregate signatures rogue key protection verify").as_str(), move |b| {
-        b.iter(|| assert!(uasg.verify(&msg[..], &uapk)));
-    });
+    c.bench_function(
+        format!("Usual bls aggregate signatures rogue key protection verify").as_str(),
+        move |b| {
+            b.iter(|| assert!(uasg.verify(&msg[..], &uapk)));
+        },
+    );
 
     let mut spks = Vec::new();
     let mut ssks = Vec::new();
@@ -133,15 +161,23 @@ fn verify_aggregate_rk_benchmark(c: &mut Criterion) {
         ssig.push(sig);
     }
 
-    c.bench_function(format!("Small bls sign with rogue key protection").as_str(), move |b| {
-       b.iter(|| SmallSignature::new_with_rk_mitigation(&msg[..], &ssks[0], 0, spks.as_slice()));
-    });
+    c.bench_function(
+        format!("Small bls sign with rogue key protection").as_str(),
+        move |b| {
+            b.iter(|| {
+                SmallSignature::new_with_rk_mitigation(&msg[..], &ssks[0], 0, spks.as_slice())
+            });
+        },
+    );
 
     let sasg = SmallAggregatedSignature::new(ssig.as_slice());
 
-    c.bench_function(format!("Small bls aggregate signatures rogue key protection verify").as_str(), move |b| {
-        b.iter(|| assert!(sasg.verify(&msg[..], &sapk)));
-    });
+    c.bench_function(
+        format!("Small bls aggregate signatures rogue key protection verify").as_str(),
+        move |b| {
+            b.iter(|| assert!(sasg.verify(&msg[..], &sapk)));
+        },
+    );
 }
 
 fn verify_multisig(c: &mut Criterion) {
@@ -161,10 +197,16 @@ fn verify_multisig(c: &mut Criterion) {
     let mut usig = usgs[0].clone();
     usig.aggregate(&usgs[1..]);
 
-    c.bench_function(format!("Usual bls multisignature verify").as_str(), move |b| {
-        let refs = msgs.iter().map(|(m, p)| (m.as_slice(), p)).collect::<Vec<(&[u8], &UsualPublicKey)>>();
-        b.iter(|| assert!(usig.verify_multi(refs.as_slice())));
-    });
+    c.bench_function(
+        format!("Usual bls multisignature verify").as_str(),
+        move |b| {
+            let refs = msgs
+                .iter()
+                .map(|(m, p)| (m.as_slice(), p))
+                .collect::<Vec<(&[u8], &UsualPublicKey)>>();
+            b.iter(|| assert!(usig.verify_multi(refs.as_slice())));
+        },
+    );
 
     let mut ssgs = Vec::new();
     let mut msgs = Vec::new();
@@ -180,10 +222,16 @@ fn verify_multisig(c: &mut Criterion) {
     let mut ssig = ssgs[0].clone();
     ssig.aggregate(&ssgs[1..]);
 
-    c.bench_function(format!("Small bls multisignature verify").as_str(), move |b| {
-        let refs = msgs.iter().map(|(m, p)| (m.as_slice(), p)).collect::<Vec<(&[u8], &SmallPublicKey)>>();
-        b.iter(|| assert!(ssig.verify_multi(refs.as_slice())));
-    });
+    c.bench_function(
+        format!("Small bls multisignature verify").as_str(),
+        move |b| {
+            let refs = msgs
+                .iter()
+                .map(|(m, p)| (m.as_slice(), p))
+                .collect::<Vec<(&[u8], &SmallPublicKey)>>();
+            b.iter(|| assert!(ssig.verify_multi(refs.as_slice())));
+        },
+    );
 }
 
 criterion_group!(
