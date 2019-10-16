@@ -163,6 +163,9 @@ impl From<libsecp256k1::Error> for CryptoError {
             libsecp256k1::Error::InvalidTweak => {
                 CryptoError::ParseError("Invalid Tweak".to_string())
             }
+            libsecp256k1::Error::NotEnoughMemory => {
+                CryptoError::ParseError("Not Enough Memory".to_string())
+            }
         }
     }
 }

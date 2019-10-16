@@ -25,19 +25,9 @@ before_install:
 env:
   - SODIUM_BUILD_STATIC=1
 
-install:
-  - rustup component add rustfmt
-  - rustup component add clippy
-  - rustup target add wasm32-unknown-unknown
-  - command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
-
 script:
-  - cargo fmt --all -- --check
-  - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
-  - cargo check && cargo audit
   - cargo build
   - cargo build --no-default-features --features=portable
   - cargo test --release
   - cargo run --manifest-path ./libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
   - cargo run --manifest-path ./libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
-  - cargo doc --no-deps

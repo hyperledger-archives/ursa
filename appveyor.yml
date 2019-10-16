@@ -19,6 +19,10 @@ install:
 
   - rustc -V
   - cargo -V
+  - rustup component add rustfmt
+  - rustup component add clippy
+  - rustup target add wasm32-unknown-unknown
+  - command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
 
 cache:
   - C:\Users\appveyor\.cargo\registry
@@ -26,4 +30,8 @@ cache:
 build: false
 
 test_script:
+  - cargo fmt --all -- --check
+  - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+  - cargo check && cargo audit
   - cargo test --release --no-fail-fast
+  - cargo doc --no-deps
