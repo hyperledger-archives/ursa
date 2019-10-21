@@ -89,6 +89,13 @@ Run the following commands to build in portable mode:
 cargo build --release --no-default-features --features=portable
 ```
 
+If you wish to take advantage of assembly level features, you can build
+Ursa using the nightly compiler of rust.
+
+```bash
+cargo build --release --no-default-features --features=asm
+```
+
 The resulting artifact(s) can be found in the *target/release* folder. They
 include:
 
@@ -127,6 +134,13 @@ Run the following commands to build in portable mode:
 
 ```bash
 cargo build --release --no-default-features --features=portable
+```
+
+If you wish to take advantage of assembly level features, you can build
+ZMix using the nightly compiler of rust.
+
+```bash
+cargo build --release --no-default-features --features=asm
 ```
 
 The resulting artifact(s) can be found in the *target/release* folder. They

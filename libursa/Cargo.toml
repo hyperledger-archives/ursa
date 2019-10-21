@@ -43,8 +43,9 @@ path = "bin/test_ed25519.rs"
 required-features = ["benchmarked25519"]
 
 [features]
-default = ["bn_openssl", "pair_amcl", "serialization", "native", "ffi", "cl", "bls"]
-portable = ["bn_rust", "pair_amcl", "serialization", "rustlibsecp256k1", "cl", "bls"]
+default = ["bn_openssl", "pair_amcl", "serialization", "native", "ffi", "cl", "bls", "std"]
+portable = ["bn_rust", "pair_amcl", "serialization", "rustlibsecp256k1", "cl", "bls", "std"]
+asm = ["bn_openssl", "pair_amcl", "serialization", "native", "ffi", "cl", "bls", "nightly"]
 native = ["secp256k1"]
 bn_openssl = ["openssl", "int_traits"]
 bn_rust = ["num-bigint", "glass_pumpkin", "int_traits", "num-integer", "num-traits"]
@@ -56,45 +57,47 @@ cl = []
 bls = []
 benchmarksecp256k1 = ["secp256k1", "openssl"]
 benchmarked25519 = ["libsodium-ffi"]
+std = ["sha2/std", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
+nightly = ["sha2/asm", "blake2/simd_asm", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend"]
 
 [dependencies]
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
 int_traits = { version = "0.1.1", optional = true }
 arrayref = "0.3.5"
-log = "0.4.1"
-failure = "0.1.5"
+log = "0.4.8"
+failure = "0.1.6"
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "0.6", features = ["wasm-bindgen"] }
 rand_chacha = "0.1"
-sha2 = "0.8"
+sha2 = { version = "0.8", default-features = false, optional = true }
 sha3 = "0.8"
-blake2 = "0.8"
-time = "0.1.36"
+blake2 = { version = "0.8", default-features = false, optional = true }
+time = "0.1"
 env_logger = "0.7.0"
-zeroize = "1.0"
-ed25519-dalek = "1.0.0-pre.2"
+zeroize = { version = "1.0", features = ["zeroize_derive"] }
+ed25519-dalek = { version = "1.0.0-pre.2", default-features = false, optional = true }
 generic-array = "0.13"
 openssl = { version = "0.10", optional = true }
 serde = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
-lazy_static = "1.0"
+lazy_static = "1.4"
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
 js-sys = { version = "0.3.13", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
 secp256k1 = { version = "0.15", optional = true, features = ["rand", "serde"]}
-libsodium-ffi = { version = "0.1.12", optional = true }
+libsodium-ffi = { version = "0.1.17", optional = true }
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1", optional = true }
 num-bigint = { version = "0.2", features = ["rand"], optional = true }
 glass_pumpkin = { version = "0.3", optional = true }
 num-integer = { version = "0.1", optional = true }
 num-traits = { version = "0.2", optional = true }
-ffi-support = { version = "0.3.4", optional = true }
+ffi-support = { version = "0.3.5", optional = true }
 
 [dev-dependencies]
 openssl = "0.10"
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1" }
-libsodium-ffi = "0.1.13"
+libsodium-ffi = "0.1.17"
 secp256k1 = "0.15"
 criterion = "0.3"
 

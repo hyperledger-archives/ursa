@@ -6,7 +6,7 @@ branches:
     - master
 
 rust:
-  - stable
+  - nightly
 
 os:
   - linux
@@ -17,12 +17,41 @@ addons:
       - libssl1.0.0
       - libssl-dev
 
-env:
-  - SODIUM_BUILD_STATIC=1
-
-script:
-  - cargo build
-  - cargo build --no-default-features --features=portable
-  - cargo test --release
-  - cargo run --manifest-path ./libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
-  - cargo run --manifest-path ./libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+matrix:
+  include:
+    - name: "rustfmt"
+      before_script:
+        - rustup component add rustfmt
+      script:
+        - cargo fmt --all -- --check
+    - name: "cargo clippy"
+      before_script:
+        - rustup component add clippy
+      script:
+        - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+    - name: "cargo audit"
+      before_script:
+        - command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
+      script:
+        - cargo check && cargo audit
+    - name: "cargo build"
+      script:
+        - cargo build
+    - name: "cargo build portable"
+      script:
+        - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
+    - name: "cargo build asm"
+      script:
+        - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
+    - name: "cargo test"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo test --release
+    - name: "cargo bench secp256k1"
+      script:
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+    - name: "cargo bench ed25519"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+    - name: "cargo doc"
+      script:
+        - cargo doc --no-deps
