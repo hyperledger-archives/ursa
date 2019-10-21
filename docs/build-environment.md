@@ -14,10 +14,10 @@ curl -sSf https://sh.rustup.rs | sh -s -- -y
 ```bash
 source ~/.cargo/env
 ```
-4. Compile and install libsodium 1.0.16
+4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz | tar -xz
-cd libsodium-1.0.16
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+cd libsodium-1.0.18
 ./autogen.sh
 ./configure --disable-dependency-tracking
 make
@@ -42,10 +42,10 @@ curl -sSf https://sh.rustup.rs | sh -s -- -y
 ```bash
 source ~/.cargo/env
 ```
-4. Compile and install libsodium 1.0.16
+4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz | tar -xz
-cd libsodium-1.0.16
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.18.tar.gz | tar -xz
+cd libsodium-1.0.18
 ./autogen.sh
 ./configure
 make
@@ -70,10 +70,10 @@ curl -sSf https://sh.rustup.rs | sh -s -- -y
 ```bash
 source ~/.cargo/env
 ```
-4. Compile and install libsodium 1.0.16
+4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz | tar -xz
-cd libsodium-1.0.16
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+cd libsodium-1.0.18
 ./autogen.sh
 ./configure
 make
@@ -110,10 +110,10 @@ brew install libtool
 ```bash
 source ~/.cargo/env
 ```
-6. Compile and install libsodium 1.0.16
+6. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.16.tar.gz | tar -xz
-cd libsodium-1.0.16
+curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+cd libsodium-1.0.18
 ./autogen.sh
 ./configure --prefix=/usr/local
 make
