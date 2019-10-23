@@ -16,7 +16,7 @@ source ~/.cargo/env
 ```
 4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+curl -fsSL https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz | tar -xz
 cd libsodium-1.0.18
 ./autogen.sh
 ./configure --disable-dependency-tracking
@@ -44,7 +44,7 @@ source ~/.cargo/env
 ```
 4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.16/libsodium-1.0.18.tar.gz | tar -xz
+curl -fsSL https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz | tar -xz
 cd libsodium-1.0.18
 ./autogen.sh
 ./configure
@@ -72,7 +72,7 @@ source ~/.cargo/env
 ```
 4. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+curl -fsSL https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz | tar -xz
 cd libsodium-1.0.18
 ./autogen.sh
 ./configure
@@ -112,7 +112,7 @@ source ~/.cargo/env
 ```
 6. Compile and install libsodium 1.0.18
 ```bash
-curl -fsSL https://github.com/jedisct1/libsodium/releases/download/1.0.18/libsodium-1.0.18.tar.gz | tar -xz
+curl -fsSL https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz | tar -xz
 cd libsodium-1.0.18
 ./autogen.sh
 ./configure --prefix=/usr/local
