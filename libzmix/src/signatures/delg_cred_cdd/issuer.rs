@@ -4,8 +4,8 @@ use super::groth_sig::{
     GrothS1, GrothS2, GrothSigkey,
 };
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
-use amcl_wrapper::group_elem_g2::{G2Vector, G2};
+use amcl_wrapper::group_elem_g1::G1Vector;
+use amcl_wrapper::group_elem_g2::G2Vector;
 
 pub type Sigkey = GrothSigkey;
 pub type EvenLevelVerkey = Groth1Verkey;
@@ -13,7 +13,8 @@ pub type OddLevelVerkey = Groth2Verkey;
 
 macro_rules! impl_CredLink {
     ( $CredLink:ident, $GrothSetupParams:ident, $GrothSig:ident, $delegatee_vk:ident, $delegator_vk:ident, $GVector:ident ) => {
-        // (attributes, signature). The signature is over the attributes and the public key combined by appending public key to the attribute vector.
+        // (attributes, signature). The signature is over the attributes and the public key combined
+        // by appending public key to the attribute vector.
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub struct $CredLink {
             pub level: usize,
@@ -46,10 +47,8 @@ macro_rules! impl_CredLink {
                 if !self.has_verkey(delegatee_vk) {
                     return Err(DelgCredCDDErrorKind::VerkeyNotFoundInDelegationLink {}.into());
                 }
-                /*link.signature
-                .verify(link.messages.as_slice(), delegator_vk, setup_params)*/
                 self.signature
-                    .verify_fast(self.attributes.as_slice(), delegator_vk, setup_params)
+                    .verify_batch(self.attributes.as_slice(), delegator_vk, setup_params)
             }
         }
     };
@@ -74,6 +73,7 @@ macro_rules! impl_Issuer {
                 $GrothS::keygen(setup_params)
             }
 
+            /// Issuer creates a Groth signature.
             pub fn delegate(
                 &self,
                 mut delegatee_attributes: $GVector,
@@ -246,7 +246,11 @@ impl CredChain {
         link.verify(delegatee_vk, delegator_vk, setup_params)
     }
 
-    // First verkey of even_level_vks is the root issuer's key
+    /// Verifies several Groth signatures, one for each link in the chain.
+    /// First verkey of even_level_vks is the root issuer's key
+    /// As an optimization, the several `link.verify`s called (once for verifying each link)
+    /// can be batched together such that there is only 1 big multi-pairing rather than chain.size().
+    /// The optimization will require splitting `verify_batch` of Groth signatures
     pub fn verify_delegations(
         &self,
         even_level_vks: Vec<&EvenLevelVerkey>,
@@ -366,7 +370,9 @@ impl RootIssuer {
 mod tests {
     use super::*;
     // For benchmarking
-    use std::time::{Duration, Instant};
+    use amcl_wrapper::group_elem_g1::G1;
+    use amcl_wrapper::group_elem_g2::G2;
+    use std::time::Instant;
 
     /// XXX: Need test fixtures
 
@@ -379,11 +385,10 @@ mod tests {
 
         let l_0_issuer = EvenLevelIssuer::new(0).unwrap();
         let l_1_issuer = OddLevelIssuer::new(1).unwrap();
-        let l_2_issuer = EvenLevelIssuer::new(2).unwrap();
 
         let (l_0_issuer_sk, l_0_issuer_vk) = EvenLevelIssuer::keygen(&params1);
         let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())
@@ -447,11 +452,10 @@ mod tests {
         let params2 = GrothS2::setup(max_attributes, label);
 
         let l_1_issuer = OddLevelIssuer::new(1).unwrap();
-        let l_2_issuer = EvenLevelIssuer::new(2).unwrap();
 
         let (root_issuer_sk, root_issuer_vk) = RootIssuer::keygen(&params1);
         let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())
@@ -506,7 +510,7 @@ mod tests {
         let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
         let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
         let (l_3_issuer_sk, l_3_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_4_issuer_sk, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())
@@ -657,7 +661,7 @@ mod tests {
         let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
         let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
         let (l_3_issuer_sk, l_3_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_4_issuer_sk, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())
@@ -899,7 +903,7 @@ mod tests {
         let (l_3_issuer_sk, l_3_issuer_vk) = OddLevelIssuer::keygen(&params2);
         let (l_4_issuer_sk, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
         let (l_5_issuer_sk, l_5_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_6_issuer_sk, l_6_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_6_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())
