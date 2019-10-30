@@ -1,4 +1,6 @@
 // A presenter is an entity holding a CredChain which does proof of attribute tokens
+// Protocol described in Figure 4 and Figure 5 of section 5.3 of the paper. Some corrections were
+// made which are commented inline with the code.
 
 use super::errors::{DelgCredCDDError, DelgCredCDDErrorKind, DelgCredCDDResult};
 use super::groth_sig::{Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig};
@@ -9,7 +11,6 @@ use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2LookupTable, G2Vector, G2};
 use std::collections::{HashMap, HashSet};
-use std::ops::Add;
 
 pub type OddLevelAttribute = G1;
 pub type EvenLevelAttribute = G2;
@@ -372,6 +373,7 @@ impl<'a> AttributeToken<'a> {
         })
     }
 
+    /// `extra` can be used to sign a message `m`. Just put the byte representation of `m` in `extra`
     pub fn gen_challenge(
         at: &AttributeTokenComm,
         ipk: &Groth1Verkey,
@@ -770,6 +772,7 @@ impl<'a> AttributeToken<'a> {
                         // e(g1, ri)^{rho_sig*rr_t} * e(-y1_j, g2)^{blindings_vk[i-2]}
                         // e(-y1_j, g2) equals e(y1_j, -g2)
                         let e_1 = pairing_g1_r_i.pow(&(&rho_sig * &rr_t));
+                        // Different from paper here, paper uses e(y1_j, .. but y1_j should be inverted.
                         let e_2 = precomp_setup.groth1_neg_y_g2[j].pow(&self.blindings_vk[i - 2]);
                         GT::mul(&e_1, &e_2)
                     };
@@ -1375,7 +1378,7 @@ mod tests {
     use amcl_wrapper::group_elem_g1::G1Vector;
     use amcl_wrapper::group_elem_g2::G2Vector;
     // For benchmarking
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     #[test]
     fn test_attribute_token() {
@@ -2342,14 +2345,10 @@ mod tests {
 
         let l_0_issuer = EvenLevelIssuer::new(0).unwrap();
         let l_1_issuer = OddLevelIssuer::new(1).unwrap();
-        let l_2_issuer = EvenLevelIssuer::new(2).unwrap();
-        let l_3_issuer = OddLevelIssuer::new(3).unwrap();
 
         let (l_0_issuer_sk, l_0_issuer_vk) = EvenLevelIssuer::keygen(&params1);
         let (l_1_issuer_sk, l_1_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_2_issuer_sk, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
-        let (l_3_issuer_sk, l_3_issuer_vk) = OddLevelIssuer::keygen(&params2);
-        let (l_4_issuer_sk, l_4_issuer_vk) = EvenLevelIssuer::keygen(&params1);
+        let (_, l_2_issuer_vk) = EvenLevelIssuer::keygen(&params1);
 
         let attributes_1: G1Vector = (0..max_attributes - 1)
             .map(|_| G1::random())

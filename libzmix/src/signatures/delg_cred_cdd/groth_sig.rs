@@ -1,3 +1,5 @@
+// Groth signatures, Groth1 and Groth2. Section 2.4.1 of the paper
+
 use super::errors::{DelgCredCDDErrorKind, DelgCredCDDResult};
 use crate::commitments::pok_vc::{
     ProofG1, ProofG2, ProverCommittedG1, ProverCommittedG2, ProverCommittingG1, ProverCommittingG2,
@@ -35,6 +37,8 @@ macro_rules! impl_GrothS {
         pub struct $GrothS {}
 
         impl $GrothVerkey {
+            /// Schnorr protocol for proof of knowledge of secret key since public key is of the
+            /// form g^sk
             pub fn initiate_proof_of_knowledge_of_sigkey(
                 setup_params: &$GrothSetupParams,
             ) -> $ProverCommitted {
@@ -229,22 +233,23 @@ impl Groth1Sig {
         Ok(true)
     }
 
-    pub fn verify_fast(
+    /// Verify n pairing checks with a single one using batch verification of pairings. This is a slight modification
+    /// of the small-exponents technique described in "Practical Short Signature Batch Verification"(https://eprint.iacr.org/2008/015).
+    /// Rather than selecting n random values, degrees of a single random value like r,r^2,r^3,..r^{n-1{ are used.
+    /// if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
+    /// in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
+    /// e(a,b) * e(c,d)^r * e(f,g)^{r^2} = e(a,b) * e(c^r, d) * e(f^{r^2}, g). Exponent moved to 1st element of pairing since computation in group G1 is cheaper
+    /// Now use a single multi-pairing rather than 3 pairings to compute e(a,b) * e(c^r, d) * e(f^{r^2}, g)
+    /// Using the above idea for signature verification =>
+    /// e(-S, R)*e(y1, g2)*e(g1, V) * {e(m1, g2)*e(y1, V)*e(T1, -R)}^r * {e(m2, g2)*e(y2, V)*e(T2, -R)}^{r^2} * ... == 1
+    /// e(-S, R)*e(y1, g2)*e(g1, V) * e(m1, g2)^r*e(y1, V)^r*e(T1, -R)^r * e(m2, g2)^{r^2}*e(y2, V)^{r^2}*e(T2, -R)^{r^2} * ... == 1
+    /// e(-S, R)*e(y1, g2)*e(g1, V) * e(m1^r, g2)*e(y1^r, V)*e(T1^r, -R) * e(m2^{r^2}, g1)*e(y2^{r^2}, V)*e(T2^{r^2}, -R) * ... == 1
+    pub fn verify_batch(
         &self,
         messages: &[G1],
         verkey: &Groth1Verkey,
         setup_params: &Groth1SetupParams,
     ) -> DelgCredCDDResult<bool> {
-        // Verify n pairing checks with a single one.
-        // if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
-        // in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
-        // e(a,b) * e(c,d)^r * e(f,g)^{r^2} = e(a,b) * e(c^r, d) * e(f^{r^2}, g). Exponent moved to 1st element of pairing since computation in group G1 is cheaper
-        // Now use a single multi-pairing rather than 3 pairings to compute e(a,b) * e(c^r, d) * e(f^{r^2}, g)
-        // Using the above idea for signature verification =>
-        // e(-S, R)*e(y1, g2)*e(g1, V) * {e(m1, g2)*e(y1, V)*e(T1, -R)}^r * {e(m2, g2)*e(y2, V)*e(T2, -R)}^{r^2} * ... == 1
-        // e(-S, R)*e(y1, g2)*e(g1, V) * e(m1, g2)^r*e(y1, V)^r*e(T1, -R)^r * e(m2, g2)^{r^2}*e(y2, V)^{r^2}*e(T2, -R)^{r^2} * ... == 1
-        // e(-S, R)*e(y1, g2)*e(g1, V) * e(m1^r, g2)*e(y1^r, V)*e(T1^r, -R) * e(m2^{r^2}, g1)*e(y2^{r^2}, V)*e(T2^{r^2}, -R) * ... == 1
-
         if messages.len() > setup_params.y.len() {
             return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
@@ -358,22 +363,23 @@ impl Groth2Sig {
         Ok(true)
     }
 
-    pub fn verify_fast(
+    /// Verify n pairing checks with a single one using batch verification of pairings. This is a slight modification
+    /// of the small-exponents technique described in "Practical Short Signature Batch Verification"(https://eprint.iacr.org/2008/015).
+    /// Rather than selecting n random values, degrees of a single random value like r,r^2,r^3,..r^{n-1{ are used.
+    /// if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
+    /// in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
+    /// e(a,b) * e(c,d)^r * e(f,g)^{r^2} = e(a,b) * e(c^r, d) * e(f^{r^2}, g). Exponent moved to 1st element of pairing since computation in group G1 is cheaper
+    /// Now use a single multi-pairing rather than 3 pairings to compute e(a,b) * e(c^r, d) * e(f^{r^2}, g)
+    /// Using the above idea for signature verification =>
+    /// e(-R, S)*e(g1, y1)*e(V, g2) * {e(g1, m1)*e(V, y1)*e(-R, T1)}^r * {e(g1, m2)*e(V, y2)*e(-R, T2)}^{r^2} * ... == 1
+    /// e(-R, S)*e(g1, y1)*e(V, g2) * e(g1, m1)^r*e(V, y1)^r*e(-R, T1)^r * e(g1, m2)^{r^2}*e(V, y2)^{r^2}*e(-R, T2)^{r^2} * ... == 1
+    /// e(-R, S)*e(g1, y1)*e(V, g2) * e(g1^r, m1)*e(V^r, y1)*e(-R^r, T1) * e(g1^{r^2}, m2)*e(V^{r^2}, y2)*e(-R^{r^2}, T2) * ... == 1
+    pub fn verify_batch(
         &self,
         messages: &[G2],
         verkey: &Groth2Verkey,
         setup_params: &Groth2SetupParams,
     ) -> DelgCredCDDResult<bool> {
-        // Verify n pairing checks with a single one.
-        // if a verifier had to check that all 3 values a, b and c are 0, he could pick a random value r in {Z_p}* and check that a + b*r + c*r^2 equals 0
-        // in a pairing situation if verifier had to check if e(a,b) = 1, e(c, d) = 1 and e(f, g) = 1, pick a random value r in {Z_p}* and check e(a,b) * e(c,d)^r * e(f,g)^{r^2} equals 1
-        // e(a,b) * e(c,d)^r * e(f,g)^{r^2} = e(a,b) * e(c^r, d) * e(f^{r^2}, g). Exponent moved to 1st element of pairing since computation in group G1 is cheaper
-        // Now use a single multi-pairing rather than 3 pairings to compute e(a,b) * e(c^r, d) * e(f^{r^2}, g)
-        // Using the above idea for signature verification =>
-        // e(-R, S)*e(g1, y1)*e(V, g2) * {e(g1, m1)*e(V, y1)*e(-R, T1)}^r * {e(g1, m2)*e(V, y2)*e(-R, T2)}^{r^2} * ... == 1
-        // e(-R, S)*e(g1, y1)*e(V, g2) * e(g1, m1)^r*e(V, y1)^r*e(-R, T1)^r * e(g1, m2)^{r^2}*e(V, y2)^{r^2}*e(-R, T2)^{r^2} * ... == 1
-        // e(-R, S)*e(g1, y1)*e(V, g2) * e(g1^r, m1)*e(V^r, y1)*e(-R^r, T1) * e(g1^{r^2}, m2)*e(V^{r^2}, y2)*e(-R^{r^2}, T2) * ... == 1
-
         if messages.len() > setup_params.y.len() {
             return Err(DelgCredCDDErrorKind::UnsupportedNoOfMessages {
                 expected: setup_params.y.len(),
@@ -423,7 +429,7 @@ impl Groth2Sig {
 mod tests {
     use super::*;
     // For benchmarking
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     #[test]
     fn test_groth1_sig_verification() {
@@ -441,7 +447,7 @@ mod tests {
         println!("Naive verify takes {:?}", start.elapsed());
 
         let start = Instant::now();
-        assert!(sig.verify_fast(msgs.as_slice(), &vk, &params).unwrap());
+        assert!(sig.verify_batch(msgs.as_slice(), &vk, &params).unwrap());
         println!("Fast verify takes {:?}", start.elapsed());
 
         let r = FieldElement::random();
@@ -450,7 +456,7 @@ mod tests {
             .verify(msgs.as_slice(), &vk, &params)
             .unwrap());
         assert!(sig_randomized
-            .verify_fast(msgs.as_slice(), &vk, &params)
+            .verify_batch(msgs.as_slice(), &vk, &params)
             .unwrap());
     }
 
@@ -470,7 +476,7 @@ mod tests {
         println!("Naive verify takes {:?}", start.elapsed());
 
         let start = Instant::now();
-        assert!(sig.verify_fast(msgs.as_slice(), &vk, &params).unwrap());
+        assert!(sig.verify_batch(msgs.as_slice(), &vk, &params).unwrap());
         println!("Fast verify takes {:?}", start.elapsed());
 
         let r = FieldElement::random();
@@ -479,7 +485,7 @@ mod tests {
             .verify(msgs.as_slice(), &vk, &params)
             .unwrap());
         assert!(sig_randomized
-            .verify_fast(msgs.as_slice(), &vk, &params)
+            .verify_batch(msgs.as_slice(), &vk, &params)
             .unwrap());
     }
 
