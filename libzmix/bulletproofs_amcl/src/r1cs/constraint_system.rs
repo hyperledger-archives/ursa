@@ -9,6 +9,12 @@ use crate::r1cs::linear_combination::LinearCombination;
 use crate::r1cs::linear_combination::Variable;
 use amcl_wrapper::field_elem::FieldElement;
 
+// The following is taken from Dalek's implementation. The code has inline
+// comments but for a detailed documentation, check following links:
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/trait.ConstraintSystem.html
+// https://doc-internal.dalek.rs/bulletproofs/notes/r1cs_proof/index.html
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/index.html
+
 /// The interface for a constraint system, abstracting over the prover
 /// and verifier's roles.
 ///

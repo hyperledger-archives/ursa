@@ -21,6 +21,12 @@ use amcl_wrapper::commitment::{commit_to_field_element, commit_to_field_element_
 use core::iter;
 use core::mem;
 
+// The following protocol is taken from Dalek's implementation. The code has inline
+// comments but for a detailed documentation, check following links:
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/struct.Prover.html
+// https://doc-internal.dalek.rs/bulletproofs/notes/r1cs_proof/index.html
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/index.html
+
 /// A `ConstraintSystem` implementation for use by the prover.
 ///
 /// The prover commits high-level variables and their blinding factors `(v, v_blinding)`,
@@ -337,6 +343,7 @@ impl<'a, 'b> Prover<'a, 'b> {
         let o_blinding1 = FieldElement::random();
         let s_blinding1 = FieldElement::random();
 
+        // Blinding for L and R for 1st phase
         let s_L1 = FieldElementVector::random(n1);
         let s_R1 = FieldElementVector::random(n1);
 
@@ -398,6 +405,7 @@ impl<'a, 'b> Prover<'a, 'b> {
             )
         };
 
+        // Blindings for L and R for 2nd phase
         let s_L2 = FieldElementVector::random(n2);
         let s_R2 = FieldElementVector::random(n2);
 
@@ -526,11 +534,13 @@ impl<'a, 'b> Prover<'a, 'b> {
         let t_x = t_poly.eval(&x);
         let t_x_blinding = t_blinding_poly.eval(&x);
         let mut l_vec = l_poly.eval(&x);
+        // add 0 padding, i.e. 0,0,...pad number of times
         l_vec.append(&mut FieldElementVector::new(pad));
 
         let mut r_vec = r_poly.eval(&x);
 
         // Since r_poly contains terms of y without any multiplicand, i.e. in the constant term
+        // For more, check https://doc-internal.dalek.rs/bulletproofs/notes/r1cs_proof/index.html#padding-mathbflx-and-mathbfrx-for-the-inner-product-proof
         for _ in n..padded_n {
             r_vec.push(exp_y.negation());
             exp_y = exp_y * &y; // y^i -> y^(i+1)

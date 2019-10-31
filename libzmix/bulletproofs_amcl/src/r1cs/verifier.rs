@@ -18,6 +18,12 @@ use crate::r1cs::linear_combination::LinearCombination;
 use crate::r1cs::linear_combination::Variable;
 use crate::r1cs::proof::R1CSProof;
 
+// The following protocol is taken from Dalek's implementation. The code has inline
+// comments but for a detailed documentation, check following links:
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/struct.Verifier.html
+// https://doc-internal.dalek.rs/bulletproofs/notes/r1cs_proof/index.html
+// https://doc-internal.dalek.rs/bulletproofs/r1cs/index.html
+
 /// A [`ConstraintSystem`] implementation for use by the verifier.
 ///
 /// The verifier adds high-level variable commitments to the transcript,
@@ -344,6 +350,7 @@ impl<'a> Verifier<'a> {
             .into_iter()
             .zip(y_inv_vec.iter())
             .map(|(wRi, exp_y_inv)| wRi * exp_y_inv)
+            // add 0 padding, i.e. 0,0,...pad number of times
             .chain(iter::repeat(FieldElement::zero()).take(pad))
             .collect::<Vec<FieldElement>>();
 
@@ -445,9 +452,6 @@ impl<'a> Verifier<'a> {
         arg2.extend(proof.ipp_proof.L.as_slice());
         arg2.extend(proof.ipp_proof.R.as_slice());
 
-        /*let res = G1Vector::from(arg2)
-        .inner_product_var_time(&FieldElementVector::from(arg1))
-        .unwrap();*/
         let res = G1Vector::inner_product_var_time_with_ref_vecs(arg2, arg1).unwrap();
         if !res.is_identity() {
             return Err(R1CSError::VerificationError);
