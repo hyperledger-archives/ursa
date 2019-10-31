@@ -72,7 +72,8 @@ impl VecPoly3 {
         out
     }
 
-    /// Evaluate polynomial at `x`
+    /// Evaluate polynomial at `x`. Found to be slower than `eval`
+    #[cfg(test)]
     pub fn eval_alt(&self, x: &FieldElement) -> FieldElementVector {
         let n = self.0.len();
         let mut out = FieldElementVector::new(n);
