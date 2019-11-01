@@ -31,8 +31,9 @@ impl IPP {
     /// and H'_i = H_i.H_factors_i. Simplistically looking, vector G and H can be transformed to
     /// G' and H' in the beginning but that causes extra scalar multiplication. To avoid this, the
     /// (G/H)_factors are accommodated with other scalars (a, b). G_factors and H_factors are needed
-    /// when the outer protocol needs to do the inner product proof over modified vectors
-    ///
+    /// when the outer protocol needs to do the inner product proof over modified vectors.
+    /// G_factors and H_factors are not described in the paper but were introduced in Dalek's
+    /// implementation.
     /// The `transcript` is passed in as a parameter so that the
     /// challenges depend on the *entire* transcript (including parent
     /// protocols).
@@ -41,7 +42,7 @@ impl IPP {
     /// power of 2.
     pub fn create_ipp(
         transcript: &mut Transcript,
-        Q: &G1,
+        u: &G1,
         G_factors: &FieldElementVector,
         H_factors: &FieldElementVector,
         G_vec: &G1Vector,
@@ -122,7 +123,11 @@ impl IPP {
             let mut L_1 = vec![];
             L_1.extend(G_R.iter());
             L_1.extend(H_L.iter());
-            L_1.push(&Q);
+            L_1.push(&u);
+
+            // While computing L and R below, variable time scalar multiplication is used.
+            // This is because the protocol is not zero-knowledge and a zero-knowledge protocol
+            // using this technique will have already blinded the vectors `a` and `b` in some way.
 
             // L = G_R^(a_L o G_factors_R) * H_L^(b_R o H_factors_L) * Q^c_L
             let L = G1Vector::inner_product_var_time_with_ref_vecs(L_1, L_0).unwrap();
@@ -145,7 +150,7 @@ impl IPP {
             let mut R_1 = vec![];
             R_1.extend(G_L.iter());
             R_1.extend(H_R.iter());
-            R_1.push(&Q);
+            R_1.push(&u);
 
             // R = G_R^(a_R o G_factors_L) * H_R^(b_L o H_factors_R) * Q^c_R
             let R = G1Vector::inner_product_var_time_with_ref_vecs(R_1, R_0).unwrap();
@@ -157,31 +162,31 @@ impl IPP {
             R_vec.push(R);
 
             // Generate challenge for Fiat-Shamir
-            let u = transcript.challenge_scalar(b"u");
-            let u_inv = u.inverse();
+            let x = transcript.challenge_scalar(b"x");
+            let x_inv = x.inverse();
 
             // Prepare vectors and generators for next round of recursion
             for i in 0..n {
-                a_L[i] = &a_L[i] * &u + &u_inv * &a_R[i];
-                b_L[i] = &b_L[i] * &u_inv + &u * &b_R[i];
+                a_L[i] = &a_L[i] * &x + &x_inv * &a_R[i];
+                b_L[i] = &b_L[i] * &x_inv + &x * &b_R[i];
                 if !factors_accommodated {
-                    // G_L[i] = (u_inv * G_factors_L[i])*G_L[i] + (u * G_factors_R[i])* G_R[i];
+                    // G_L[i] = (x_inv * G_factors_L[i])*G_L[i] + (x * G_factors_R[i])* G_R[i];
                     G_L[i] = G_L[i].binary_scalar_mul(
                         &G_R[i],
-                        &(&u_inv * &G_factors_L[i]),
-                        &(&u * &G_factors_R[i]),
+                        &(&x_inv * &G_factors_L[i]),
+                        &(&x * &G_factors_R[i]),
                     );
-                    // H_L[i] = (u * H_factors_L[i])*H_L[i] + (u_inv * H_factors_R[i])*H_R[i];
+                    // H_L[i] = (x * H_factors_L[i])*H_L[i] + (x_inv * H_factors_R[i])*H_R[i];
                     H_L[i] = H_L[i].binary_scalar_mul(
                         &H_R[i],
-                        &(&u * &H_factors_L[i]),
-                        &(&u_inv * &H_factors_R[i]),
+                        &(&x * &H_factors_L[i]),
+                        &(&x_inv * &H_factors_R[i]),
                     );
                 } else {
-                    // G_L[i] = (u_inv * G_L[i]) + (u * G_R[i]);
-                    G_L[i] = G_L[i].binary_scalar_mul(&G_R[i], &u_inv, &u);
-                    // H_L[i] = (u * H_L[i]) + (u_inv * H_R[i]);
-                    H_L[i] = H_L[i].binary_scalar_mul(&H_R[i], &u, &u_inv);
+                    // G_L[i] = (x_inv * G_L[i]) + (x * G_R[i]);
+                    G_L[i] = G_L[i].binary_scalar_mul(&G_R[i], &x_inv, &x);
+                    // H_L[i] = (x * H_L[i]) + (x_inv * H_R[i]);
+                    H_L[i] = H_L[i].binary_scalar_mul(&H_R[i], &x, &x_inv);
                 }
             }
 
@@ -208,7 +213,7 @@ impl IPP {
         G_factors: &FieldElementVector,
         H_factors: &FieldElementVector,
         P: &G1,
-        Q: &G1,
+        u: &G1,
         G_vec: &G1Vector,
         H_vec: &G1Vector,
         a: &FieldElement,
@@ -216,7 +221,10 @@ impl IPP {
         L_vec: &G1Vector,
         R_vec: &G1Vector,
     ) -> Result<(), R1CSError> {
-        let (u_sq, u_inv_sq, s) = Self::verification_scalars(L_vec, R_vec, n, transcript).unwrap();
+        // The prover does not have access to all the challenges in the beginning but the verifier does.
+        // The verifier uses all the challenges to compute scalars such that it can efficiently compute
+        // the final g, h, L^{x^2}, L^{x^-2}
+        let (x_sq, x_inv_sq, s) = Self::verification_scalars(L_vec, R_vec, n, transcript).unwrap();
 
         let g_times_a_times_s = G_factors
             .iter()
@@ -232,18 +240,18 @@ impl IPP {
             .zip(inv_s)
             .map(|(h_i, s_i_inv)| (b * s_i_inv) * h_i);
 
-        let neg_u_sq = u_sq.iter().map(|u| -u);
-        let neg_u_inv_sq = u_inv_sq.iter().map(|u| -u);
+        let neg_x_sq = x_sq.iter().map(|x| -x);
+        let neg_x_inv_sq = x_inv_sq.iter().map(|x| -x);
 
         // expected_P = Q^{a*b} * G_vec^{a*s*G_factors} * H_vec^{b*inv_s*H_factors} * L_vec^neg_u_sq * R_vec^neg_u_inv_sq
         let exponents: Vec<FieldElement> = iter::once(a * b)
             .chain(g_times_a_times_s)
             .chain(h_times_b_div_s)
-            .chain(neg_u_sq)
-            .chain(neg_u_inv_sq)
+            .chain(neg_x_sq)
+            .chain(neg_x_inv_sq)
             .collect();
         let mut bases = G1Vector::with_capacity(exponents.len());
-        bases.push(Q.clone());
+        bases.push(u.clone());
         bases.append(&mut G_vec.clone());
         bases.append(&mut H_vec.clone());
         bases.append(&mut L_vec.clone());
@@ -260,7 +268,7 @@ impl IPP {
         }
     }
 
-    /// Return `u^2`s, `u^-2`s and s. From section 3.1 of the paper
+    /// Return `x^2`s, `x^-2`s and s. From section 3.1 of the paper
     pub fn verification_scalars(
         L_vec: &G1Vector,
         R_vec: &G1Vector,
@@ -281,26 +289,26 @@ impl IPP {
 
         transcript.innerproduct_domain_sep(n as u64);
 
-        // 1. Recompute u_k,...,u_1 based on the proof transcript. u_k is the challenge for the
-        // first round of recursion whereas u_1 is the challenge from the last round.
+        // 1. Recompute x_k,...,x_1 based on the proof transcript. x_k is the challenge for the
+        // first round of recursion whereas x_1 is the challenge from the last round.
 
         let mut challenges = Vec::with_capacity(lg_n);
         for (L, R) in L_vec.iter().zip(R_vec.iter()) {
             transcript.commit_point(b"L", L);
             transcript.commit_point(b"R", R);
-            let u = transcript.challenge_scalar(b"u");
-            challenges.push(u);
+            let x = transcript.challenge_scalar(b"x");
+            challenges.push(x);
         }
 
-        // 2. Compute u_k^2...u_1^2, 1/(u_k...u_1), 1/u_k^2, ..., 1/u_1^2
+        // 2. Compute x_k^2...x_1^2, 1/(x_k...x_1), 1/x_k^2, ..., 1/x_1^2
 
-        // challenges_sq = [u_k^2, u_{k-1}^2..., u_1^2]
+        // challenges_sq = [x_k^2, x_{k-1}^2..., x_1^2]
         let mut challenges_sq = Vec::with_capacity(lg_n);
-        // challenges_inv_sq = [1/u_k^2, 1/u_{k-1}^2..., 1/u_1^2]
+        // challenges_inv_sq = [1/x_k^2, 1/x_{k-1}^2..., 1/x_1^2]
         let mut challenges_inv_sq = Vec::with_capacity(lg_n);
 
-        // challenges_inv = [1/u_k, 1/u_{k-1}..., 1/u_1]
-        // product_chal_inv = 1/(u_k*u_{k-1}*...u_1)
+        // challenges_inv = [1/x_k, 1/x_{k-1}..., 1/x_1]
+        // product_chal_inv = 1/(x_k*x_{k-1}*...x_1)
         let (challenges_inv, product_chal_inv) = FieldElement::batch_invert(&challenges);
         for i in 0..challenges.len() {
             challenges_sq.push(challenges[i].square());
@@ -315,12 +323,12 @@ impl IPP {
             // From "Computing scalars" in section 6.2 of the paper
             let lg_i = (i as f32).log2() as usize;
             let k = 1 << lg_i;
-            // The challenges are stored in "creation order" as [u_k,...,u_1],
-            // so u_{lg(i)+1} is indexed by (lg_n-1) - lg_i. Choosing challenges_sq since there is
+            // The challenges are stored in "creation order" as [x_k,...,x_1],
+            // so x_{lg(i)+1} is indexed by (lg_n-1) - lg_i. Choosing challenges_sq since there is
             // inverse of the challenge in the multiplicand element of s.
             let j = (lg_n - 1) - lg_i;
-            let u_lg_i_sq = &challenges_sq[j];
-            s.push(&s[i - k] * u_lg_i_sq);
+            let x_lg_i_sq = &challenges_sq[j];
+            s.push(&s[i - k] * x_lg_i_sq);
         }
 
         Ok((challenges_sq, challenges_inv_sq, s))
@@ -339,7 +347,7 @@ mod tests {
         let n = 16;
         let G: G1Vector = get_generators("g", n).into();
         let H: G1Vector = get_generators("h", n).into();
-        let Q = G1::from_msg_hash("Q".as_bytes());
+        let u = G1::from_msg_hash("u".as_bytes());
 
         let mut a = FieldElementVector::random(n);
         let b = FieldElementVector::random(n);
@@ -352,7 +360,7 @@ mod tests {
 
         let mut new_trans = Transcript::new(b"innerproduct");
         let start = Instant::now();
-        let ipp_proof = IPP::create_ipp(&mut new_trans, &Q, &G_factors, &H_factors, &G, &H, &a, &b);
+        let ipp_proof = IPP::create_ipp(&mut new_trans, &u, &G_factors, &H_factors, &G, &H, &a, &b);
         println!(
             "Time for create inner product proof for vectors with {} items is {:?}",
             n,
@@ -374,7 +382,7 @@ mod tests {
         let mut _2 = G1Vector::new(0);
         _2.append(&mut G.clone());
         _2.append(&mut H.clone());
-        _2.push(Q.clone());
+        _2.push(u.clone());
         let P = G1Vector::from(_2).multi_scalar_mul_var_time(&_1).unwrap();
 
         let mut new_trans1 = Transcript::new(b"innerproduct");
@@ -384,7 +392,7 @@ mod tests {
             &G_factors,
             &H_factors,
             &P,
-            &Q,
+            &u,
             &G,
             &H,
             &ipp_proof.a,
