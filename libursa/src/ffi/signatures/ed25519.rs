@@ -33,8 +33,8 @@
 //         return 1;
 //     }
 //
-//     ursa_ed25519_bytebuffer_free(*public_key);
-//     ursa_ed25519_bytebuffer_free(*private_key);
+//     ursa_bytebuffer_free(*public_key);
+//     ursa_bytebuffer_free(*private_key);
 //
 //     free(seed->data);
 //     free(seed);
@@ -44,13 +44,13 @@
 //     if (!ursa_ed25519_keypair_new(public_key, private_key, err)) {
 //         printf("Failed to generate keys\n");
 //
-//         ursa_ed25519_bytebuffer_free(*public_key);
-//         ursa_ed25519_bytebuffer_free(*private_key);
+//         ursa_bytebuffer_free(*public_key);
+//         ursa_bytebuffer_free(*private_key);
 //
 //         free(public_key);
 //         free(private_key);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -92,7 +92,7 @@
 //         free(message);
 //         free(signature);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -103,9 +103,9 @@
 //     if (!ursa_ed25519_verify(message, signature, public_key, err)) {
 //         printf("Verification failed.");
 //
-//         ursa_ed25519_bytebuffer_free(*public_key);
-//         ursa_ed25519_bytebuffer_free(*private_key);
-//         ursa_ed25519_bytebuffer_free(*signature);
+//         ursa_bytebuffer_free(*public_key);
+//         ursa_bytebuffer_free(*private_key);
+//         ursa_bytebuffer_free(*signature);
 //
 //         free(public_key);
 //         free(private_key);
@@ -113,7 +113,7 @@
 //         free(message);
 //         free(signature);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -121,19 +121,19 @@
 //     printf("Verified!\n");
 //
 //     // ExternError messages also need to be freed from memory
-//     ursa_ed25519_bytebuffer_free(*signature);
+//     ursa_bytebuffer_free(*signature);
 //     free(message->data);
 //     message->len = 0;
 //
 //     if (!ursa_ed25519_sign(message->data, message->len, private_key->data, private_key->len, signature, err)) {
 //         printf("Expected signing error: %s\n", err->message);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //     }
 //
 //
-//     ursa_ed25519_bytebuffer_free(*public_key);
-//     ursa_ed25519_bytebuffer_free(*private_key);
+//     ursa_bytebuffer_free(*public_key);
+//     ursa_bytebuffer_free(*private_key);
 //
 //     free(public_key);
 //     free(private_key);
@@ -325,9 +325,6 @@ fn ursa_ed25519_keypair_gen(
         }
     }
 }
-
-define_bytebuffer_destructor!(ursa_ed25519_bytebuffer_free);
-define_string_destructor!(ursa_ed25519_string_free);
 
 #[cfg(test)]
 mod tests {

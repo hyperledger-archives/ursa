@@ -18,7 +18,7 @@ use zmix::signatures::ps::signature::Signature as PSSignature;
 use zmix::signatures::SignatureMessageVector;
 
 fn keypair_benchmark(c: &mut Criterion) {
-    for atts in vec![1, 2, 5, 10, 20, 50, 100] {
+    for atts in vec![1, 2, 5, 10, 20, 50, 100, 200] {
         c.bench_function(format!("create bbs+ key for {}", atts).as_str(), move |b| {
             b.iter(|| bbs_keys_generate(atts))
         });
@@ -30,7 +30,7 @@ fn keypair_benchmark(c: &mut Criterion) {
 }
 
 fn sign_messages_benchmark(c: &mut Criterion) {
-    for atts in vec![1, 2, 5, 10, 20, 50, 100] {
+    for atts in vec![1, 2, 5, 10, 20, 50, 100, 200] {
         let (pk, sk) = bbs_keys_generate(atts).unwrap();
         let attributes = SignatureMessageVector::random(atts);
         c.bench_function(format!("bbs+ sign {} atts", atts).as_str(), |b| {

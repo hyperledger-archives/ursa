@@ -30,34 +30,64 @@ matrix:
       before_script:
         - rustup component add clippy
       script:
-        - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+        - SODIUM_BUILD_STATIC=1 cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
     - name: "cargo audit"
       before_script:
         - command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
       script:
-        - cargo check && cargo audit
+        - SODIUM_BUILD_STATIC=1 cargo check && cargo audit
     - name: "cargo build"
       script:
-        - cargo build
-    - name: "cargo build portable"
+        - SODIUM_BUILD_STATIC=1 cargo build
+    - name: "cargo build libzmix portable"
       script:
         - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
-    - name: "cargo build asm"
+    - name: "cargo build libzmix asm"
       script:
-        - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
+        - SODIUM_BUILD_STATIC=1 cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
+    - name: "cargo build libursa portable"
+      script:
+        - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=portable
+    - name: "cargo build libursa asm"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=asm
     - name: "cargo test"
       script:
         - SODIUM_BUILD_STATIC=1 cargo test --release
-    - name: "cargo bench secp256k1"
+    - name: "cargo bench secp256k1 native"
       script:
-        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
-    - name: "cargo bench ed25519"
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+    - name: "cargo bench secp256k1 portable"
+      script:
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --no-default-features --features="benchmarksecp256k1,portable"
+    - name: "cargo bench ed25519 native"
       script:
         - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+    - name: "cargo bench ed25519 portable"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --no-default-features --features="benchmarked25519,portable"
+    - name: "cargo bench aescbc native"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aescbc --features="benchmarkaescbc"
+    - name: "cargo bench aescbc portable"
+      script:
+        - RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aescbc --no-default-features --features="benchmarkaescbc,portable"
+    - name: "cargo bench aesgcm native"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aesgcm --features="benchmarkaesgcm"
+    - name: "cargo bench aesgcm portable"
+      script:
+        - RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aesgcm --no-default-features --features="benchmarkaesgcm,portable"
+    - name: "cargo bench xchacha20poly1305 native"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --features="benchmarkxchacha20poly1305"
+    - name: "cargo bench xchacha20poly1305 portable"
+      script:
+        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --no-default-features --features="benchmarkxchacha20poly1305,portable"
     - name: "cargo doc"
       rust: stable
       script:
-        - cargo doc --no-deps
+        - SODIUM_BUILD_STATIC=1 cargo doc --no-deps
     - name: "cargo wasm"
       rust: stable
       before_script:
