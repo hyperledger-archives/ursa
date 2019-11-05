@@ -111,7 +111,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(all(feature = "native", not(any(feature = "portable", feature = "wasm"))))]
+#[cfg(all(feature = "native_secp256k1", not(any(feature = "portable", feature = "wasm"))))]
 mod ecdsa_secp256k1 {
     use super::*;
     use libsecp256k1;
@@ -218,7 +218,7 @@ mod ecdsa_secp256k1 {
     }
 }
 
-#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native")))]
+#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native_secp256k1")))]
 mod ecdsa_secp256k1 {
     use super::*;
     use rustlibsecp256k1;

@@ -19,7 +19,6 @@ install:
 
   - rustc -V
   - cargo -V
-  - rustup target add wasm32-unknown-unknown
 
 cache:
   - C:\Users\appveyor\.cargo\registry
@@ -28,4 +27,3 @@ build: false
 
 test_script:
   - cargo test --release
-  - cargo doc --no-deps

@@ -4,6 +4,7 @@ mod macros;
 pub mod bls;
 
 pub mod ed25519;
+pub mod encryption;
 pub mod secp256k1;
 
 //#[cfg(feature = "cl")]

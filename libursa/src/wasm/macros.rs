@@ -11,7 +11,7 @@ macro_rules! check_opt_reference {
 
 macro_rules! maperr {
     ($expr:expr) => {
-        $expr.map_err(|e| e.to_string())?
+        $expr.map_err(|e| stringify!(e))?
     };
 }
 
