@@ -1456,7 +1456,7 @@ dependencies = [
 
 [[package]]
 name = "zmix"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "amcl_wrapper 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

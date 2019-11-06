@@ -4,78 +4,86 @@ use super::{ate_2_pairing, OtherGroupVec, SignatureGroup, SignatureGroupVec};
 use crate::amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
+use signatures::ps::keys::Params;
 
+/// Created by the signer when no blinded messages. Also the receiver of a blind signature can get
+/// this by unblinding the blind signature.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Signature {
     pub sigma_1: SignatureGroup,
     pub sigma_2: SignatureGroup,
 }
 
-/// Section  6.1 of paper
+/// Section  4.2 of paper
 impl Signature {
-    /// No committed messages. All messages known to signer.
+    /// Signer creates a signature.
     pub fn new(
         messages: &[FieldElement],
         sigkey: &Sigkey,
-        verkey: &Verkey,
+        params: &Params,
     ) -> Result<Self, PSError> {
-        Self::check_verkey_and_messages_compat(messages, verkey)?;
-        let (sigma_1, sigma_2) = Self::_sign(messages, sigkey, verkey, None);
-        Ok(Signature { sigma_1, sigma_2 })
+        Self::check_sigkey_and_messages_compat(messages, sigkey)?;
+        // A random h should be generated which is same as generating a random u and then computing h = g^u
+        let u = FieldElement::random();
+        let (sigma_1, sigma_2) =
+            Self::sign_with_sigma_1_generated_from_given_exp(messages, sigkey, &u, 0, &params.g)?;
+        Ok(Self { sigma_1, sigma_2 })
     }
 
-    /// 1 or more messages are captured in a commitment `commitment`. The remaining known messages are in `messages`.
-    /// This is a blind signature.
-    pub fn new_with_committed_messages(
-        commitment: &SignatureGroup,
+    // Generate signature when first element of signature tuple is generated using given exponent
+    pub fn sign_with_sigma_1_generated_from_given_exp(
         messages: &[FieldElement],
         sigkey: &Sigkey,
-        verkey: &Verkey,
-    ) -> Result<Self, PSError> {
-        verkey.validate()?;
-        // There should be commitment to at least one message
-        if messages.len() >= verkey.Y.len() {
+        u: &FieldElement,
+        offset: usize,
+        g: &SignatureGroup,
+    ) -> Result<(SignatureGroup, SignatureGroup), PSError> {
+        if offset + messages.len() != sigkey.y.len() {
             return Err(PSErrorKind::UnsupportedNoOfMessages {
-                expected: messages.len(),
-                given: verkey.Y.len(),
+                expected: offset + messages.len(),
+                given: sigkey.y.len(),
             }
             .into());
         }
-
-        let (sigma_1, sigma_2) = Self::_sign(messages, sigkey, verkey, Some(commitment));
-        Ok(Signature { sigma_1, sigma_2 })
+        // h = g^u
+        let h = g * u;
+        // h^(x + y_j*m_j + y_{j+1}*m_{j+1} + y_{j+2}*m_{j+2} + ...) = g^{u * (x + y_j*m_j + y_{j+1}*m_{j+1} + y_{j+2}*m_{j+2} + ...)}
+        let mut exp = sigkey.x.clone();
+        for i in 0..messages.len() {
+            exp += &sigkey.y[offset + i] * &messages[i];
+        }
+        let h_exp = &h * &exp;
+        Ok((h, h_exp))
     }
 
     /// Verify a signature. During proof of knowledge also, this method is used after extending the verkey
-    pub fn verify(&self, messages: &[FieldElement], verkey: &Verkey) -> Result<bool, PSError> {
+    pub fn verify(
+        &self,
+        messages: &[FieldElement],
+        vk: &Verkey,
+        params: &Params,
+    ) -> Result<bool, PSError> {
         if self.sigma_1.is_identity() || self.sigma_2.is_identity() {
             return Ok(false);
         }
-        Self::check_verkey_and_messages_compat(messages, verkey)?;
-        let mut points = OtherGroupVec::new(0);
-        let mut scalars = FieldElementVector::new(0);
-        points.push(verkey.X_tilde.clone());
-        scalars.push(FieldElement::one());
+        Self::check_verkey_and_messages_compat(messages, vk)?;
+        let mut Y_m_bases = OtherGroupVec::with_capacity(messages.len());
+        let mut Y_m_exps = FieldElementVector::with_capacity(messages.len());
         for i in 0..messages.len() {
-            scalars.push(messages[i].clone());
-            points.push(verkey.Y_tilde[i].clone());
+            Y_m_bases.push(vk.Y_tilde[i].clone());
+            Y_m_exps.push(messages[i].clone());
         }
-        // pr = X_tilde * Y_tilde[0]^messages[0] * Y_tilde[1]^messages[1] * .... Y_tilde[i]^messages[i]
-        let pr = points.multi_scalar_mul_var_time(&scalars).unwrap();
-        // check e(sigma_1, pr) == e(sigma_2, g_tilde) => e(sigma_1, pr) * e(sigma_2, g_tilde)^-1 == 1
-        // e(sigma_1, pr) * e(sigma_2, g_tilde)^-1 = e(sigma_1, pr) * e(sigma_2^-1, g_tilde), if precomputation can be used, then
+        // Y_m = X_tilde * Y_tilde[1]^m_1 * Y_tilde[2]^m_2 * ...Y_tilde[i]^m_i
+        let Y_m = &vk.X_tilde + &(Y_m_bases.multi_scalar_mul_var_time(&Y_m_exps).unwrap());
+        // e(sigma_1, Y_m) == e(sigma_2, g2) => e(sigma_1, Y_m) * e(-sigma_2, g2) == 1, if precomputation can be used, then
         // inverse in sigma_2 can be avoided since inverse of g_tilde can be precomputed
-        let res = ate_2_pairing(&self.sigma_1, &pr, &(-&self.sigma_2), &verkey.g_tilde);
-        Ok(res.is_one())
-    }
-
-    /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
-    /// Takes the blinding used in the commitment.
-    pub fn get_unblinded_signature(&self, blinding: &FieldElement) -> Self {
-        let sigma_1 = self.sigma_1.clone();
-        let sigma_1_t = &sigma_1 * blinding;
-        let sigma_2 = &self.sigma_2 - sigma_1_t;
-        Self { sigma_1, sigma_2 }
+        let e = ate_2_pairing(
+            &self.sigma_1,
+            &Y_m,
+            &(self.sigma_2.negation()),
+            &params.g_tilde,
+        );
+        Ok(e.is_one())
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -85,44 +93,32 @@ impl Signature {
         bytes
     }
 
-    pub fn check_verkey_and_messages_compat(
+    pub fn check_sigkey_and_messages_compat(
         messages: &[FieldElement],
-        verkey: &Verkey,
+        sigkey: &Sigkey,
     ) -> Result<(), PSError> {
-        verkey.validate()?;
-        if messages.len() != verkey.Y.len() {
+        if messages.len() != sigkey.y.len() {
             return Err(PSErrorKind::UnsupportedNoOfMessages {
                 expected: messages.len(),
-                given: verkey.Y.len(),
+                given: sigkey.y.len(),
             }
             .into());
         }
         Ok(())
     }
 
-    pub fn _sign(
+    pub fn check_verkey_and_messages_compat(
         messages: &[FieldElement],
-        sigkey: &Sigkey,
         verkey: &Verkey,
-        commitment: Option<&SignatureGroup>,
-    ) -> (SignatureGroup, SignatureGroup) {
-        let u = FieldElement::random();
-        // sigma_1 = g^u
-        let sigma_1 = &verkey.g * &u;
-        let mut points = SignatureGroupVec::new(0);
-        let mut scalars = FieldElementVector::new(0);
-        let offset = verkey.Y.len() - messages.len();
-        for i in 0..messages.len() {
-            scalars.push(messages[i].clone());
-            points.push(verkey.Y[offset + i].clone());
+    ) -> Result<(), PSError> {
+        if messages.len() != verkey.Y_tilde.len() {
+            return Err(PSErrorKind::UnsupportedNoOfMessages {
+                expected: messages.len(),
+                given: verkey.Y_tilde.len(),
+            }
+            .into());
         }
-        // sigma_2 = {X + Y_i^{m_i} + commitment}^u
-        let mut sigma_2 = &sigkey.X + &points.multi_scalar_mul_const_time(&scalars).unwrap();
-        if commitment.is_some() {
-            sigma_2 += commitment.unwrap()
-        }
-        sigma_2 = &sigma_2 * &u;
-        (sigma_1, sigma_2)
+        Ok(())
     }
 }
 
@@ -135,173 +131,40 @@ mod tests {
 
     #[test]
     fn test_signature_all_known_messages() {
+        let params = Params::new("test".as_bytes());
         for i in 0..10 {
             let count_msgs = (i % 5) + 1;
-            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
+            let (vk, sk) = keygen(count_msgs, &params);
             let msgs = FieldElementVector::random(count_msgs);
             let msgs = msgs.as_slice();
-            let sig = Signature::new(msgs, &sk, &vk).unwrap();
-            assert!(sig.verify(msgs, &vk).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_signature_single_committed_message() {
-        for _ in 0..10 {
-            let count_msgs = 1;
-            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
-            let msg = FieldElement::random();
-            let blinding = FieldElement::random();
-
-            // commitment = Y[0]^msg * g^blinding
-            let comm = (&vk.Y[0] * &msg) + (&vk.g * &blinding);
-
-            let sig_blinded = Signature::new_with_committed_messages(&comm, &[], &sk, &vk).unwrap();
-            let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
-            assert!(sig_unblinded.verify(&[msg], &vk).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_signature_many_committed_messages() {
-        for i in 0..10 {
-            let count_msgs = (i % 5) + 1;
-            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
-            let msgs = FieldElementVector::random(count_msgs);
-            let blinding = FieldElement::random();
-
-            // XXX: In production always use multi-scalar multiplication
-            let mut comm = SignatureGroup::new();
-            for i in 0..count_msgs {
-                comm += &vk.Y[i] * &msgs[i];
-            }
-            comm += &vk.g * &blinding;
-            let sig_blinded = Signature::new_with_committed_messages(&comm, &[], &sk, &vk).unwrap();
-            let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
-            assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_signature_known_and_committed_messages() {
-        for i in 0..10 {
-            let count_msgs = (i % 6) + 1;
-            let committed_msgs = (i % count_msgs) + 1;
-            let (vk, sk) = keygen(count_msgs, "test".as_bytes());
-            let msgs = FieldElementVector::random(count_msgs);
-            let blinding = FieldElement::random();
-
-            // XXX: In production always use multi-scalar multiplication
-            let mut comm = SignatureGroup::new();
-            for i in 0..committed_msgs {
-                comm += &vk.Y[i] * &msgs[i];
-            }
-            comm += &vk.g * &blinding;
-
-            let sig_blinded = Signature::new_with_committed_messages(
-                &comm,
-                &msgs.as_slice()[committed_msgs..count_msgs],
-                &sk,
-                &vk,
-            )
-            .unwrap();
-            let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
-            assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
+            let sig = Signature::new(msgs, &sk, &params).unwrap();
+            assert!(sig.verify(msgs, &vk, &params).unwrap());
         }
     }
 
     #[test]
     fn test_sig_with_unequal_messages_and_verkey_elements() {
-        let (vk, sk) = keygen(5, "test".as_bytes());
+        let params = Params::new("test".as_bytes());
+        let (_, sk) = keygen(5, &params);
         let msgs_1 = FieldElementVector::random(6);
-        assert!(Signature::new(msgs_1.as_slice(), &sk, &vk).is_err());
+        assert!(Signature::new(msgs_1.as_slice(), &sk, &params).is_err());
 
         let msgs_2 = FieldElementVector::random(4);
-        assert!(Signature::new(msgs_2.as_slice(), &sk, &vk).is_err());
-    }
-
-    #[test]
-    fn test_committed_sig_with_incorrect_no_of_messages_and_verkey_elements() {
-        let (vk, sk) = keygen(5, "test".as_bytes());
-        let msgs_1 = FieldElementVector::random(5);
-        let blinding = FieldElement::random();
-
-        // No of messages should be at least one less than size of vk.Y
-        assert!(Signature::new_with_committed_messages(
-            &SignatureGroup::random(),
-            &msgs_1.as_slice(),
-            &sk,
-            &vk
-        )
-        .is_err());
-
-        let mut comm = SignatureGroup::new();
-        for i in 0..5 {
-            comm += &vk.Y[i] * &msgs_1[i];
-        }
-        comm += &vk.g * &blinding;
-        let msgs_2 = FieldElementVector::random(6);
-        assert!(
-            Signature::new_with_committed_messages(&comm, &msgs_2.as_slice(), &sk, &vk).is_err()
-        );
+        assert!(Signature::new(msgs_2.as_slice(), &sk, &params).is_err());
     }
 
     #[test]
     fn test_signature_as_identity() {
         // When signature consists of identity elements, proof verification fails.
         let count_msgs = 5;
-        let (vk, _) = keygen(count_msgs, "test".as_bytes());
+        let params = Params::new("test".as_bytes());
+        let (vk, _) = keygen(count_msgs, &params);
 
         let msgs = FieldElementVector::random(count_msgs);
         let sig_bad = Signature {
             sigma_1: SignatureGroup::identity(),
             sigma_2: SignatureGroup::identity(),
         };
-        assert!(!sig_bad.verify(msgs.as_slice(), &vk).unwrap());
-    }
-
-    #[test]
-    fn timing_signature_over_known_and_committed_messages() {
-        // Measure time to create and verify signatures. Verifying time will include time to unblind the signature as well.
-        let iterations = 10;
-        let count_msgs = 10;
-        let committed_msgs = 3;
-        let (vk, sk) = keygen(count_msgs, "test".as_bytes());
-        let mut total_signing = Duration::new(0, 0);
-        let mut total_verifying = Duration::new(0, 0);
-        for _ in 0..iterations {
-            let msgs = FieldElementVector::random(count_msgs);
-            let blinding = FieldElement::random();
-            // XXX: In production always use multi-scalar multiplication
-            let mut comm = SignatureGroup::new();
-            for i in 0..committed_msgs {
-                comm += &vk.Y[i] * &msgs[i];
-            }
-            comm += &vk.g * &blinding;
-
-            let start = Instant::now();
-            let sig_blinded = Signature::new_with_committed_messages(
-                &comm,
-                &msgs.as_slice()[committed_msgs..count_msgs],
-                &sk,
-                &vk,
-            )
-            .unwrap();
-            total_signing += start.elapsed();
-
-            let start = Instant::now();
-            let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
-            assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
-            total_verifying += start.elapsed();
-        }
-
-        println!(
-            "Time to create {} signatures is {:?}",
-            iterations, total_signing
-        );
-        println!(
-            "Time to verify {} signatures is {:?}",
-            iterations, total_verifying
-        );
+        assert!(!sig_bad.verify(msgs.as_slice(), &vk, &params).unwrap());
     }
 }
