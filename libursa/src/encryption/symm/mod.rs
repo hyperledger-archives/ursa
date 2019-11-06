@@ -39,7 +39,7 @@ use aead::{
     generic_array::{typenum::Unsigned, ArrayLength, GenericArray},
     Aead, Error, NewAead, Payload,
 };
-use std::io::Read;
+use std::io::{Read, Write};
 use std::str::FromStr;
 
 #[cfg(feature = "serialization")]
@@ -103,7 +103,7 @@ macro_rules! default_impl {
     ($name:ident) => {
         impl Default for $name {
             fn default() -> Self {
-                $name::new($name::gen_key().unwrap())
+                $name::new($name::key_gen().unwrap())
             }
         }
     };
@@ -180,20 +180,22 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
         self.encryptor.decrypt(nonce, payload)
     }
 
-    pub fn encrypt_buffer<A: AsRef<[u8]>, I: Read>(
+    pub fn encrypt_buffer<A: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: A,
         plaintext: &mut I,
-    ) -> Result<Vec<u8>, Error> {
-        self.encryptor.encrypt_buffer(aad, plaintext)
+        ciphertext: &mut O,
+    ) -> Result<(), Error> {
+        self.encryptor.encrypt_buffer(aad, plaintext, ciphertext)
     }
 
-    pub fn decrypt_buffer<A: AsRef<[u8]>, I: Read>(
+    pub fn decrypt_buffer<A: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: A,
         ciphertext: &mut I,
-    ) -> Result<Vec<u8>, Error> {
-        self.encryptor.decrypt_buffer(aad, ciphertext)
+        plaintext: &mut O,
+    ) -> Result<(), Error> {
+        self.encryptor.decrypt_buffer(aad, ciphertext, plaintext)
     }
 }
 
@@ -211,7 +213,7 @@ pub trait Encryptor: Aead + NewAead {
     type MinSize: ArrayLength<u8>;
 
     fn encrypt_easy<M: AsRef<[u8]>>(&self, aad: M, plaintext: M) -> Result<Vec<u8>, Error> {
-        let nonce = Self::gen_nonce()?;
+        let nonce = Self::nonce_gen()?;
         let payload = Payload {
             msg: plaintext.as_ref(),
             aad: aad.as_ref(),
@@ -237,29 +239,35 @@ pub trait Encryptor: Aead + NewAead {
         Ok(plaintext)
     }
 
-    fn encrypt_buffer<M: AsRef<[u8]>, I: Read>(
+    fn encrypt_buffer<M: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: M,
         plaintext: &mut I,
-    ) -> Result<Vec<u8>, Error> {
+        ciphertext: &mut O,
+    ) -> Result<(), Error> {
         let p = read_buffer(plaintext)?;
-        self.encrypt_easy(aad.as_ref(), p.as_slice())
+        let c = self.encrypt_easy(aad.as_ref(), p.as_slice())?;
+        ciphertext.write_all(c.as_slice()).map_err(|_| Error)?;
+        Ok(())
     }
 
-    fn decrypt_buffer<M: AsRef<[u8]>, I: Read>(
+    fn decrypt_buffer<M: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: M,
         ciphertext: &mut I,
-    ) -> Result<Vec<u8>, Error> {
+        plaintext: &mut O,
+    ) -> Result<(), Error> {
         let c = read_buffer(ciphertext)?;
-        self.decrypt_easy(aad.as_ref(), c.as_slice())
+        let p = self.decrypt_easy(aad.as_ref(), c.as_slice())?;
+        plaintext.write_all(p.as_slice()).map_err(|_| Error)?;
+        Ok(())
     }
 
-    fn gen_key() -> Result<GenericArray<u8, Self::KeySize>, Error> {
+    fn key_gen() -> Result<GenericArray<u8, Self::KeySize>, Error> {
         random_bytes()
     }
 
-    fn gen_nonce() -> Result<GenericArray<u8, Self::NonceSize>, Error> {
+    fn nonce_gen() -> Result<GenericArray<u8, Self::NonceSize>, Error> {
         random_bytes()
     }
 }
@@ -427,7 +435,7 @@ macro_rules! tests_impl {
         #[test]
         fn encrypt_works() {
             let aes = $name::default();
-            let nonce = $name::gen_nonce().unwrap();
+            let nonce = $name::nonce_gen().unwrap();
             let aad = b"encrypt test".to_vec();
             let message = b"Hello and Goodbye!".to_vec();
             let payload = Payload { msg: message.as_slice(), aad: aad.as_slice() };
@@ -465,13 +473,14 @@ macro_rules! tests_impl {
             let aad = b"buffer works".to_vec();
             let dummytext = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
             let mut buffer = ByteBuffer::from_bytes(&dummytext[..]);
-            let res = aes.encrypt_buffer(&aad, &mut buffer);
+            let mut ciphertext = Vec::new();
+            let res = aes.encrypt_buffer(&aad, &mut buffer, &mut ciphertext);
             assert!(res.is_ok());
-            let ciphertext = res.unwrap();
             let mut cipher_buffer = ByteBuffer::from_bytes(ciphertext.as_slice());
-            let res = aes.decrypt_buffer(&aad, &mut cipher_buffer);
+            let mut plaintext = Vec::new();
+            let res = aes.decrypt_buffer(&aad, &mut cipher_buffer, &mut plaintext);
             assert!(res.is_ok());
-            assert_eq!(dummytext.to_vec(), res.unwrap());
+            assert_eq!(dummytext.to_vec(), plaintext);
         }
 
         #[cfg(feature = "serialization")]

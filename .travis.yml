@@ -5,11 +5,11 @@ branches:
   only:
     - master
 
-rust:
-  - nightly
-
 os:
   - linux
+
+env:
+  - SODIUM_BUILD_STATIC=1
 
 addons:
   apt:
@@ -30,60 +30,79 @@ matrix:
       before_script:
         - rustup component add clippy
       script:
-        - SODIUM_BUILD_STATIC=1 cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+        - cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
     - name: "cargo audit"
+      rust: stable
       before_script:
         - command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
       script:
-        - SODIUM_BUILD_STATIC=1 cargo check && cargo audit
+        - cargo check && cargo audit
     - name: "cargo build"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo build
-    - name: "cargo build libzmix portable"
+        - cargo build
+    - name: "cargo build portable"
+      rust: stable
       script:
         - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
     - name: "cargo build libzmix asm"
+      rust: nightly
       script:
-        - SODIUM_BUILD_STATIC=1 cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
-    - name: "cargo build libursa portable"
-      script:
-        - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=portable
+        - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
     - name: "cargo build libursa asm"
+      rust: nightly
       script:
-        - SODIUM_BUILD_STATIC=1 cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=asm
+        - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=asm
+    - name: "cargo build libursa wasm"
+      rust: stable
+      before_script:
+        - rustup target add wasm32-unknown-unknown
+      script:
+        - cargo build --manifest-path=libursa/Cargo.toml --no-default-features --features=wasm
     - name: "cargo test"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo test --release
+        - cargo test --release
     - name: "cargo bench secp256k1 native"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
     - name: "cargo bench secp256k1 portable"
+      rust: stable
       script:
         - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --no-default-features --features="benchmarksecp256k1,portable"
     - name: "cargo bench ed25519 native"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
     - name: "cargo bench ed25519 portable"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --no-default-features --features="benchmarked25519,portable"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --no-default-features --features="benchmarked25519,portable"
     - name: "cargo bench aescbc native"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aescbc --features="benchmarkaescbc"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aescbc --features="benchmarkaescbc"
     - name: "cargo bench aescbc portable"
+      rust: stable
       script:
         - RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aescbc --no-default-features --features="benchmarkaescbc,portable"
     - name: "cargo bench aesgcm native"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aesgcm --features="benchmarkaesgcm"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aesgcm --features="benchmarkaesgcm"
     - name: "cargo bench aesgcm portable"
+      rust: stable
       script:
         - RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3" cargo run --release --manifest-path=libursa/Cargo.toml --bin test_aesgcm --no-default-features --features="benchmarkaesgcm,portable"
     - name: "cargo bench xchacha20poly1305 native"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --features="benchmarkxchacha20poly1305"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --features="benchmarkxchacha20poly1305"
     - name: "cargo bench xchacha20poly1305 portable"
+      rust: stable
       script:
-        - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --no-default-features --features="benchmarkxchacha20poly1305,portable"
+        - cargo run --release --manifest-path=libursa/Cargo.toml --bin test_xchacha20poly1305 --no-default-features --features="benchmarkxchacha20poly1305,portable"
     - name: "cargo doc"
       rust: stable
       script:

@@ -6,6 +6,7 @@ environment:
       MSYS2: 1
       SODIUM_BUILD_STATIC: yes
       OPENSSL_DIR: C:\OpenSSL-v111-Win64
+      APPVEYOR_RUST_CHANNEL: stable
 
 branches:
   only:
@@ -25,5 +26,10 @@ cache:
 
 build: false
 
-test_script:
-  - cargo test --release
+for:
+  - matrix:
+      only:
+        - APPVEYOR_RUST_CHANNEL: stable
+    test_script:
+      - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
+      - cargo test --release
