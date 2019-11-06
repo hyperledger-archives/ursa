@@ -41,16 +41,21 @@ pub(crate) fn ate_2_pairing(
     GT::ate_2_pairing(g1, g2, h1, h2)
 }
 
+pub mod blind_signature;
 pub mod errors;
 pub mod keys;
 pub mod pok_sig;
 pub mod signature;
 
 pub mod prelude {
+    pub use super::blind_signature::{
+        BlindSignature, BlindingKey, ProofSignatureGroup, ProverCommittedSignatureGroup,
+        ProverCommittingSignatureGroup,
+    };
     pub use super::keys::{keygen as generate, Sigkey as SecretKey, Verkey as PublicKey};
     pub use super::pok_sig::{
-        PoKOfSignature, PoKOfSignatureProof, ProofSignatureGroup, ProverCommittedSignatureGroup,
-        ProverCommittingSignatureGroup,
+        PoKOfSignature, PoKOfSignatureProof, ProofOtherGroup, ProverCommittedOtherGroup,
+        ProverCommittingOtherGroup,
     };
     pub use super::signature::Signature;
     pub use super::{SignatureGroup, SignatureGroupVec};

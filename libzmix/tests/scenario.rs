@@ -4,6 +4,8 @@ extern crate zmix;
 use amcl_wrapper::group_elem::GroupElement;
 use std::collections::{HashMap, HashSet};
 use zmix::signatures::prelude::*;
+use zmix::signatures::ps::blind_signature::{BlindSignature, BlindingKey};
+use zmix::signatures::ps::keys::Params;
 use zmix::signatures::ps::prelude::*;
 
 #[test]
@@ -13,26 +15,29 @@ fn test_scenario_1() {
     // The user also reveals to the verifier some of the messages.
     let count_msgs = 10;
     let committed_msgs = 2;
-    let (vk, sk) = generate(count_msgs, "test".as_bytes());
+    let params = Params::new("test".as_bytes());
+    let (vk, sk) = generate(count_msgs, &params);
+    let blinding_key = BlindingKey::new(&sk, &params);
+
     let msgs = SignatureMessageVector::random(count_msgs);
     let blinding = SignatureMessage::random();
 
     // User commits to some messages
     let mut comm = SignatureGroup::new();
     for i in 0..committed_msgs {
-        comm += &vk.Y[i] * &msgs[i];
+        comm += &blinding_key.Y[i] * &msgs[i];
     }
-    comm += &vk.g * &blinding;
+    comm += &params.g * &blinding;
 
     {
         // User and signer engage in a proof of knowledge for the above commitment `comm`
         let mut bases = Vec::<SignatureGroup>::new();
         let mut hidden_msgs = Vec::<SignatureMessage>::new();
         for i in 0..committed_msgs {
-            bases.push(vk.Y[i].clone());
+            bases.push(blinding_key.Y[i].clone());
             hidden_msgs.push(msgs[i].clone());
         }
-        bases.push(vk.g.clone());
+        bases.push(params.g.clone());
         hidden_msgs.push(blinding.clone());
 
         // User creates a random commitment, computes challenge and response. The proof of knowledge consists of commitment and responses
@@ -52,15 +57,16 @@ fn test_scenario_1() {
     }
 
     // Get signature, unblind it and then verify.
-    let sig_blinded = Signature::new_with_committed_messages(
+    let sig_blinded = BlindSignature::new(
         &comm,
         &msgs.as_slice()[committed_msgs..count_msgs],
         &sk,
-        &vk,
+        &blinding_key,
+        &params,
     )
     .unwrap();
-    let sig_unblinded = sig_blinded.get_unblinded_signature(&blinding);
-    assert!(sig_unblinded.verify(msgs.as_slice(), &vk).unwrap());
+    let sig_unblinded = BlindSignature::unblind(&sig_blinded, &blinding);
+    assert!(sig_unblinded.verify(msgs.as_slice(), &vk, &params).unwrap());
 
     // Do a proof of knowledge of the signature and also reveal some of the messages.
     let mut revealed_msg_indices = HashSet::new();
@@ -71,6 +77,7 @@ fn test_scenario_1() {
     let pok = PoKOfSignature::init(
         &sig_unblinded,
         &vk,
+        &params,
         msgs.as_slice(),
         None,
         revealed_msg_indices.clone(),
@@ -85,5 +92,7 @@ fn test_scenario_1() {
     for i in &revealed_msg_indices {
         revealed_msgs.insert(i.clone(), msgs[*i].clone());
     }
-    assert!(proof.verify(&vk, revealed_msgs.clone(), &chal).unwrap());
+    assert!(proof
+        .verify(&vk, &params, revealed_msgs.clone(), &chal)
+        .unwrap());
 }
