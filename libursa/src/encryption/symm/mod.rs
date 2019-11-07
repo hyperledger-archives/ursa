@@ -91,9 +91,15 @@ macro_rules! serialize_impl {
 
 macro_rules! drop_impl {
     ($structname:ident) => {
+        impl Zeroize for $structname {
+            fn zeroize(&mut self) {
+                self.key.as_mut_slice().zeroize();
+            }
+        }
+
         impl Drop for $structname {
             fn drop(&mut self) {
-                self.key.as_mut_slice().zeroize();
+                self.zeroize();
             }
         }
     };
@@ -490,6 +496,21 @@ macro_rules! tests_impl {
             let serialized = serde_json::to_string(&aes).unwrap();
             let deserialized: $name = serde_json::from_str(&serialized).unwrap();
             assert_eq!(aes, deserialized);
+        }
+
+        #[test]
+        fn zeroed_on_drop() {
+            let mut aes = $name::new($name::key_gen().unwrap());
+            aes.zeroize();
+
+            fn as_bytes<T>(x: &T) -> &[u8] {
+                use std::mem;
+                use std::slice;
+
+                unsafe { slice::from_raw_parts(x as *const T as *const u8, mem::size_of_val(x)) }
+            }
+
+            assert!(as_bytes(&aes.key).iter().all(|b| *b == 0u8));
         }
     };
 }
