@@ -27,6 +27,7 @@ extern crate failure;
 #[macro_use]
 extern crate log;
 pub extern crate blake2;
+#[macro_use]
 extern crate generic_array;
 extern crate hex;
 #[cfg(any(test, feature = "encryption_asm"))]
