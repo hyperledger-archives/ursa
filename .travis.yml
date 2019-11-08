@@ -20,11 +20,13 @@ addons:
 matrix:
   include:
     - name: "rustfmt"
+      rust: stable
       before_script:
         - rustup component add rustfmt
       script:
         - cargo fmt --all -- --check
     - name: "cargo clippy"
+      rust: stable
       before_script:
         - rustup component add clippy
       script:
@@ -53,5 +55,12 @@ matrix:
       script:
         - SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
     - name: "cargo doc"
+      rust: stable
       script:
         - cargo doc --no-deps
+    - name: "cargo wasm"
+      rust: stable
+      before_script:
+        -  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      script:
+        - wasm-pack build libursa -- --no-default-features --features=wasm

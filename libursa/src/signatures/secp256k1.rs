@@ -4,9 +4,9 @@ use CryptoError;
 
 use rand::rngs::OsRng;
 
-#[cfg(feature = "portable")]
+#[cfg(feature = "wasm")]
 use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "portable")]
+#[cfg(feature = "wasm")]
 use serde::ser::{Serialize, Serializer};
 
 pub const PRIVATE_KEY_SIZE: usize = 32;
@@ -74,7 +74,7 @@ impl EcdsaPublicKeyHandler for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "portable")]
+#[cfg(feature = "wasm")]
 impl Serialize for EcdsaSecp256k1Sha256 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -84,7 +84,7 @@ impl Serialize for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "portable")]
+#[cfg(feature = "wasm")]
 impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -111,7 +111,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(all(feature = "native", not(feature = "portable")))]
+#[cfg(all(feature = "native", not(any(feature = "portable", feature = "wasm"))))]
 mod ecdsa_secp256k1 {
     use super::*;
     use libsecp256k1;
@@ -218,7 +218,7 @@ mod ecdsa_secp256k1 {
     }
 }
 
-#[cfg(all(feature = "portable", not(feature = "native")))]
+#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native")))]
 mod ecdsa_secp256k1 {
     use super::*;
     use rustlibsecp256k1;

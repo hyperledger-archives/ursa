@@ -148,7 +148,7 @@
 use super::super::ByteArray;
 use keys::{KeyGenOption, PrivateKey, PublicKey};
 use signatures::ed25519;
-use signatures::SignatureScheme;
+use signatures::prelude::*;
 
 use ffi_support::{ByteBuffer, ErrorCode, ExternError};
 
@@ -245,7 +245,7 @@ pub extern "C" fn ursa_ed25519_sign(
     signature: &mut ByteBuffer,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     let sk = PrivateKey(private_key.to_vec());
 
     match scheme.sign(message.to_vec().as_slice(), &sk) {
@@ -274,7 +274,7 @@ pub extern "C" fn ursa_ed25519_verify(
     public_key: &ByteArray,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     let pk = PublicKey(public_key.to_vec());
 
     match scheme.verify(
@@ -306,7 +306,7 @@ fn ursa_ed25519_keypair_gen(
     private_key: Option<&mut ByteBuffer>,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     match scheme.keypair(option) {
         Ok((pk, sk)) => {
             *err = ExternError::success();

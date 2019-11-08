@@ -27,13 +27,17 @@ extern crate failure;
 extern crate log;
 pub extern crate blake2;
 extern crate generic_array;
+extern crate hex;
 #[cfg(test)]
 extern crate libsodium_ffi;
 extern crate rand;
 extern crate rand_chacha;
-#[cfg(all(feature = "portable", not(feature = "native")))]
+#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native")))]
 extern crate rustlibsecp256k1;
-#[cfg(any(test, all(feature = "native", not(feature = "portable"))))]
+#[cfg(any(
+    test,
+    all(feature = "native", not(any(feature = "portable", feature = "wasm")))
+))]
 extern crate secp256k1 as libsecp256k1;
 pub extern crate sha2;
 pub extern crate sha3;
@@ -75,6 +79,9 @@ extern crate ffi_support;
 
 extern crate time;
 
+#[cfg(feature = "wasm")]
+extern crate crypto;
+#[cfg(not(feature = "wasm"))]
 extern crate ed25519_dalek;
 
 #[cfg(feature = "cl")]

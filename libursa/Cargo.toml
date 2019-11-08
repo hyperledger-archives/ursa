@@ -51,7 +51,7 @@ bn_openssl = ["openssl", "int_traits"]
 bn_rust = ["num-bigint", "glass_pumpkin", "int_traits", "num-integer", "num-traits"]
 pair_amcl = ["amcl"]
 serialization = ["serde", "serde_json", "serde_derive"]
-wasm = ["wasm-bindgen", "console_error_panic_hook", "portable", "js-sys"]
+wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "js-sys", "rust-crypto-wasm"]
 ffi = ["ffi-support"]
 cl = []
 bls = []
@@ -93,6 +93,8 @@ glass_pumpkin = { version = "0.3", optional = true }
 num-integer = { version = "0.1", optional = true }
 num-traits = { version = "0.2", optional = true }
 ffi-support = { version = "0.3.5", optional = true }
+rust-crypto-wasm = { version = "0.3.1", optional = true }
+hex = "0.4"
 
 [dev-dependencies]
 openssl = "0.10"

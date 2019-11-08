@@ -1,8 +1,7 @@
 extern crate libsodium_ffi as ffi;
 extern crate ursa;
 
-use ursa::signatures::ed25519::Ed25519Sha512;
-use ursa::signatures::SignatureScheme;
+use ursa::signatures::prelude::*;
 
 use std::io;
 use std::io::Write;
