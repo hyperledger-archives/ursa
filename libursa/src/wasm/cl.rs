@@ -426,8 +426,9 @@ impl ProofVerifier {
     }
 
     pub fn verify(&self, proof: &Proof, nonce: &Nonce) -> Result<bool, JsValue> {
-        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
-        Ok(res)
+//        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
+//        Ok(res)
+        unimplemented!();
     }
 }
 

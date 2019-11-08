@@ -1,6 +1,13 @@
 pub mod ed25519;
 pub mod secp256k1;
 
+pub mod prelude {
+    pub use super::{
+        ed25519::ed25519::Ed25519Sha512, secp256k1::EcdsaSecp256k1Sha256, EcdsaPublicKeyHandler,
+        SignatureScheme, Signer,
+    };
+}
+
 use keys::{KeyGenOption, PrivateKey, PublicKey};
 use CryptoError;
 
