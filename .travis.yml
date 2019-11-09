@@ -61,6 +61,6 @@ matrix:
     - name: "cargo wasm"
       rust: stable
       before_script:
-        -  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        -  [[ ! -f /home/travis/.cargo/bin/wasm-pack ]] && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       script:
         - wasm-pack build libursa -- --no-default-features --features=wasm
