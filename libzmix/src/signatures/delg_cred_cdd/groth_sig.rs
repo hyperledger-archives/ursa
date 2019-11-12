@@ -155,11 +155,11 @@ impl_GrothS!(
 /// Returns tuple of groups elements where the elements are result of scalar multiplication involving the same field element. Uses w-NAF
 #[macro_export]
 macro_rules! var_time_mul_scl_mul_with_same_field_element {
-    ( $group:ident, $field_elem:expr, $( $group_elem_table:expr ),* ) => {{
+    ( $group:ident, $group_elem_table: ident, $field_elem:expr, $( $group_elem:expr ),* ) => {{
         let wnaf = $field_elem.to_wnaf(5);
         (
             $(
-            $group::wnaf_mul(&$group_elem_table, &wnaf),
+            $group::wnaf_mul(&$group_elem_table::from($group_elem), &wnaf),
             )*
         )
     }}
@@ -258,41 +258,79 @@ impl Groth1Sig {
             .into());
         }
 
+        let mut pairing_elems: Vec<(G1, G2)> = vec![];
         let r = FieldElement::random();
         let r_vec = FieldElementVector::new_vandermonde_vector(&r, messages.len() + 1);
-        let negR = self.R.negation();
-        let negS = self.S.negation();
 
-        let mut pairing_elems: Vec<(&G1, &G2)> = vec![
-            (&setup_params.y[0], &setup_params.g2),
-            (&setup_params.g1, &verkey.0),
-            (&negS, &self.R),
-        ];
+        Self::prepare_for_pairing_checks(
+            &mut pairing_elems,
+            &r_vec,
+            0,
+            &self,
+            messages,
+            &verkey,
+            setup_params,
+        );
+        let e = GT::ate_multi_pairing(
+            pairing_elems
+                .iter()
+                .map(|p| (&p.0, &p.1))
+                .collect::<Vec<_>>(),
+        );
+        Ok(e.is_one())
+    }
 
+    /// Prepare a vector which will be the argument of the multi-pairing
+    pub(crate) fn prepare_for_pairing_checks(
+        pairing_elems: &mut Vec<(G1, G2)>,
+        r_vec: &FieldElementVector,
+        r_vec_offset: usize,
+        sig: &Groth1Sig,
+        messages: &[G1],
+        verkey: &Groth1Verkey,
+        setup_params: &Groth1SetupParams,
+    ) {
+        // TODO: There are lot of clonings happening below. Find a better way.
+
+        let negR = sig.R.negation();
+        let negS = sig.S.negation();
+
+        let (p_0, p_1, p_2) = if r_vec_offset == 0 {
+            (setup_params.y[0].clone(), setup_params.g1.clone(), negS)
+        } else {
+            var_time_mul_scl_mul_with_same_field_element!(
+                G1,
+                G1LookupTable,
+                r_vec[r_vec_offset],
+                &setup_params.y[0],
+                &setup_params.g1,
+                &negS
+            )
+        };
+
+        pairing_elems.push((p_0, setup_params.g2.clone()));
+        pairing_elems.push((p_1, verkey.0.clone()));
+        pairing_elems.push((p_2, sig.R.clone()));
         let mut temp: Vec<(G1, G1, G1)> = vec![];
         for i in 0..messages.len() {
             // The next code block will perform several scalar multiplications with the same field element, i.e. m_i * r, y_i * r, T_i * r
-            let table_m = G1LookupTable::from(&messages[i]);
-            let table_y = G1LookupTable::from(&setup_params.y[i]);
-            let table_T = G1LookupTable::from(&self.T[i]);
             // m_i * r, y_i * r, T_i * r
             temp.push(var_time_mul_scl_mul_with_same_field_element!(
                 G1,
-                r_vec[i + 1],
-                table_m,
-                table_y,
-                table_T
+                G1LookupTable,
+                r_vec[r_vec_offset + i + 1],
+                &messages[i],
+                &setup_params.y[i],
+                &sig.T[i]
             ));
         }
 
-        for i in 0..messages.len() {
-            pairing_elems.push((&temp[i].0, &setup_params.g2));
-            pairing_elems.push((&temp[i].1, &verkey.0));
-            pairing_elems.push((&temp[i].2, &negR))
+        for _ in 0..messages.len() {
+            let t = temp.remove(0);
+            pairing_elems.push((t.0, setup_params.g2.clone()));
+            pairing_elems.push((t.1, verkey.0.clone()));
+            pairing_elems.push((t.2, negR.clone()))
         }
-
-        let e = GT::ate_multi_pairing(pairing_elems);
-        Ok(e.is_one())
     }
 }
 
@@ -388,40 +426,77 @@ impl Groth2Sig {
             .into());
         }
 
+        let mut pairing_elems: Vec<(G1, G2)> = vec![];
         let r = FieldElement::random();
         let r_vec = FieldElementVector::new_vandermonde_vector(&r, messages.len() + 1);
-        let negR = self.R.negation();
 
-        let mut pairing_elems: Vec<(&G1, &G2)> = vec![
-            (&setup_params.g1, &setup_params.y[0]),
-            (&verkey.0, &setup_params.g2),
-            (&negR, &self.S),
-        ];
+        Self::prepare_for_pairing_checks(
+            &mut pairing_elems,
+            &r_vec,
+            0,
+            &self,
+            messages,
+            &verkey,
+            setup_params,
+        );
+        let e = GT::ate_multi_pairing(
+            pairing_elems
+                .iter()
+                .map(|p| (&p.0, &p.1))
+                .collect::<Vec<_>>(),
+        );
+        Ok(e.is_one())
+    }
+
+    /// Prepare a vector which will be the argument of the multi-pairing
+    pub(crate) fn prepare_for_pairing_checks(
+        pairing_elems: &mut Vec<(G1, G2)>,
+        r_vec: &FieldElementVector,
+        r_vec_offset: usize,
+        sig: &Groth2Sig,
+        messages: &[G2],
+        verkey: &Groth2Verkey,
+        setup_params: &Groth2SetupParams,
+    ) {
+        let negR = sig.R.negation();
+
+        let (p_0, p_1, p_2) = if r_vec_offset == 0 {
+            (setup_params.g1.clone(), verkey.0.clone(), negR.clone())
+        } else {
+            var_time_mul_scl_mul_with_same_field_element!(
+                G1,
+                G1LookupTable,
+                r_vec[r_vec_offset],
+                &setup_params.g1,
+                &verkey.0,
+                &negR
+            )
+        };
+
+        pairing_elems.push((p_0, setup_params.y[0].clone()));
+        pairing_elems.push((p_1, setup_params.g2.clone()));
+        pairing_elems.push((p_2, sig.S.clone()));
 
         // The next code block will perform several scalar multiplications with the same bases for the same field element (in each iteration), i.e. g1 * r, V * r, R * r
         let mut temp: Vec<(G1, G1, G1)> = vec![];
-        let table_g1 = G1LookupTable::from(&setup_params.g1);
-        let table_vk = G1LookupTable::from(&verkey.0);
-        let table_R = G1LookupTable::from(&negR);
         for i in 0..messages.len() {
             // g1 * r, V * r, R * r
             temp.push(var_time_mul_scl_mul_with_same_field_element!(
                 G1,
+                G1LookupTable,
                 r_vec[i + 1],
-                table_g1,
-                table_vk,
-                table_R
+                &setup_params.g1,
+                &verkey.0,
+                &negR
             ));
         }
 
         for i in 0..messages.len() {
-            pairing_elems.push((&temp[i].0, &messages[i]));
-            pairing_elems.push((&temp[i].1, &setup_params.y[i]));
-            pairing_elems.push((&temp[i].2, &self.T[i]))
+            let t = temp.remove(0);
+            pairing_elems.push((t.0, messages[i].clone()));
+            pairing_elems.push((t.1, setup_params.y[i].clone()));
+            pairing_elems.push((t.2, sig.T[i].clone()))
         }
-
-        let e = GT::ate_multi_pairing(pairing_elems);
-        Ok(e.is_one())
     }
 }
 

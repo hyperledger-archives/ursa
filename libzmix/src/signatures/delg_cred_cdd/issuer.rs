@@ -3,9 +3,11 @@ use super::groth_sig::{
     Groth1SetupParams, Groth1Sig, Groth1Verkey, Groth2SetupParams, Groth2Sig, Groth2Verkey,
     GrothS1, GrothS2, GrothSigkey,
 };
+use amcl_wrapper::extension_field_gt::GT;
+use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use amcl_wrapper::group_elem_g1::G1Vector;
-use amcl_wrapper::group_elem_g2::G2Vector;
+use amcl_wrapper::group_elem_g1::{G1Vector, G1};
+use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 
 pub type Sigkey = GrothSigkey;
 pub type EvenLevelVerkey = Groth1Verkey;
@@ -31,12 +33,25 @@ macro_rules! impl_CredLink {
                 self.attributes[self.attributes.len() - 1] == vk.0
             }
 
+            /// Check that link correct number of attributes, has the delegatee's verkey and has
+            /// valid signature from delegator
             pub fn verify(
                 &self,
                 delegatee_vk: &$delegatee_vk,
                 delegator_vk: &$delegator_vk,
                 setup_params: &$GrothSetupParams,
             ) -> DelgCredCDDResult<bool> {
+                self.validate(delegatee_vk, setup_params)?;
+                self.signature
+                    .verify_batch(self.attributes.as_slice(), delegator_vk, setup_params)
+            }
+
+            /// Check that link correct number of attributes and has the delegatee's verkey
+            pub fn validate(
+                &self,
+                delegatee_vk: &$delegatee_vk,
+                setup_params: &$GrothSetupParams,
+            ) -> DelgCredCDDResult<()> {
                 if self.attributes.len() > setup_params.y.len() {
                     return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
                         expected: setup_params.y.len(),
@@ -47,8 +62,7 @@ macro_rules! impl_CredLink {
                 if !self.has_verkey(delegatee_vk) {
                     return Err(DelgCredCDDErrorKind::VerkeyNotFoundInDelegationLink {}.into());
                 }
-                self.signature
-                    .verify_batch(self.attributes.as_slice(), delegator_vk, setup_params)
+                Ok(())
             }
         }
     };
@@ -247,10 +261,8 @@ impl CredChain {
     }
 
     /// Verifies several Groth signatures, one for each link in the chain.
-    /// First verkey of even_level_vks is the root issuer's key
-    /// As an optimization, the several `link.verify`s called (once for verifying each link)
-    /// can be batched together such that there is only 1 big multi-pairing rather than chain.size().
-    /// The optimization will require splitting `verify_batch` of Groth signatures
+    /// First verkey of even_level_vks is the root issuer's key. Each link is verified independently
+    /// resulting in a multi-pairing check per link.
     pub fn verify_delegations(
         &self,
         even_level_vks: Vec<&EvenLevelVerkey>,
@@ -258,40 +270,7 @@ impl CredChain {
         setup_params_1: &Groth1SetupParams,
         setup_params_2: &Groth2SetupParams,
     ) -> DelgCredCDDResult<bool> {
-        if self.size() == 0 {
-            return Err(DelgCredCDDErrorKind::ChainEmpty {}.into());
-        }
-        if (even_level_vks.len() + odd_level_vks.len()) != (self.size() + 1) {
-            return Err(DelgCredCDDErrorKind::IncorrectNumberOfVerkeys {
-                expected: self.size() + 1,
-                given: even_level_vks.len() + odd_level_vks.len(),
-            }
-            .into());
-        }
-        if even_level_vks.len() != ((self.size() / 2) + 1) {
-            return Err(DelgCredCDDErrorKind::IncorrectNumberOfEvenLevelVerkeys {
-                expected: (self.size() / 2) + 1,
-                given: even_level_vks.len(),
-            }
-            .into());
-        }
-        if self.size() % 2 == 1 {
-            if odd_level_vks.len() != ((self.size() / 2) + 1) {
-                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
-                    expected: (self.size() / 2) + 1,
-                    given: odd_level_vks.len(),
-                }
-                .into());
-            }
-        } else {
-            if odd_level_vks.len() != (self.size() / 2) {
-                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
-                    expected: self.size() / 2,
-                    given: odd_level_vks.len(),
-                }
-                .into());
-            }
-        }
+        self.validate(&even_level_vks, &odd_level_vks)?;
 
         for i in 1..=self.size() {
             let r = if i % 2 == 1 {
@@ -327,6 +306,96 @@ impl CredChain {
         Ok(true)
     }
 
+    /// Used for the same task as `verify_delegations`. As an optimization, the several `link.verify`s
+    /// called (once for verifying each link) in verify_delegations are batched together such that
+    /// there is only 1 big multi-pairing rather than chain.size(). The technique used is same as used in
+    /// `verify_batch`
+    pub fn verify_delegations_batched(
+        &self,
+        even_level_vks: Vec<&EvenLevelVerkey>,
+        odd_level_vks: Vec<&OddLevelVerkey>,
+        setup_params_1: &Groth1SetupParams,
+        setup_params_2: &Groth2SetupParams,
+    ) -> DelgCredCDDResult<bool> {
+        self.validate(&even_level_vks, &odd_level_vks)?;
+
+        // Accumulates elements for multi-pairings.
+        let mut pairing_elems: Vec<(G1, G2)> = vec![];
+
+        // The random values whose powers are created for doing the batched pairing verification
+        let r = FieldElement::random();
+
+        // Calculate total number of attributes (including verkeys) for all links in the chain.
+        let mut total_attrib_count = 0;
+        for i in 1..=self.size() {
+            if i % 2 == 1 {
+                total_attrib_count += self.odd_links[i / 2].attribute_count() + 1;
+            } else {
+                total_attrib_count += self.even_links[(i / 2) - 1].attribute_count() + 1;
+            }
+        }
+        // Vector that holds powers of the random value created above
+        let r_vec = FieldElementVector::new_vandermonde_vector(&r, total_attrib_count);
+
+        // Offset in the above vector so group elements are multiplied by the correct power of random value.
+        let mut r_vec_offset = 0;
+        for i in 1..=self.size() {
+            if i % 2 == 1 {
+                let idx = i / 2;
+                let link = &self.odd_links[idx];
+                if link.level != i {
+                    return Err(DelgCredCDDErrorKind::UnexpectedLevel {
+                        expected: i,
+                        given: link.level,
+                    }
+                    .into());
+                }
+                // Validate the link
+                link.validate(odd_level_vks[idx], setup_params_1)?;
+                // Accumulate values for the multi-pairing
+                Groth1Sig::prepare_for_pairing_checks(
+                    &mut pairing_elems,
+                    &r_vec,
+                    r_vec_offset,
+                    &link.signature,
+                    link.attributes.as_slice(),
+                    even_level_vks[idx],
+                    setup_params_1,
+                );
+                r_vec_offset += link.attributes.len() + 1;
+            } else {
+                let link = &self.even_links[(i / 2) - 1];
+                if link.level != i {
+                    return Err(DelgCredCDDErrorKind::UnexpectedLevel {
+                        expected: i,
+                        given: link.level,
+                    }
+                    .into());
+                }
+                // Validate the link
+                link.validate(even_level_vks[i / 2], setup_params_2)?;
+                // Accumulate values for the multi-pairing
+                Groth2Sig::prepare_for_pairing_checks(
+                    &mut pairing_elems,
+                    &r_vec,
+                    r_vec_offset,
+                    &link.signature,
+                    link.attributes.as_slice(),
+                    odd_level_vks[(i / 2) - 1],
+                    setup_params_2,
+                );
+                r_vec_offset += link.attributes.len() + 1;
+            }
+        }
+        let e = GT::ate_multi_pairing(
+            pairing_elems
+                .iter()
+                .map(|p| (&p.0, &p.1))
+                .collect::<Vec<_>>(),
+        );
+        Ok(e.is_one())
+    }
+
     /// Returns a truncated version of the current chain. Does not modify the current chain but clones the links.
     pub fn get_truncated(&self, size: usize) -> DelgCredCDDResult<Self> {
         if size > self.size() {
@@ -347,6 +416,51 @@ impl CredChain {
             }
         }
         Ok(new_chain)
+    }
+
+    /// Check that the chain is non-empty and there are correct number of odd and even level verkeys.
+    fn validate(
+        &self,
+        even_level_vks: &Vec<&EvenLevelVerkey>,
+        odd_level_vks: &Vec<&OddLevelVerkey>,
+    ) -> DelgCredCDDResult<()> {
+        let size = self.size();
+        if size == 0 {
+            return Err(DelgCredCDDErrorKind::ChainEmpty {}.into());
+        }
+        if (even_level_vks.len() + odd_level_vks.len()) != (size + 1) {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfVerkeys {
+                expected: size + 1,
+                given: even_level_vks.len() + odd_level_vks.len(),
+            }
+            .into());
+        }
+        if even_level_vks.len() != ((size / 2) + 1) {
+            return Err(DelgCredCDDErrorKind::IncorrectNumberOfEvenLevelVerkeys {
+                expected: (size / 2) + 1,
+                given: even_level_vks.len(),
+            }
+            .into());
+        }
+        if size % 2 == 1 {
+            if odd_level_vks.len() != ((size / 2) + 1) {
+                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
+                    expected: (size / 2) + 1,
+                    given: odd_level_vks.len(),
+                }
+                .into());
+            }
+        } else {
+            if odd_level_vks.len() != (size / 2) {
+                return Err(DelgCredCDDErrorKind::IncorrectNumberOfOddLevelVerkeys {
+                    expected: size / 2,
+                    given: odd_level_vks.len(),
+                }
+                .into());
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -545,6 +659,21 @@ mod tests {
             start.elapsed()
         );
 
+        let start = Instant::now();
+        assert!(chain_1
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        println!(
+            "Verifying delegation chain of length {} using batched verification takes {:?}",
+            chain_1.size(),
+            start.elapsed()
+        );
+
         let attributes_2: G2Vector = (0..max_attributes - 1)
             .map(|_| G2::random())
             .collect::<Vec<G2>>()
@@ -574,6 +703,21 @@ mod tests {
             .unwrap());
         println!(
             "Verifying delegation chain of length {} takes {:?}",
+            chain_2.size(),
+            start.elapsed()
+        );
+
+        let start = Instant::now();
+        assert!(chain_2
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        println!(
+            "Verifying delegation chain of length {} using batched verification takes {:?}",
             chain_2.size(),
             start.elapsed()
         );
@@ -611,6 +755,21 @@ mod tests {
             start.elapsed()
         );
 
+        let start = Instant::now();
+        assert!(chain_3
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        println!(
+            "Verifying delegation chain of length {} using batched verification takes {:?}",
+            chain_3.size(),
+            start.elapsed()
+        );
+
         let attributes_4: G2Vector = (0..max_attributes - 1)
             .map(|_| G2::random())
             .collect::<Vec<G2>>()
@@ -640,6 +799,21 @@ mod tests {
             .unwrap());
         println!(
             "Verifying delegation chain of length {} takes {:?}",
+            chain_4.size(),
+            start.elapsed()
+        );
+
+        let start = Instant::now();
+        assert!(chain_4
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk, &l_4_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        println!(
+            "Verifying delegation chain of length {} using batched verification takes {:?}",
             chain_4.size(),
             start.elapsed()
         );
@@ -692,12 +866,29 @@ mod tests {
             )
             .unwrap());
 
+        assert!(chain_1
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+
         assert!(chain_1.get_truncated(2).is_err());
 
         let chain_1_1 = chain_1.get_truncated(1).unwrap();
         assert_eq!(chain_1_1.size(), 1);
         assert!(chain_1_1
             .verify_delegations(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_1_1
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk],
                 vec![&l_1_issuer_vk],
                 &params1,
@@ -728,6 +919,14 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_2
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         assert!(chain_2.get_truncated(3).is_err());
 
@@ -741,11 +940,27 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_2_1
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         let chain_2_2 = chain_2.get_truncated(2).unwrap();
         assert_eq!(chain_2_2.size(), 2);
         assert!(chain_2_2
             .verify_delegations(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_2_2
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk, &l_2_issuer_vk],
                 vec![&l_1_issuer_vk],
                 &params1,
@@ -776,6 +991,14 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_3
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         assert!(chain_3.get_truncated(4).is_err());
 
@@ -783,6 +1006,14 @@ mod tests {
         assert_eq!(chain_3_1.size(), 1);
         assert!(chain_3_1
             .verify_delegations(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_3_1
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk],
                 vec![&l_1_issuer_vk],
                 &params1,
@@ -800,11 +1031,27 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_3_2
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         let chain_3_3 = chain_3.get_truncated(3).unwrap();
         assert_eq!(chain_3_3.size(), 3);
         assert!(chain_3
             .verify_delegations(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_3
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk, &l_2_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
                 &params1,
@@ -835,6 +1082,14 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_4
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk, &l_4_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         assert!(chain_4.get_truncated(5).is_err());
 
@@ -842,6 +1097,14 @@ mod tests {
         assert_eq!(chain_4_1.size(), 1);
         assert!(chain_4_1
             .verify_delegations(
+                vec![&l_0_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_4_1
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk],
                 vec![&l_1_issuer_vk],
                 &params1,
@@ -859,6 +1122,14 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_4_2
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         let chain_4_3 = chain_4.get_truncated(3).unwrap();
         assert_eq!(chain_4_3.size(), 3);
@@ -870,11 +1141,27 @@ mod tests {
                 &params2
             )
             .unwrap());
+        assert!(chain_4_3
+            .verify_delegations_batched(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
 
         let chain_4_4 = chain_4.get_truncated(4).unwrap();
         assert_eq!(chain_4_4.size(), 4);
         assert!(chain_4_4
             .verify_delegations(
+                vec![&l_0_issuer_vk, &l_2_issuer_vk, &l_4_issuer_vk],
+                vec![&l_1_issuer_vk, &l_3_issuer_vk],
+                &params1,
+                &params2
+            )
+            .unwrap());
+        assert!(chain_4_4
+            .verify_delegations_batched(
                 vec![&l_0_issuer_vk, &l_2_issuer_vk, &l_4_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
                 &params1,
