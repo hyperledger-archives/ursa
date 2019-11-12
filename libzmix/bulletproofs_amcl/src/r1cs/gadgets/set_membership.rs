@@ -7,6 +7,10 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
+/* This constraint system has linear (in set size) cost and should only be used for small, static
+sets.
+*/
+
 /// Constraints for set membership check
 /// Create a new set with values being difference between the set value at that index and the value being proved a member.
 /// Now ensure that the product of members of this new set is 0
@@ -36,6 +40,7 @@ pub fn set_membership_gadget<CS: ConstraintSystem>(
     Ok(())
 }
 
+/// Takes the given prover enforce the set membership constraints.
 pub fn prove_set_membership<R: RngCore + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
@@ -50,6 +55,7 @@ pub fn prove_set_membership<R: RngCore + CryptoRng>(
     let mut comms = vec![];
     let mut diff_vars: Vec<AllocatedQuantity> = vec![];
 
+    // Commit to member
     let (com_value, var_value) = prover.commit(
         value.clone(),
         randomness.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
@@ -61,9 +67,9 @@ pub fn prove_set_membership<R: RngCore + CryptoRng>(
     comms.push(com_value);
 
     for i in 0..set_length {
+        // Take difference of set element and value, `set[i] - value` and commit to it
         let diff = &set[i] - &value;
 
-        // Take difference of set element and value, `set[i] - value`
         let (com_diff, var_diff) = prover.commit(diff.clone(), FieldElement::random());
         let alloc_scal_diff = AllocatedQuantity {
             variable: var_diff,
@@ -78,6 +84,7 @@ pub fn prove_set_membership<R: RngCore + CryptoRng>(
     Ok(comms)
 }
 
+/// Takes the given verifier enforce the set membership constraints.
 pub fn verify_set_membership(
     set: &[FieldElement],
     mut commitments: Vec<G1>,
@@ -107,6 +114,8 @@ pub fn verify_set_membership(
     Ok(())
 }
 
+/// Initializes a prover, enforces the set membership constraints and outputs the proof and
+/// the commitment.
 pub fn gen_proof_of_set_membership<R: RngCore + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
@@ -127,6 +136,8 @@ pub fn gen_proof_of_set_membership<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initializes a verifier, enforces the set membership constraints and checks the correctness of
+/// the proof.
 pub fn verify_proof_of_set_membership(
     set: &[FieldElement],
     proof: R1CSProof,

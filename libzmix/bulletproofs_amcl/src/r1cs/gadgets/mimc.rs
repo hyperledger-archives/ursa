@@ -10,9 +10,9 @@ use rand::{CryptoRng, RngCore};
 use super::helper_constraints::mimc::{mimc, mimc_gadget};
 
 pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
-    mut inputs: Vec<FieldElement>,
+    mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     constants: &[FieldElement],
     mimc_rounds: usize,
     rng: Option<&mut R>,
@@ -28,19 +28,19 @@ pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(inputs, rands, 2)?;
+    check_for_input_and_randomness_length!(preimage, rands, 2)?;
 
-    let (com_l, var_l) = prover.commit(inputs[0].clone(), rands.remove(0));
-    let (com_r, var_r) = prover.commit(inputs[1].clone(), rands.remove(0));
+    let (com_l, var_l) = prover.commit(preimage[0].clone(), rands.remove(0));
+    let (com_r, var_r) = prover.commit(preimage[1].clone(), rands.remove(0));
 
     let left_alloc_scalar = AllocatedQuantity {
         variable: var_l,
-        assignment: Some(inputs.remove(0)),
+        assignment: Some(preimage.remove(0)),
     };
 
     let right_alloc_scalar = AllocatedQuantity {
         variable: var_r,
-        assignment: Some(inputs.remove(0)),
+        assignment: Some(preimage.remove(0)),
     };
 
     mimc_gadget(
@@ -49,14 +49,14 @@ pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
         right_alloc_scalar,
         mimc_rounds,
         &constants,
-        &expected_output,
+        &image,
     )?;
 
     Ok(vec![com_l, com_r])
 }
 
 pub fn verify_mimc_preimage(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     constants: &[FieldElement],
     mimc_rounds: usize,
     mut commitments: Vec<G1>,
@@ -81,16 +81,16 @@ pub fn verify_mimc_preimage(
         right_alloc_scalar,
         mimc_rounds,
         &constants,
-        &expected_output,
+        &image,
     )?;
 
     Ok(())
 }
 
 pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
-    inputs: Vec<FieldElement>,
+    preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     constants: &[FieldElement],
     mimc_rounds: usize,
     rng: Option<&mut R>,
@@ -104,9 +104,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
     let mut prover = Prover::new(&g, &h, &mut prover_transcript);
 
     let comms = prove_mimc_preimage(
-        inputs,
+        preimage,
         randomness,
-        expected_output,
+        image,
         constants,
         mimc_rounds,
         rng,
@@ -125,7 +125,7 @@ pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
 }
 
 pub fn verify_knowledge_of_preimage_of_mimc(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     constants: &[FieldElement],
     mimc_rounds: usize,
     proof: R1CSProof,
@@ -139,13 +139,7 @@ pub fn verify_knowledge_of_preimage_of_mimc(
     let mut verifier_transcript = Transcript::new(transcript_label);
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
-    verify_mimc_preimage(
-        expected_output,
-        constants,
-        mimc_rounds,
-        commitments,
-        &mut verifier,
-    )?;
+    verify_mimc_preimage(image, constants, mimc_rounds, commitments, &mut verifier)?;
     verifier.verify(&proof, g, h, G, H)?;
 
     Ok(())
@@ -171,7 +165,7 @@ mod tests {
         let xl = FieldElement::random();
         let xr = FieldElement::random();
 
-        let expected_output = mimc(&xl, &xr, &constants, mimc_rounds);
+        let image = mimc(&xl, &xr, &constants, mimc_rounds);
 
         let G: G1Vector = get_generators("G", 2048).into();
         let H: G1Vector = get_generators("H", 2048).into();
@@ -184,7 +178,7 @@ mod tests {
         let (proof, commitments) = gen_proof_of_knowledge_of_preimage_of_mimc(
             vec![xl, xr],
             None,
-            &expected_output,
+            &image,
             &constants,
             mimc_rounds,
             Some(&mut rng),
@@ -199,7 +193,7 @@ mod tests {
 
         let start = Instant::now();
         verify_knowledge_of_preimage_of_mimc(
-            &expected_output,
+            &image,
             &constants,
             mimc_rounds,
             proof,

@@ -38,8 +38,8 @@ impl VecPoly3 {
     /// - `rhs.2` is zero;
     /// This is the case in the constraint system proof.
     pub fn special_inner_product(lhs: &Self, rhs: &Self) -> Poly6 {
+        // An alternative would be a loop here.
         // Unwraps are fine as the initialization of vector polynomial ensures vectors are of equal length
-
         let t1 = lhs.1.inner_product(&rhs.0).unwrap();
         let t2 = lhs.1.inner_product(&rhs.1).unwrap() + lhs.2.inner_product(&rhs.0).unwrap();
         let t3 = lhs.2.inner_product(&rhs.1).unwrap() + &lhs.3.inner_product(&rhs.0).unwrap();
@@ -57,7 +57,8 @@ impl VecPoly3 {
         }
     }
 
-    /// Evaluate polynomial at `x`
+    // TODO: See why eval_alt is slower since it does not have overhead of vandermonde vector creation?
+    /// Evaluate polynomial at `x`.
     pub fn eval(&self, x: &FieldElement) -> FieldElementVector {
         let n = self.0.len();
         let mut out = FieldElementVector::new(n);
@@ -73,7 +74,7 @@ impl VecPoly3 {
     }
 
     /// Evaluate polynomial at `x`. Found to be slower than `eval`
-    #[cfg(test)]
+    /// #[cfg(test)]
     pub fn eval_alt(&self, x: &FieldElement) -> FieldElementVector {
         let n = self.0.len();
         let mut out = FieldElementVector::new(n);

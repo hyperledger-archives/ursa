@@ -8,6 +8,10 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
+/* This constraint system has linear (in set size) cost and should only be used for small, static
+sets.
+*/
+
 /// Constraints for set non-membership check
 /// Create a new set with values being difference between the set value at that index and the value being proved a member.
 /// Now ensure that each members of this new set is not 0

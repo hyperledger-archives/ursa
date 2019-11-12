@@ -309,11 +309,16 @@ impl IPP {
 
         // challenges_inv = [1/x_k, 1/x_{k-1}..., 1/x_1]
         // product_chal_inv = 1/(x_k*x_{k-1}*...x_1)
-        let (challenges_inv, product_chal_inv) = FieldElement::batch_invert(&challenges);
-        for i in 0..challenges.len() {
-            challenges_sq.push(challenges[i].square());
-            challenges_inv_sq.push(challenges_inv[i].square());
-        }
+        let product_chal_inv = if lg_n > 0 {
+            let (challenges_inv, product_chal_inv) = FieldElement::batch_invert(&challenges);
+            for i in 0..challenges.len() {
+                challenges_sq.push(challenges[i].square());
+                challenges_inv_sq.push(challenges_inv[i].square());
+            }
+            product_chal_inv
+        } else {
+            FieldElement::one()
+        };
 
         // 3. Compute s values inductively.
 
@@ -344,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_ipp() {
-        let n = 16;
+        let n = 8;
         let G: G1Vector = get_generators("g", n).into();
         let H: G1Vector = get_generators("h", n).into();
         let u = G1::from_msg_hash("u".as_bytes());

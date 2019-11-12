@@ -71,10 +71,11 @@ pub fn allocate_statics_for_verifier(
     statics
 }
 
+/// Takes a Prover and enforces the constraints of Poseidon hash with 2 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
-    mut inputs: Vec<FieldElement>,
+    mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -89,12 +90,12 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
             FieldElement::random_using_rng(r),
         ]
     });
-    check_for_input_and_randomness_length!(inputs, rands, 2)?;
+    check_for_input_and_randomness_length!(preimage, rands, 2)?;
 
     let mut comms = vec![];
 
-    let input1 = inputs.remove(0);
-    let input2 = inputs.remove(0);
+    let input1 = preimage.remove(0);
+    let input2 = preimage.remove(0);
 
     let (com_l, var_l) = prover.commit(input1, rands.remove(0));
     comms.push(com_l);
@@ -111,14 +112,15 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
         statics,
         &hash_params,
         sbox_type,
-        &expected_output,
+        &image,
     )?;
 
     Ok(comms)
 }
 
+/// Takes a Verifier and enforces the constraints of Poseidon hash with 2 inputs and 1 output
 pub fn verify_knowledge_of_preimage_of_Poseidon_2(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     mut commitments: Vec<G1>,
@@ -131,22 +133,15 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
 
     let statics = allocate_statics_for_verifier(verifier, 1, g, h);
 
-    Poseidon_hash_2_gadget(
-        verifier,
-        lv,
-        rv,
-        statics,
-        &hash_params,
-        sbox_type,
-        &expected_output,
-    )?;
+    Poseidon_hash_2_gadget(verifier, lv, rv, statics, &hash_params, sbox_type, &image)?;
     Ok(())
 }
 
+/// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
-    inputs: Vec<FieldElement>,
+    preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -164,9 +159,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
         + hash_params.full_rounds_end;
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_2(
-        inputs,
+        preimage,
         randomness,
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         rng,
@@ -184,8 +179,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initializes a Verifier and verifies proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output
 pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_2(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     proof: R1CSProof,
@@ -200,7 +196,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_2(
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
     verify_knowledge_of_preimage_of_Poseidon_2(
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         commitments,
@@ -211,10 +207,11 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_2(
     verifier.verify(&proof, g, h, G, H)
 }
 
+/// Takes a Prover and enforces the constraints of Poseidon hash with 4 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
-    mut inputs: Vec<FieldElement>,
+    mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -235,10 +232,10 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(inputs, rands, 4)?;
+    check_for_input_and_randomness_length!(preimage, rands, 4)?;
 
     for _ in 0..4 {
-        let (com, var) = prover.commit(inputs.remove(0), rands.remove(0));
+        let (com, var) = prover.commit(preimage.remove(0), rands.remove(0));
         comms.push(com);
         vars.push(var);
     }
@@ -246,20 +243,14 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
     let num_statics = 1;
     let statics = allocate_statics_for_prover(prover, num_statics);
 
-    Poseidon_hash_4_gadget(
-        prover,
-        vars,
-        statics,
-        &hash_params,
-        sbox_type,
-        &expected_output,
-    )?;
+    Poseidon_hash_4_gadget(prover, vars, statics, &hash_params, sbox_type, &image)?;
 
     Ok(comms)
 }
 
+/// Takes a Verifier and enforces the constraints of Poseidon hash with 4 inputs and 1 output
 pub fn verify_knowledge_of_preimage_of_Poseidon_4(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     mut commitments: Vec<G1>,
@@ -277,22 +268,16 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_4(
     let num_statics = 1;
     let statics = allocate_statics_for_verifier(verifier, num_statics, g, h);
 
-    Poseidon_hash_4_gadget(
-        verifier,
-        allocs,
-        statics,
-        &hash_params,
-        sbox_type,
-        &expected_output,
-    )?;
+    Poseidon_hash_4_gadget(verifier, allocs, statics, &hash_params, sbox_type, &image)?;
 
     Ok(())
 }
 
+/// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 4 inputs and 1 output
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
-    inputs: Vec<FieldElement>,
+    preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -310,9 +295,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
     let mut prover = Prover::new(&g, &h, &mut prover_transcript);
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_4(
-        inputs,
+        preimage,
         randomness,
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         rng,
@@ -331,8 +316,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initializes a Verifier and verifies proof of knowledge of preimage of Poseidon hash with 4 inputs and 1 output
 pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     proof: R1CSProof,
@@ -347,7 +333,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
     verify_knowledge_of_preimage_of_Poseidon_4(
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         commitments,
@@ -359,10 +345,11 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
     verifier.verify(&proof, g, h, G, H)
 }
 
+/// Takes a Prover and enforces the constraints of Poseidon hash with 8 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
-    mut inputs: Vec<FieldElement>,
+    mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -387,22 +374,23 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(inputs, rands, 8)?;
+    check_for_input_and_randomness_length!(preimage, rands, 8)?;
 
     for _ in 0..8 {
-        let (com, var) = prover.commit(inputs.remove(0), rands.remove(0));
+        let (com, var) = prover.commit(preimage.remove(0), rands.remove(0));
         comms.push(com);
         vars.push(var);
     }
 
     let (_, var) = prover.commit(FieldElement::from(ZERO_CONST), FieldElement::zero());
-    Poseidon_hash_8_gadget(prover, vars, var, &hash_params, sbox_type, &expected_output)?;
+    Poseidon_hash_8_gadget(prover, vars, var, &hash_params, sbox_type, &image)?;
 
     Ok(comms)
 }
 
+/// Takes a Verifier and enforces the constraints of Poseidon hash with 8 inputs and 1 output
 pub fn verify_knowledge_of_preimage_of_Poseidon_8(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     mut commitments: Vec<G1>,
@@ -421,14 +409,15 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_8(
         commit_to_field_element(g, h, &FieldElement::from(ZERO_CONST), &FieldElement::zero());
     let v = verifier.commit(zero_comm.clone());
 
-    Poseidon_hash_8_gadget(verifier, vars, v, &hash_params, sbox_type, &expected_output)?;
+    Poseidon_hash_8_gadget(verifier, vars, v, &hash_params, sbox_type, &image)?;
     Ok(())
 }
 
+/// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 8 inputs and 1 output
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
-    inputs: Vec<FieldElement>,
+    preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
@@ -446,9 +435,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
     let mut prover = Prover::new(&g, &h, &mut prover_transcript);
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_8(
-        inputs,
+        preimage,
         randomness,
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         rng,
@@ -467,8 +456,9 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initializes a Verifier and verifies proof of knowledge of preimage of Poseidon hash with 8 inputs and 1 output
 pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_8(
-    expected_output: &FieldElement,
+    image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     proof: R1CSProof,
@@ -483,7 +473,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_8(
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
     verify_knowledge_of_preimage_of_Poseidon_8(
-        expected_output,
+        image,
         hash_params,
         sbox_type,
         commitments,
