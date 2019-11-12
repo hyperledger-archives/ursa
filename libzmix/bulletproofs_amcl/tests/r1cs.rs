@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_factor_r1cs() {
-        // Prove knowledge of `p` and `q` such that given an `r`, `p * q = r`
+        // Prove knowledge of `p`, `q`, `r` and `s` such that given an `s`, `p * q * r = s`
         let G: G1Vector = get_generators("G", 8).into();
         let H: G1Vector = get_generators("H", 8).into();
         let g = G1::from_msg_hash("g".as_bytes());

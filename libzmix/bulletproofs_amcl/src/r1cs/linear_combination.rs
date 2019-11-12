@@ -28,9 +28,9 @@ pub struct AllocatedQuantity {
     pub assignment: Option<FieldElement>,
 }
 
-/// Represents a linear combination of
-/// `Variables`.  Each term is represented by a
-/// `(Variable, FieldElement)` pair.
+/// Represents a linear combination of `Variables`.  Each term is represented by a `(Variable, FieldElement)`
+/// pair where FieldElement is the coefficient. The linear combination might have several terms for
+/// the same variable with different coefficients, use `simplify` to combine those terms.
 #[derive(Clone, Debug)]
 pub struct LinearCombination {
     pub terms: Vec<(Variable, FieldElement)>,

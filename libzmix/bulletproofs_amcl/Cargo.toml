@@ -12,6 +12,7 @@ byteorder = "1.3.1"
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
+criterion = "0.3"
 
 [dependencies.amcl_wrapper]
 version = "0.1.7"
@@ -24,3 +25,7 @@ bls381 = ["amcl_wrapper/bls381"]
 bn254 = ["amcl_wrapper/bn254"]
 secp256k1 = ["amcl_wrapper/secp256k1"]
 ed25519 = ["amcl_wrapper/ed25519"]
+
+[[bench]]
+name = "vec_poly_eval"
+harness = false

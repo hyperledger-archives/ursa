@@ -9,54 +9,42 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, RngCore};
 
-/*// Ensure `v` is a bit, hence 0 or 1
-pub fn bit_gadget<CS: ConstraintSystem>(
-    cs: &mut CS,
-    v: AllocatedQuantity,
-) -> Result<(), R1CSError> {
-    // TODO: Possible to save reallocation of `v` in `bit`?
-    let (a, b, o) =
-        cs.allocate_multiplier(v.assignment.map(|bit| ((FieldElement::one() - bit), bit)))?;
+/* This constraint system has linear (in set size) cost and should only be used for small, static
+sets.
+*/
 
-    // Might not be necessary if above TODO is addressed
-    // Variable b is same as v so b + (-v) = 0
-    let neg_v: LinearCombination = vec![(v.variable, FieldElement::minus_one())]
-        .iter()
-        .collect();
-    cs.constrain(b + neg_v);
+/*
+The following gadget verifies whether an value exists within a set of items
 
-    // Enforce a * b = 0, so one of (a,b) is zero
-    cs.constrain(o.into());
+To do this, it uses 3 variables:
+*
+ - value
+ - items[]
+ - toggles[]
 
-    // Might not be necessary if above TODO is addressed
-    // Enforce that a = 1 - b, so they both are 1 or 0.
-    cs.constrain(a + (b - FieldElement::one()));
+For example:
 
-    Ok(())
-}
+ - value = 4
+ - items = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+ - toggles = [0, 0, 0, 1, 0, 0, 0, 0, 0]
 
-// Ensure sum of items of `vector` is `sum`
-pub fn vector_sum_gadget<CS: ConstraintSystem>(
-    cs: &mut CS,
-    vector: &[AllocatedQuantity],
-    sum: u64,
-) -> Result<(), R1CSError> {
-    let mut constraints = vec![(Variable::One(), FieldElement::from(sum).negation())];
-    for i in vector {
-        constraints.push((i.variable, FieldElement::one()));
-    }
+You must indicate which value is yours by setting the appropriate toggle
 
-    cs.constrain(constraints.iter().collect());
+The constraints for the above would be:
 
-    Ok(())
-}*/
+  - ensure_bit(for each of toggles)
+  - sum(toggles) == 1
+  - (items[i] * toggles[i]) == (toggles[i] * value)
+
+This ensures that only 1 item is toggled, and whichever one it is is ours.
+*/
 
 // TODO: Find better name
-// Ensure items[i] * vector[i] = vector[i] * value
+// Ensure items[i] * toggles[i] = toggles[i] * value
 pub fn vector_product_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     items: &[u64],
-    vector: &[AllocatedQuantity],
+    toggles: &[AllocatedQuantity],
     value: &AllocatedQuantity,
 ) -> Result<(), R1CSError> {
     let mut constraints = vec![(value.variable, FieldElement::minus_one())];
@@ -64,13 +52,14 @@ pub fn vector_product_gadget<CS: ConstraintSystem>(
     for i in 0..items.len() {
         // TODO: Possible to save reallocation of elements of `vector` in `bit`? If circuit variables for vector are passed, then yes.
         let (bit_var, item_var, o1) = cs.allocate_multiplier(
-            vector[i]
+            toggles[i]
                 .assignment
                 .as_ref()
                 .map(|bit| (bit.clone(), items[i].into())),
         )?;
         constrain_lc_with_scalar::<CS>(cs, item_var.into(), &items[i].into());
 
+        // o2 = bit_var * value
         let (_, _, o2) = cs.multiply(bit_var.into(), value.variable.into());
 
         cs.constrain(o1 - o2);
@@ -86,7 +75,7 @@ pub fn vector_product_gadget<CS: ConstraintSystem>(
 
 /// Allocate a bitmap for the `set` with 1 as the index of `value`, 0 otherwise. Then commit to values of bitmap
 /// and prove that each element is either 0 or 1, sum of elements of this bitmap is 1 (as there is only 1 element)
-/// and the relation set[i] * bitmap[i] = bitmap[i] * value.
+/// and the relation set[i] * toggles[i] = toggles[i] * value.
 /// Taken from https://github.com/HarryR/ethsnarks/blob/master/src/gadgets/one_of_n.hpp
 pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
     value: u64,
@@ -98,30 +87,30 @@ pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
     check_for_randomness_or_rng!(randomness, rng)?;
 
     // Set all indices to 0 except the one where `value` is
-    let bit_map: Vec<u64> = set
+    let toggles: Vec<u64> = set
         .iter()
         .map(|elem| if *elem == value { 1 } else { 0 })
         .collect();
 
     let mut comms = vec![];
 
-    let mut bit_vars = vec![];
-    let mut bit_allocs = vec![];
-    for b in bit_map {
-        let _b = FieldElement::from(b);
-        let (com, var) = prover.commit(_b.clone(), FieldElement::random());
-        bit_vars.push(var.clone());
+    let mut toggles_vars = vec![];
+    let mut toggles_allocs = vec![];
+    for bit in toggles {
+        let bit_as_field_elem = FieldElement::from(bit);
+        let (com, var) = prover.commit(bit_as_field_elem.clone(), FieldElement::random());
+        toggles_vars.push(var.clone());
         let quantity = AllocatedQuantity {
             variable: var,
-            assignment: Some(_b),
+            assignment: Some(bit_as_field_elem),
         };
         bit_gadget(prover, &quantity)?;
         comms.push(com);
-        bit_allocs.push(quantity);
+        toggles_allocs.push(quantity);
     }
 
-    // The bit vector sum should be 1
-    vector_sum_constraints(prover, bit_vars, 1);
+    // The toggle vector sum should be 1
+    vector_sum_constraints(prover, toggles_vars, 1);
 
     let _value = FieldElement::from(value);
     let (com_value, var_value) = prover.commit(
@@ -132,12 +121,13 @@ pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
         variable: var_value,
         assignment: Some(_value),
     };
-    vector_product_gadget(prover, &set, &bit_allocs, &quantity_value)?;
+    vector_product_gadget(prover, &set, &toggles_allocs, &quantity_value)?;
     comms.push(com_value);
 
     Ok(comms)
 }
 
+/// Verify the set membership constraints
 pub fn verify_set_membership_alt(
     set: &[u64],
     mut commitments: Vec<G1>,
@@ -172,6 +162,7 @@ pub fn verify_set_membership_alt(
     Ok(())
 }
 
+/// Initialize a Prover and generate the proof of set membership with commitments
 pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
     value: u64,
     randomness: Option<FieldElement>,
@@ -200,6 +191,7 @@ pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initialize a Verifier and verify the proof of set membership
 pub fn verify_proof_of_set_membership_alt(
     set: &[u64],
     proof: R1CSProof,

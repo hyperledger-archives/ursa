@@ -26,7 +26,7 @@ pub fn bit_gadget<CS: ConstraintSystem>(
     cs.constrain(o.into());
 
     // Might not be necessary if above TODO is addressed
-    // Enforce that a = 1 - b, so they both are 1 or 0.
+    // Enforce that a = 1 - b, so they both are either 1 or 0 and their sum is 1.
     cs.constrain(a + (b - FieldElement::one()));
 
     Ok(())

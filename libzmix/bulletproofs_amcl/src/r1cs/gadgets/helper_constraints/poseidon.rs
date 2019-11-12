@@ -8,6 +8,7 @@ use super::super::helper_constraints::non_zero::is_nonzero_gadget;
 use crate::r1cs::gadgets::poseidon_constants::*;
 
 // Poseidon is described here https://eprint.iacr.org/2019/458
+
 #[derive(Clone, Debug)]
 pub struct PoseidonParams {
     pub width: usize,
@@ -21,6 +22,8 @@ pub struct PoseidonParams {
     pub MDS_matrix: Vec<Vec<FieldElement>>,
 }
 
+/// Read the defined round keys and MDS matrix for the corresponding curve.
+/// Reads constants `ROUND_CONSTS_W_<width>` and `MDS_ENTRIES_W_<width>`
 impl PoseidonParams {
     pub fn new(
         width: usize,
@@ -32,8 +35,8 @@ impl PoseidonParams {
             panic!("Only width of 3, 5 or 9 are supported")
         }
         let total_rounds = full_rounds_beginning + partial_rounds + full_rounds_end;
-        let round_keys = Self::gen_round_keys(width, total_rounds);
-        let matrix_2 = Self::gen_MDS_matrix(width);
+        let round_keys = Self::get_round_keys(width, total_rounds);
+        let matrix_2 = Self::get_MDS_matrix(width);
         PoseidonParams {
             width,
             full_rounds_beginning,
@@ -44,7 +47,8 @@ impl PoseidonParams {
         }
     }
 
-    fn gen_round_keys(width: usize, total_rounds: usize) -> Vec<FieldElement> {
+    /// Get the round keys for the curve and given width
+    fn get_round_keys(width: usize, total_rounds: usize) -> Vec<FieldElement> {
         let cap = total_rounds * width;
         //(0..cap).map(|_| FieldElement::random()).collect::<Vec<_>>()
         //vec![FieldElement::one(); cap]
@@ -71,7 +75,8 @@ impl PoseidonParams {
         rc
     }
 
-    fn gen_MDS_matrix(width: usize) -> Vec<Vec<FieldElement>> {
+    /// Get the MDS matrix for the curve and given width
+    fn get_MDS_matrix(width: usize) -> Vec<Vec<FieldElement>> {
         //(0..width).map(|_| (0..width).map(|_| FieldElement::random()).collect::<Vec<_>>()).collect::<Vec<Vec<_>>>()
         //vec![vec![FieldElement::one(); width]; width]
 
@@ -120,6 +125,7 @@ pub enum SboxType {
 }
 
 impl SboxType {
+    /// Apply the Sbox on the given element
     fn apply_sbox(&self, elem: &FieldElement) -> FieldElement {
         match self {
             SboxType::Cube => {
@@ -137,6 +143,7 @@ impl SboxType {
         }
     }
 
+    /// Enforce the constraints of this Sbox
     fn synthesize_sbox<CS: ConstraintSystem>(
         &self,
         cs: &mut CS,
@@ -150,7 +157,7 @@ impl SboxType {
         }
     }
 
-    // Allocate variables in circuit and enforce constraints when Sbox as cube
+    /// Allocate variables in circuit and enforce constraints when Sbox as cube, i.e. (input_var + round_key)^3
     fn synthesize_cube_sbox<CS: ConstraintSystem>(
         cs: &mut CS,
         input_var: LinearCombination,
@@ -162,7 +169,7 @@ impl SboxType {
         Ok(cube)
     }
 
-    // Allocate variables in circuit and enforce constraints when Sbox as quint
+    /// Allocate variables in circuit and enforce constraints when Sbox as quint, i.e. (input_var + round_key)^5
     fn synthesize_quint_sbox<CS: ConstraintSystem>(
         cs: &mut CS,
         input_var: LinearCombination,
@@ -175,7 +182,7 @@ impl SboxType {
         Ok(qi)
     }
 
-    // Allocate variables in circuit and enforce constraints when Sbox as inverse
+    /// Allocate variables in circuit and enforce constraints when Sbox as inverse, i.e. (input_var + round_key)^-1
     fn synthesize_inverse_sbox<CS: ConstraintSystem>(
         cs: &mut CS,
         input_var: LinearCombination,
@@ -199,6 +206,7 @@ impl SboxType {
     }
 }
 
+/// Computes the permutation on the given inputs, parameters and Sbox
 pub fn Poseidon_permutation(
     input: &[FieldElement],
     params: &PoseidonParams,
@@ -211,7 +219,10 @@ pub fn Poseidon_permutation(
     let partial_rounds = params.partial_rounds;
     let full_rounds_end = params.full_rounds_end;
 
+    // Each round of the permutation will change current_state.
     let mut current_state = input.to_owned();
+
+    // Temporary layer to hold the output of the linear layer
     let mut current_state_temp = vec![FieldElement::zero(); width];
 
     let mut round_keys_offset = 0;
@@ -292,6 +303,7 @@ pub fn Poseidon_permutation(
     current_state
 }
 
+/// Enforces the permutation on the given inputs, parameters and Sbox
 pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     input: Vec<LinearCombination>,
@@ -380,7 +392,6 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
         for i in 0..width {
             // replace input_vars with simplified next_input_vars
             input_vars[i] = next_input_vars.remove(0).simplify();
-            //println!("len={}", input_vars[i].len());
         }
     }
 
@@ -442,7 +453,8 @@ pub fn Poseidon_permutation_gadget<'a, CS: ConstraintSystem>(
     Ok(())
 }
 
-/// 2:1 (2 inputs, 1 output) hash from the permutation by passing the first input as zero, 2 of the next 4 as non-zero, a padding constant and rest zero. Choose one of the outputs.
+/// 2:1 (2 inputs, 1 output) hash from the permutation by passing the first input as zero,
+/// 2 of the next 4 as non-zero, a padding constant and rest zero. Choose one of the outputs.
 
 // Choice is arbitrary
 pub const PADDING_CONST: u64 = 101;

@@ -204,6 +204,9 @@ mod tests {
 
         let n = 32;
 
+        /// TODO: Check for numbers > 2^n but less than curve order
+        /// TODO: Hypothesis: This would work when 2^n is less than half of the curve order/field size.
+        /// Write a test to check this.
         let label = b"BoundsTest";
         let (proof, commitments) = gen_proof_of_bounded_num(
             v,

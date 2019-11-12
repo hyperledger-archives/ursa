@@ -6,7 +6,8 @@ use crate::r1cs::linear_combination::AllocatedQuantity;
 
 use crate::r1cs::gadgets::helper_constraints::constrain_lc_with_scalar;
 
-// For each round: xl = (xl + constants[i])^3 + xr, xr = xl. Output is xl of last round
+/// Taken from https://eprint.iacr.org/2016/492, section 2.1, MiMC-2n/n (Feistel).
+/// For each round: xl = (xl + constants[i])^3 + xr, xr = xl. Output is xl of last round.
 pub fn mimc(
     xl: &FieldElement,
     xr: &FieldElement,
@@ -28,6 +29,7 @@ pub fn mimc(
     xl
 }
 
+/// Enforces the constraints of MiMC and check that the output equals `image`
 pub fn mimc_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     left: AllocatedQuantity,
@@ -47,6 +49,7 @@ pub fn mimc_gadget<CS: ConstraintSystem>(
     Ok(())
 }
 
+/// Constraints for MiMC
 pub fn enforce_mimc_2_inputs<CS: ConstraintSystem>(
     cs: &mut CS,
     left: LinearCombination,
