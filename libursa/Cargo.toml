@@ -80,12 +80,12 @@ encryption = ["aes-cbc", "aes-gcm", "chacha20poly1305"]
 encryption_asm = ["aescbc_openssl", "aesgcm_openssl", "chacha20poly1305_libsodium"]
 ffi = ["ffi-support"]
 native_secp256k1 = ["secp256k1"]
-nightly = ["sha2/asm", "blake2/simd_asm", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend"]
+nightly = ["sha2/asm", "sha3", "blake2/simd_asm", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend"]
 pair_amcl = ["amcl"]
 portable = ["bn_rust", "pair_amcl", "serialization", "rustlibsecp256k1", "cl", "bls", "std", "encryption"]
 serialization = ["serde", "serde_json", "serde_derive"]
-std = ["sha2/std", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
-wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "js-sys", "rust-crypto-wasm"]
+std = ["sha2/std", "sha3", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
+wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "sha3", "js-sys", "rust-crypto-wasm", "encryption"]
 
 [dependencies]
 aead = { version = "0.1", optional = true }
@@ -126,6 +126,7 @@ serde = { version = "1.0",  optional = true}
 serde_derive = { version = "1.0",  optional = true}
 serde_json = { version = "1.0",  optional = true}
 sha2 = { version = "0.8", default-features = false, optional = true }
+sha3 = { version = "0.8", optional = true }
 subtle = { version = "2.2.1", optional = true }
 time = "0.1"
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
