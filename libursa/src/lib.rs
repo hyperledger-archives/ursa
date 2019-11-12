@@ -34,11 +34,17 @@ extern crate hex;
 extern crate libsodium_ffi;
 extern crate rand;
 extern crate rand_chacha;
-#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native_secp256k1")))]
+#[cfg(all(
+    any(feature = "portable", feature = "wasm"),
+    not(feature = "native_secp256k1")
+))]
 extern crate rustlibsecp256k1;
 #[cfg(any(
     test,
-    all(feature = "native_secp256k1", not(any(feature = "portable", feature = "wasm")))
+    all(
+        feature = "native_secp256k1",
+        not(any(feature = "portable", feature = "wasm"))
+    )
 ))]
 extern crate secp256k1 as libsecp256k1;
 pub extern crate sha2;
