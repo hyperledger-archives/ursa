@@ -213,7 +213,8 @@ impl<'a> AttributeToken<'a> {
         }
     }
 
-    // Assuming that chain has already been verified using `CredChain::verify_delegations`
+    /// Corresponds to commitment phase of Figure 4 from the paper
+    /// Assuming that chain has already been verified using `CredChain::verify_delegations`
     pub fn commitment(
         &mut self,
         revealed: Vec<HashSet<usize>>,
@@ -229,6 +230,7 @@ impl<'a> AttributeToken<'a> {
         )
     }
 
+    /// Corresponds to response phase of Figure 4 from the paper
     pub fn response(
         &self,
         at: &AttributeTokenComm,
@@ -386,6 +388,7 @@ impl<'a> AttributeToken<'a> {
         FieldElement::from_msg_hash(&bytes)
     }
 
+    /// Corresponds to Figure 5 from the paper
     pub fn reconstruct_commitment(
         L: usize,
         comm: &AttributeTokenComm,
@@ -1435,7 +1438,7 @@ mod tests {
 
         let start_resp = Instant::now();
         let resp_1 = at_1
-            .response(&com_1, &l_1_issuer_sk.0, &c_1, vec![], vec![&l_1_issuer_vk])
+            .response(&com_1, &l_1_issuer_sk, &c_1, vec![], vec![&l_1_issuer_vk])
             .unwrap();
         let resp_duration = start_resp.elapsed();
 
@@ -1488,7 +1491,7 @@ mod tests {
         let resp_2 = at_2
             .response(
                 &com_2,
-                &l_2_issuer_sk.0,
+                &l_2_issuer_sk,
                 &c_2,
                 vec![&l_2_issuer_vk],
                 vec![&l_1_issuer_vk],
@@ -1547,7 +1550,7 @@ mod tests {
         let resp_3 = at_3
             .response(
                 &com_3,
-                &l_3_issuer_sk.0,
+                &l_3_issuer_sk,
                 &c_3,
                 vec![&l_2_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
@@ -1607,7 +1610,7 @@ mod tests {
         let resp_4 = at_4
             .response(
                 &com_4,
-                &l_4_issuer_sk.0,
+                &l_4_issuer_sk,
                 &c_4,
                 vec![&l_2_issuer_vk, &l_4_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
@@ -1668,7 +1671,7 @@ mod tests {
         let resp_5 = at_5
             .response(
                 &com_5,
-                &l_5_issuer_sk.0,
+                &l_5_issuer_sk,
                 &c_5,
                 vec![&l_2_issuer_vk, &l_4_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk, &l_5_issuer_vk],
@@ -1730,7 +1733,7 @@ mod tests {
         let resp_6 = at_6
             .response(
                 &com_6,
-                &l_6_issuer_sk.0,
+                &l_6_issuer_sk,
                 &c_6,
                 vec![&l_2_issuer_vk, &l_4_issuer_vk, &l_6_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk, &l_5_issuer_vk],
@@ -1817,7 +1820,7 @@ mod tests {
 
         let start_resp = Instant::now();
         let resp_1 = at_1
-            .response(&com_1, &l_1_issuer_sk.0, &c_1, vec![], vec![&l_1_issuer_vk])
+            .response(&com_1, &l_1_issuer_sk, &c_1, vec![], vec![&l_1_issuer_vk])
             .unwrap();
         let resp_duration = start_resp.elapsed();
 
@@ -1888,7 +1891,7 @@ mod tests {
         let resp_2 = at_2
             .response(
                 &com_2,
-                &l_2_issuer_sk.0,
+                &l_2_issuer_sk,
                 &c_2,
                 vec![&l_2_issuer_vk],
                 vec![&l_1_issuer_vk],
@@ -1969,7 +1972,7 @@ mod tests {
         let resp_3 = at_3
             .response(
                 &com_3,
-                &l_3_issuer_sk.0,
+                &l_3_issuer_sk,
                 &c_3,
                 vec![&l_2_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
@@ -2058,7 +2061,7 @@ mod tests {
         let resp_4 = at_4
             .response(
                 &com_4,
-                &l_4_issuer_sk.0,
+                &l_4_issuer_sk,
                 &c_4,
                 vec![&l_2_issuer_vk, &l_4_issuer_vk],
                 vec![&l_1_issuer_vk, &l_3_issuer_vk],
@@ -2230,11 +2233,9 @@ mod tests {
             let c_precomp = AttributeToken::gen_challenge(&com_precomp, &l_0_issuer_vk, vec![]);
 
             let sk = if i % 2 == 1 {
-                let sk = &odd_level_issuer_keys[i / 2].0;
-                &sk.0
+                &odd_level_issuer_keys[i / 2].0
             } else {
-                let sk = &even_level_issuer_keys[(i / 2) - 1].0;
-                &sk.0
+                &even_level_issuer_keys[(i / 2) - 1].0
             };
             let start = Instant::now();
             let resp = at
@@ -2389,7 +2390,7 @@ mod tests {
         assert!(at_1
             .response(
                 &morphed_commitment,
-                &l_1_issuer_sk.0,
+                &l_1_issuer_sk,
                 &c_1,
                 vec![],
                 vec![&l_1_issuer_vk]
@@ -2403,7 +2404,7 @@ mod tests {
         assert!(at_1
             .response(
                 &morphed_commitment,
-                &l_1_issuer_sk.0,
+                &l_1_issuer_sk,
                 &c_1,
                 vec![],
                 vec![&l_1_issuer_vk]
@@ -2417,7 +2418,7 @@ mod tests {
         assert!(at_1
             .response(
                 &morphed_commitment,
-                &l_1_issuer_sk.0,
+                &l_1_issuer_sk,
                 &c_1,
                 vec![],
                 vec![&l_1_issuer_vk]
@@ -2429,7 +2430,7 @@ mod tests {
         assert!(at_1
             .response(
                 &morphed_commitment,
-                &l_1_issuer_sk.0,
+                &l_1_issuer_sk,
                 &c_1,
                 vec![],
                 vec![&l_1_issuer_vk]
@@ -2437,7 +2438,7 @@ mod tests {
             .is_err());
 
         let resp_1 = at_1
-            .response(&com_1, &l_1_issuer_sk.0, &c_1, vec![], vec![&l_1_issuer_vk])
+            .response(&com_1, &l_1_issuer_sk, &c_1, vec![], vec![&l_1_issuer_vk])
             .unwrap();
 
         let attributes_2: G2Vector = (0..max_attributes - 1)

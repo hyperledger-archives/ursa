@@ -11,8 +11,7 @@ use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 use signatures::delg_cred_cdd::issuer::Sigkey;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GrothSigkey(pub FieldElement);
+pub type GrothSigkey = FieldElement;
 
 macro_rules! impl_GrothS {
     ( $GrothSetupParams:ident, $GrothVerkey:ident, $GrothSig:ident, $GrothS:ident, $vk_group:ident, $msg_group:ident,
@@ -49,10 +48,10 @@ macro_rules! impl_GrothS {
 
             pub fn finish_proof_of_knowledge_of_sigkey(
                 committed: $ProverCommitted,
-                sig_key: Sigkey,
+                sig_key: GrothSigkey,
                 challenge: &FieldElement,
             ) -> $Proof {
-                committed.gen_proof(&challenge, &[sig_key.0]).unwrap()
+                committed.gen_proof(&challenge, &[sig_key]).unwrap()
             }
 
             pub fn verify_proof_of_knowledge_of_sigkey(
@@ -70,6 +69,7 @@ macro_rules! impl_GrothS {
 
 macro_rules! impl_GrothS_setup {
     ( $GrothSetupParams:ident, $msg_group:ident, $GVector:ident ) => {
+        /// Corresponds to Groth sig's "Setup" from the paper
         pub fn setup(count_messages: usize, label: &[u8]) -> $GrothSetupParams {
             // NUMS for g1 and g2
             let g1 = G1::from_msg_hash(&[label, " : g1".as_bytes()].concat());
@@ -99,10 +99,10 @@ macro_rules! impl_GrothSig_new {
         let r = FieldElement::random();
         let r_inv = r.inverse();
         let R = &$g_r * &r;
-        let S = (&$y[0] + (&$g_s * &$sk.0)) * &r_inv;
+        let S = (&$y[0] + (&$g_s * $sk)) * &r_inv;
         let mut T = $msg_group_vec::with_capacity($messages.len());
         for i in 0..$messages.len() {
-            T.push(&$messages[i] + (&$y[i] * &$sk.0));
+            T.push(&$messages[i] + (&$y[i] * $sk));
         }
         T.scale(&r_inv);
         Ok(Self { R, S, T })
@@ -111,6 +111,9 @@ macro_rules! impl_GrothSig_new {
 
 macro_rules! impl_GrothSig_randomize {
     (  ) => {
+        /// This multiplication randomizes the signature making it indistinguishable from previous
+        /// usages of this signature.
+        /// Corresponds to Groth sig's "Rand" from the paper
         pub fn randomize(&self, r_prime: &FieldElement) -> Self {
             let r_prime_inv = r_prime.inverse();
             let R = &self.R * r_prime;
@@ -168,14 +171,16 @@ macro_rules! var_time_mul_scl_mul_with_same_field_element {
 impl GrothS1 {
     impl_GrothS_setup!(Groth1SetupParams, G1, G1Vector);
 
+    /// Corresponds to Groth sig's "Gen" from the paper
     pub fn keygen(setup_params: &Groth1SetupParams) -> (GrothSigkey, Groth1Verkey) {
         let sk = FieldElement::random();
         let vk = &setup_params.g2 * &sk;
-        (GrothSigkey(sk), Groth1Verkey(vk))
+        (sk, Groth1Verkey(vk))
     }
 }
 
 impl Groth1Sig {
+    /// Corresponds to Groth sig's "Sign" from the paper
     pub fn new(
         messages: &[G1],
         sk: &GrothSigkey,
@@ -193,6 +198,7 @@ impl Groth1Sig {
 
     impl_GrothSig_randomize!();
 
+    /// Corresponds to Groth sig's "Verify" from the paper
     pub fn verify(
         &self,
         messages: &[G1],
@@ -337,14 +343,16 @@ impl Groth1Sig {
 impl GrothS2 {
     impl_GrothS_setup!(Groth2SetupParams, G2, G2Vector);
 
+    /// Corresponds to Groth sig's "Gen" from the paper
     pub fn keygen(setup_params: &Groth2SetupParams) -> (GrothSigkey, Groth2Verkey) {
         let sk = FieldElement::random();
         let vk = &setup_params.g1 * &sk;
-        (GrothSigkey(sk), Groth2Verkey(vk))
+        (sk, Groth2Verkey(vk))
     }
 }
 
 impl Groth2Sig {
+    /// Corresponds to Groth sig's "Sign" from the paper
     pub fn new(
         messages: &[G2],
         sk: &GrothSigkey,
@@ -362,6 +370,7 @@ impl Groth2Sig {
 
     impl_GrothSig_randomize!();
 
+    /// Corresponds to Groth sig's "Verify" from the paper
     pub fn verify(
         &self,
         messages: &[G2],
