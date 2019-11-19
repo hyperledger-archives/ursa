@@ -7,9 +7,7 @@ use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
-use super::poseidon::{
-    PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType, PADDING_CONST,
-};
+use super::poseidon::{PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_byte_size};
 use crate::r1cs::gadgets::helper_constraints::allocated_leaf_index_to_bytes;
 use crate::utils::hash_db::HashDb;
@@ -258,13 +256,11 @@ pub fn vanilla_merkle_merkle_tree_4_verif_gadget<CS: ConstraintSystem>(
     leaf_val: Variable,
     leaf_index: AllocatedQuantity,
     mut proof_nodes: Vec<Variable>,
-    statics: Vec<Variable>,
+    capacity_const: Variable,
     poseidon_params: &PoseidonParams,
     sbox_type: &SboxType,
 ) -> Result<(), R1CSError> {
     let mut prev_hash = LinearCombination::from(leaf_val);
-
-    let statics: Vec<LinearCombination> = statics.into_iter().map(|s| s.into()).collect();
 
     // Initialize  constraint_leaf_index with -leaf_index.
     let mut constraint_leaf_index = vec![(leaf_index.variable, FieldElement::minus_one())];
@@ -362,7 +358,7 @@ pub fn vanilla_merkle_merkle_tree_4_verif_gadget<CS: ConstraintSystem>(
             prev_hash = Poseidon_hash_4_constraints::<CS>(
                 cs,
                 input,
-                statics.clone(),
+                capacity_const.into(),
                 poseidon_params,
                 sbox_type,
             )?;

@@ -16,7 +16,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 
 use super::helper_constraints::poseidon::{
-    PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType, PADDING_CONST,
+    PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType,
 };
 use super::helper_constraints::sparse_merkle_tree_4_ary::{
     vanilla_merkle_merkle_tree_4_verif_gadget, DBVal_4_ary, ProofNode_4_ary,
@@ -24,8 +24,9 @@ use super::helper_constraints::sparse_merkle_tree_4_ary::{
 };
 
 use crate::errors::R1CSError;
+use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
 use crate::r1cs::gadgets::poseidon_hash::{
-    allocate_statics_for_prover, allocate_statics_for_verifier,
+    allocate_capacity_const_for_prover, allocate_capacity_const_for_verifier,
 };
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
@@ -93,14 +94,12 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
     indices: Vec<FieldElement>, // For future: `indices` can be made hidden too
     orig_vals: Vec<Variable>,   // values of the original tree
     mut orig_vals_proofs: Vec<Vec<Variable>>, // merkle proofs for values of the original tree
-    statics: Vec<Variable>,
+    capacity_const: Variable,
     poseidon_params: &PoseidonParams,
     sbox_type: &SboxType,
 ) -> Result<(), R1CSError> {
     assert_eq!(new_tree.depth, depth);
     assert_eq!(indices.len(), orig_vals.len());
-
-    let statics: Vec<LinearCombination> = statics.into_iter().map(|s| s.into()).collect();
 
     // Keep a map of path -> LinearCombination for the new_tree for all nodes in paths of modified indices
     let mut new_tree_modified_nodes = HashMap::<Vec<u8>, LinearCombination>::new();
@@ -127,7 +126,7 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
             cur_hash_in_orig_tree = Poseidon_hash_4_constraints::<CS>(
                 cs,
                 proof,
-                statics.clone(),
+                capacity_const.into(),
                 poseidon_params,
                 sbox_type,
             )?;
@@ -183,7 +182,7 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
             orig_val_lc = Poseidon_hash_4_constraints::<CS>(
                 cs,
                 nodes_at_level_j,
-                statics.clone(),
+                capacity_const.into(),
                 poseidon_params,
                 sbox_type,
             )?;
@@ -250,8 +249,7 @@ pub fn gen_proof_for_randomizer(
         proof_vars.push(ps);
     }
 
-    let num_statics = 1;
-    let statics = allocate_statics_for_prover(&mut prover, num_statics);
+    let capacity_const = allocate_capacity_const_for_prover(&mut prover, CAP_CONST_W_5);
 
     let start = Instant::now();
     randomizer_gadget(
@@ -263,7 +261,7 @@ pub fn gen_proof_for_randomizer(
         modified_indices.to_vec(),
         orig_val_vars,
         proof_vars,
-        statics,
+        capacity_const,
         &hash_params,
         sbox_type,
     )?;
@@ -317,8 +315,7 @@ pub fn verify_proof_for_randomizer(
         proof_vars.push(ps);
     }
 
-    let num_statics = 1;
-    let statics = allocate_statics_for_verifier(&mut verifier, num_statics, g, h);
+    let capacity_const = allocate_capacity_const_for_verifier(&mut verifier, CAP_CONST_W_5, g, h);
 
     let start = Instant::now();
     randomizer_gadget(
@@ -330,7 +327,7 @@ pub fn verify_proof_for_randomizer(
         modified_indices.to_vec(),
         orig_val_vars,
         proof_vars,
-        statics,
+        capacity_const,
         hash_params,
         sbox_type,
     )?;

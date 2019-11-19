@@ -10,65 +10,33 @@ use std::time::{Duration, Instant};
 
 use super::helper_constraints::poseidon::{
     PoseidonParams, Poseidon_hash_2, Poseidon_hash_2_gadget, Poseidon_hash_4,
-    Poseidon_hash_4_gadget, Poseidon_hash_8, Poseidon_hash_8_gadget, SboxType, PADDING_CONST,
-    ZERO_CONST,
+    Poseidon_hash_4_gadget, Poseidon_hash_8, Poseidon_hash_8_gadget, SboxType, CAP_CONST_W_3,
+    CAP_CONST_W_5, CAP_CONST_W_9,
 };
 use amcl_wrapper::commitment::commit_to_field_element;
 
-/// Statics are needed to use permutation as a hash function
-/// Allocate padding constant and zeroes for Prover
-pub fn allocate_statics_for_prover(prover: &mut Prover, num_statics: usize) -> Vec<Variable> {
-    let mut statics = vec![];
-    let (_, var) = prover.commit(FieldElement::from(ZERO_CONST), FieldElement::zero());
-    statics.push(var);
-
-    if num_statics > statics.len() {
-        // Commitment to PADDING_CONST with blinding as 0
-        let (_, var) = prover.commit(FieldElement::from(PADDING_CONST), FieldElement::zero());
-        statics.push(var);
-    }
-
-    // Commit to 0 with randomness 0 for the rest of the elements of width
-    for _ in statics.len()..num_statics {
-        let (_, var) = prover.commit(FieldElement::from(ZERO_CONST), FieldElement::zero());
-        statics.push(var);
-    }
-    statics
+/// Allocate capacity constant for Prover. Blinding is kept 0
+pub fn allocate_capacity_const_for_prover(prover: &mut Prover, capacity_const: u64) -> Variable {
+    let (_, var) = prover.commit(FieldElement::from(capacity_const), FieldElement::zero());
+    var
 }
 
-/// Allocate padding constant and zeroes for Verifier
-pub fn allocate_statics_for_verifier(
+/// Allocate capacity constant for Verifier. Blinding is kept 0
+pub fn allocate_capacity_const_for_verifier(
     verifier: &mut Verifier,
-    num_statics: usize,
+    capacity_const: u64,
     g: &G1,
     h: &G1,
-) -> Vec<Variable> {
-    let mut statics = vec![];
+) -> Variable {
+    // Commitment to capacity_const with blinding as 0
+    let comm = commit_to_field_element(
+        g,
+        h,
+        &FieldElement::from(capacity_const),
+        &FieldElement::zero(),
+    );
 
-    // Commitment to 0 with blinding as 0
-    let zero_comm =
-        commit_to_field_element(g, h, &FieldElement::from(ZERO_CONST), &FieldElement::zero());
-
-    let v = verifier.commit(zero_comm.clone());
-    statics.push(v);
-
-    if num_statics > statics.len() {
-        // Commitment to PADDING_CONST with blinding as 0
-        let pad_comm = commit_to_field_element(
-            g,
-            h,
-            &FieldElement::from(PADDING_CONST),
-            &FieldElement::zero(),
-        );
-        let v = verifier.commit(pad_comm);
-        statics.push(v);
-    }
-
-    for _ in statics.len()..num_statics {
-        let v = verifier.commit(zero_comm.clone());
-        statics.push(v);
-    }
-    statics
+    verifier.commit(comm)
 }
 
 /// Takes a Prover and enforces the constraints of Poseidon hash with 2 inputs and 1 output
@@ -103,13 +71,13 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
     let (com_r, var_r) = prover.commit(input2, rands.remove(0));
     comms.push(com_r);
 
-    let statics = allocate_statics_for_prover(prover, 1);
+    let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_3);
 
     Poseidon_hash_2_gadget(
         prover,
         var_l,
         var_r,
-        statics,
+        capacity_const,
         &hash_params,
         sbox_type,
         &image,
@@ -131,7 +99,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
     let lv = verifier.commit(commitments.remove(0));
     let rv = verifier.commit(commitments.remove(0));
 
-    let statics = allocate_statics_for_verifier(verifier, 1, g, h);
+    let statics = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_3, g, h);
 
     Poseidon_hash_2_gadget(verifier, lv, rv, statics, &hash_params, sbox_type, &image)?;
     Ok(())
@@ -241,9 +209,16 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
     }
 
     let num_statics = 1;
-    let statics = allocate_statics_for_prover(prover, num_statics);
+    let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_5);
 
-    Poseidon_hash_4_gadget(prover, vars, statics, &hash_params, sbox_type, &image)?;
+    Poseidon_hash_4_gadget(
+        prover,
+        vars,
+        capacity_const,
+        &hash_params,
+        sbox_type,
+        &image,
+    )?;
 
     Ok(comms)
 }
@@ -266,9 +241,16 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_4(
     }
 
     let num_statics = 1;
-    let statics = allocate_statics_for_verifier(verifier, num_statics, g, h);
+    let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_5, g, h);
 
-    Poseidon_hash_4_gadget(verifier, allocs, statics, &hash_params, sbox_type, &image)?;
+    Poseidon_hash_4_gadget(
+        verifier,
+        allocs,
+        capacity_const,
+        &hash_params,
+        sbox_type,
+        &image,
+    )?;
 
     Ok(())
 }
@@ -382,8 +364,15 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
         vars.push(var);
     }
 
-    let (_, var) = prover.commit(FieldElement::from(ZERO_CONST), FieldElement::zero());
-    Poseidon_hash_8_gadget(prover, vars, var, &hash_params, sbox_type, &image)?;
+    let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_9);
+    Poseidon_hash_8_gadget(
+        prover,
+        vars,
+        capacity_const,
+        &hash_params,
+        sbox_type,
+        &image,
+    )?;
 
     Ok(comms)
 }
@@ -405,11 +394,16 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_8(
         vars.push(var);
     }
 
-    let zero_comm =
-        commit_to_field_element(g, h, &FieldElement::from(ZERO_CONST), &FieldElement::zero());
-    let v = verifier.commit(zero_comm.clone());
+    let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_9, g, h);
 
-    Poseidon_hash_8_gadget(verifier, vars, v, &hash_params, sbox_type, &image)?;
+    Poseidon_hash_8_gadget(
+        verifier,
+        vars,
+        capacity_const,
+        &hash_params,
+        sbox_type,
+        &image,
+    )?;
     Ok(())
 }
 
@@ -559,7 +553,7 @@ mod tests {
             FieldElement::random(),
             FieldElement::random(),
         ];
-        let expected_output = Poseidon_hash_4(inputs.clone(), &hash_params, sbox_type);
+        let image = Poseidon_hash_4(inputs.clone(), &hash_params, sbox_type);
 
         let label = b"PoseidonHash4:1";
 
@@ -567,7 +561,7 @@ mod tests {
         let (proof, commitments) = gen_proof_of_knowledge_of_preimage_of_Poseidon_4(
             inputs,
             None,
-            &expected_output,
+            &image,
             &hash_params,
             sbox_type,
             Some(&mut rng),
@@ -586,7 +580,7 @@ mod tests {
 
         let start = Instant::now();
         verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
-            &expected_output,
+            &image,
             &hash_params,
             sbox_type,
             proof,
