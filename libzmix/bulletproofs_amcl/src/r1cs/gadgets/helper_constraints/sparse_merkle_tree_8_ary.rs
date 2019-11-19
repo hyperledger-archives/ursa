@@ -7,11 +7,8 @@ use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
-use super::poseidon::{
-    PoseidonParams, Poseidon_hash_8, Poseidon_hash_8_constraints, SboxType, PADDING_CONST,
-};
+use super::poseidon::{PoseidonParams, Poseidon_hash_8, Poseidon_hash_8_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_bit_count, get_byte_size};
-use crate::r1cs::gadgets::helper_constraints::poseidon::ZERO_CONST;
 use crate::utils::hash_db::HashDb;
 
 const ARITY: usize = 8;
@@ -282,7 +279,7 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
     leaf_val: Variable,
     leaf_index: AllocatedQuantity,
     mut proof_nodes: Vec<Variable>,
-    zero: Variable,
+    capacity_const: Variable,
     poseidon_params: &PoseidonParams,
     sbox_type: &SboxType,
 ) -> Result<(), R1CSError> {
@@ -470,8 +467,13 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
         let c7 = c7_1 + c7_2;
 
         let input = vec![c0, c1, c2, c3, c4, c5, c6, c7];
-        prev_hash =
-            Poseidon_hash_8_constraints::<CS>(cs, input, zero.into(), poseidon_params, sbox_type)?;
+        prev_hash = Poseidon_hash_8_constraints::<CS>(
+            cs,
+            input,
+            capacity_const.into(),
+            poseidon_params,
+            sbox_type,
+        )?;
 
         prev_hash = prev_hash.simplify();
 

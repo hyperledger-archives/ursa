@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use rand::{CryptoRng, RngCore};
 
 use crate::r1cs::gadgets::poseidon_hash::{
-    allocate_statics_for_prover, allocate_statics_for_verifier,
+    allocate_capacity_const_for_prover, allocate_capacity_const_for_verifier,
 };
 
 use super::helper_constraints::poseidon::{PoseidonParams, SboxType};
@@ -18,6 +18,7 @@ use super::helper_constraints::sparse_merkle_tree_4_ary::{
     vanilla_merkle_merkle_tree_4_verif_gadget, DBVal_4_ary, ProofNode_4_ary,
     VanillaSparseMerkleTree_4,
 };
+use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
 
 pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
     leaf: FieldElement,
@@ -70,7 +71,7 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
     }
 
     let num_statics = 1;
-    let statics = allocate_statics_for_prover(prover, num_statics);
+    let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_5);
 
     vanilla_merkle_merkle_tree_4_verif_gadget(
         prover,
@@ -79,7 +80,7 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
         var_leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
-        statics,
+        capacity_const,
         &hash_params,
         sbox_type,
     )?;
@@ -112,7 +113,7 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree(
     }
 
     let num_statics = 1;
-    let statics = allocate_statics_for_verifier(verifier, num_statics, g, h);
+    let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_5, g, h);
 
     vanilla_merkle_merkle_tree_4_verif_gadget(
         verifier,
@@ -121,7 +122,7 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree(
         var_leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
-        statics,
+        capacity_const,
         hash_params,
         sbox_type,
     )?;
