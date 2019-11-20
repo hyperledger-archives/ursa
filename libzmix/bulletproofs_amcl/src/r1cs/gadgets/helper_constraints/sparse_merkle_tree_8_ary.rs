@@ -51,6 +51,7 @@ pub struct VanillaSparseMerkleTree_8<'a> {
 }
 
 impl<'a> VanillaSparseMerkleTree_8<'a> {
+    /// Create a new tree
     pub fn new(
         hash_params: &'a PoseidonParams,
         depth: usize,
@@ -89,6 +90,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         }
     }
 
+    /// Set the given `val` at the given leaf index `idx`
     pub fn update(
         &mut self,
         idx: &FieldElement,
@@ -101,6 +103,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         let mut sidenodes = sidenodes_wrap.unwrap();
 
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
+        // Reverse since path was from root to leaf but i am going leaf to root
         path.reverse();
         let mut cur_val = val.clone();
 
@@ -207,6 +210,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         }
     }
 
+    /// Get path from root to leaf given a leaf index
     /// Convert leaf index to base 8
     pub fn leaf_index_to_path(idx: &FieldElement, depth: usize) -> Vec<u8> {
         get_base_8_repr(idx, depth).to_vec()
@@ -271,6 +275,8 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
     c5 = (1 - b2 * (1 - (1 - b0) * (1 - b1))) * N5 + b2 * b1 * N6 + b2 * (1 - b1) * b0 * N
     c6 = b0*b1*b2*N7 + b2*(1-b0)*b1*N + (1-b1*b2)*N6
     c7 = b0*b1*b2*N + (1-b0*b1*b2)*N7
+
+    // TODO: Consider the trick from 4-ary tree here as well.
 */
 pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
