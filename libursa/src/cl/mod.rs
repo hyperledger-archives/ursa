@@ -157,7 +157,7 @@ impl CredentialValue {
 }
 
 /// Values of attributes from `Claim Schema` (must be integers).
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct CredentialValues {
     attrs_values: BTreeMap<String, CredentialValue>,
 }
@@ -810,7 +810,7 @@ pub struct BlindedCredentialSecretsCorrectnessProof {
 
 /// “Sub Proof Request” - input to create a Proof for a credential;
 /// Contains attributes to be revealed and predicates.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SubProofRequest {
     revealed_attrs: BTreeSet<String>,
     predicates: BTreeSet<Predicate>,
