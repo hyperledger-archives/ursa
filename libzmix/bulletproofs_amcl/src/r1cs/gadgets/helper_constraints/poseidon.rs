@@ -8,7 +8,7 @@ use super::super::helper_constraints::non_zero::is_nonzero_gadget;
 use crate::r1cs::gadgets::poseidon_constants::*;
 
 // Poseidon is described here https://eprint.iacr.org/2019/458
-
+// TODO: Give a overview of Poseidon construction relative of the code.
 #[derive(Clone, Debug)]
 pub struct PoseidonParams {
     pub width: usize,
@@ -32,6 +32,7 @@ impl PoseidonParams {
         partial_rounds: usize,
     ) -> PoseidonParams {
         if width != 3 && width != 5 && width != 9 {
+            // TODO: Convert panic to error
             panic!("Only width of 3, 5 or 9 are supported")
         }
         let total_rounds = full_rounds_beginning + partial_rounds + full_rounds_end;
@@ -59,6 +60,7 @@ impl PoseidonParams {
             _ => panic!("Unsupported width {}", width),
         };
         if ROUND_CONSTS.len() < cap {
+            // TODO: Convert panic to error
             panic!(
                 "Not enough round constants, need {}, found {}",
                 cap,
@@ -99,11 +101,13 @@ impl PoseidonParams {
             _ => panic!("Unsupported width {}", width),
         };
         if MDS_ENTRIES.len() != width {
+            // TODO: Convert panic to error
             panic!("Incorrect width, only width {} is supported now", width);
         }
         let mut mds: Vec<Vec<FieldElement>> = vec![vec![FieldElement::zero(); width]; width];
         for i in 0..width {
             if MDS_ENTRIES[i].len() != width {
+                // TODO: Convert panic to error
                 panic!("Incorrect width, only width {} is supported now", width);
             }
             for j in 0..width {
@@ -206,7 +210,7 @@ impl SboxType {
     }
 }
 
-/// Computes the permutation on the given inputs, parameters and Sbox
+/// Computes the permutation on the given inputs, parameters and Sbox and outputs the result of the permutation
 pub fn Poseidon_permutation(
     input: &[FieldElement],
     params: &PoseidonParams,
@@ -227,28 +231,49 @@ pub fn Poseidon_permutation(
 
     let mut round_keys_offset = 0;
 
-    // full Sbox rounds
-    for _ in 0..full_rounds_beginning {
-        // Sbox layer
-        for i in 0..width {
-            current_state[i] += &params.round_keys[round_keys_offset];
-            current_state[i] = sbox.apply_sbox(&current_state[i]);
-            round_keys_offset += 1;
-        }
+    /// Apply given number of full rounds.
+    // Using closure makes me wrap the mutables, i.e. current_state, current_state_temp, round_keys_offset
+    // in `RefCell`s which results in using borrow and borrow_mut at other places in code.
+    fn apply_full_rounds(
+        num_rounds: usize,
+        current_state: &mut Vec<FieldElement>,
+        current_state_temp: &mut Vec<FieldElement>,
+        round_keys_offset: &mut usize,
+        params: &PoseidonParams,
+        sbox: &SboxType,
+    ) {
+        for _ in 0..num_rounds {
+            // Sbox layer
+            for i in 0..params.width {
+                current_state[i] += &params.round_keys[*round_keys_offset];
+                current_state[i] = sbox.apply_sbox(&current_state[i]);
+                *round_keys_offset += 1;
+            }
 
-        // linear layer
-        for i in 0..width {
-            for j in 0..width {
-                current_state_temp[i] += &current_state[j] * &params.MDS_matrix[j][i];
+            // linear layer
+            for i in 0..params.width {
+                for j in 0..params.width {
+                    current_state_temp[i] += &current_state[j] * &params.MDS_matrix[j][i];
+                }
+            }
+
+            // Output of this round becomes input to next round
+            for i in 0..params.width {
+                current_state[i] = current_state_temp.remove(0);
+                current_state_temp.push(FieldElement::zero());
             }
         }
-
-        // Output of this round becomes input to next round
-        for i in 0..width {
-            current_state[i] = current_state_temp.remove(0);
-            current_state_temp.push(FieldElement::zero());
-        }
     }
+
+    // full Sbox rounds
+    apply_full_rounds(
+        full_rounds_beginning,
+        &mut current_state,
+        &mut current_state_temp,
+        &mut round_keys_offset,
+        params,
+        sbox,
+    );
 
     // middle partial Sbox rounds
     for _ in full_rounds_beginning..(full_rounds_beginning + partial_rounds) {
@@ -259,6 +284,7 @@ pub fn Poseidon_permutation(
 
         // partial Sbox layer, apply Sbox to only 1 element of the state.
         // Here the last one is chosen but the choice is arbitrary.
+        // TODO: This should be written in the paper not just in a diagram.
         current_state[width - 1] = sbox.apply_sbox(&current_state[width - 1]);
 
         // linear layer
@@ -275,35 +301,23 @@ pub fn Poseidon_permutation(
         }
     }
 
+    // TODO: Remove duplicate code below.
     // last full Sbox rounds
-    let loop_begin = full_rounds_beginning + partial_rounds;
-    let loop_end = full_rounds_beginning + partial_rounds + full_rounds_end;
-    for _ in loop_begin..loop_end {
-        // Sbox layer
-        for i in 0..width {
-            current_state[i] += &params.round_keys[round_keys_offset];
-            current_state[i] = sbox.apply_sbox(&current_state[i]);
-            round_keys_offset += 1;
-        }
-
-        // linear layer
-        for i in 0..width {
-            for j in 0..width {
-                current_state_temp[i] += &current_state[j] * &params.MDS_matrix[j][i];
-            }
-        }
-
-        // Output of this round becomes input to next round
-        for i in 0..width {
-            current_state[i] = current_state_temp.remove(0);
-            current_state_temp.push(FieldElement::zero());
-        }
-    }
+    apply_full_rounds(
+        full_rounds_end,
+        &mut current_state,
+        &mut current_state_temp,
+        &mut round_keys_offset,
+        params,
+        sbox,
+    );
 
     current_state
 }
 
-/// Enforces the permutation on the given inputs, parameters and Sbox
+/// Enforces the constraints of the Poseidon permutation with the given constraint system on the
+/// given inputs, parameters and Sbox. Output is a vector where each element of it is a linear
+/// combination corresponding to an output. The number of outputs is same as number of inputs
 pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     input: Vec<LinearCombination>,
@@ -326,7 +340,7 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
         }
     }
 
-    let mut input_vars: Vec<LinearCombination> = input;
+    let mut current_state_vars: Vec<LinearCombination> = input;
 
     let mut round_keys_offset = 0;
 
@@ -334,30 +348,52 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
     let partial_rounds = params.partial_rounds;
     let full_rounds_end = params.full_rounds_end;
 
-    // ------------ First full_rounds_beginning rounds begin --------------------
+    /// Apply full rounds
+    fn apply_full_rounds<CS: ConstraintSystem>(
+        num_rounds: usize,
+        cs: &mut CS,
+        input_vars: &mut Vec<LinearCombination>,
+        round_keys_offset: &mut usize,
+        params: &PoseidonParams,
+        sbox_type: &SboxType,
+    ) -> Result<(), R1CSError> {
+        for _ in 0..num_rounds {
+            let mut sbox_outputs: Vec<LinearCombination> =
+                vec![LinearCombination::default(); params.width];
 
-    for _ in 0..full_rounds_beginning {
-        let mut sbox_outputs: Vec<LinearCombination> = vec![LinearCombination::default(); width];
+            // Substitution (S-box) layer
+            for i in 0..params.width {
+                let round_key = params.round_keys[*round_keys_offset].clone();
+                sbox_outputs[i] = sbox_type
+                    .synthesize_sbox(cs, input_vars[i].clone(), round_key)?
+                    .into();
 
-        // Substitution (S-box) layer
-        for i in 0..width {
-            let round_key = params.round_keys[round_keys_offset].clone();
-            sbox_outputs[i] = sbox_type
-                .synthesize_sbox(cs, input_vars[i].clone(), round_key)?
-                .into();
+                *round_keys_offset += 1;
+            }
 
-            round_keys_offset += 1;
+            let mut next_input_vars: Vec<LinearCombination> =
+                vec![LinearCombination::default(); params.width];
+
+            apply_linear_layer(sbox_outputs, &mut next_input_vars, &params.MDS_matrix);
+
+            for i in 0..params.width {
+                // replace input_vars with next_input_vars
+                input_vars[i] = next_input_vars.remove(0);
+            }
         }
-
-        let mut next_input_vars: Vec<LinearCombination> = vec![LinearCombination::default(); width];
-
-        apply_linear_layer(sbox_outputs, &mut next_input_vars, &params.MDS_matrix);
-
-        for i in 0..width {
-            // replace input_vars with next_input_vars
-            input_vars[i] = next_input_vars.remove(0);
-        }
+        Ok(())
     }
+
+    // ------------ First full rounds begin --------------------
+
+    apply_full_rounds(
+        full_rounds_beginning,
+        cs,
+        &mut current_state_vars,
+        &mut round_keys_offset,
+        params,
+        sbox_type,
+    )?;
 
     // ------------ First full_rounds_beginning rounds end --------------------
 
@@ -374,10 +410,10 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
             // Here the last one is chosen but the choice is arbitrary.
             if i == width - 1 {
                 sbox_outputs[i] = sbox_type
-                    .synthesize_sbox(cs, input_vars[i].clone(), round_key)?
+                    .synthesize_sbox(cs, current_state_vars[i].clone(), round_key)?
                     .into();
             } else {
-                sbox_outputs[i] = input_vars[i].clone() + round_key;
+                sbox_outputs[i] = current_state_vars[i].clone() + round_key;
             }
 
             round_keys_offset += 1;
@@ -391,47 +427,31 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
 
         for i in 0..width {
             // replace input_vars with simplified next_input_vars
-            input_vars[i] = next_input_vars.remove(0).simplify();
+            current_state_vars[i] = next_input_vars.remove(0).simplify();
         }
     }
 
     // ------------ Middle rounds end --------------------
 
-    // ------------ Last rounds with full SBox begin --------------------
+    // ------------ Last full rounds begin --------------------
 
-    // 3 rounds
-    for _ in full_rounds_beginning + partial_rounds
-        ..(full_rounds_beginning + partial_rounds + full_rounds_end)
-    {
-        let mut sbox_outputs: Vec<LinearCombination> = vec![LinearCombination::default(); width];
-
-        // Substitution (S-box) layer
-        for i in 0..width {
-            let round_key = params.round_keys[round_keys_offset].clone();
-            sbox_outputs[i] = sbox_type
-                .synthesize_sbox(cs, input_vars[i].clone(), round_key)?
-                .into();
-
-            round_keys_offset += 1;
-        }
-
-        // Linear layer
-
-        let mut next_input_vars: Vec<LinearCombination> = vec![LinearCombination::default(); width];
-
-        apply_linear_layer(sbox_outputs, &mut next_input_vars, &params.MDS_matrix);
-
-        for i in 0..width {
-            // replace input_vars with next_input_vars
-            input_vars[i] = next_input_vars.remove(0);
-        }
-    }
+    apply_full_rounds(
+        full_rounds_end,
+        cs,
+        &mut current_state_vars,
+        &mut round_keys_offset,
+        params,
+        sbox_type,
+    )?;
 
     // ------------ Last rounds with full SBox end --------------------
 
-    Ok(input_vars)
+    Ok(current_state_vars)
 }
 
+/// More specific than `Poseidon_permutation_constraints`. Takes input and expected output and
+/// checks that the permutation output matches the expected output.
+/// Input are circuit variables (or linear combinations of them) and output is a public element
 pub fn Poseidon_permutation_gadget<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     input: Vec<AllocatedQuantity>,
@@ -453,15 +473,17 @@ pub fn Poseidon_permutation_gadget<'a, CS: ConstraintSystem>(
     Ok(())
 }
 
-// 2:1 (2 inputs, 1 output) hash from the permutation by passing the first input as capacity constant
+// TODO: Say about the 2 types of hash, fixed input vs var input. Explain why capacity constant?
+// Hash from the permutation by passing the first input as capacity constant.
 // Capacity constants should have the least significant width-1 bits set and rest unset
-// Capacity constant for width 3,   000000000...11
+// Capacity constant for width 3,   000000000...0011
 pub const CAP_CONST_W_3: u64 = 3;
-// Capacity constant for width 5,   0000000...1111
+// Capacity constant for width 5,   0000000...001111
 pub const CAP_CONST_W_5: u64 = 31;
-// Capacity constant for width 9,   000...11111111
+// Capacity constant for width 9,   000...0011111111
 pub const CAP_CONST_W_9: u64 = 511;
 
+/// Hashes 2 inputs to give a single output
 pub fn Poseidon_hash_2(
     xl: FieldElement,
     xr: FieldElement,
@@ -469,8 +491,8 @@ pub fn Poseidon_hash_2(
     sbox: &SboxType,
 ) -> FieldElement {
     // Only 2 elements to the permutation are set to the input of this hash function,
-    // one is set to the capacity constant. Always keep the 1st element of the permutation as the
-    // capacity constant.
+    // one is set to the capacity constant.
+    // Always keep the 1st element of the permutation as the capacity constant.
 
     let input = vec![FieldElement::from(CAP_CONST_W_3), xl, xr];
 
@@ -479,6 +501,7 @@ pub fn Poseidon_hash_2(
     out
 }
 
+/// Enforces constraints for Poseidon_hash_2 for the given constraint system and Poseidon params
 pub fn Poseidon_hash_2_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     xl: LinearCombination,
@@ -498,6 +521,8 @@ pub fn Poseidon_hash_2_constraints<'a, CS: ConstraintSystem>(
     Ok(permutation_output[1].to_owned())
 }
 
+/// Enforces constraints for Poseidon_hash_2 for the given constraint system and Poseidon params
+/// and constraints the output of the hash to given `image`.
 pub fn Poseidon_hash_2_gadget<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     xl: Variable,
@@ -505,7 +530,7 @@ pub fn Poseidon_hash_2_gadget<'a, CS: ConstraintSystem>(
     capacity_const: Variable,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
-    output: &FieldElement,
+    image: &FieldElement,
 ) -> Result<(), R1CSError> {
     let hash = Poseidon_hash_2_constraints::<CS>(
         cs,
@@ -516,11 +541,12 @@ pub fn Poseidon_hash_2_gadget<'a, CS: ConstraintSystem>(
         sbox_type,
     )?;
 
-    constrain_lc_with_scalar::<CS>(cs, hash, output);
+    constrain_lc_with_scalar::<CS>(cs, hash, image);
 
     Ok(())
 }
 
+/// Hashes 4 inputs to give a single output
 pub fn Poseidon_hash_4(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
@@ -537,6 +563,7 @@ pub fn Poseidon_hash_4(
     out
 }
 
+/// Enforces constraints for Poseidon_hash_4 for the given constraint system and Poseidon params
 pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     mut inputs: Vec<LinearCombination>,
@@ -544,6 +571,7 @@ pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
 ) -> Result<LinearCombination, R1CSError> {
+    // TODO: Code deduplication with macros
     let width = params.width;
     // Only 4 inputs to the permutation are set to the input of this hash function.
     assert_eq!(inputs.len(), 4);
@@ -556,13 +584,15 @@ pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
     Ok(permutation_output[1].to_owned())
 }
 
+/// Enforces constraints for Poseidon_hash_4 for the given constraint system and Poseidon params
+/// and constraints the output of the hash to given `image`.
 pub fn Poseidon_hash_4_gadget<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     input: Vec<Variable>,
     capacity_const: Variable,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
-    output: &FieldElement,
+    image: &FieldElement,
 ) -> Result<(), R1CSError> {
     assert_eq!(input.len(), 4);
 
@@ -577,11 +607,12 @@ pub fn Poseidon_hash_4_gadget<'a, CS: ConstraintSystem>(
         sbox_type,
     )?;
 
-    constrain_lc_with_scalar::<CS>(cs, hash, output);
+    constrain_lc_with_scalar::<CS>(cs, hash, image);
 
     Ok(())
 }
 
+/// Hashes 2 inputs to give a single output
 /// Only 8 inputs to the permutation are set to the input of this hash function,
 /// one is set to capacity constant. Always keep the 1st input as capacity constant
 pub fn Poseidon_hash_8(
@@ -598,6 +629,7 @@ pub fn Poseidon_hash_8(
     out
 }
 
+/// Enforces constraints for Poseidon_hash_8 for the given constraint system and Poseidon params
 pub fn Poseidon_hash_8_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     mut input: Vec<LinearCombination>,
@@ -615,13 +647,15 @@ pub fn Poseidon_hash_8_constraints<'a, CS: ConstraintSystem>(
     Ok(permutation_output[1].to_owned())
 }
 
+/// Enforces constraints for Poseidon_hash_8 for the given constraint system and Poseidon params
+/// and constraints the output of the hash to given `image`.
 pub fn Poseidon_hash_8_gadget<'a, CS: ConstraintSystem>(
     cs: &mut CS,
     input: Vec<Variable>,
     capacity_const: Variable,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
-    output: &FieldElement,
+    image: &FieldElement,
 ) -> Result<(), R1CSError> {
     assert_eq!(input.len(), 8);
     let hash = Poseidon_hash_8_constraints::<CS>(
@@ -635,7 +669,7 @@ pub fn Poseidon_hash_8_gadget<'a, CS: ConstraintSystem>(
         sbox_type,
     )?;
 
-    constrain_lc_with_scalar::<CS>(cs, hash, output);
+    constrain_lc_with_scalar::<CS>(cs, hash, image);
 
     Ok(())
 }

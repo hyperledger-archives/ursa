@@ -19,6 +19,7 @@ pub type ProofNode_4_ary = [FieldElement; 3];
 pub fn get_base_4_repr(scalar: &FieldElement, num_digits: usize) -> Vec<u8> {
     let byte_size = get_byte_size(num_digits, 4);
     if byte_size > MODBYTES {
+        // TODO: Convert panic to error
         panic!(
             "limit_bytes cannot be more than {} but found {}",
             MODBYTES, byte_size
@@ -41,6 +42,7 @@ pub fn get_base_4_repr(scalar: &FieldElement, num_digits: usize) -> Vec<u8> {
 }
 
 // TODO: ABSTRACT HASH FUNCTION BETTER
+// Consider usage of SHA as a hash function as well for testing
 /// Sparse merkle tree with arity 4, .i.e each node has 4 children.
 #[derive(Clone, Debug)]
 pub struct VanillaSparseMerkleTree_4<'a> {
@@ -49,12 +51,18 @@ pub struct VanillaSparseMerkleTree_4<'a> {
     pub root: FieldElement,
 }
 
+/// For details here of sparse merkle trees, check here https://ethresear.ch/t/optimizing-sparse-merkle-trees/3751
+
 impl<'a> VanillaSparseMerkleTree_4<'a> {
+    /// Create a new tree
+    /// Requires a database to hold leaves and nodes. The db should implement the `HashDb` trait
     pub fn new(
         hash_params: &'a PoseidonParams,
         depth: usize,
         hash_db: &mut HashDb<DBVal_4_ary>,
     ) -> VanillaSparseMerkleTree_4<'a> {
+        /// Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
+        /// Since all leaves are same, all nodes at the same level will have the same value.
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
@@ -84,27 +92,30 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         }
     }
 
+    /// Set the given `val` at the given leaf index `idx`
     pub fn update(
         &mut self,
         idx: &FieldElement,
         val: FieldElement,
         hash_db: &mut HashDb<DBVal_4_ary>,
     ) -> Result<FieldElement, R1CSError> {
-        // Find path to insert the new key
-        let mut sidenodes_wrap = Some(Vec::<ProofNode_4_ary>::new());
-        self.get(&idx, &mut sidenodes_wrap, hash_db)?;
-        let mut sidenodes = sidenodes_wrap.unwrap();
+        // Find path to insert the new key. siblings are the the sibling nodes at each level from
+        // the root to the leaf for the `idx`
+        let mut siblings_wrap = Some(Vec::<ProofNode_4_ary>::new());
+        self.get(&idx, &mut siblings_wrap, hash_db)?;
+        let mut siblings = siblings_wrap.unwrap();
 
         // Convert leaf index to base 4
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
+        // Reverse since path was from root to leaf but i am going leaf to root
         path.reverse();
         let mut cur_val = val;
 
         // Iterate over the base 4 digits
         for d in path {
-            let mut side_elem = sidenodes.pop().unwrap().to_vec();
+            let mut sibling_elem = siblings.pop().unwrap().to_vec();
             // Insert the value at the position determined by the base 4 digit
-            side_elem.insert(d as usize, cur_val);
+            sibling_elem.insert(d as usize, cur_val);
 
             let mut db_val: DBVal_4_ary = [
                 FieldElement::zero(),
@@ -112,8 +123,8 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
                 FieldElement::zero(),
                 FieldElement::zero(),
             ];
-            db_val.clone_from_slice(side_elem.as_slice());
-            let h = Poseidon_hash_4(side_elem, self.hash_params, &SboxType::Quint);
+            db_val.clone_from_slice(sibling_elem.as_slice());
+            let h = Poseidon_hash_4(sibling_elem, self.hash_params, &SboxType::Quint);
             Self::update_db_with_key_val(&h, db_val, hash_db);
             cur_val = h;
         }
@@ -132,7 +143,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
     ) -> Result<FieldElement, R1CSError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
-
+        // TODO: more comments
         let need_proof = proof.is_some();
         let mut proof_vec = Vec::<ProofNode_4_ary>::new();
 
@@ -193,6 +204,8 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         }
     }
 
+    /// Get path from root to leaf given a leaf index
+    /// Convert leaf index to base 4
     pub fn leaf_index_to_path(idx: &FieldElement, depth: usize) -> Vec<u8> {
         get_base_4_repr(idx, depth).to_vec()
     }
@@ -238,6 +251,10 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
     | c1     | N1       | N        | N2        | N2        |
     | c2     | N2       | N2       | N         | N3        |
     | c3     | N3       | N3       | N3        | N         |
+
+    // TODO: Think about it. Don't need bits.
+    c_k = c_{k-1} || c_k || c_{k+1}.
+    c_k = N_k || N || N_{k+1}
 
     Arithmetic relations for c0, c1, c2 and c3
 

@@ -15,6 +15,8 @@ use super::helper_constraints::poseidon::{
 };
 use amcl_wrapper::commitment::commit_to_field_element;
 
+// TODO: Comment on the distinction between wrapper and non-wrapper code.
+
 /// Allocate capacity constant for Prover. Blinding is kept 0
 pub fn allocate_capacity_const_for_prover(prover: &mut Prover, capacity_const: u64) -> Variable {
     let (_, var) = prover.commit(FieldElement::from(capacity_const), FieldElement::zero());
@@ -105,7 +107,8 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
     Ok(())
 }
 
-/// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output
+/// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output.
+/// TODO: Why `prove_knowledge_of_preimage_of_Poseidon_2` and `gen_proof_of_knowledge_of_preimage_of_Poseidon_2`
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
@@ -208,7 +211,6 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
         vars.push(var);
     }
 
-    let num_statics = 1;
     let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_5);
 
     Poseidon_hash_4_gadget(
@@ -240,7 +242,6 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_4(
         allocs.push(var);
     }
 
-    let num_statics = 1;
     let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_5, g, h);
 
     Poseidon_hash_4_gadget(

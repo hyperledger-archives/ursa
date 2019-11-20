@@ -36,3 +36,23 @@ impl<T: Clone> InMemoryHashDb<T> {
         Self { db }
     }
 }
+
+/*pub trait HashFunc<T: Clone> {
+    fn hash(&self, hash: Vec<u8>) -> Result<T, R1CSError>;
+}*/
+
+/*
+TODO: Hash func abstraction
+pub trait HashFunc<T: Clone> {
+    fn hash(&self, hash: Vec<u8>);
+}
+
+struct poseidon {state: Any}
+
+impl poseidon {
+    fn new(**args)
+}
+
+impl  HashFunc for poseidon {
+
+}*/

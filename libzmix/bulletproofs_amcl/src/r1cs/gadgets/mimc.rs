@@ -9,6 +9,7 @@ use rand::{CryptoRng, RngCore};
 
 use super::helper_constraints::mimc::{mimc, mimc_gadget};
 
+/// Takes a Prover and enforces the constraints of MiMC hash with 2 inputs and 1 output
 pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
     mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
@@ -55,6 +56,7 @@ pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
     Ok(vec![com_l, com_r])
 }
 
+/// Takes a Verifier and enforces the constraints of MiMC hash with 2 inputs and 1 output
 pub fn verify_mimc_preimage(
     image: &FieldElement,
     constants: &[FieldElement],
@@ -87,6 +89,7 @@ pub fn verify_mimc_preimage(
     Ok(())
 }
 
+/// Initializes a Prover and creates proof of knowledge of preimage of MiMC hash with 2 inputs and 1 output.
 pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
@@ -124,6 +127,7 @@ pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
     Ok((proof, comms))
 }
 
+/// Initializes a Verifier and verifies proof of knowledge of preimage of MiMC hash with 2 inputs and 1 output
 pub fn verify_knowledge_of_preimage_of_mimc(
     image: &FieldElement,
     constants: &[FieldElement],

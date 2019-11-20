@@ -2,6 +2,10 @@ extern crate amcl_wrapper;
 
 // MDS entries and round constants are suffixed with _W_{width}, so MDS_ENTRIES_W_5 corresponds to MDS matrix for width 5
 
+// The following values were received from the author but can be recomputed by running the provided sage and python
+// files in the `sage` directory. The sage files were found in this repo https://extgit.iaik.tugraz.at/krypto/hadeshash
+// as mentioned in the paper
+
 #[cfg(feature = "bls381")]
 pub const MDS_ENTRIES_W_3: [[&str; 3]; 3] = [
     [

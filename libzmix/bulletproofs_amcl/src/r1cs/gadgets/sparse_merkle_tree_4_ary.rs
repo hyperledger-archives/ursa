@@ -70,7 +70,6 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
         }
     }
 
-    let num_statics = 1;
     let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_5);
 
     vanilla_merkle_merkle_tree_4_verif_gadget(
@@ -112,7 +111,6 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree(
         proof_vars.push(v);
     }
 
-    let num_statics = 1;
     let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_5, g, h);
 
     vanilla_merkle_merkle_tree_4_verif_gadget(
