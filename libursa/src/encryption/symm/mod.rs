@@ -150,10 +150,13 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
         })
     }
 
+    // Encrypt `plaintext` and integrity protect `aad`. The result is the ciphertext.
+    // This method handles safely generating a `nonce` and prepends it to the ciphertext
     pub fn encrypt_easy<A: AsRef<[u8]>>(&self, aad: A, plaintext: A) -> Result<Vec<u8>, Error> {
         self.encryptor.encrypt_easy(aad, plaintext)
     }
 
+    // Encrypt `plaintext` and integrity protect `aad`. The result is the ciphertext.
     pub fn encrypt<A: AsRef<[u8]>>(
         &self,
         nonce: A,
@@ -168,10 +171,19 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
         self.encryptor.encrypt(nonce, payload)
     }
 
+    // Decrypt `ciphertext` using integrity protected `aad`. The result is the plaintext if successful
+    // or an error if the `ciphetext` cannot be decrypted due to tampering, an incorrect `aad` value,
+    // or incorrect key.
+    // `aad` must be the same value used in `encrypt_easy`. Expects the nonce to be prepended to
+    // the `ciphertext`
     pub fn decrypt_easy<A: AsRef<[u8]>>(&self, aad: A, ciphertext: A) -> Result<Vec<u8>, Error> {
         self.encryptor.decrypt_easy(aad, ciphertext)
     }
 
+    // Decrypt `ciphertext` using integrity protected `aad`. The result is the plaintext if successful
+    // or an error if the `ciphetext` cannot be decrypted due to tampering, an incorrect `aad` value,
+    // or incorrect key.
+    // `aad` must be the same value used in `encrypt_easy`.
     pub fn decrypt<A: AsRef<[u8]>>(
         &self,
         nonce: A,
@@ -186,6 +198,7 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
         self.encryptor.decrypt(nonce, payload)
     }
 
+    // Similar to `encrypt_easy` but reads from a stream instead of a slice
     pub fn encrypt_buffer<A: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: A,
@@ -195,6 +208,7 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
         self.encryptor.encrypt_buffer(aad, plaintext, ciphertext)
     }
 
+    // Similar to `decrypt_easy` but reads from a stream instead of a slice
     pub fn decrypt_buffer<A: AsRef<[u8]>, I: Read, O: Write>(
         &self,
         aad: A,
