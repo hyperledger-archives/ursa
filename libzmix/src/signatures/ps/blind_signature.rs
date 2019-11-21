@@ -140,7 +140,7 @@ mod tests {
     fn test_blinding_key() {
         let count_msgs = 5;
         let params = Params::new("test".as_bytes());
-        let (vk, sk) = keygen(count_msgs, &params);
+        let (_, sk) = keygen(count_msgs, &params);
         let blinding_key = BlindingKey::new(&sk, &params);
         assert_eq!(blinding_key.Y.len(), count_msgs);
     }

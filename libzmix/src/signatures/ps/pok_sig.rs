@@ -42,6 +42,7 @@ pub struct PoKOfSignature {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
+    // This is the randomized signature.
     pub sig: Signature,
     pub J: OtherGroup,
     pub proof_vc: ProofOtherGroup,
@@ -129,7 +130,10 @@ impl PoKOfSignature {
         })
     }
 
-    /// Return byte representation of public elements so they can be used for challenge computation
+    /// Return byte representation of public elements so they can be used for challenge computation.
+    /// Takes bytes of the randomized signature, the "commitment" to non-revealed messages (J) and the
+    /// generators and the commitment to randomness used in the proof of knowledge of "non-revealed" messages.
+    /// Called by the prover.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.append(&mut self.sig.to_bytes());
@@ -149,6 +153,35 @@ impl PoKOfSignature {
 }
 
 impl PoKOfSignatureProof {
+    /// Return bytes that need to be hashed for generating challenge. Since the message only requires
+    /// commitment to "non-revealed" messages of signature, generators of only those messages are
+    /// to be considered for challenge creation.
+    /// Takes bytes of the randomized signature, the "commitment" to non-revealed messages (J) and the
+    /// generators and the commitment to randomness used in the proof of knowledge of "non-revealed" messages.
+    /// Used by the verifier. The output of this method should be same as the output of `PoKOfSignature::to_bytes`
+    /// for a specific protocol execution
+    pub fn get_bytes_for_challenge(
+        &self,
+        revealed_msg_indices: HashSet<usize>,
+        vk: &Verkey,
+        params: &Params,
+    ) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.sig.to_bytes());
+        bytes.append(&mut self.J.to_bytes());
+        bytes.append(&mut params.g_tilde.to_bytes());
+        for i in 0..vk.Y_tilde.len() {
+            if revealed_msg_indices.contains(&i) {
+                continue;
+            }
+            let mut b = vk.Y_tilde[i].to_bytes();
+            bytes.append(&mut b);
+        }
+        bytes.append(&mut self.proof_vc.commitment.to_bytes());
+        bytes
+    }
+
+    /// Verifies the proof. The verifier should generate the challenge on its own.
     pub fn verify(
         &self,
         vk: &Verkey,
@@ -320,11 +353,14 @@ mod tests {
             HashSet::new(),
         )
         .unwrap();
-        let chal_1 = FieldElement::from_msg_hash(&pok_1.to_bytes());
-        let proof_1 = pok_1.gen_proof(&chal_1).unwrap();
+        let chal_prover = FieldElement::from_msg_hash(&pok_1.to_bytes());
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
 
+        // The verifier generates the challenge on its own.
+        let chal_bytes = proof_1.get_bytes_for_challenge(HashSet::new(), &vk, &params);
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
         assert!(proof_1
-            .verify(&vk, &params, HashMap::new(), &chal_1)
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
             .unwrap());
     }
 
@@ -352,23 +388,27 @@ mod tests {
         )
         .unwrap();
 
-        let chal = FieldElement::from_msg_hash(&pok.to_bytes());
+        let chal_prover = FieldElement::from_msg_hash(&pok.to_bytes());
 
-        let proof = pok.gen_proof(&chal).unwrap();
+        let proof = pok.gen_proof(&chal_prover).unwrap();
 
         let mut revealed_msgs = HashMap::new();
         for i in &revealed_msg_indices {
             revealed_msgs.insert(i.clone(), msgs[*i].clone());
         }
+
+        // The verifier generates the challenge on its own.
+        let chal_bytes = proof.get_bytes_for_challenge(revealed_msg_indices.clone(), &vk, &params);
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
         assert!(proof
-            .verify(&vk, &params, revealed_msgs.clone(), &chal)
+            .verify(&vk, &params, revealed_msgs.clone(), &chal_verifier)
             .unwrap());
 
         // Reveal wrong message
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
         assert!(!proof
-            .verify(&vk, &params, revealed_msgs_1.clone(), &chal)
+            .verify(&vk, &params, revealed_msgs_1.clone(), &chal_verifier)
             .unwrap());
 
         // PoK with supplied blindings
@@ -382,10 +422,15 @@ mod tests {
             revealed_msg_indices.clone(),
         )
         .unwrap();
-        let chal_1 = FieldElement::from_msg_hash(&pok_1.to_bytes());
-        let proof_1 = pok_1.gen_proof(&chal_1).unwrap();
+        let chal_prover = FieldElement::from_msg_hash(&pok_1.to_bytes());
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let chal_bytes =
+            proof_1.get_bytes_for_challenge(revealed_msg_indices.clone(), &vk, &params);
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
         assert!(proof_1
-            .verify(&vk, &params, revealed_msgs.clone(), &chal_1)
+            .verify(&vk, &params, revealed_msgs.clone(), &chal_verifier)
             .unwrap());
 
         let blindings_more =
@@ -463,16 +508,24 @@ mod tests {
 
         let pok = PoKOfSignature::init(&sig, &vk, &params, msgs.as_slice(), None, HashSet::new())
             .unwrap();
-        let chal = FieldElement::from_msg_hash(&pok.to_bytes());
-        let proof = pok.gen_proof(&chal).unwrap();
+        let chal_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&chal_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let chal_bytes = proof.get_bytes_for_challenge(HashSet::new(), &vk, &params);
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
 
         // Verification fails with bad verkey
         let mut vk_1 = vk.clone();
         vk_1.Y_tilde.push(OtherGroup::new());
-        assert!(proof.verify(&vk_1, &params, HashMap::new(), &chal).is_err());
+        assert!(proof
+            .verify(&vk_1, &params, HashMap::new(), &chal_verifier)
+            .is_err());
 
         // Verification passes with correct verkey
-        assert!(proof.verify(&vk, &params, HashMap::new(), &chal).unwrap());
+        assert!(proof
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
+            .unwrap());
     }
 
     #[test]
@@ -513,13 +566,23 @@ mod tests {
         chal_bytes.append(&mut pok_1.to_bytes());
         chal_bytes.append(&mut pok_2.to_bytes());
 
-        let chal = FieldElement::from_msg_hash(&chal_bytes);
+        let chal_prover = FieldElement::from_msg_hash(&chal_bytes);
 
-        let proof_1 = pok_1.gen_proof(&chal).unwrap();
-        let proof_2 = pok_2.gen_proof(&chal).unwrap();
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
 
-        assert!(proof_1.verify(&vk, &params, HashMap::new(), &chal).unwrap());
-        assert!(proof_2.verify(&vk, &params, HashMap::new(), &chal).unwrap());
+        // The verifier generates the challenge on its own.
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(HashSet::new(), &vk, &params));
+        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(HashSet::new(), &vk, &params));
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+
+        assert!(proof_1
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
+            .unwrap());
+        assert!(proof_2
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
+            .unwrap());
     }
 
     #[test]
@@ -580,10 +643,16 @@ mod tests {
         chal_bytes.append(&mut pok_1.to_bytes());
         chal_bytes.append(&mut pok_2.to_bytes());
 
-        let chal = FieldElement::from_msg_hash(&chal_bytes);
+        let chal_prover = FieldElement::from_msg_hash(&chal_bytes);
 
-        let proof_1 = pok_1.gen_proof(&chal).unwrap();
-        let proof_2 = pok_2.gen_proof(&chal).unwrap();
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(HashSet::new(), &vk, &params));
+        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(HashSet::new(), &vk, &params));
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
 
         // Response for the same message should be same (this check is made by the verifier)
         // 1 added to the index, since 0th index is reserved for randomization (`t`)
@@ -593,8 +662,12 @@ mod tests {
             proof_2.proof_vc.responses[1 + 4]
         );
 
-        assert!(proof_1.verify(&vk, &params, HashMap::new(), &chal).unwrap());
-        assert!(proof_2.verify(&vk, &params, HashMap::new(), &chal).unwrap());
+        assert!(proof_1
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
+            .unwrap());
+        assert!(proof_2
+            .verify(&vk, &params, HashMap::new(), &chal_verifier)
+            .unwrap());
     }
 
     #[test]
@@ -618,13 +691,18 @@ mod tests {
                 PoKOfSignature::init(&sig, &vk, &params, msgs.as_slice(), None, HashSet::new())
                     .unwrap();
 
-            let chal = FieldElement::from_msg_hash(&pok.to_bytes());
+            let chal_prover = FieldElement::from_msg_hash(&pok.to_bytes());
 
-            let proof = pok.gen_proof(&chal).unwrap();
+            let proof = pok.gen_proof(&chal_prover).unwrap();
             total_generating += start.elapsed();
 
             let start = Instant::now();
-            assert!(proof.verify(&vk, &params, HashMap::new(), &chal).unwrap());
+            // The verifier generates the challenge on its own.
+            let chal_bytes = proof.get_bytes_for_challenge(HashSet::new(), &vk, &params);
+            let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+            assert!(proof
+                .verify(&vk, &params, HashMap::new(), &chal_verifier)
+                .unwrap());
             total_verifying += start.elapsed();
         }
 
