@@ -10,11 +10,11 @@ use criterion::Criterion;
 use std::collections::{HashMap, HashSet};
 
 use zmix::signatures::bbs::keys::generate as bbs_keys_generate;
-use zmix::signatures::bbs::signature::Signature as BBSSignature;
 use zmix::signatures::bbs::pok_sig::PoKOfSignature as BBSPoKOfSignature;
+use zmix::signatures::bbs::signature::Signature as BBSSignature;
 use zmix::signatures::ps::keys::{keygen as ps_keys_generate, Params};
-use zmix::signatures::ps::signature::Signature as PSSignature;
 use zmix::signatures::ps::pok_sig::PoKOfSignature as PSPoKOfSignature;
+use zmix::signatures::ps::signature::Signature as PSSignature;
 use zmix::signatures::SignatureMessageVector;
 
 fn keypair_benchmark(c: &mut Criterion) {
@@ -45,9 +45,7 @@ fn sign_messages_benchmark(c: &mut Criterion) {
     }
 }
 
-fn bbs_sign_committed_messages_benchmark(c: &mut Criterion) {
-
-}
+fn bbs_sign_committed_messages_benchmark(c: &mut Criterion) {}
 
 fn bbs_prove_benchmark(c: &mut Criterion) {
     for atts in vec![1, 2, 5, 10, 20, 50, 100, 200] {
@@ -58,12 +56,15 @@ fn bbs_prove_benchmark(c: &mut Criterion) {
 
         c.bench_function(format!("bbs+ generate proof {} atts", atts).as_str(), |b| {
             b.iter(|| {
-                let pok = BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new()).unwrap();
+                let pok =
+                    BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new())
+                        .unwrap();
                 let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
                 pok.gen_proof(&challenge).unwrap()
             })
         });
-        let poks = BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new()).unwrap();
+        let poks = BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new())
+            .unwrap();
         let challenge = FieldElement::from_msg_hash(&poks.to_bytes());
         let proof = poks.gen_proof(&challenge).unwrap();
         c.bench_function(format!("bbs+ verify proof {} atts", atts).as_str(), |b| {
@@ -78,13 +79,29 @@ fn bbs_prove_benchmark(c: &mut Criterion) {
 
         c.bench_function(format!("ps generate proof {} atts", atts).as_str(), |b| {
             b.iter(|| {
-                let pok = PSPoKOfSignature::init(&sig, &pk, &params, attributes.as_slice(), None, HashSet::new()).unwrap();
+                let pok = PSPoKOfSignature::init(
+                    &sig,
+                    &pk,
+                    &params,
+                    attributes.as_slice(),
+                    None,
+                    HashSet::new(),
+                )
+                .unwrap();
                 let chal = FieldElement::from_msg_hash(&pok.to_bytes());
                 pok.gen_proof(&chal).unwrap()
             })
         });
 
-        let pok = PSPoKOfSignature::init(&sig, &pk, &params, attributes.as_slice(), None, HashSet::new()).unwrap();
+        let pok = PSPoKOfSignature::init(
+            &sig,
+            &pk,
+            &params,
+            attributes.as_slice(),
+            None,
+            HashSet::new(),
+        )
+        .unwrap();
         let chal = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&chal).unwrap();
 

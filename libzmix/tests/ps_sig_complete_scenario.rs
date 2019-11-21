@@ -1,6 +1,7 @@
 extern crate amcl_wrapper;
 extern crate zmix;
 
+use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;
 use std::collections::{HashMap, HashSet};
 use zmix::signatures::prelude::*;
@@ -9,7 +10,10 @@ use zmix::signatures::ps::keys::Params;
 use zmix::signatures::ps::prelude::*;
 
 #[test]
-fn test_scenario_1() {
+fn test_PS_sig_and_proof_of_knowledge_of_sig() {
+    // For PS signature
+    // A complete scenario showing requesting of signature, creation of signature, verification of signature,
+    // proving knowledge of signature and verifying this proof of knowledge.
     // User request signer to sign 10 messages where signer knows only 8 messages, the other 2 are given in a form of commitment.
     // Once user receives the signature, it engages in a proof of knowledge of signature with a verifier.
     // The user also reveals to the verifier some of the messages.
@@ -84,15 +88,19 @@ fn test_scenario_1() {
     )
     .unwrap();
 
-    let chal = SignatureMessage::from_msg_hash(&pok.to_bytes());
+    let chal_prover = SignatureMessage::from_msg_hash(&pok.to_bytes());
 
-    let proof = pok.gen_proof(&chal).unwrap();
+    let proof = pok.gen_proof(&chal_prover).unwrap();
 
     let mut revealed_msgs = HashMap::new();
     for i in &revealed_msg_indices {
         revealed_msgs.insert(i.clone(), msgs[*i].clone());
     }
+    // The verifier generates the challenge on its own.
+    let chal_bytes = proof.get_bytes_for_challenge(revealed_msg_indices.clone(), &vk, &params);
+    let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+
     assert!(proof
-        .verify(&vk, &params, revealed_msgs.clone(), &chal)
+        .verify(&vk, &params, revealed_msgs.clone(), &chal_verifier)
         .unwrap());
 }
