@@ -32,6 +32,12 @@ impl Params {
     }
 }
 
+impl Verkey {
+    pub fn msg_count(&self) -> usize {
+        self.Y_tilde.len()
+    }
+}
+
 pub fn keygen(count_messages: usize, params: &Params) -> (Verkey, Sigkey) {
     let x = FieldElement::random();
     let X_tilde = &params.g_tilde * &x;
