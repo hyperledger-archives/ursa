@@ -4,13 +4,14 @@ extern crate merlin;
 extern crate rand;
 
 pub mod bound_check;
-pub mod hamming_distance;
+//pub mod hamming_distance;
 pub mod helper_constraints;
 pub mod mimc;
 pub mod non_zero;
 pub mod poseidon_constants;
 pub mod poseidon_hash;
-pub mod randomizer;
+//pub mod randomizer;
+pub mod merkle_tree_hash;
 pub mod set_membership;
 pub mod set_membership_alt;
 pub mod set_non_membership;

@@ -8,18 +8,11 @@ use crate::r1cs::gadgets::helper_constraints::constrain_lc_with_scalar;
 
 /// Taken from https://eprint.iacr.org/2016/492, section 2.1, MiMC-2n/n (Feistel).
 /// For each round: xl = (xl + constants[i])^3 + xr, xr = xl. Output is xl of last round.
-pub fn mimc(
-    xl: &FieldElement,
-    xr: &FieldElement,
-    constants: &[FieldElement],
-    mimc_rounds: usize,
-) -> FieldElement {
-    assert_eq!(constants.len(), mimc_rounds);
-
+pub fn mimc(xl: &FieldElement, xr: &FieldElement, constants: &[FieldElement]) -> FieldElement {
     let mut xl = xl.clone();
     let mut xr = xr.clone();
 
-    for i in 0..mimc_rounds {
+    for i in 0..constants.len() {
         let tmp1 = &xl + &constants[i];
         let mut tmp2 = tmp1.square() * &tmp1;
         tmp2 += &xr;
@@ -32,19 +25,12 @@ pub fn mimc(
 /// Enforces the constraints of MiMC and check that the output equals `image`
 pub fn mimc_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
-    left: AllocatedQuantity,
-    right: AllocatedQuantity,
-    mimc_rounds: usize,
+    left: LinearCombination,
+    right: LinearCombination,
     mimc_constants: &[FieldElement],
     image: &FieldElement,
 ) -> Result<(), R1CSError> {
-    let res_v = enforce_mimc_2_inputs::<CS>(
-        cs,
-        left.variable.into(),
-        right.variable.into(),
-        mimc_rounds,
-        mimc_constants,
-    )?;
+    let res_v = enforce_mimc_2_inputs::<CS>(cs, left, right, mimc_constants)?;
     constrain_lc_with_scalar::<CS>(cs, res_v, image);
     Ok(())
 }
@@ -54,13 +40,12 @@ pub fn enforce_mimc_2_inputs<CS: ConstraintSystem>(
     cs: &mut CS,
     left: LinearCombination,
     right: LinearCombination,
-    mimc_rounds: usize,
     mimc_constants: &[FieldElement],
 ) -> Result<LinearCombination, R1CSError> {
     let mut left_v = left;
     let mut right_v = right;
 
-    for j in 0..mimc_rounds {
+    for j in 0..mimc_constants.len() {
         // xL, xR := xR + (xL + Ci)^3, xL
 
         let const_lc: LinearCombination = vec![(Variable::One(), mimc_constants[j].clone())]

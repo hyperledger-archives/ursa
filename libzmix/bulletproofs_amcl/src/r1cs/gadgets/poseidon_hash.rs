@@ -77,8 +77,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
 
     Poseidon_hash_2_gadget(
         prover,
-        var_l,
-        var_r,
+        vec![var_l, var_r],
         capacity_const,
         &hash_params,
         sbox_type,
@@ -103,7 +102,14 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
 
     let statics = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_3, g, h);
 
-    Poseidon_hash_2_gadget(verifier, lv, rv, statics, &hash_params, sbox_type, &image)?;
+    Poseidon_hash_2_gadget(
+        verifier,
+        vec![lv, rv],
+        statics,
+        &hash_params,
+        sbox_type,
+        &image,
+    )?;
     Ok(())
 }
 
@@ -498,13 +504,14 @@ mod tests {
 
         let xl = FieldElement::random();
         let xr = FieldElement::random();
-        let expected_output = Poseidon_hash_2(xl.clone(), xr.clone(), &hash_params, sbox_type);
+        let inputs = vec![xl, xr];
+        let expected_output = Poseidon_hash_2(inputs.clone(), &hash_params, sbox_type).unwrap();
 
         let label = b"PoseidonHash2:1";
 
         let start = Instant::now();
         let (proof, commitments) = gen_proof_of_knowledge_of_preimage_of_Poseidon_2(
-            vec![xl, xr],
+            inputs,
             None,
             &expected_output,
             &hash_params,
@@ -554,7 +561,7 @@ mod tests {
             FieldElement::random(),
             FieldElement::random(),
         ];
-        let image = Poseidon_hash_4(inputs.clone(), &hash_params, sbox_type);
+        let image = Poseidon_hash_4(inputs.clone(), &hash_params, sbox_type).unwrap();
 
         let label = b"PoseidonHash4:1";
 
@@ -614,7 +621,7 @@ mod tests {
             FieldElement::random(),
             FieldElement::random(),
         ];
-        let expected_output = Poseidon_hash_8(inputs.clone(), &hash_params, sbox_type);
+        let expected_output = Poseidon_hash_8(inputs.clone(), &hash_params, sbox_type).unwrap();
 
         let label = b"PoseidonHash8:1";
 

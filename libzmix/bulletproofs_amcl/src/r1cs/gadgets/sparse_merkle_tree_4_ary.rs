@@ -239,7 +239,7 @@ mod tests {
         let total_rounds = full_b + partial_rounds + full_e;
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
         let tree_depth = 12;
-        let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db);
+        let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db).unwrap();
 
         for i in 1..=10 {
             let s = FieldElement::from(i as u32);
@@ -259,7 +259,9 @@ mod tests {
             let k = FieldElement::from(i);
             assert_eq!(k, tree.get(&k, &mut merkle_proof, &db).unwrap());
             merkle_proof_vec = merkle_proof.unwrap();
-            assert!(tree.verify_proof(&k, &k, &merkle_proof_vec, Some(&tree.root)));
+            assert!(tree
+                .verify_proof(&k, &k, &merkle_proof_vec, Some(&tree.root))
+                .unwrap());
 
             let mut rng = rand::thread_rng();
 

@@ -56,7 +56,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         hash_params: &'a PoseidonParams,
         depth: usize,
         hash_db: &mut HashDb<DBVal_8_ary>,
-    ) -> VanillaSparseMerkleTree_8<'a> {
+    ) -> Result<VanillaSparseMerkleTree_8<'a>, R1CSError> {
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
@@ -74,7 +74,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
             ];
             input.clone_from_slice(inp.as_slice());
             // Hash all 8 children at once
-            let new = Poseidon_hash_8(inp, hash_params, &SboxType::Quint);
+            let new = Poseidon_hash_8(inp, hash_params, &SboxType::Quint)?;
             let key = new.to_bytes();
 
             hash_db.insert(key, input);
@@ -83,11 +83,11 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
 
         let root = empty_tree_hashes[depth].clone();
 
-        VanillaSparseMerkleTree_8 {
+        Ok(VanillaSparseMerkleTree_8 {
             depth,
             hash_params,
             root,
-        }
+        })
     }
 
     /// Set the given `val` at the given leaf index `idx`
@@ -98,9 +98,9 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         hash_db: &mut HashDb<DBVal_8_ary>,
     ) -> Result<FieldElement, R1CSError> {
         // Find path to insert the new key
-        let mut sidenodes_wrap = Some(Vec::<ProofNode_8_ary>::new());
-        self.get(idx, &mut sidenodes_wrap, hash_db)?;
-        let mut sidenodes = sidenodes_wrap.unwrap();
+        let mut siblings_wrap = Some(Vec::<ProofNode_8_ary>::new());
+        self.get(idx, &mut siblings_wrap, hash_db)?;
+        let mut siblings = siblings_wrap.unwrap();
 
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
         // Reverse since path was from root to leaf but i am going leaf to root
@@ -109,9 +109,9 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
 
         // Iterate over the base 8 digits
         for d in path {
-            let mut side_elem = sidenodes.pop().unwrap().to_vec();
+            let mut sibling = siblings.pop().unwrap().to_vec();
             // Insert the value at the position determined by the base 4 digit
-            side_elem.insert(d as usize, cur_val);
+            sibling.insert(d as usize, cur_val);
             let mut input: DBVal_8_ary = [
                 FieldElement::zero(),
                 FieldElement::zero(),
@@ -122,8 +122,8 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
                 FieldElement::zero(),
                 FieldElement::zero(),
             ];
-            input.clone_from_slice(side_elem.as_slice());
-            let h = Poseidon_hash_8(side_elem, self.hash_params, &SboxType::Quint);
+            input.clone_from_slice(sibling.as_slice());
+            let h = Poseidon_hash_8(sibling, self.hash_params, &SboxType::Quint)?;
             Self::update_db_with_key_val(&h, input, hash_db);
             cur_val = h;
         }
@@ -192,7 +192,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         val: &FieldElement,
         proof: &[ProofNode_8_ary],
         root: Option<&FieldElement>,
-    ) -> bool {
+    ) -> Result<bool, R1CSError> {
         let mut path = Self::leaf_index_to_path(idx, self.depth);
         path.reverse();
         let mut cur_val = val.clone();
@@ -200,13 +200,13 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         for (i, d) in path.iter().enumerate() {
             let mut p = proof[self.depth - 1 - i].clone().to_vec();
             p.insert(*d as usize, cur_val);
-            cur_val = Poseidon_hash_8(p, self.hash_params, &SboxType::Quint);
+            cur_val = Poseidon_hash_8(p, self.hash_params, &SboxType::Quint)?;
         }
 
         // Check if root is equal to cur_val
         match root {
-            Some(r) => cur_val == *r,
-            None => cur_val == self.root,
+            Some(r) => Ok(cur_val == *r),
+            None => Ok(cur_val == self.root),
         }
     }
 
@@ -520,7 +520,7 @@ mod tests {
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
 
         let tree_depth = 12;
-        let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db);
+        let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db).unwrap();
 
         for i in 1..20 {
             let s = FieldElement::from(i as u64);
@@ -534,8 +534,10 @@ mod tests {
             let mut proof = Some(proof_vec);
             assert_eq!(s, tree.get(&s, &mut proof, &db).unwrap());
             proof_vec = proof.unwrap();
-            assert!(tree.verify_proof(&s, &s, &proof_vec, None));
-            assert!(tree.verify_proof(&s, &s, &proof_vec, Some(&tree.root)));
+            assert!(tree.verify_proof(&s, &s, &proof_vec, None).unwrap());
+            assert!(tree
+                .verify_proof(&s, &s, &proof_vec, Some(&tree.root))
+                .unwrap());
         }
 
         let kvs: Vec<(FieldElement, FieldElement)> = (0..20)
