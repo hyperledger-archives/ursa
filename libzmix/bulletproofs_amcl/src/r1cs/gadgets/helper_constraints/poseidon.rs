@@ -485,39 +485,45 @@ pub const CAP_CONST_W_9: u64 = 511;
 
 /// Hashes 2 inputs to give a single output
 pub fn Poseidon_hash_2(
-    xl: FieldElement,
-    xr: FieldElement,
+    mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> FieldElement {
+) -> Result<FieldElement, R1CSError> {
     // Only 2 elements to the permutation are set to the input of this hash function,
     // one is set to the capacity constant.
     // Always keep the 1st element of the permutation as the capacity constant.
+    if inputs.len() != 2 {
+        return Err(R1CSError::IncorrectWidthForPoseidon {
+            width: 2,
+            expected: inputs.len(),
+        });
+    }
 
-    let input = vec![FieldElement::from(CAP_CONST_W_3), xl, xr];
+    let mut input = vec![FieldElement::from(CAP_CONST_W_3)];
+    input.append(&mut inputs);
 
     // Never take the first output
     let out = Poseidon_permutation(&input, params, sbox).remove(1);
-    out
+    Ok(out)
 }
 
 /// Enforces constraints for Poseidon_hash_2 for the given constraint system and Poseidon params
 pub fn Poseidon_hash_2_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
-    xl: LinearCombination,
-    xr: LinearCombination,
+    mut inputs: Vec<LinearCombination>,
     capacity_const: LinearCombination,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
 ) -> Result<LinearCombination, R1CSError> {
+    assert_eq!(inputs.len(), 2);
+
     let width = params.width;
 
     // Always keep the 1st input as 0
-    let mut inputs = vec![capacity_const];
-    inputs.push(xl);
-    inputs.push(xr);
+    let mut input = vec![capacity_const];
+    input.append(&mut inputs);
 
-    let permutation_output = Poseidon_permutation_constraints::<CS>(cs, inputs, params, sbox_type)?;
+    let permutation_output = Poseidon_permutation_constraints::<CS>(cs, input, params, sbox_type)?;
     Ok(permutation_output[1].to_owned())
 }
 
@@ -525,8 +531,7 @@ pub fn Poseidon_hash_2_constraints<'a, CS: ConstraintSystem>(
 /// and constraints the output of the hash to given `image`.
 pub fn Poseidon_hash_2_gadget<'a, CS: ConstraintSystem>(
     cs: &mut CS,
-    xl: Variable,
-    xr: Variable,
+    input: Vec<Variable>,
     capacity_const: Variable,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
@@ -534,8 +539,10 @@ pub fn Poseidon_hash_2_gadget<'a, CS: ConstraintSystem>(
 ) -> Result<(), R1CSError> {
     let hash = Poseidon_hash_2_constraints::<CS>(
         cs,
-        xl.into(),
-        xr.into(),
+        input
+            .into_iter()
+            .map(|s| s.into())
+            .collect::<Vec<LinearCombination>>(),
         capacity_const.into(),
         params,
         sbox_type,
@@ -551,16 +558,22 @@ pub fn Poseidon_hash_4(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> FieldElement {
+) -> Result<FieldElement, R1CSError> {
     // Only 4 inputs to the permutation are set to the input of this hash function,
     // one is set to the capacity constant. Always keep the 1st element of the permutation as the
     // capacity constant.
-    assert_eq!(inputs.len(), 4);
+    if inputs.len() != 4 {
+        return Err(R1CSError::IncorrectWidthForPoseidon {
+            width: 4,
+            expected: inputs.len(),
+        });
+    }
+
     let mut input = vec![FieldElement::from(CAP_CONST_W_5)];
     input.append(&mut inputs);
     // Never take the first output
     let out = Poseidon_permutation(&input, params, sbox).remove(1);
-    out
+    Ok(out)
 }
 
 /// Enforces constraints for Poseidon_hash_4 for the given constraint system and Poseidon params
@@ -619,14 +632,19 @@ pub fn Poseidon_hash_8(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> FieldElement {
-    assert_eq!(inputs.len(), 8);
+) -> Result<FieldElement, R1CSError> {
+    if inputs.len() != 8 {
+        return Err(R1CSError::IncorrectWidthForPoseidon {
+            width: 8,
+            expected: inputs.len(),
+        });
+    }
     let mut input = vec![FieldElement::from(CAP_CONST_W_9)];
     input.append(&mut inputs);
 
     // Never take the first output
     let out = Poseidon_permutation(&input, params, sbox).remove(1);
-    out
+    Ok(out)
 }
 
 /// Enforces constraints for Poseidon_hash_8 for the given constraint system and Poseidon params

@@ -60,7 +60,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         hash_params: &'a PoseidonParams,
         depth: usize,
         hash_db: &mut HashDb<DBVal_4_ary>,
-    ) -> VanillaSparseMerkleTree_4<'a> {
+    ) -> Result<VanillaSparseMerkleTree_4<'a>, R1CSError> {
         /// Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
         /// Since all leaves are same, all nodes at the same level will have the same value.
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
@@ -76,7 +76,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
                 FieldElement::zero(),
             ];
             val.clone_from_slice(input.as_slice());
-            let new = Poseidon_hash_4(input, hash_params, &SboxType::Quint);
+            let new = Poseidon_hash_4(input, hash_params, &SboxType::Quint)?;
             let key = new.to_bytes();
 
             hash_db.insert(key, val);
@@ -85,11 +85,11 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
 
         let root = empty_tree_hashes[depth].clone();
 
-        VanillaSparseMerkleTree_4 {
+        Ok(VanillaSparseMerkleTree_4 {
             depth,
             hash_params,
             root,
-        }
+        })
     }
 
     /// Set the given `val` at the given leaf index `idx`
@@ -124,7 +124,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
                 FieldElement::zero(),
             ];
             db_val.clone_from_slice(sibling_elem.as_slice());
-            let h = Poseidon_hash_4(sibling_elem, self.hash_params, &SboxType::Quint);
+            let h = Poseidon_hash_4(sibling_elem, self.hash_params, &SboxType::Quint)?;
             Self::update_db_with_key_val(&h, db_val, hash_db);
             cur_val = h;
         }
@@ -186,7 +186,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         val: &FieldElement,
         proof: &[ProofNode_4_ary],
         root: Option<&FieldElement>,
-    ) -> bool {
+    ) -> Result<bool, R1CSError> {
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
         path.reverse();
         let mut cur_val = val.clone();
@@ -194,13 +194,13 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         for (i, d) in path.iter().enumerate() {
             let mut p = proof[self.depth - 1 - i].clone().to_vec();
             p.insert(*d as usize, cur_val);
-            cur_val = Poseidon_hash_4(p, self.hash_params, &SboxType::Quint);
+            cur_val = Poseidon_hash_4(p, self.hash_params, &SboxType::Quint)?;
         }
 
         // Check if root is equal to cur_val
         match root {
-            Some(r) => cur_val == *r,
-            None => cur_val == self.root,
+            Some(r) => Ok(cur_val == *r),
+            None => Ok(cur_val == self.root),
         }
     }
 
@@ -419,7 +419,7 @@ mod tests {
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
 
         let tree_depth = 17;
-        let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db);
+        let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db).unwrap();
 
         for i in 1..10 {
             let s = FieldElement::from(i as u64);
@@ -433,8 +433,10 @@ mod tests {
             let mut proof = Some(proof_vec);
             assert_eq!(s, tree.get(&s, &mut proof, &db).unwrap());
             proof_vec = proof.unwrap();
-            assert!(tree.verify_proof(&s, &s, &proof_vec, None));
-            assert!(tree.verify_proof(&s, &s, &proof_vec, Some(&tree.root)));
+            assert!(tree.verify_proof(&s, &s, &proof_vec, None).unwrap());
+            assert!(tree
+                .verify_proof(&s, &s, &proof_vec, Some(&tree.root))
+                .unwrap());
         }
 
         let kvs: Vec<(FieldElement, FieldElement)> = (0..10)

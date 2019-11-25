@@ -25,6 +25,11 @@ pub enum R1CSError {
     HashNotFoundInDB {
         hash: Vec<u8>,
     },
+
+    IncorrectWidthForPoseidon {
+        width: usize,
+        expected: usize,
+    },
 }
 
 /// Check if either randomness was provided or random number generator was provided. Works like a boolean OR on Option
