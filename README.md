@@ -3,12 +3,17 @@
 [![Build Status](https://travis-ci.org/hyperledger/ursa.svg?branch=travis-ci)](https://travis-ci.org/hyperledger/ursa)
 [![Build status](https://ci.appveyor.com/api/projects/status/1htmp82mdvmfjjap?svg=true)](https://ci.appveyor.com/project/hyperledger/ursa)
 
+- [HYPERLEDGER URSA](#hyperledger-ursa)
 - [Introduction](#introduction)
 - [Features](#features)
-    - [Libursa](#Libursa)
-    - [Libzmix](#libzmix)
+  - [Libursa](#libursa)
+  - [Libzmix](#libzmix)
 - [Dependencies](#dependencies)
-- [Building from source](#building-from-source)
+- [Building from Source](#building-from-source)
+  - [Libursa](#libursa-1)
+  - [Packaging](#packaging)
+    - [Libursa Documentation](#libursa-documentation)
+  - [Libzmix](#libzmix-1)
 - [Contributing](#contributing)
 
 # Introduction
@@ -55,7 +60,7 @@ Ursa uses the following external dependencies:
 Ursa uses the following external dependencies for testing:
 
 - [libsodium
-  1.0.18](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
+  1.0.16](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
   (Written in C)
 
 These dependencies are used when building in the default secure mode. These
