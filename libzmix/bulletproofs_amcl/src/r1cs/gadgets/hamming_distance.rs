@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 /// Check in how many elements are 2 ordered sets different.
 /// Checks that Hamming distance is equal to some public value.

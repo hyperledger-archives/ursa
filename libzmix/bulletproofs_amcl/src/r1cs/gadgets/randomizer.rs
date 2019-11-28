@@ -1,4 +1,4 @@
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 /// Gadget to prove that 2 merkle trees have only few leaves different.
 /// The leaves that are chosen different is based on value of the nonce
 /// It is known to verifier which leaves are distorted.

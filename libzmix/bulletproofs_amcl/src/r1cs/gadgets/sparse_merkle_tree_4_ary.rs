@@ -7,7 +7,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use std::time::{Duration, Instant};
 
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 use crate::r1cs::gadgets::poseidon_hash::{
     allocate_capacity_const_for_prover, allocate_capacity_const_for_verifier,
@@ -20,7 +20,7 @@ use super::helper_constraints::sparse_merkle_tree_4_ary::{
 };
 use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
 
-pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
+pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: Rng + CryptoRng>(
     leaf: FieldElement,
     leaf_index: FieldElement,
     randomness: Option<Vec<FieldElement>>,
@@ -128,7 +128,7 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree(
     Ok(())
 }
 
-pub fn gen_proof_of_leaf_inclusion_4_ary_merkle_tree<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_leaf_inclusion_4_ary_merkle_tree<R: Rng + CryptoRng>(
     leaf: FieldElement,
     leaf_index: FieldElement,
     randomness: Option<Vec<FieldElement>>,

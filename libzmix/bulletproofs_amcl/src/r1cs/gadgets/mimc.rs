@@ -5,12 +5,12 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 use super::helper_constraints::mimc::{mimc, mimc_gadget};
 
 /// Takes a Prover and enforces the constraints of MiMC hash with 2 inputs and 1 output
-pub fn prove_mimc_preimage<R: RngCore + CryptoRng>(
+pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -54,7 +54,7 @@ pub fn verify_mimc_preimage(
 }
 
 /// Initializes a Prover and creates proof of knowledge of preimage of MiMC hash with 2 inputs and 1 output.
-pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_knowledge_of_preimage_of_mimc<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,

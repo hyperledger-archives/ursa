@@ -6,9 +6,9 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
-pub fn prove_non_zero_val<R: RngCore + CryptoRng>(
+pub fn prove_non_zero_val<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     rng: Option<&mut R>,
@@ -64,7 +64,7 @@ pub fn verify_non_zero_val(
 
 /// Accepts the num which is to be proved non-zero and optionally the randomness used in committing to that number.
 /// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
-pub fn gen_proof_of_non_zero_val<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_non_zero_val<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     rng: Option<&mut R>,

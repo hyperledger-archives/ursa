@@ -5,7 +5,7 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 /* This constraint system has linear (in set size) cost and should only be used for small, static
 sets.
@@ -41,7 +41,7 @@ pub fn set_membership_gadget<CS: ConstraintSystem>(
 }
 
 /// Takes the given prover enforce the set membership constraints.
-pub fn prove_set_membership<R: RngCore + CryptoRng>(
+pub fn prove_set_membership<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     set: &[FieldElement],
@@ -116,7 +116,7 @@ pub fn verify_set_membership(
 
 /// Initializes a prover, enforces the set membership constraints and outputs the proof and
 /// the commitment.
-pub fn gen_proof_of_set_membership<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_set_membership<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     set: &[FieldElement],
