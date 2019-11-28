@@ -199,6 +199,23 @@ impl PoKOfSignatureProof {
         bytes
     }
 
+    /// Get the response from post-challenge phase of the Sigma protocol for the given message index `msg_idx`.
+    /// Used when comparing message equality
+    pub fn get_resp_for_message(&self, msg_idx: usize) -> Result<FieldElement, BBSError> {
+        // 2 elements in self.proof_vc_2.responses are reserved for `&signature.e` and `r2`
+        if msg_idx >= (self.proof_vc_2.responses.len() - 2) {
+            return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
+                msg: format!(
+                    "Message index was given {} but should be less than {}",
+                    msg_idx,
+                    self.proof_vc_2.responses.len() - 2
+                ),
+            }));
+        }
+        // 2 added to the index, since 0th and 1st index are reserved for `&signature.e` and `r2`
+        Ok(self.proof_vc_2.responses[2 + msg_idx].clone())
+    }
+
     pub fn verify(
         &self,
         vk: &PublicKey,
@@ -359,5 +376,81 @@ mod tests {
         assert!(proof
             .verify(&verkey, revealed_msgs.clone(), &challenge_verifier)
             .unwrap());
+    }
+
+    #[test]
+    fn test_PoK_multiple_sigs_with_same_msg() {
+        // Prove knowledge of multiple signatures and the equality of a specific message under both signatures.
+        // Knowledge of 2 signatures and their corresponding messages is being proven.
+        // 2nd message in the 1st signature and 5th message in the 2nd signature are to be proven equal without revealing them
+
+        let message_count = 5;
+        let (vk, signkey) = generate(message_count).unwrap();
+
+        let same_msg = FieldElement::random();
+        let mut msgs_1 = FieldElementVector::random(message_count - 1);
+        msgs_1.insert(1, same_msg.clone());
+        let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
+        assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
+
+        let mut msgs_2 = FieldElementVector::random(message_count - 1);
+        msgs_2.insert(4, same_msg.clone());
+        let sig_2 = Signature::new(msgs_2.as_slice(), &signkey, &vk).unwrap();
+        assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
+
+        // A particular message is same
+        assert_eq!(msgs_1[1], msgs_2[4]);
+
+        let same_blinding = FieldElement::random();
+
+        let mut blindings_1 = FieldElementVector::random(message_count - 1);
+        blindings_1.insert(1, same_blinding.clone());
+
+        let mut blindings_2 = FieldElementVector::random(message_count - 1);
+        blindings_2.insert(4, same_blinding.clone());
+
+        // Blinding for the same message is kept same
+        assert_eq!(blindings_1[1], blindings_2[4]);
+
+        let pok_1 = PoKOfSignature::init(
+            &sig_1,
+            &vk,
+            msgs_1.as_slice(),
+            Some(blindings_1.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+        let pok_2 = PoKOfSignature::init(
+            &sig_2,
+            &vk,
+            msgs_2.as_slice(),
+            Some(blindings_2.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut pok_1.to_bytes());
+        chal_bytes.append(&mut pok_2.to_bytes());
+
+        let chal_prover = FieldElement::from_msg_hash(&chal_bytes);
+
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(HashSet::new(), &vk));
+        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(HashSet::new(), &vk));
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+
+        // Response for the same message should be same (this check is made by the verifier)
+        assert_eq!(
+            proof_1.get_resp_for_message(1).unwrap(),
+            proof_2.get_resp_for_message(4).unwrap()
+        );
+
+        assert!(proof_1.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
+        assert!(proof_2.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
     }
 }
