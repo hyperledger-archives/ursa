@@ -6,7 +6,7 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 /* This constraint system has linear (in set size) cost and should only be used for small, static
 sets.
@@ -36,7 +36,7 @@ pub fn set_non_membership_gadget<CS: ConstraintSystem>(
     Ok(())
 }
 
-pub fn prove_set_non_membership<R: RngCore + CryptoRng>(
+pub fn prove_set_non_membership<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     set: &[FieldElement],
@@ -128,7 +128,7 @@ pub fn verify_set_non_membership(
 }
 
 /// Prove that difference between each set element and value is non-zero, hence value does not equal any set element.
-pub fn gen_proof_of_set_non_membership<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_set_non_membership<R: Rng + CryptoRng>(
     value: FieldElement,
     randomness: Option<FieldElement>,
     set: &[FieldElement],

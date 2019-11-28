@@ -7,7 +7,7 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 /* This constraint system has linear (in set size) cost and should only be used for small, static
 sets.
@@ -77,7 +77,7 @@ pub fn vector_product_gadget<CS: ConstraintSystem>(
 /// and prove that each element is either 0 or 1, sum of elements of this bitmap is 1 (as there is only 1 element)
 /// and the relation set[i] * toggles[i] = toggles[i] * value.
 /// Taken from https://github.com/HarryR/ethsnarks/blob/master/src/gadgets/one_of_n.hpp
-pub fn prove_set_membership_alt<R: RngCore + CryptoRng>(
+pub fn prove_set_membership_alt<R: Rng + CryptoRng>(
     value: u64,
     randomness: Option<FieldElement>,
     set: &[u64],
@@ -163,7 +163,7 @@ pub fn verify_set_membership_alt(
 }
 
 /// Initialize a Prover and generate the proof of set membership with commitments
-pub fn gen_proof_of_set_membership_alt<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_set_membership_alt<R: Rng + CryptoRng>(
     value: u64,
     randomness: Option<FieldElement>,
     set: &[u64],

@@ -6,7 +6,7 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 
 /// Constraints for proving v lies in [min, max].
 /// Ensure v - min and max - v are positive numbers and don't overflow
@@ -38,7 +38,7 @@ pub fn bound_check_gadget<CS: ConstraintSystem>(
     Ok(())
 }
 
-pub fn prove_bounded_num<R: RngCore + CryptoRng>(
+pub fn prove_bounded_num<R: Rng + CryptoRng>(
     val: u64,
     randomness: Option<FieldElement>,
     lower: u64,
@@ -130,7 +130,7 @@ pub fn verify_bounded_num(
 
 /// Accepts the num for which the bounds have to proved and optionally the randomness used in committing to that number.
 /// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
-pub fn gen_proof_of_bounded_num<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_bounded_num<R: Rng + CryptoRng>(
     val: u64,
     randomness: Option<FieldElement>,
     lower: u64,

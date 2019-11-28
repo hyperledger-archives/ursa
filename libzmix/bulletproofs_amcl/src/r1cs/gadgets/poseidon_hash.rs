@@ -5,7 +5,7 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variab
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use rand::{CryptoRng, RngCore};
+use rand::{CryptoRng, Rng};
 use std::time::{Duration, Instant};
 
 use super::helper_constraints::poseidon::{
@@ -42,7 +42,7 @@ pub fn allocate_capacity_const_for_verifier(
 }
 
 /// Takes a Prover and enforces the constraints of Poseidon hash with 2 inputs and 1 output
-pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
+pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -115,7 +115,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
 
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output.
 /// TODO: Why `prove_knowledge_of_preimage_of_Poseidon_2` and `gen_proof_of_knowledge_of_preimage_of_Poseidon_2`
-pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -185,7 +185,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_2(
 }
 
 /// Takes a Prover and enforces the constraints of Poseidon hash with 4 inputs and 1 output
-pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
+pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -263,7 +263,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_4(
 }
 
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 4 inputs and 1 output
-pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -335,7 +335,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
 }
 
 /// Takes a Prover and enforces the constraints of Poseidon hash with 8 inputs and 1 output
-pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
+pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
@@ -415,7 +415,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_8(
 }
 
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 8 inputs and 1 output
-pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: RngCore + CryptoRng>(
+pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
     randomness: Option<Vec<FieldElement>>,
     image: &FieldElement,
