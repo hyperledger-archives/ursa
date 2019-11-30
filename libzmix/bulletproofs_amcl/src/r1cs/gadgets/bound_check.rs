@@ -1,6 +1,6 @@
 use super::helper_constraints::constrain_lc_with_scalar;
 use super::helper_constraints::positive_no::positive_no_gadget;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -40,14 +40,14 @@ pub fn bound_check_gadget<CS: ConstraintSystem>(
 
 pub fn prove_bounded_num<R: Rng + CryptoRng>(
     val: u64,
-    randomness: Option<FieldElement>,
+    blinding: Option<FieldElement>,
     lower: u64,
     upper: u64,
     max_bits_in_val: usize,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blinding, rng)?;
 
     let a = val - lower;
     let b = upper - val;
@@ -56,7 +56,7 @@ pub fn prove_bounded_num<R: Rng + CryptoRng>(
 
     let (com_v, var_v) = prover.commit(
         val.into(),
-        randomness.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
+        blinding.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
     );
     let quantity_v = AllocatedQuantity {
         variable: var_v,
@@ -132,7 +132,7 @@ pub fn verify_bounded_num(
 /// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
 pub fn gen_proof_of_bounded_num<R: Rng + CryptoRng>(
     val: u64,
-    randomness: Option<FieldElement>,
+    blinding: Option<FieldElement>,
     lower: u64,
     upper: u64,
     max_bits_in_val: usize,
@@ -148,7 +148,7 @@ pub fn gen_proof_of_bounded_num<R: Rng + CryptoRng>(
 
     let comms = prove_bounded_num(
         val,
-        randomness,
+        blinding,
         lower,
         upper,
         max_bits_in_val,

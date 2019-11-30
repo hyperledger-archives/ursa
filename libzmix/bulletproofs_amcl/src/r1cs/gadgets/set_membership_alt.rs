@@ -1,7 +1,7 @@
 use super::helper_constraints::bit::bit_gadget;
 use super::helper_constraints::constrain_lc_with_scalar;
 use super::helper_constraints::vector_sum::vector_sum_constraints;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;

@@ -1,5 +1,5 @@
 use super::helper_constraints::constrain_lc_with_scalar;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -12,15 +12,15 @@ use super::helper_constraints::mimc::{mimc, mimc_gadget};
 /// Takes a Prover and enforces the constraints of MiMC hash with 2 inputs and 1 output
 pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     constants: &[FieldElement],
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blindings, rng)?;
 
-    let mut rands = randomness.unwrap_or_else(|| {
+    let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
         vec![
             FieldElement::random_using_rng(r),

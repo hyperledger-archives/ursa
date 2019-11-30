@@ -2,7 +2,7 @@
     SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-use crate::errors::R1CSError;
+use crate::errors::{BulletproofError, BulletproofErrorKind};
 use crate::transcript::TranscriptProtocol;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -220,7 +220,7 @@ impl IPP {
         b: &FieldElement,
         L_vec: &G1Vector,
         R_vec: &G1Vector,
-    ) -> Result<(), R1CSError> {
+    ) -> Result<(), BulletproofError> {
         // The prover does not have access to all the challenges in the beginning but the verifier does.
         // The verifier uses all the challenges to compute scalars such that it can efficiently compute
         // the final g, h, L^{x^2}, L^{x^-2}
@@ -264,7 +264,7 @@ impl IPP {
         if expected_P == *P {
             Ok(())
         } else {
-            Err(R1CSError::VerificationError)
+            Err(BulletproofErrorKind::IPPVerificationError.into())
         }
     }
 
@@ -274,17 +274,17 @@ impl IPP {
         R_vec: &G1Vector,
         n: usize,
         transcript: &mut Transcript,
-    ) -> Result<(Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>), R1CSError> {
+    ) -> Result<(Vec<FieldElement>, Vec<FieldElement>, Vec<FieldElement>), BulletproofError> {
         // lg_n is the number of rounds of recursion
         let lg_n = L_vec.len();
         if lg_n >= 32 {
             // 2 billion (2^31) multiplications should be enough for anyone
             // and this check prevents overflow in 1<<lg_n below.
-            return Err(R1CSError::VerificationError);
+            return Err(BulletproofErrorKind::IPPVerificationError.into());
         }
         if n != (1 << lg_n) {
             // n is not a power of 2
-            return Err(R1CSError::VerificationError);
+            return Err(BulletproofErrorKind::IPPVerificationError.into());
         }
 
         transcript.innerproduct_domain_sep(n as u64);

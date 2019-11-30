@@ -10,7 +10,7 @@ use crate::transcript::TranscriptProtocol;
 use core::mem;
 use merlin::Transcript;
 
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::ipp::IPP;
 use crate::r1cs::constraint_system::ConstraintSystem;
 use crate::r1cs::constraint_system::RandomizedConstraintSystem;
@@ -301,7 +301,11 @@ impl<'a> Verifier<'a> {
         use std::iter;
 
         if G.len() < padded_n {
-            return Err(R1CSError::InvalidGeneratorsLength);
+            return Err(R1CSErrorKind::InvalidGeneratorsLength {
+                length: G.len(),
+                expected: padded_n,
+            }
+            .into());
         }
 
         self.transcript.commit_point(b"A_I2", &proof.A_I2);
@@ -364,7 +368,7 @@ impl<'a> Verifier<'a> {
             padded_n,
             self.transcript,
         )
-        .map_err(|_| R1CSError::VerificationError)?;
+        .map_err(|_| R1CSError::from(R1CSErrorKind::VerificationError))?;
 
         let u_for_g = iter::repeat(FieldElement::one())
             .take(n1)
@@ -454,7 +458,7 @@ impl<'a> Verifier<'a> {
 
         let res = G1Vector::inner_product_var_time_with_ref_vecs(arg2, arg1).unwrap();
         if !res.is_identity() {
-            return Err(R1CSError::VerificationError);
+            return Err(R1CSErrorKind::VerificationError.into());
         }
 
         Ok(())
@@ -532,7 +536,7 @@ impl<'a, 'b> ConstraintSystem for Verifier<'a> {
                 Variable::MultiplierRight(i),
                 Some(Variable::MultiplierOutput(i)),
             )),
-            _ => Err(R1CSError::FormatError),
+            _ => Err(R1CSErrorKind::FormatError.into()),
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::errors::R1CSError;
+use crate::errors::{BulletproofError, BulletproofErrorKind, R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
@@ -22,7 +22,7 @@ pub struct PoseidonParams {
     pub MDS_matrix: Vec<Vec<FieldElement>>,
 }
 
-/// Read the defined round keys and MDS matrix for the corresponding curve.
+/// Read the defined round keys and MDS matrix for the corresponding curve from file `poseidon_constants.rs`.
 /// Reads constants `ROUND_CONSTS_W_<width>` and `MDS_ENTRIES_W_<width>`
 impl PoseidonParams {
     pub fn new(
@@ -30,26 +30,32 @@ impl PoseidonParams {
         full_rounds_beginning: usize,
         full_rounds_end: usize,
         partial_rounds: usize,
-    ) -> PoseidonParams {
+    ) -> Result<PoseidonParams, BulletproofError> {
         if width != 3 && width != 5 && width != 9 {
-            // TODO: Convert panic to error
-            panic!("Only width of 3, 5 or 9 are supported")
+            return Err(BulletproofErrorKind::UnacceptableWidthForPoseidon {
+                width,
+                acceptable: vec![3, 5, 9],
+            }
+            .into());
         }
         let total_rounds = full_rounds_beginning + partial_rounds + full_rounds_end;
-        let round_keys = Self::get_round_keys(width, total_rounds);
-        let matrix_2 = Self::get_MDS_matrix(width);
-        PoseidonParams {
+        let round_keys = Self::get_round_keys(width, total_rounds)?;
+        let matrix_2 = Self::get_MDS_matrix(width)?;
+        Ok(PoseidonParams {
             width,
             full_rounds_beginning,
             full_rounds_end,
             partial_rounds,
             round_keys,
             MDS_matrix: matrix_2,
-        }
+        })
     }
 
     /// Get the round keys for the curve and given width
-    fn get_round_keys(width: usize, total_rounds: usize) -> Vec<FieldElement> {
+    fn get_round_keys(
+        width: usize,
+        total_rounds: usize,
+    ) -> Result<Vec<FieldElement>, BulletproofError> {
         let cap = total_rounds * width;
         //(0..cap).map(|_| FieldElement::random()).collect::<Vec<_>>()
         //vec![FieldElement::one(); cap]
@@ -57,31 +63,35 @@ impl PoseidonParams {
             3 => ROUND_CONSTS_W_3.to_vec(),
             5 => ROUND_CONSTS_W_5.to_vec(),
             9 => ROUND_CONSTS_W_9.to_vec(),
-            _ => panic!("Unsupported width {}", width),
+            _ => {
+                return Err(BulletproofErrorKind::UnacceptableWidthForPoseidon {
+                    width,
+                    acceptable: vec![3, 5, 9],
+                }
+                .into())
+            }
         };
         if ROUND_CONSTS.len() < cap {
-            // TODO: Convert panic to error
-            panic!(
-                "Not enough round constants, need {}, found {}",
-                cap,
-                ROUND_CONSTS.len()
-            );
+            return Err(BulletproofErrorKind::IncorrectRoundConstantsForPoseidon {
+                expected: cap,
+                found: ROUND_CONSTS.len(),
+            }
+            .into());
         }
         let mut rc = vec![];
         for i in 0..cap {
-            // TODO: Remove unwrap, handle error
-            let mut c = ROUND_CONSTS[i].to_string();
-            c.replace_range(..2, "");
-            rc.push(FieldElement::from_hex(c).unwrap());
+            rc.push(Self::get_field_element_from_hex_str(&ROUND_CONSTS[i])?);
         }
-        rc
+        Ok(rc)
     }
 
     /// Get the MDS matrix for the curve and given width
-    fn get_MDS_matrix(width: usize) -> Vec<Vec<FieldElement>> {
+    fn get_MDS_matrix(width: usize) -> Result<Vec<Vec<FieldElement>>, BulletproofError> {
         //(0..width).map(|_| (0..width).map(|_| FieldElement::random()).collect::<Vec<_>>()).collect::<Vec<Vec<_>>>()
         //vec![vec![FieldElement::one(); width]; width]
 
+        // `MDS_ENTRIES` is the MDS matrix, it needs to be a square matrix with no of rows and
+        // columns equal to `width`
         let MDS_ENTRIES = match width {
             3 => MDS_ENTRIES_W_3
                 .to_vec()
@@ -98,26 +108,56 @@ impl PoseidonParams {
                 .iter()
                 .map(|v| v.to_vec())
                 .collect::<Vec<Vec<_>>>(),
-            _ => panic!("Unsupported width {}", width),
+            _ => {
+                return Err(BulletproofErrorKind::UnacceptableWidthForPoseidon {
+                    width,
+                    acceptable: vec![3, 5, 9],
+                }
+                .into())
+            }
         };
         if MDS_ENTRIES.len() != width {
-            // TODO: Convert panic to error
-            panic!("Incorrect width, only width {} is supported now", width);
+            return Err(BulletproofErrorKind::IncorrectMSDRowCountForPoseidon {
+                found: MDS_ENTRIES.len(),
+                expected: width,
+            }
+            .into());
         }
         let mut mds: Vec<Vec<FieldElement>> = vec![vec![FieldElement::zero(); width]; width];
         for i in 0..width {
             if MDS_ENTRIES[i].len() != width {
-                // TODO: Convert panic to error
-                panic!("Incorrect width, only width {} is supported now", width);
+                return Err(BulletproofErrorKind::IncorrectMSDColCountForPoseidon {
+                    found: MDS_ENTRIES[i].len(),
+                    expected: width,
+                }
+                .into());
             }
             for j in 0..width {
-                // TODO: Remove unwrap, handle error
-                let mut c = MDS_ENTRIES[i][j].to_string();
-                c.replace_range(..2, "");
-                mds[i][j] = FieldElement::from_hex(c).unwrap();
+                mds[i][j] = Self::get_field_element_from_hex_str(&MDS_ENTRIES[i][j])?;
             }
         }
-        mds
+        Ok(mds)
+    }
+
+    /// Convert a hex string of form "0x4d4..." to a field element
+    fn get_field_element_from_hex_str(hex_str: &str) -> Result<FieldElement, BulletproofError> {
+        let mut c = hex_str.to_string();
+        // Remove "0x" from beginning
+        let l = c.len();
+        if l < 3 {
+            return Err(BulletproofErrorKind::ParseErrorForPoseidonConstant {
+                constant: c,
+                error_msg: format!("Length of constant is {} which is less than 3", l),
+            }
+            .into());
+        }
+        c.replace_range(..2, "");
+        FieldElement::from_hex(c).map_err(|_| {
+            BulletproofError::from(BulletproofErrorKind::ParseErrorForPoseidonConstant {
+                constant: hex_str[2..].to_string(),
+                error_msg: String::from("Cannot convert to hex"),
+            })
+        })
     }
 }
 
@@ -488,15 +528,16 @@ pub fn Poseidon_hash_2(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> Result<FieldElement, R1CSError> {
+) -> Result<FieldElement, BulletproofError> {
     // Only 2 elements to the permutation are set to the input of this hash function,
     // one is set to the capacity constant.
     // Always keep the 1st element of the permutation as the capacity constant.
     if inputs.len() != 2 {
-        return Err(R1CSError::IncorrectWidthForPoseidon {
+        return Err(BulletproofErrorKind::IncorrectWidthForPoseidon {
             width: 2,
             expected: inputs.len(),
-        });
+        }
+        .into());
     }
 
     let mut input = vec![FieldElement::from(CAP_CONST_W_3)];
@@ -558,15 +599,16 @@ pub fn Poseidon_hash_4(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> Result<FieldElement, R1CSError> {
+) -> Result<FieldElement, BulletproofError> {
     // Only 4 inputs to the permutation are set to the input of this hash function,
     // one is set to the capacity constant. Always keep the 1st element of the permutation as the
     // capacity constant.
     if inputs.len() != 4 {
-        return Err(R1CSError::IncorrectWidthForPoseidon {
+        return Err(BulletproofErrorKind::IncorrectWidthForPoseidon {
             width: 4,
             expected: inputs.len(),
-        });
+        }
+        .into());
     }
 
     let mut input = vec![FieldElement::from(CAP_CONST_W_5)];
@@ -632,12 +674,13 @@ pub fn Poseidon_hash_8(
     mut inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
-) -> Result<FieldElement, R1CSError> {
+) -> Result<FieldElement, BulletproofError> {
     if inputs.len() != 8 {
-        return Err(R1CSError::IncorrectWidthForPoseidon {
+        return Err(BulletproofErrorKind::IncorrectWidthForPoseidon {
             width: 8,
             expected: inputs.len(),
-        });
+        }
+        .into());
     }
     let mut input = vec![FieldElement::from(CAP_CONST_W_9)];
     input.append(&mut inputs);

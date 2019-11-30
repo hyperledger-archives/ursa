@@ -1,5 +1,5 @@
 use super::helper_constraints::constrain_lc_with_scalar;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -44,9 +44,10 @@ pub fn prove_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
     });
 
     if rands.len() != 2 {
-        return Err(R1CSError::GadgetError {
+        return Err(R1CSErrorKind::GadgetError {
             description: String::from("Provided randomness should have size 2"),
-        });
+        }
+        .into());
     }
 
     let mut comms = vec![];
@@ -233,7 +234,7 @@ mod tests {
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         let total_rounds = full_b + partial_rounds + full_e;
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
         let tree_depth = 8;
         let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db).unwrap();
 

@@ -2,44 +2,20 @@ use std::collections::HashMap;
 
 use amcl_wrapper::constants::MODBYTES;
 
-use crate::errors::R1CSError;
+use crate::errors::{BulletproofError, R1CSError};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
 use super::poseidon::{PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_byte_size};
-use crate::r1cs::gadgets::helper_constraints::allocated_leaf_index_to_bytes;
+use crate::r1cs::gadgets::helper_constraints::{
+    allocated_leaf_index_to_bytes, get_repr_in_power_2_base,
+};
 use crate::utils::hash_db::HashDb;
 
 pub type DBVal_4_ary = [FieldElement; 4];
 pub type ProofNode_4_ary = [FieldElement; 3];
-
-/// Get a base 4 representation of the given `scalar`. Only return `num_digits` of the representation
-pub fn get_base_4_repr(scalar: &FieldElement, num_digits: usize) -> Vec<u8> {
-    let byte_size = get_byte_size(num_digits, 4);
-    if byte_size > MODBYTES {
-        // TODO: Convert panic to error
-        panic!(
-            "limit_bytes cannot be more than {} but found {}",
-            MODBYTES, byte_size
-        )
-    }
-    let mut s = scalar.to_bignum();
-    s.norm();
-
-    let mut base_4 = vec![];
-    while (base_4.len() != num_digits) && (!s.iszilch()) {
-        base_4.push(s.lastbits(2) as u8);
-        s.fshr(2);
-    }
-    while base_4.len() != num_digits {
-        base_4.push(0);
-    }
-
-    base_4.reverse();
-    base_4
-}
 
 // TODO: ABSTRACT HASH FUNCTION BETTER
 // Consider usage of SHA as a hash function as well for testing
@@ -53,6 +29,10 @@ pub struct VanillaSparseMerkleTree_4<'a> {
 
 /// For details here of sparse merkle trees, check here https://ethresear.ch/t/optimizing-sparse-merkle-trees/3751
 
+// The logic of `VanillaSparseMerkleTree_4` and `VanillaSparseMerkleTree_8` is same. Only the arity
+// and hence the hash function differs. The code is still kept separate for clarity. If code is to be
+// combined then a generic implementation will take the hash and database as type parameters.
+
 impl<'a> VanillaSparseMerkleTree_4<'a> {
     /// Create a new tree
     /// Requires a database to hold leaves and nodes. The db should implement the `HashDb` trait
@@ -60,7 +40,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         hash_params: &'a PoseidonParams,
         depth: usize,
         hash_db: &mut HashDb<DBVal_4_ary>,
-    ) -> Result<VanillaSparseMerkleTree_4<'a>, R1CSError> {
+    ) -> Result<VanillaSparseMerkleTree_4<'a>, BulletproofError> {
         /// Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
         /// Since all leaves are same, all nodes at the same level will have the same value.
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
@@ -98,7 +78,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         idx: &FieldElement,
         val: FieldElement,
         hash_db: &mut HashDb<DBVal_4_ary>,
-    ) -> Result<FieldElement, R1CSError> {
+    ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key. siblings are the the sibling nodes at each level from
         // the root to the leaf for the `idx`
         let mut siblings_wrap = Some(Vec::<ProofNode_4_ary>::new());
@@ -140,7 +120,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         idx: &FieldElement,
         proof: &mut Option<Vec<ProofNode_4_ary>>,
         hash_db: &HashDb<DBVal_4_ary>,
-    ) -> Result<FieldElement, R1CSError> {
+    ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
         // TODO: more comments
@@ -186,7 +166,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
         val: &FieldElement,
         proof: &[ProofNode_4_ary],
         root: Option<&FieldElement>,
-    ) -> Result<bool, R1CSError> {
+    ) -> Result<bool, BulletproofError> {
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
         path.reverse();
         let mut cur_val = val.clone();
@@ -207,7 +187,7 @@ impl<'a> VanillaSparseMerkleTree_4<'a> {
     /// Get path from root to leaf given a leaf index
     /// Convert leaf index to base 4
     pub fn leaf_index_to_path(idx: &FieldElement, depth: usize) -> Vec<u8> {
-        get_base_4_repr(idx, depth).to_vec()
+        get_repr_in_power_2_base(2, idx, depth).to_vec()
     }
 
     fn update_db_with_key_val(
@@ -416,7 +396,7 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         let tree_depth = 17;
         let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db).unwrap();

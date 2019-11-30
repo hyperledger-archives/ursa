@@ -9,7 +9,7 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use crate::transcript::TranscriptProtocol;
 use merlin::Transcript;
 
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::ipp::IPP;
 use crate::r1cs::constraint_system::ConstraintSystem;
 use crate::r1cs::constraint_system::RandomizedConstraintSystem;
@@ -336,7 +336,11 @@ impl<'a, 'b> Prover<'a, 'b> {
         let n1 = self.a_L.len();
 
         if G.len() < n1 {
-            return Err(R1CSError::InvalidGeneratorsLength);
+            return Err(R1CSErrorKind::InvalidGeneratorsLength {
+                length: G.len(),
+                expected: n1,
+            }
+            .into());
         }
 
         let i_blinding1 = FieldElement::random();
@@ -384,7 +388,11 @@ impl<'a, 'b> Prover<'a, 'b> {
         let pad = padded_n - n;
 
         if G.len() < padded_n {
-            return Err(R1CSError::InvalidGeneratorsLength);
+            return Err(R1CSErrorKind::InvalidGeneratorsLength {
+                length: G.len(),
+                expected: padded_n,
+            }
+            .into());
         }
 
         // Commit to the second-phase low-level witness variables
@@ -638,7 +646,7 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
     }
 
     fn allocate(&mut self, assignment: Option<FieldElement>) -> Result<Variable, R1CSError> {
-        let scalar = assignment.ok_or(R1CSError::MissingAssignment)?;
+        let scalar = assignment.ok_or(R1CSError::from(R1CSErrorKind::MissingAssignment))?;
 
         match self.pending_multiplier {
             None => {
@@ -662,7 +670,7 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
         &mut self,
         input_assignments: Option<(FieldElement, FieldElement)>,
     ) -> Result<(Variable, Variable, Variable), R1CSError> {
-        let (l, r) = input_assignments.ok_or(R1CSError::MissingAssignment)?;
+        let (l, r) = input_assignments.ok_or(R1CSError::from(R1CSErrorKind::MissingAssignment))?;
         let o = &l * &r;
 
         Ok(self._allocate_vars(l, r, o))
@@ -697,7 +705,7 @@ impl<'a, 'b> ConstraintSystem for Prover<'a, 'b> {
                 Variable::MultiplierRight(i),
                 Some(Variable::MultiplierOutput(i)),
             )),
-            _ => Err(R1CSError::FormatError),
+            _ => Err(R1CSErrorKind::FormatError.into()),
         }
     }
 }

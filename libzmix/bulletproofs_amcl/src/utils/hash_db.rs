@@ -1,13 +1,13 @@
 // Interface and an in-memory for key-value database where the key is bytes and is intended to be hash.
 // Used to store merkle tree nodes.
 
-use crate::errors::R1CSError;
+use crate::errors::{BulletproofError, BulletproofErrorKind};
 use std::collections::HashMap;
 
 pub trait HashDb<T: Clone> {
     fn insert(&mut self, hash: Vec<u8>, value: T);
 
-    fn get(&self, hash: &[u8]) -> Result<T, R1CSError>;
+    fn get(&self, hash: &[u8]) -> Result<T, BulletproofError>;
 }
 
 #[derive(Clone, Debug)]
@@ -20,12 +20,13 @@ impl<T: Clone> HashDb<T> for InMemoryHashDb<T> {
         self.db.insert(hash, value);
     }
 
-    fn get(&self, hash: &[u8]) -> Result<T, R1CSError> {
+    fn get(&self, hash: &[u8]) -> Result<T, BulletproofError> {
         match self.db.get(hash) {
             Some(val) => Ok(val.clone()),
-            None => Err(R1CSError::HashNotFoundInDB {
+            None => Err(BulletproofErrorKind::HashNotFoundInDB {
                 hash: hash.to_vec(),
-            }),
+            }
+            .into()),
         }
     }
 }
@@ -36,23 +37,3 @@ impl<T: Clone> InMemoryHashDb<T> {
         Self { db }
     }
 }
-
-/*pub trait HashFunc<T: Clone> {
-    fn hash(&self, hash: Vec<u8>) -> Result<T, R1CSError>;
-}*/
-
-/*
-TODO: Hash func abstraction
-pub trait HashFunc<T: Clone> {
-    fn hash(&self, hash: Vec<u8>);
-}
-
-struct poseidon {state: Any}
-
-impl poseidon {
-    fn new(**args)
-}
-
-impl  HashFunc for poseidon {
-
-}*/

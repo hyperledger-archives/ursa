@@ -57,25 +57,8 @@ impl VecPoly3 {
         }
     }
 
-    // TODO: See why eval_alt is slower since it does not have overhead of vandermonde vector creation?
-    /// Evaluate polynomial at `x`.
+    /// Evaluate polynomial at `x` using Horner's method
     pub fn eval(&self, x: &FieldElement) -> FieldElementVector {
-        let n = self.0.len();
-        let mut out = FieldElementVector::new(n);
-        let x_vec = FieldElementVector::new_vandermonde_vector(x, 4);
-        for i in 0..n {
-            // out[i] = self.0[i] + self.1[i]*x + self.2[i]*x^2 + self.3[i]*x^3
-            out[i] = &self.0[i]
-                + &self.1[i] * &x_vec[1]
-                + &self.2[i] * &x_vec[2]
-                + &self.3[i] * &x_vec[3];
-        }
-        out
-    }
-
-    /// Evaluate polynomial at `x`. Found to be slower than `eval`
-    /// #[cfg(test)]
-    pub fn eval_alt(&self, x: &FieldElement) -> FieldElementVector {
         let n = self.0.len();
         let mut out = FieldElementVector::new(n);
         for i in 0..n {
@@ -94,34 +77,5 @@ impl Poly6 {
         // ... = x*(t1 + x*(t2 + x*(t3 + x*(t4 + x*(t5 + x*t6)))))
         x * (&self.t1
             + x * (&self.t2 + x * (&self.t3 + x * (&self.t4 + x * (&self.t5 + x * &self.t6)))))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::time::Instant;
-
-    #[test]
-    fn timing_vec_poly_evaluation() {
-        // Comparing timing of 2 polynomial evaluation methods. `eval` turns out ot be faster than `eval_alt`
-        let n = 100;
-        let p1_0 = FieldElementVector::random(n);
-        let p1_1 = FieldElementVector::random(n);
-        let p1_2 = FieldElementVector::random(n);
-        let p1_3 = FieldElementVector::random(n);
-
-        let p1 = VecPoly3(p1_0, p1_1, p1_2, p1_3);
-        let x = FieldElement::random();
-
-        let start = Instant::now();
-        let r1 = p1.eval(&x);
-        println!("eval time for {} is {:?}", n, start.elapsed());
-
-        let start = Instant::now();
-        let r2 = p1.eval_alt(&x);
-        println!("eval_alt time for {} is {:?}", n, start.elapsed());
-
-        assert_eq!(r1, r2);
     }
 }

@@ -1,5 +1,5 @@
 use super::helper_constraints::constrain_lc_with_scalar;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -23,7 +23,7 @@ use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
 pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: Rng + CryptoRng>(
     leaf: FieldElement,
     leaf_index: FieldElement,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     mut merkle_proof: Vec<ProofNode_4_ary>,
     root: &FieldElement,
     tree_depth: usize,
@@ -32,10 +32,10 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blindings, rng)?;
 
     // Randomness is only provided for leaf value and leaf index
-    let mut rands = randomness.unwrap_or_else(|| {
+    let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
         vec![
             FieldElement::random_using_rng(r),
@@ -44,9 +44,10 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<R: Rng + CryptoRng>(
     });
 
     if rands.len() != 2 {
-        return Err(R1CSError::GadgetError {
+        return Err(R1CSErrorKind::GadgetError {
             description: String::from("Provided randomness should have size 2"),
-        });
+        }
+        .into());
     }
 
     let mut comms = vec![];
@@ -237,7 +238,7 @@ mod tests {
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         let total_rounds = full_b + partial_rounds + full_e;
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
         let tree_depth = 12;
         let mut tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut db).unwrap();
 
