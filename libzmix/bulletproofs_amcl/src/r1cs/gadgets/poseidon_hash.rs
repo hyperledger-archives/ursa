@@ -1,5 +1,5 @@
 use super::helper_constraints::constrain_lc_with_scalar;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -44,16 +44,16 @@ pub fn allocate_capacity_const_for_verifier(
 /// Takes a Prover and enforces the constraints of Poseidon hash with 2 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blindings, rng)?;
 
-    let mut rands = randomness.unwrap_or_else(|| {
+    let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
         vec![
             FieldElement::random_using_rng(r),
@@ -114,10 +114,9 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_2(
 }
 
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 2 inputs and 1 output.
-/// TODO: Why `prove_knowledge_of_preimage_of_Poseidon_2` and `gen_proof_of_knowledge_of_preimage_of_Poseidon_2`
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
@@ -137,7 +136,7 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_2(
         preimage,
-        randomness,
+        blindings,
         image,
         hash_params,
         sbox_type,
@@ -187,19 +186,19 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_2(
 /// Takes a Prover and enforces the constraints of Poseidon hash with 4 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blindings, rng)?;
 
     let mut comms = vec![];
     let mut vars = vec![];
 
-    let mut rands = randomness.unwrap_or_else(|| {
+    let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
         vec![
             FieldElement::random_using_rng(r),
@@ -265,7 +264,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_4(
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 4 inputs and 1 output
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
@@ -285,7 +284,7 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_4(
         preimage,
-        randomness,
+        blindings,
         image,
         hash_params,
         sbox_type,
@@ -337,19 +336,19 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_4(
 /// Takes a Prover and enforces the constraints of Poseidon hash with 8 inputs and 1 output
 pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
     mut preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blindings, rng)?;
 
     let mut comms = vec![];
     let mut vars = vec![];
 
-    let mut rands = randomness.unwrap_or_else(|| {
+    let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
         vec![
             FieldElement::random_using_rng(r),
@@ -417,7 +416,7 @@ pub fn verify_knowledge_of_preimage_of_Poseidon_8(
 /// Initializes a Prover and creates proof of knowledge of preimage of Poseidon hash with 8 inputs and 1 output
 pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
     preimage: Vec<FieldElement>,
-    randomness: Option<Vec<FieldElement>>,
+    blindings: Option<Vec<FieldElement>>,
     image: &FieldElement,
     hash_params: &PoseidonParams,
     sbox_type: &SboxType,
@@ -437,7 +436,7 @@ pub fn gen_proof_of_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
 
     let comms = prove_knowledge_of_preimage_of_Poseidon_8(
         preimage,
-        randomness,
+        blindings,
         image,
         hash_params,
         sbox_type,
@@ -679,7 +678,7 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 55);
 
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         check_hash_2(&hash_params, &SboxType::Cube);
         check_hash_2(&hash_params, &SboxType::Inverse);
@@ -702,7 +701,7 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         check_hash_4(&hash_params, &SboxType::Cube);
         check_hash_4(&hash_params, &SboxType::Inverse);
@@ -725,7 +724,7 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 57);
 
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         check_hash_8(&hash_params, &SboxType::Cube);
         check_hash_8(&hash_params, &SboxType::Inverse);

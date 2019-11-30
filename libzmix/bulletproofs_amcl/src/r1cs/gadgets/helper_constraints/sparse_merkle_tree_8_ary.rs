@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use amcl_wrapper::constants::MODBYTES;
 
-use crate::errors::R1CSError;
+use crate::errors::{BulletproofError, R1CSError};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
 use super::poseidon::{PoseidonParams, Poseidon_hash_8, Poseidon_hash_8_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_bit_count, get_byte_size};
+use crate::r1cs::gadgets::helper_constraints::get_repr_in_power_2_base;
 use crate::utils::hash_db::HashDb;
 
 const ARITY: usize = 8;
@@ -16,30 +17,9 @@ const ARITY: usize = 8;
 pub type DBVal_8_ary = [FieldElement; ARITY];
 pub type ProofNode_8_ary = [FieldElement; ARITY - 1];
 
-/// Get a base 8 representation of the given `scalar`. Only return `num_digits` of the representation
-pub fn get_base_8_repr(scalar: &FieldElement, num_digits: usize) -> Vec<u8> {
-    let byte_size = get_byte_size(num_digits, 8);
-    if byte_size > MODBYTES {
-        panic!(
-            "limit_bytes cannot be more than {} but found {}",
-            MODBYTES, byte_size
-        )
-    }
-    let mut s = scalar.to_bignum();
-    s.norm();
-
-    let mut base_8 = vec![];
-    while (base_8.len() != num_digits) && (!s.iszilch()) {
-        base_8.push(s.lastbits(3) as u8);
-        s.fshr(3);
-    }
-    while base_8.len() != num_digits {
-        base_8.push(0);
-    }
-
-    base_8.reverse();
-    base_8
-}
+// The logic of `VanillaSparseMerkleTree_4` and `VanillaSparseMerkleTree_8` is same. Only the arity
+// and hence the hash function differs. The code is still kept separate for clarity. If code is to be
+// combined then a generic implementation will take the hash and database as type parameters.
 
 // TODO: ABSTRACT HASH FUNCTION BETTER
 /// Sparse merkle tree with arity 8, .i.e each node has 8 children.
@@ -56,7 +36,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         hash_params: &'a PoseidonParams,
         depth: usize,
         hash_db: &mut HashDb<DBVal_8_ary>,
-    ) -> Result<VanillaSparseMerkleTree_8<'a>, R1CSError> {
+    ) -> Result<VanillaSparseMerkleTree_8<'a>, BulletproofError> {
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
@@ -96,7 +76,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         idx: &FieldElement,
         val: FieldElement,
         hash_db: &mut HashDb<DBVal_8_ary>,
-    ) -> Result<FieldElement, R1CSError> {
+    ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key
         let mut siblings_wrap = Some(Vec::<ProofNode_8_ary>::new());
         self.get(idx, &mut siblings_wrap, hash_db)?;
@@ -139,7 +119,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         idx: &FieldElement,
         proof: &mut Option<Vec<ProofNode_8_ary>>,
         hash_db: &HashDb<DBVal_8_ary>,
-    ) -> Result<FieldElement, R1CSError> {
+    ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
 
@@ -192,7 +172,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         val: &FieldElement,
         proof: &[ProofNode_8_ary],
         root: Option<&FieldElement>,
-    ) -> Result<bool, R1CSError> {
+    ) -> Result<bool, BulletproofError> {
         let mut path = Self::leaf_index_to_path(idx, self.depth);
         path.reverse();
         let mut cur_val = val.clone();
@@ -213,7 +193,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
     /// Get path from root to leaf given a leaf index
     /// Convert leaf index to base 8
     pub fn leaf_index_to_path(idx: &FieldElement, depth: usize) -> Vec<u8> {
-        get_base_8_repr(idx, depth).to_vec()
+        get_repr_in_power_2_base(3, idx, depth).to_vec()
     }
 
     fn update_db_with_key_val(
@@ -299,7 +279,7 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
     let eight = FieldElement::from(8u64);
 
     let leaf_index_octets = leaf_index.assignment.map(|l| {
-        let mut b = get_base_8_repr(&l, depth);
+        let mut b = get_repr_in_power_2_base(3, &l, depth);
         b.reverse();
         b
     });
@@ -517,7 +497,7 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
-        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds);
+        let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         let tree_depth = 12;
         let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db).unwrap();

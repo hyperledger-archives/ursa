@@ -1,6 +1,6 @@
 use super::helper_constraints::constrain_lc_with_scalar;
 use super::helper_constraints::non_zero::is_nonzero_gadget;
-use crate::errors::R1CSError;
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
@@ -10,18 +10,18 @@ use rand::{CryptoRng, Rng};
 
 pub fn prove_non_zero_val<R: Rng + CryptoRng>(
     value: FieldElement,
-    randomness: Option<FieldElement>,
+    blinding: Option<FieldElement>,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_randomness_or_rng!(blinding, rng)?;
 
     let inv = value.inverse();
     let mut comms = vec![];
 
     let (com_val, var_val) = prover.commit(
         value.clone(),
-        randomness.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
+        blinding.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
     );
     let alloc_scal = AllocatedQuantity {
         variable: var_val,
@@ -66,7 +66,7 @@ pub fn verify_non_zero_val(
 /// This randomness argument is accepted so that this can be used as a sub-protocol where the protocol on upper layer will create the commitment.
 pub fn gen_proof_of_non_zero_val<R: Rng + CryptoRng>(
     value: FieldElement,
-    randomness: Option<FieldElement>,
+    blinding: Option<FieldElement>,
     rng: Option<&mut R>,
     transcript_label: &'static [u8],
     g: &G1,
@@ -77,7 +77,7 @@ pub fn gen_proof_of_non_zero_val<R: Rng + CryptoRng>(
     let mut prover_transcript = Transcript::new(transcript_label);
     let mut prover = Prover::new(g, h, &mut prover_transcript);
 
-    let comms = prove_non_zero_val(value, randomness, rng, &mut prover)?;
+    let comms = prove_non_zero_val(value, blinding, rng, &mut prover)?;
     let proof = prover.prove(G, H)?;
 
     Ok((proof, comms))

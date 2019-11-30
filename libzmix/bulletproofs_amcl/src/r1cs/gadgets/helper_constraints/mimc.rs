@@ -2,8 +2,6 @@ use crate::errors::R1CSError;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
-use crate::r1cs::linear_combination::AllocatedQuantity;
-
 use crate::r1cs::gadgets::helper_constraints::constrain_lc_with_scalar;
 
 /// Taken from https://eprint.iacr.org/2016/492, section 2.1, MiMC-2n/n (Feistel).
