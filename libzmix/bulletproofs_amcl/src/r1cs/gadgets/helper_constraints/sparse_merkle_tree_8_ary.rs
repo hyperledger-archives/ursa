@@ -10,6 +10,9 @@ use amcl_wrapper::field_elem::FieldElement;
 use super::poseidon::{PoseidonParams, Poseidon_hash_8, Poseidon_hash_8_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_bit_count, get_byte_size};
 use crate::r1cs::gadgets::helper_constraints::get_repr_in_power_2_base;
+use crate::r1cs::gadgets::merkle_tree_hash::{
+    Arity8MerkleTreeHash, Arity8MerkleTreeHashConstraints,
+};
 use crate::utils::hash_db::HashDb;
 
 const ARITY: usize = 8;
@@ -21,22 +24,24 @@ pub type ProofNode_8_ary = [FieldElement; ARITY - 1];
 // and hence the hash function differs. The code is still kept separate for clarity. If code is to be
 // combined then a generic implementation will take the hash and database as type parameters.
 
-// TODO: ABSTRACT HASH FUNCTION BETTER
 /// Sparse merkle tree with arity 8, .i.e each node has 8 children.
 #[derive(Clone, Debug)]
-pub struct VanillaSparseMerkleTree_8<'a> {
+pub struct VanillaSparseMerkleTree_8<'a, MTH: Arity8MerkleTreeHash> {
     pub depth: usize,
-    hash_params: &'a PoseidonParams,
+    hash_func: &'a MTH,
     pub root: FieldElement,
 }
 
-impl<'a> VanillaSparseMerkleTree_8<'a> {
+impl<'a, MTH> VanillaSparseMerkleTree_8<'a, MTH>
+where
+    MTH: Arity8MerkleTreeHash,
+{
     /// Create a new tree
     pub fn new(
-        hash_params: &'a PoseidonParams,
+        hash_func: &'a MTH,
         depth: usize,
         hash_db: &mut HashDb<DBVal_8_ary>,
-    ) -> Result<VanillaSparseMerkleTree_8<'a>, BulletproofError> {
+    ) -> Result<VanillaSparseMerkleTree_8<'a, MTH>, BulletproofError> {
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
@@ -54,7 +59,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
             ];
             input.clone_from_slice(inp.as_slice());
             // Hash all 8 children at once
-            let new = Poseidon_hash_8(inp, hash_params, &SboxType::Quint)?;
+            let new = hash_func.hash(inp)?;
             let key = new.to_bytes();
 
             hash_db.insert(key, input);
@@ -65,7 +70,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
 
         Ok(VanillaSparseMerkleTree_8 {
             depth,
-            hash_params,
+            hash_func,
             root,
         })
     }
@@ -103,7 +108,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
                 FieldElement::zero(),
             ];
             input.clone_from_slice(sibling.as_slice());
-            let h = Poseidon_hash_8(sibling, self.hash_params, &SboxType::Quint)?;
+            let h = self.hash_func.hash(sibling)?;
             Self::update_db_with_key_val(&h, input, hash_db);
             cur_val = h;
         }
@@ -180,7 +185,7 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
         for (i, d) in path.iter().enumerate() {
             let mut p = proof[self.depth - 1 - i].clone().to_vec();
             p.insert(*d as usize, cur_val);
-            cur_val = Poseidon_hash_8(p, self.hash_params, &SboxType::Quint)?;
+            cur_val = self.hash_func.hash(p)?;
         }
 
         // Check if root is equal to cur_val
@@ -258,16 +263,17 @@ impl<'a> VanillaSparseMerkleTree_8<'a> {
 
     // TODO: Consider the trick from 4-ary tree here as well.
 */
-pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
+pub fn vanilla_merkle_merkle_tree_8_verif_gadget<
+    CS: ConstraintSystem,
+    MTHC: Arity8MerkleTreeHashConstraints,
+>(
     cs: &mut CS,
     depth: usize,
     expected_root: &FieldElement,
     leaf_val: Variable,
     leaf_index: AllocatedQuantity,
     mut proof_nodes: Vec<Variable>,
-    capacity_const: Variable,
-    poseidon_params: &PoseidonParams,
-    sbox_type: &SboxType,
+    hash_func: &mut MTHC,
 ) -> Result<(), R1CSError> {
     let mut prev_hash = LinearCombination::from(leaf_val);
 
@@ -453,13 +459,8 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
         let c7 = c7_1 + c7_2;
 
         let input = vec![c0, c1, c2, c3, c4, c5, c6, c7];
-        prev_hash = Poseidon_hash_8_constraints::<CS>(
-            cs,
-            input,
-            capacity_const.into(),
-            poseidon_params,
-            sbox_type,
-        )?;
+
+        prev_hash = hash_func.hash(cs, input)?;
 
         prev_hash = prev_hash.simplify();
 
@@ -476,6 +477,7 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<CS: ConstraintSystem>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash_8;
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
 
@@ -500,7 +502,11 @@ mod tests {
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         let tree_depth = 12;
-        let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db).unwrap();
+        let hash_func = PoseidonHash_8 {
+            params: &hash_params,
+            sbox: &SboxType::Quint,
+        };
+        let mut tree = VanillaSparseMerkleTree_8::new(&hash_func, tree_depth, &mut db).unwrap();
 
         for i in 1..20 {
             let s = FieldElement::from(i as u64);

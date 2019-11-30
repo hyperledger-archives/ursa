@@ -3,10 +3,8 @@ extern crate rand;
 pub mod hash_db;
 pub mod vector_poly;
 
-use rand::rngs::EntropyRng;
 use rand::RngCore;
 
-use amcl_wrapper::constants::{CurveOrder, MODBYTES};
 use amcl_wrapper::errors::ValueError;
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;

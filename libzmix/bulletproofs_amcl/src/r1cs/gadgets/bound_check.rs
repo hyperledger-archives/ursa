@@ -9,7 +9,9 @@ use merlin::Transcript;
 use rand::{CryptoRng, Rng};
 
 /// Constraints for proving v lies in [min, max].
-/// Ensure v - min and max - v are positive numbers and don't overflow
+/// Ensure v - min and max - v are positive numbers and don't overflow.
+/// This would work when since v, min and max are u64 and less than half
+/// of the curve order/field size.
 pub fn bound_check_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     v: AllocatedQuantity,
@@ -204,9 +206,6 @@ mod tests {
 
         let n = 32;
 
-        /// TODO: Check for numbers > 2^n but less than curve order
-        /// TODO: Hypothesis: This would work when 2^n is less than half of the curve order/field size.
-        /// Write a test to check this.
         let label = b"BoundsTest";
         let (proof, commitments) = gen_proof_of_bounded_num(
             v,

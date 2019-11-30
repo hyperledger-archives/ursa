@@ -523,6 +523,11 @@ pub const CAP_CONST_W_5: u64 = 31;
 // Capacity constant for width 9,   000...0011111111
 pub const CAP_CONST_W_9: u64 = 511;
 
+// TODO: For various `Poseidon_hash_{2/4/8}`, `Poseidon_hash_{2/4/8}_constraints` and `Poseidon_hash_{2/4/8}_gadget`
+// functions below, a better way is to make inputs an array of {2/4/8} rather than a vector but then
+// below i have to use `mem::replace` and `mem::uninitialized` to move values out of `inputs` which.
+//  are unsafe. Another alternative is to check crate "arrayvec"
+
 /// Hashes 2 inputs to give a single output
 pub fn Poseidon_hash_2(
     mut inputs: Vec<FieldElement>,
@@ -621,7 +626,7 @@ pub fn Poseidon_hash_4(
 /// Enforces constraints for Poseidon_hash_4 for the given constraint system and Poseidon params
 pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
     cs: &mut CS,
-    mut inputs: Vec<LinearCombination>,
+    inputs: Vec<LinearCombination>,
     capacity_const: LinearCombination,
     params: &'a PoseidonParams,
     sbox_type: &SboxType,
@@ -633,7 +638,7 @@ pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
 
     // Always keep the 1st input as 0
     let mut input = vec![capacity_const];
-    input.append(&mut inputs);
+    input.extend(inputs.into_iter());
 
     let permutation_output = Poseidon_permutation_constraints::<CS>(cs, input, params, sbox_type)?;
     Ok(permutation_output[1].to_owned())
@@ -671,7 +676,7 @@ pub fn Poseidon_hash_4_gadget<'a, CS: ConstraintSystem>(
 /// Only 8 inputs to the permutation are set to the input of this hash function,
 /// one is set to capacity constant. Always keep the 1st input as capacity constant
 pub fn Poseidon_hash_8(
-    mut inputs: Vec<FieldElement>,
+    inputs: Vec<FieldElement>,
     params: &PoseidonParams,
     sbox: &SboxType,
 ) -> Result<FieldElement, BulletproofError> {
@@ -683,7 +688,7 @@ pub fn Poseidon_hash_8(
         .into());
     }
     let mut input = vec![FieldElement::from(CAP_CONST_W_9)];
-    input.append(&mut inputs);
+    input.extend(inputs.into_iter());
 
     // Never take the first output
     let out = Poseidon_permutation(&input, params, sbox).remove(1);
