@@ -30,8 +30,8 @@ pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
 
     check_for_input_and_randomness_length!(preimage, rands, 2)?;
 
-    let (com_l, var_l) = prover.commit(preimage[0].clone(), rands.remove(0));
-    let (com_r, var_r) = prover.commit(preimage[1].clone(), rands.remove(0));
+    let (com_l, var_l) = prover.commit(preimage.remove(0), rands.remove(0));
+    let (com_r, var_r) = prover.commit(preimage.remove(0), rands.remove(0));
 
     mimc_gadget(prover, var_l.into(), var_r.into(), &constants, &image)?;
 

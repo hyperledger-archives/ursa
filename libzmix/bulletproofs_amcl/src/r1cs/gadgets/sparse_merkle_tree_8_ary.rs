@@ -19,16 +19,19 @@ use super::helper_constraints::sparse_merkle_tree_8_ary::{
     VanillaSparseMerkleTree_8,
 };
 use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_9;
+use crate::r1cs::gadgets::merkle_tree_hash::Arity8MerkleTreeHashConstraints;
 
-pub fn prove_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
+pub fn prove_leaf_inclusion_8_ary_merkle_tree<
+    R: Rng + CryptoRng,
+    MTHC: Arity8MerkleTreeHashConstraints,
+>(
     leaf: FieldElement,
     leaf_index: FieldElement,
     randomness: Option<Vec<FieldElement>>,
     mut merkle_proof: Vec<ProofNode_8_ary>,
     root: &FieldElement,
     tree_depth: usize,
-    hash_params: &PoseidonParams,
-    sbox_type: &SboxType,
+    hash_func: &mut MTHC,
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
@@ -71,7 +74,7 @@ pub fn prove_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
         }
     }
 
-    let capacity_const = allocate_capacity_const_for_prover(prover, CAP_CONST_W_9);
+    hash_func.prover_setup(prover)?;
 
     vanilla_merkle_merkle_tree_8_verif_gadget(
         prover,
@@ -80,19 +83,18 @@ pub fn prove_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
         var_leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
-        capacity_const,
-        &hash_params,
-        sbox_type,
+        hash_func,
     )?;
 
     Ok(comms)
 }
 
-pub fn verify_leaf_inclusion_8_ary_merkle_tree(
+pub fn verify_leaf_inclusion_8_ary_merkle_tree<MTHC: Arity8MerkleTreeHashConstraints>(
     root: &FieldElement,
     tree_depth: usize,
-    hash_params: &PoseidonParams,
-    sbox_type: &SboxType,
+    /*hash_params: &PoseidonParams,
+    sbox_type: &SboxType,*/
+    hash_func: &mut MTHC,
     mut commitments: Vec<G1>,
     g: &G1,
     h: &G1,
@@ -112,7 +114,8 @@ pub fn verify_leaf_inclusion_8_ary_merkle_tree(
         proof_vars.push(v);
     }
 
-    let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_9, g, h);
+    //    let capacity_const = allocate_capacity_const_for_verifier(verifier, CAP_CONST_W_9, g, h);
+    hash_func.verifier_setup(verifier, Some(g), Some(h))?;
 
     vanilla_merkle_merkle_tree_8_verif_gadget(
         verifier,
@@ -121,23 +124,28 @@ pub fn verify_leaf_inclusion_8_ary_merkle_tree(
         var_leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
-        capacity_const,
+        /*capacity_const,
         hash_params,
-        sbox_type,
+        sbox_type,*/
+        hash_func,
     )?;
 
     Ok(())
 }
 
-pub fn gen_proof_of_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
+pub fn gen_proof_of_leaf_inclusion_8_ary_merkle_tree<
+    R: Rng + CryptoRng,
+    MTHC: Arity8MerkleTreeHashConstraints,
+>(
     leaf: FieldElement,
     leaf_index: FieldElement,
     randomness: Option<Vec<FieldElement>>,
     merkle_proof: Vec<ProofNode_8_ary>,
     root: &FieldElement,
     tree_depth: usize,
-    hash_params: &PoseidonParams,
-    sbox_type: &SboxType,
+    /*hash_params: &PoseidonParams,
+    sbox_type: &SboxType,*/
+    hash_func: &mut MTHC,
     rng: Option<&mut R>,
     transcript_label: &'static [u8],
     g: &G1,
@@ -156,15 +164,14 @@ pub fn gen_proof_of_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
         merkle_proof,
         root,
         tree_depth,
-        hash_params,
-        sbox_type,
+        hash_func,
         rng,
         &mut prover,
     )?;
-    let total_rounds = hash_params.full_rounds_beginning
+    /*let total_rounds = hash_params.full_rounds_beginning
         + hash_params.partial_rounds
         + hash_params.full_rounds_end;
-    println!("For 8-ary tree of height {} (has 2^{} leaves) and Poseidon rounds {}, no of multipliers is {} and constraints is {}", tree_depth, tree_depth*3, total_rounds, &prover.num_multipliers(), &prover.num_constraints());
+    println!("For 8-ary tree of height {} (has 2^{} leaves) and Poseidon rounds {}, no of multipliers is {} and constraints is {}", tree_depth, tree_depth*3, total_rounds, &prover.num_multipliers(), &prover.num_constraints());*/
 
     let proof = prover.prove(G, H)?;
     let end = start.elapsed();
@@ -174,11 +181,10 @@ pub fn gen_proof_of_leaf_inclusion_8_ary_merkle_tree<R: Rng + CryptoRng>(
     Ok((proof, comms))
 }
 
-pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
+pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree<MTHC: Arity8MerkleTreeHashConstraints>(
     root: &FieldElement,
     tree_depth: usize,
-    hash_params: &PoseidonParams,
-    sbox_type: &SboxType,
+    hash_func: &mut MTHC,
     proof: R1CSProof,
     commitments: Vec<G1>,
     transcript_label: &'static [u8],
@@ -194,8 +200,7 @@ pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
     verify_leaf_inclusion_8_ary_merkle_tree(
         root,
         tree_depth,
-        hash_params,
-        sbox_type,
+        hash_func,
         commitments,
         g,
         h,
@@ -211,6 +216,7 @@ pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHashConstraints, PoseidonHash_8};
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
     use amcl_wrapper::group_elem::GroupElement;
@@ -236,7 +242,13 @@ mod tests {
         let total_rounds = full_b + partial_rounds + full_e;
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
         let tree_depth = 8;
-        let mut tree = VanillaSparseMerkleTree_8::new(&hash_params, tree_depth, &mut db).unwrap();
+        let sbox = &SboxType::Quint;
+
+        let hash_func = PoseidonHash_8 {
+            params: &hash_params,
+            sbox,
+        };
+        let mut tree = VanillaSparseMerkleTree_8::new(&hash_func, tree_depth, &mut db).unwrap();
 
         for i in 1..=10 {
             let s = FieldElement::from(i as u32);
@@ -254,8 +266,6 @@ mod tests {
 
         let mut rng = rand::thread_rng();
 
-        let sbox_type = &SboxType::Quint;
-
         // TODO: Use iterators. Generating so many generators at once is very slow. In practice, generators will be persisted.
         let G: G1Vector = get_generators("G", 4096).into();
         let H: G1Vector = get_generators("H", 4096).into();
@@ -264,6 +274,7 @@ mod tests {
         let h = G1::from_msg_hash("h".as_bytes());
 
         let label = b"8-aryMerkleTree";
+        let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_9);
 
         let (proof, commitments) = gen_proof_of_leaf_inclusion_8_ary_merkle_tree(
             k.clone(),
@@ -272,8 +283,7 @@ mod tests {
             merkle_proof_vec,
             &tree.root,
             tree.depth,
-            &hash_params,
-            sbox_type,
+            &mut hash_func,
             Some(&mut rng),
             label,
             &g,
@@ -283,11 +293,12 @@ mod tests {
         )
         .unwrap();
 
+        let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_9);
+
         verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
             &tree.root,
             tree.depth,
-            &hash_params,
-            sbox_type,
+            &mut hash_func,
             proof,
             commitments,
             label,

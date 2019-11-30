@@ -53,6 +53,13 @@ pub enum BulletproofErrorKind {
     )]
     ParseErrorForPoseidonConstant { constant: String, error_msg: String },
 
+    /// Occurs when Merkle tree hash is called with incorrect number of inputs
+    #[fail(
+        display = "Merkle tree hash is called with incorrect number of inputs. Expected {} inputs but found {}",
+        expected, found
+    )]
+    IncorrectNoOfInputsForMerkleTreeHash { found: usize, expected: usize },
+
     /// Occurs when a error from Constraint system or gadget is returned.
     #[fail(display = "R1CS Error: {:?}", msg)]
     R1CSError { msg: String },
