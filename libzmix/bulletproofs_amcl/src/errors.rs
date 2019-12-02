@@ -199,13 +199,14 @@ impl From<R1CSError> for BulletproofError {
     }
 }
 
-/// Check if either randomness was provided or random number generator was provided. Works like a boolean OR on Option
+/// Check if either blinding is provided or random number generator that will be used to generate
+/// the blinding is provided. Works like a boolean OR on Option
 #[macro_export]
-macro_rules! check_for_randomness_or_rng {
-    ( $randomness:expr, $rng:expr ) => {{
-        if $randomness.is_none() && $rng.is_none() {
+macro_rules! check_for_blindings_or_rng {
+    ( $blindings:expr, $rng:expr ) => {{
+        if $blindings.is_none() && $rng.is_none() {
             Err(R1CSError::from(R1CSErrorKind::GadgetError {
-                description: String::from("Since randomness is None, provide"),
+                description: String::from("Since blindings is None, provide"),
             }))
         } else {
             Ok(())
@@ -214,11 +215,11 @@ macro_rules! check_for_randomness_or_rng {
 }
 
 #[macro_export]
-macro_rules! check_for_input_and_randomness_length {
-    ( $input:expr, $randomness:expr, $expected_length:expr ) => {{
-        if ($input.len() != $expected_length) || ($randomness.len() != $expected_length) {
+macro_rules! check_for_input_and_blindings_length {
+    ( $input:expr, $blindings:expr, $expected_length:expr ) => {{
+        if ($input.len() != $expected_length) || ($blindings.len() != $expected_length) {
             Err(R1CSError::from(R1CSErrorKind::GadgetError {
-                description: format!("Both input and randomness should be of the same size {} but input size is {} and randomness size is {}", $expected_length, $input.len(), $randomness.len()),
+                description: format!("Both input and blindings should be of the same size {} but input size is {} and blindings size is {}", $expected_length, $input.len(), $blindings.len()),
             }))
         } else {
             Ok(())

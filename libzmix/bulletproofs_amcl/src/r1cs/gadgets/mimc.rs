@@ -18,7 +18,7 @@ pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blindings, rng)?;
+    check_for_blindings_or_rng!(blindings, rng)?;
 
     let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
@@ -28,7 +28,7 @@ pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(preimage, rands, 2)?;
+    check_for_input_and_blindings_length!(preimage, rands, 2)?;
 
     let (com_l, var_l) = prover.commit(preimage.remove(0), rands.remove(0));
     let (com_r, var_r) = prover.commit(preimage.remove(0), rands.remove(0));

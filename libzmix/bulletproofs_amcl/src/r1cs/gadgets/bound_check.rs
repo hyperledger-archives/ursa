@@ -49,7 +49,7 @@ pub fn prove_bounded_num<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blinding, rng)?;
+    check_for_blindings_or_rng!(blinding, rng)?;
 
     let a = val - lower;
     let b = upper - val;

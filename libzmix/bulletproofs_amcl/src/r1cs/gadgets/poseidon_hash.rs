@@ -51,7 +51,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blindings, rng)?;
+    check_for_blindings_or_rng!(blindings, rng)?;
 
     let mut rands = blindings.unwrap_or_else(|| {
         let r = rng.unwrap();
@@ -60,7 +60,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_2<R: Rng + CryptoRng>(
             FieldElement::random_using_rng(r),
         ]
     });
-    check_for_input_and_randomness_length!(preimage, rands, 2)?;
+    check_for_input_and_blindings_length!(preimage, rands, 2)?;
 
     let mut comms = vec![];
 
@@ -193,7 +193,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blindings, rng)?;
+    check_for_blindings_or_rng!(blindings, rng)?;
 
     let mut comms = vec![];
     let mut vars = vec![];
@@ -208,7 +208,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_4<R: Rng + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(preimage, rands, 4)?;
+    check_for_input_and_blindings_length!(preimage, rands, 4)?;
 
     for _ in 0..4 {
         let (com, var) = prover.commit(preimage.remove(0), rands.remove(0));
@@ -343,7 +343,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blindings, rng)?;
+    check_for_blindings_or_rng!(blindings, rng)?;
 
     let mut comms = vec![];
     let mut vars = vec![];
@@ -362,7 +362,7 @@ pub fn prove_knowledge_of_preimage_of_Poseidon_8<R: Rng + CryptoRng>(
         ]
     });
 
-    check_for_input_and_randomness_length!(preimage, rands, 8)?;
+    check_for_input_and_blindings_length!(preimage, rands, 8)?;
 
     for _ in 0..8 {
         let (com, var) = prover.commit(preimage.remove(0), rands.remove(0));
