@@ -35,7 +35,7 @@ pub fn prove_leaf_inclusion_8_ary_merkle_tree<
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_blindings_or_rng!(randomness, rng)?;
 
     // Randomness is only provided for leaf value and leaf index
     let mut rands = randomness.unwrap_or_else(|| {

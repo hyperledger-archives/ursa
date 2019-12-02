@@ -84,7 +84,7 @@ pub fn prove_set_membership_alt<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_blindings_or_rng!(randomness, rng)?;
 
     // Set all indices to 0 except the one where `value` is
     let toggles: Vec<u64> = set

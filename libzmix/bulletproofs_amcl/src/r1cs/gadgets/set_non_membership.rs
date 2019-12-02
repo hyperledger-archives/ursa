@@ -1,7 +1,6 @@
 use super::helper_constraints::constrain_lc_with_scalar;
 use super::helper_constraints::non_zero::is_nonzero_gadget;
 use crate::errors::{R1CSError, R1CSErrorKind};
-use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
@@ -19,18 +18,18 @@ sets.
 /// Create new set (a-x, b-x, c-x, d-x, e-x). Now ensure none of a-x, b-x,...e-x is 0.
 pub fn set_non_membership_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
-    v: AllocatedQuantity,
-    diff_vars: Vec<AllocatedQuantity>,
-    diff_inv_vars: Vec<AllocatedQuantity>,
+    v: Variable,
+    diff_vars: Vec<Variable>,
+    diff_inv_vars: Vec<Variable>,
     set: &[FieldElement],
 ) -> Result<(), R1CSError> {
     let set_length = set.len();
 
     for i in 0..set_length {
         // Since `diff_vars[i]` is `set[i] - v`, `diff_vars[i]` + `v` should be `set[i]`
-        constrain_lc_with_scalar::<CS>(cs, diff_vars[i].variable + v.variable, &set[i]);
+        constrain_lc_with_scalar::<CS>(cs, diff_vars[i] + v, &set[i]);
         // Ensure `set[i] - v` is non-zero
-        is_nonzero_gadget(cs, diff_vars[i].variable, diff_inv_vars[i].variable)?;
+        is_nonzero_gadget(cs, diff_vars[i], diff_inv_vars[i])?;
     }
 
     Ok(())
@@ -43,23 +42,19 @@ pub fn prove_set_non_membership<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(randomness, rng)?;
+    check_for_blindings_or_rng!(randomness, rng)?;
 
     let set_length = set.len();
 
     let mut comms = vec![];
-    let mut diff_vars: Vec<AllocatedQuantity> = vec![];
-    let mut diff_inv_vars: Vec<AllocatedQuantity> = vec![];
+    let mut diff_vars = vec![];
+    let mut diff_inv_vars = vec![];
 
     let value = FieldElement::from(value);
     let (com_value, var_value) = prover.commit(
         value.clone(),
         randomness.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
     );
-    let alloc_scal = AllocatedQuantity {
-        variable: var_value,
-        assignment: Some(value.clone()),
-    };
     comms.push(com_value);
 
     for i in 0..set_length {
@@ -68,24 +63,16 @@ pub fn prove_set_non_membership<R: Rng + CryptoRng>(
 
         // Take difference of set element and value, `set[i] - value`
         let (com_diff, var_diff) = prover.commit(diff.clone(), FieldElement::random());
-        let alloc_scal_diff = AllocatedQuantity {
-            variable: var_diff,
-            assignment: Some(diff),
-        };
-        diff_vars.push(alloc_scal_diff);
+        diff_vars.push(var_diff);
         comms.push(com_diff);
 
         // Inverse needed to prove that difference `set[i] - value` is non-zero
         let (com_diff_inv, var_diff_inv) = prover.commit(diff_inv.clone(), FieldElement::random());
-        let alloc_scal_diff_inv = AllocatedQuantity {
-            variable: var_diff_inv,
-            assignment: Some(diff_inv),
-        };
-        diff_inv_vars.push(alloc_scal_diff_inv);
+        diff_inv_vars.push(var_diff_inv);
         comms.push(com_diff_inv);
     }
 
-    set_non_membership_gadget(prover, alloc_scal, diff_vars, diff_inv_vars, &set)?;
+    set_non_membership_gadget(prover, var_value, diff_vars, diff_inv_vars, &set)?;
 
     Ok(comms)
 }
@@ -97,32 +84,20 @@ pub fn verify_set_non_membership(
 ) -> Result<(), R1CSError> {
     let set_length = set.len();
 
-    let mut diff_vars: Vec<AllocatedQuantity> = vec![];
-    let mut diff_inv_vars: Vec<AllocatedQuantity> = vec![];
+    let mut diff_vars = vec![];
+    let mut diff_inv_vars = vec![];
 
     let var_val = verifier.commit(commitments.remove(0));
-    let alloc_scal = AllocatedQuantity {
-        variable: var_val,
-        assignment: None,
-    };
 
     for _ in 1..set_length + 1 {
         let var_diff = verifier.commit(commitments.remove(0));
-        let alloc_scal_diff = AllocatedQuantity {
-            variable: var_diff,
-            assignment: None,
-        };
-        diff_vars.push(alloc_scal_diff);
+        diff_vars.push(var_diff);
 
         let var_diff_inv = verifier.commit(commitments.remove(0));
-        let alloc_scal_diff_inv = AllocatedQuantity {
-            variable: var_diff_inv,
-            assignment: None,
-        };
-        diff_inv_vars.push(alloc_scal_diff_inv);
+        diff_inv_vars.push(var_diff_inv);
     }
 
-    set_non_membership_gadget(verifier, alloc_scal, diff_vars, diff_inv_vars, &set)?;
+    set_non_membership_gadget(verifier, var_val, diff_vars, diff_inv_vars, &set)?;
 
     Ok(())
 }

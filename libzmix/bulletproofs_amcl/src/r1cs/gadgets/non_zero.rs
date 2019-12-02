@@ -14,29 +14,23 @@ pub fn prove_non_zero_val<R: Rng + CryptoRng>(
     rng: Option<&mut R>,
     prover: &mut Prover,
 ) -> Result<Vec<G1>, R1CSError> {
-    check_for_randomness_or_rng!(blinding, rng)?;
+    check_for_blindings_or_rng!(blinding, rng)?;
 
     let inv = value.inverse();
     let mut comms = vec![];
 
     let (com_val, var_val) = prover.commit(
-        value.clone(),
+        value,
         blinding.unwrap_or_else(|| FieldElement::random_using_rng(rng.unwrap())),
     );
-    let alloc_scal = AllocatedQuantity {
-        variable: var_val,
-        assignment: Some(value),
-    };
+
     comms.push(com_val);
 
-    let (com_val_inv, var_val_inv) = prover.commit(inv.clone(), FieldElement::random());
-    let alloc_scal_inv = AllocatedQuantity {
-        variable: var_val_inv,
-        assignment: Some(inv),
-    };
+    let (com_val_inv, var_val_inv) = prover.commit(inv, FieldElement::random());
+
     comms.push(com_val_inv);
 
-    is_nonzero_gadget(prover, alloc_scal.variable, alloc_scal_inv.variable)?;
+    is_nonzero_gadget(prover, var_val, var_val_inv)?;
 
     Ok(comms)
 }
@@ -46,18 +40,10 @@ pub fn verify_non_zero_val(
     verifier: &mut Verifier,
 ) -> Result<(), R1CSError> {
     let var_val = verifier.commit(commitments.remove(0));
-    let alloc_scal = AllocatedQuantity {
-        variable: var_val,
-        assignment: None,
-    };
 
     let var_val_inv = verifier.commit(commitments.remove(0));
-    let alloc_scal_inv = AllocatedQuantity {
-        variable: var_val_inv,
-        assignment: None,
-    };
 
-    is_nonzero_gadget(verifier, alloc_scal.variable, alloc_scal_inv.variable)?;
+    is_nonzero_gadget(verifier, var_val, var_val_inv)?;
 
     Ok(())
 }
