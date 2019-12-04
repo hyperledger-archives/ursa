@@ -19,16 +19,21 @@ use super::helper_constraints::sparse_merkle_tree_4_ary::{
     VanillaSparseMerkleTree_4,
 };
 use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
+use crate::r1cs::gadgets::helper_constraints::{
+    get_blinding_for_merkle_tree_prover, LeafValueType,
+};
 use crate::r1cs::gadgets::merkle_tree_hash::{
     Arity4MerkleTreeHash, Arity4MerkleTreeHashConstraints,
 };
 
+// If the leaf value (`leaf`) is not hidden from the verifier, then it will not be committed to
 pub fn prove_leaf_inclusion_4_ary_merkle_tree<
     R: Rng + CryptoRng,
     MTHC: Arity4MerkleTreeHashConstraints,
 >(
     leaf: FieldElement,
     leaf_index: FieldElement,
+    hide_leaf: bool, // Indicates whether the leaf value is hidden from the verifier or not
     blindings: Option<Vec<FieldElement>>,
     mut merkle_proof: Vec<ProofNode_4_ary>,
     root: &FieldElement,
@@ -39,33 +44,24 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<
 ) -> Result<Vec<G1>, R1CSError> {
     check_for_blindings_or_rng!(blindings, rng)?;
 
-    // Randomness is only provided for leaf value and leaf index
-    let mut rands = blindings.unwrap_or_else(|| {
-        let r = rng.unwrap();
-        vec![
-            FieldElement::random_using_rng(r),
-            FieldElement::random_using_rng(r),
-        ]
-    });
-
-    if rands.len() != 2 {
-        return Err(R1CSErrorKind::GadgetError {
-            description: String::from("Provided randomness should have size 2"),
-        }
-        .into());
-    }
+    let mut blindings = get_blinding_for_merkle_tree_prover(hide_leaf, blindings, rng)?;
 
     let mut comms = vec![];
 
-    let (com_leaf, var_leaf) = prover.commit(leaf, rands.remove(0));
-    comms.push(com_leaf);
-
-    let (com_leaf_idx, var_leaf_idx) = prover.commit(leaf_index.clone(), rands.remove(0));
+    let (com_leaf_idx, var_leaf_idx) = prover.commit(leaf_index.clone(), blindings.remove(0));
     let leaf_idx_alloc_scalar = AllocatedQuantity {
         variable: var_leaf_idx,
         assignment: Some(leaf_index),
     };
     comms.push(com_leaf_idx);
+
+    let leaf = if hide_leaf {
+        let (com_leaf, var_leaf) = prover.commit(leaf, blindings.remove(0));
+        comms.push(com_leaf);
+        LeafValueType::Hidden(var_leaf)
+    } else {
+        LeafValueType::Known(leaf)
+    };
 
     let mut proof_vars = vec![];
     for p in merkle_proof.drain(0..) {
@@ -81,7 +77,7 @@ pub fn prove_leaf_inclusion_4_ary_merkle_tree<
         prover,
         tree_depth,
         root,
-        var_leaf,
+        leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
         hash_func,
@@ -94,17 +90,21 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree<MTHC: Arity4MerkleTreeHashConstra
     root: &FieldElement,
     tree_depth: usize,
     hash_func: &mut MTHC,
+    leaf_val: Option<FieldElement>, // If the leaf value is hidden from the verifier, `leaf_val` will be None else it will have the value of the leaf
     mut commitments: Vec<G1>,
     g: &G1,
     h: &G1,
     verifier: &mut Verifier,
 ) -> Result<(), R1CSError> {
-    let var_leaf = verifier.commit(commitments.remove(0));
-
     let var_leaf_idx = verifier.commit(commitments.remove(0));
     let leaf_idx_alloc_scalar = AllocatedQuantity {
         variable: var_leaf_idx,
         assignment: None,
+    };
+
+    let leaf = match leaf_val {
+        Some(v) => LeafValueType::Known(v),
+        None => LeafValueType::Hidden(verifier.commit(commitments.remove(0))),
     };
 
     let mut proof_vars = vec![];
@@ -118,7 +118,7 @@ pub fn verify_leaf_inclusion_4_ary_merkle_tree<MTHC: Arity4MerkleTreeHashConstra
         verifier,
         tree_depth,
         root,
-        var_leaf,
+        leaf,
         leaf_idx_alloc_scalar,
         proof_vars,
         hash_func,
@@ -133,7 +133,8 @@ pub fn gen_proof_of_leaf_inclusion_4_ary_merkle_tree<
 >(
     leaf: FieldElement,
     leaf_index: FieldElement,
-    randomness: Option<Vec<FieldElement>>,
+    hide_leaf: bool, // Indicates whether the leaf value is hidden from the verifier or not
+    blindings: Option<Vec<FieldElement>>,
     merkle_proof: Vec<ProofNode_4_ary>,
     root: &FieldElement,
     tree_depth: usize,
@@ -153,7 +154,8 @@ pub fn gen_proof_of_leaf_inclusion_4_ary_merkle_tree<
     let comms = prove_leaf_inclusion_4_ary_merkle_tree(
         leaf,
         leaf_index,
-        randomness,
+        hide_leaf,
+        blindings,
         merkle_proof,
         root,
         tree_depth,
@@ -180,6 +182,7 @@ pub fn verify_proof_of_leaf_inclusion_4_ary_merkle_tree<MTHC: Arity4MerkleTreeHa
     tree_depth: usize,
     hash_func: &mut MTHC,
     proof: R1CSProof,
+    leaf_val: Option<FieldElement>, // If the leaf value is hidden from the verifier, `leaf_val` will be None else it will have the value of the leaf
     commitments: Vec<G1>,
     transcript_label: &'static [u8],
     g: &G1,
@@ -196,6 +199,7 @@ pub fn verify_proof_of_leaf_inclusion_4_ary_merkle_tree<MTHC: Arity4MerkleTreeHa
         root,
         tree_depth,
         hash_func,
+        leaf_val,
         commitments,
         g,
         h,
@@ -272,10 +276,48 @@ mod tests {
 
             let label = b"4-aryMerkleTree";
 
+            // Test with leaf value hidden from verifier
             let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
             let (proof, commitments) = gen_proof_of_leaf_inclusion_4_ary_merkle_tree(
                 k.clone(),
                 k.clone(),
+                true,
+                None,
+                merkle_proof_vec.clone(),
+                &tree.root,
+                tree.depth,
+                &mut hash_func,
+                Some(&mut rng),
+                label,
+                &g,
+                &h,
+                &G,
+                &H,
+            )
+            .unwrap();
+
+            let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
+            verify_proof_of_leaf_inclusion_4_ary_merkle_tree(
+                &tree.root,
+                tree.depth,
+                &mut hash_func,
+                proof,
+                None,
+                commitments,
+                label,
+                &g,
+                &h,
+                &G,
+                &H,
+            )
+            .unwrap();
+
+            // Test with leaf value known to verifier
+            let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
+            let (proof, commitments) = gen_proof_of_leaf_inclusion_4_ary_merkle_tree(
+                k.clone(),
+                k.clone(),
+                false,
                 None,
                 merkle_proof_vec,
                 &tree.root,
@@ -296,6 +338,7 @@ mod tests {
                 tree.depth,
                 &mut hash_func,
                 proof,
+                Some(k.clone()), // The verifier knows the value of the leaf
                 commitments,
                 label,
                 &g,

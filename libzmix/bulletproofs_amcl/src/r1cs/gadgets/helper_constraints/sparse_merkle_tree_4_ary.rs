@@ -10,7 +10,7 @@ use amcl_wrapper::field_elem::FieldElement;
 use super::poseidon::{PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_byte_size};
 use crate::r1cs::gadgets::helper_constraints::{
-    allocated_leaf_index_to_bytes, get_repr_in_power_2_base,
+    allocated_leaf_index_to_bytes, get_repr_in_power_2_base, LeafValueType,
 };
 use crate::r1cs::gadgets::merkle_tree_hash::{
     Arity4MerkleTreeHash, Arity4MerkleTreeHashConstraints,
@@ -259,7 +259,7 @@ pub fn vanilla_merkle_merkle_tree_4_verif_gadget<
     cs: &mut CS,
     depth: usize,
     expected_root: &FieldElement,
-    leaf_val: Variable,
+    leaf_val: LeafValueType,
     leaf_index: AllocatedQuantity,
     mut proof_nodes: Vec<Variable>,
     hash_func: &mut MTHC,
