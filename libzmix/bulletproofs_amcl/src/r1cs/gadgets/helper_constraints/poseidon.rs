@@ -523,10 +523,14 @@ pub const CAP_CONST_W_5: u64 = 31;
 // Capacity constant for width 9,   000...0011111111
 pub const CAP_CONST_W_9: u64 = 511;
 
-// TODO: For various `Poseidon_hash_{2/4/8}`, `Poseidon_hash_{2/4/8}_constraints` and `Poseidon_hash_{2/4/8}_gadget`
-// functions below, a better way is to make inputs an array of {2/4/8} rather than a vector but then
-// below i have to use `mem::replace` and `mem::uninitialized` to move values out of `inputs` which.
-//  are unsafe. Another alternative is to check crate "arrayvec"
+// Tradeoff: For various `Poseidon_hash_{2/4/8}`, `Poseidon_hash_{2/4/8}_constraints` and `Poseidon_hash_{2/4/8}_gadget`
+// functions below, a better way (since they will always take {2/4/8} elements) is to make inputs an
+// array of {2/4/8} rather than a vector but then below i have to use `mem::replace` and `mem::uninitialized`
+// to move values out of `inputs` which are unsafe.
+// The upside of using vectors is that allocations are done only once whereas if i use an array, i
+// have to eventually move its elements to a vector before passing to the permutation since permutation
+// needs to work on variable length inputs.
+// Another alternative is to check crate "arrayvec"
 
 /// Hashes 2 inputs to give a single output
 pub fn Poseidon_hash_2(

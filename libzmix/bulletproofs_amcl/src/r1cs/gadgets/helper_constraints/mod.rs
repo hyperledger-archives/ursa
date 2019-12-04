@@ -1,7 +1,10 @@
+use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
-use crate::r1cs::{ConstraintSystem, LinearCombination};
+use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::constants::MODBYTES;
 use amcl_wrapper::field_elem::FieldElement;
+
+use rand::{CryptoRng, Rng};
 
 pub mod bit;
 pub mod mimc;
@@ -69,4 +72,64 @@ fn allocated_leaf_index_to_bytes(leaf_index: AllocatedQuantity) -> Option<[u8; M
         b.reverse();
         b
     })
+}
+
+/// When doing merkle proofs, the prover might want to hide the leaf index and leaf value both or
+/// might only want to hide lead index but reveal leaf value. The following enum is used to indicate
+/// whether the prover is hiding the leaf value or (`LeafValueType::Hidden`) or not (`LeafValueType::Known`).
+/// Hence the leaf value type being passed to the gadget must be of the required type.
+pub enum LeafValueType {
+    Hidden(Variable),
+    Known(FieldElement),
+}
+
+impl From<LeafValueType> for LinearCombination {
+    fn from(v: LeafValueType) -> LinearCombination {
+        match v {
+            LeafValueType::Hidden(v) => LinearCombination::from(v),
+            LeafValueType::Known(v) => LinearCombination::from(v),
+        }
+    }
+}
+
+/// Either get the blindings from the given Option or generate by using the given random number
+/// generator. It returns 1 or 2 blindings depending on whether the leaf value is hidden from the
+/// verifier or not
+pub(crate) fn get_blinding_for_merkle_tree_prover<R: Rng + CryptoRng>(
+    hide_leaf: bool,
+    blindings: Option<Vec<FieldElement>>,
+    rng: Option<&mut R>,
+) -> Result<Vec<FieldElement>, R1CSError> {
+    if hide_leaf {
+        // Randomness is only provided for leaf value and leaf index
+        let mut blindings = blindings.unwrap_or_else(|| {
+            let r = rng.unwrap();
+            vec![
+                FieldElement::random_using_rng(r),
+                FieldElement::random_using_rng(r),
+            ]
+        });
+
+        if blindings.len() != 2 {
+            return Err(R1CSErrorKind::GadgetError {
+                description: String::from("Provided randomness should have size 2"),
+            }
+            .into());
+        }
+        Ok(blindings)
+    } else {
+        // Randomness is only provided for the leaf index
+        let mut blindings = blindings.unwrap_or_else(|| {
+            let r = rng.unwrap();
+            vec![FieldElement::random_using_rng(r)]
+        });
+
+        if blindings.len() != 1 {
+            return Err(R1CSErrorKind::GadgetError {
+                description: String::from("Provided randomness should have size 1"),
+            }
+            .into());
+        }
+        Ok(blindings)
+    }
 }
