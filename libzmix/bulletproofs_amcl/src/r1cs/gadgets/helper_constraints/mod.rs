@@ -102,7 +102,7 @@ pub(crate) fn get_blinding_for_merkle_tree_prover<R: Rng + CryptoRng>(
 ) -> Result<Vec<FieldElement>, R1CSError> {
     if hide_leaf {
         // Randomness is only provided for leaf value and leaf index
-        let mut blindings = blindings.unwrap_or_else(|| {
+        let blindings = blindings.unwrap_or_else(|| {
             let r = rng.unwrap();
             vec![
                 FieldElement::random_using_rng(r),
@@ -119,7 +119,7 @@ pub(crate) fn get_blinding_for_merkle_tree_prover<R: Rng + CryptoRng>(
         Ok(blindings)
     } else {
         // Randomness is only provided for the leaf index
-        let mut blindings = blindings.unwrap_or_else(|| {
+        let blindings = blindings.unwrap_or_else(|| {
             let r = rng.unwrap();
             vec![FieldElement::random_using_rng(r)]
         });

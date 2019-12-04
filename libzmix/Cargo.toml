@@ -27,7 +27,9 @@ zeroize = { version = "1.0", features = ["zeroize_derive"] }
 lazy_static = "1.4"
 sha2 = { version = "0.8", default-features = false, optional = true }
 ursa = { version = "0.2", path = "../libursa", default-features = false, optional = true }
+bulletproofs_amcl = { version = "0.1.0", path = "./bulletproofs_amcl" }
 criterion = "0.3"
+merlin = "1"
 
 [[bench]]
 name = "bbs_vs_ps"
