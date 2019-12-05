@@ -21,21 +21,17 @@ PS_Signature_G2 = []
 PS_Signature_G1 = []
 
 [dependencies]
+bulletproofs_amcl = { version = "0.1.0", path = "./bulletproofs_amcl" }
 criterion = "0.3"
 failure = "0.1"
 lazy_static = "1.4"
+merlin = "1"
 rand = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = { version = "0.8", default-features = false, optional = true }
 ursa = { version = "0.3", path = "../libursa", default-features = false, optional = true }
 zeroize = { version = "1.0", features = ["zeroize_derive"] }
-lazy_static = "1.4"
-sha2 = { version = "0.8", default-features = false, optional = true }
-ursa = { version = "0.2", path = "../libursa", default-features = false, optional = true }
-bulletproofs_amcl = { version = "0.1.0", path = "./bulletproofs_amcl" }
-criterion = "0.3"
-merlin = "1"
 
 [[bench]]
 name = "bbs_vs_ps"

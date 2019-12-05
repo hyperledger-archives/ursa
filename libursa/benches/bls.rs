@@ -10,13 +10,13 @@ use criterion::Criterion;
 use ursa::signatures::bls::{
     normal::{
         generate as usual_generate, AggregatedPublicKey as UsualAggregatedPublicKey,
-        AggregatedSignature as UsualAggregatedSignature, PublicKey as UsualPublicKey,
-        Signature as UsualSignature, Generator as UsualGenerator
+        AggregatedSignature as UsualAggregatedSignature, Generator as UsualGenerator,
+        PublicKey as UsualPublicKey, Signature as UsualSignature,
     },
     small::{
         generate as small_generate, AggregatedPublicKey as SmallAggregatedPublicKey,
-        AggregatedSignature as SmallAggregatedSignature, PublicKey as SmallPublicKey,
-        Signature as SmallSignature, Generator as SmallGenerator
+        AggregatedSignature as SmallAggregatedSignature, Generator as SmallGenerator,
+        PublicKey as SmallPublicKey, Signature as SmallSignature,
     },
 };
 
@@ -133,7 +133,8 @@ fn verify_aggregate_rk_benchmark(c: &mut Criterion) {
 
     let mut usig = Vec::new();
     for i in 0..MSG_COUNT {
-        let sig = UsualSignature::new_with_rk_mitigation(&msg[..], None, &usks[i], i, upks.as_slice());
+        let sig =
+            UsualSignature::new_with_rk_mitigation(&msg[..], None, &usks[i], i, upks.as_slice());
         usig.push(sig);
     }
 
@@ -168,7 +169,8 @@ fn verify_aggregate_rk_benchmark(c: &mut Criterion) {
 
     let mut ssig = Vec::new();
     for i in 0..MSG_COUNT {
-        let sig = SmallSignature::new_with_rk_mitigation(&msg[..], None, &ssks[i], i, spks.as_slice());
+        let sig =
+            SmallSignature::new_with_rk_mitigation(&msg[..], None, &ssks[i], i, spks.as_slice());
         ssig.push(sig);
     }
 
