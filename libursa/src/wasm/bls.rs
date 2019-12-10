@@ -22,24 +22,27 @@ impl Generator {
 }
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize)]
 pub struct SignKey(bls::SignKey);
 
 #[wasm_bindgen]
 impl SignKey {
-    pub fn new() -> Result<SignKey, JsValue> {
-        Ok(SignKey(maperr!(bls::SignKey::new(None))))
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<JsValue, JsValue>  {
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(None)?)).unwrap())
+    }
+    pub fn from_seed(seed: JsValue) -> Result<JsValue, JsValue> {
+        let _seed: Vec<u8> = seed.into_serde().unwrap();
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(Some(&_seed))?)).unwrap())
     }
 
-    pub fn from_seed(seed: &[u8]) -> Result<SignKey, JsValue> {
-        Ok(SignKey(maperr!(bls::SignKey::new(Some(seed)))))
+    pub fn from_bytes(bytes: JsValue) -> Result<JsValue, JsValue> {
+        let _bytes: Vec<u8> = bytes.into_serde().unwrap();
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::from_bytes(&_bytes)?)).unwrap())
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<SignKey, JsValue> {
-        Ok(SignKey(maperr!(bls::SignKey::from_bytes(bytes))))
-    }
-
-    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
-        Ok(self.0.as_bytes().to_vec())
+    pub fn to_bytes(&self) -> Result<JsValue, JsValue> {
+        Ok(JsValue::from_serde(&self.0.as_bytes().to_vec()).unwrap())
     }
 }
 

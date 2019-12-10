@@ -7,8 +7,8 @@ pub mod ed25519;
 pub mod encryption;
 pub mod secp256k1;
 
-//#[cfg(feature = "cl")]
-//pub mod cl;
+#[cfg(feature = "cl")]
+pub mod cl;
 
 use keys::{PrivateKey, PublicKey};
 

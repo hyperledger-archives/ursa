@@ -85,7 +85,7 @@ pair_amcl = ["amcl"]
 portable = ["bn_rust", "pair_amcl", "serialization", "rustlibsecp256k1", "cl", "bls", "std", "encryption"]
 serialization = ["serde", "serde_json", "serde_derive"]
 std = ["sha2/std", "sha3", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
-wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "sha3", "js-sys", "rust-crypto-wasm", "encryption"]
+wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "cl", "blake2/std", "sha2/std", "sha3", "js-sys", "rust-crypto-wasm", "encryption"]
 
 [dependencies]
 aead = { version = "0.1", optional = true }
