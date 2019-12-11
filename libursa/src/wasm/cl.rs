@@ -99,7 +99,7 @@ impl CredentialPublicKey {
     }
     pub fn getRevocationKey(&self) -> Result<JsValue, JsValue> {
         match maperr!(self.0.get_revocation_key()) {
-            Some(k) => Ok(JsValue::from_serde(&CredentialRevocationPublicKey(k)).unwrap()),
+            Some(k) => Ok(JsValue::from_serde(&CredentialRevocationPublicKey(k)).map_err(|e| "parameter failed to serde".to_string())?),
             None => Ok(JsValue::NULL),
         }
     }
@@ -136,8 +136,8 @@ impl CredentialDefinition {
                 js_hidden_attrs: JsValue,
                 support_revocation: bool) -> Result<JsValue,JsValue> {
                     
-        let attrs: JsCredentialSchema = js_attrs.into_serde().unwrap();
-        let hidden_attrs: JsNonCredentialSchema = js_hidden_attrs.into_serde().unwrap();
+        let attrs: JsCredentialSchema = js_attrs.into_serde().map_err(|e| "schema parameter failed to serde".to_string())?;
+        let hidden_attrs: JsNonCredentialSchema = js_hidden_attrs.into_serde().map_err(|e| "hidden schema parameter failed to serde".to_string())?;
 
         let (credential_public_key, credential_private_key, credential_key_correctness_proof) =
         cl::issuer::Issuer::new_credential_def(&attrs.0, &hidden_attrs.0, support_revocation)?;
@@ -145,7 +145,7 @@ impl CredentialDefinition {
             publicKey: CredentialPublicKey(credential_public_key),
             privateKey: CredentialPrivateKey(credential_private_key),
             keyCorrectnessProof: CredentialKeyCorrectnessProof(credential_key_correctness_proof),
-        }).unwrap())
+        }).map_err(|e| "parameter failed to serde".to_string())?)
     }
 }
 
@@ -159,7 +159,7 @@ impl MasterSecret {
     pub fn new() -> Result<JsValue, JsValue>{
         Ok(JsValue::from_serde(&MasterSecret(
             cl::prover::Prover::new_master_secret()?
-        )).unwrap())
+        )).map_err(|e| "parameter failed to serde".to_string())?)
     }
 }
 

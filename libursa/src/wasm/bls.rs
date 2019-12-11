@@ -29,20 +29,20 @@ pub struct SignKey(bls::SignKey);
 impl SignKey {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Result<JsValue, JsValue>  {
-        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(None)?)).unwrap())
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(None)?)).map_err(|e| "parameter failed to serde".to_string())?)
     }
     pub fn from_seed(seed: JsValue) -> Result<JsValue, JsValue> {
-        let _seed: Vec<u8> = seed.into_serde().unwrap();
-        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(Some(&_seed))?)).unwrap())
+        let _seed: Vec<u8> = seed.into_serde().map_err(|e| "parameter failed to serde".to_string())?;
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::new(Some(&_seed))?)).map_err(|e| "parameter failed to serde".to_string())?)
     }
 
     pub fn from_bytes(bytes: JsValue) -> Result<JsValue, JsValue> {
-        let _bytes: Vec<u8> = bytes.into_serde().unwrap();
-        Ok(JsValue::from_serde(&SignKey(bls::SignKey::from_bytes(&_bytes)?)).unwrap())
+        let _bytes: Vec<u8> = bytes.into_serde().map_err(|e| "parameter failed to serde".to_string())?;
+        Ok(JsValue::from_serde(&SignKey(bls::SignKey::from_bytes(&_bytes)?)).map_err(|e| "parameter failed to serde".to_string())?)
     }
 
     pub fn to_bytes(&self) -> Result<JsValue, JsValue> {
-        Ok(JsValue::from_serde(&self.0.as_bytes().to_vec()).unwrap())
+        Ok(JsValue::from_serde(&self.0.as_bytes().to_vec()).map_err(|e| "parameter failed to serde".to_string())?)
     }
 }
 
