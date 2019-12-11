@@ -11,6 +11,7 @@ use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2LookupTable, G2Vector, G2};
 use std::collections::{HashMap, HashSet};
+use std::ops::Mul;
 
 pub type OddLevelAttribute = G1;
 pub type EvenLevelAttribute = G2;
@@ -464,7 +465,7 @@ impl<'a> AttributeToken<'a> {
                         &ipk_c,
                     );
                     // e(resp_s_i, r'_i) * ( e(g1, ipk) * e(y0, g2) )^-c
-                    GT::mul(&e_1, &y0_g2_c)
+                    &e_1 * &y0_g2_c
                 } else {
                     // e(resp_s_i, r'_i) * e(-g1, resp_vk_{i-1})
                     let e_1 = GT::ate_2_pairing(
@@ -474,7 +475,7 @@ impl<'a> AttributeToken<'a> {
                         &resp.even_level_resp_vk[(i / 2) - 1],
                     );
                     // e(resp_s_i, r'_i) * e(-g1, resp_vk_{i-1}) * e(y_0, g2)^-c
-                    GT::mul(&e_1, &y0_g2_c)
+                    &e_1 * &y0_g2_c
                 };
                 comms_s.push(com_i_s);
 
@@ -609,7 +610,7 @@ impl<'a> AttributeToken<'a> {
                     &resp.odd_level_resp_vk[(i / 2) - 1],
                     &groth2_neg_g2,
                 );
-                let com_i_s = GT::mul(&e_1, &g1_y0_c);
+                let com_i_s = &e_1 * &g1_y0_c;
                 comms_s.push(com_i_s);
 
                 let mut com_t = Vec::<GT>::with_capacity(comm.comms_t[i - 1].len());
@@ -747,7 +748,7 @@ impl<'a> AttributeToken<'a> {
                     let e_2 = precomp_setup
                         .pairing_inv_groth1_g1_g2
                         .pow(&self.blindings_vk[i - 2]);
-                    GT::mul(&e_1, &e_2)
+                    &e_1 * &e_2
                 };
 
                 if revealed[i - 1].len() > self.setup_params_1.y.len() {
@@ -777,7 +778,7 @@ impl<'a> AttributeToken<'a> {
                         let e_1 = pairing_g1_r_i.pow(&(&rho_sig * &rr_t));
                         // Different from paper here, paper uses e(y1_j, .. but y1_j should be inverted.
                         let e_2 = precomp_setup.groth1_neg_y_g2[j].pow(&self.blindings_vk[i - 2]);
-                        GT::mul(&e_1, &e_2)
+                        &e_1 * &e_2
                     };
 
                     if !revealed[i - 1].contains(&j) {
@@ -786,7 +787,7 @@ impl<'a> AttributeToken<'a> {
                         let rr_a = FieldElement::random();
                         let e = precomp_setup.pairing_inv_groth1_g1_g2.pow(&rr_a);
                         // e(g1, ri)^{rho_sig*rr_t} * e(y1_j, g2)^{blindings_vk[i-2]} * e(-g1, g2)^rr_a
-                        com_i_t = GT::mul(&com_i_t, &e);
+                        com_i_t = &com_i_t * &e;
                         r_a.push(rr_a);
                     } else {
                         rev_attrs.insert(j, link.attributes[j].clone());
@@ -803,7 +804,7 @@ impl<'a> AttributeToken<'a> {
                     // e(g1, ri)^{rho_sig*rr_t} * e(-g1, g2)^rr_a
                     let e_1 = pairing_g1_r_i.pow(&(&rho_sig * &rr_t));
                     let e_2 = precomp_setup.pairing_inv_groth1_g1_g2.pow(&rho_vk);
-                    GT::mul(&e_1, &e_2)
+                    &e_1 * &e_2
                 };
                 if i != 1 {
                     // Different from paper here, paper uses e(y1_j, g2) but e(-y1_j, g2) should be used and e(-y1_j, g2) equals e(y1_j, -g2)
@@ -811,7 +812,7 @@ impl<'a> AttributeToken<'a> {
                     let e = precomp_setup.groth1_neg_y_g2[link.attribute_count() - 1]
                         .pow(&self.blindings_vk[i - 2]);
                     // e(g1, ri)^{rho_sig*rr_t} * e(-g1, g2)^rr_a * e(y1_j, g2)^{blindings_vk[i-2]}
-                    com_i_vk = GT::mul(&com_i_vk, &e);
+                    com_i_vk = &com_i_vk * &e;
                 }
                 com_t.push(com_i_vk);
                 r_t.push(rr_t);
@@ -833,7 +834,7 @@ impl<'a> AttributeToken<'a> {
                 let e_2 = precomp_setup
                     .pairing_inv_groth2_g1_g2
                     .pow(&self.blindings_vk[i - 2]);
-                let com_i_s = GT::mul(&e_1, &e_2);
+                let com_i_s = &e_1 * &e_2;
 
                 if revealed[i - 1].len() > self.setup_params_2.y.len() {
                     return Err(DelgCredCDDErrorKind::MoreAttributesThanExpected {
@@ -857,7 +858,7 @@ impl<'a> AttributeToken<'a> {
                     // e(g1, -y2_j) equals e(-g1, y2_j)
                     let e_1 = pairing_r_i_g2.pow(&(&rho_sig * &rr_t));
                     let e_2 = precomp_setup.groth2_neg_g1_y[j].pow(&self.blindings_vk[i - 2]);
-                    let mut com_i_t = GT::mul(&e_1, &e_2);
+                    let mut com_i_t = &e_1 * &e_2;
 
                     if !revealed[i - 1].contains(&j) {
                         // Unrevealed attribute
@@ -865,7 +866,7 @@ impl<'a> AttributeToken<'a> {
                         // In above, replace e(g1, -y2_j)^{blindings_vk[i-2]} with e(-g1, y2_j)^{blindings_vk[i-2]}
                         let rr_a = FieldElement::random();
                         let e = GT::pow(&precomp_setup.pairing_inv_groth2_g1_g2, &rr_a);
-                        com_i_t = GT::mul(&com_i_t, &e);
+                        com_i_t = &com_i_t * &e;
                         r_a.push(rr_a);
                     } else {
                         rev_attrs.insert(j, link.attributes[j].clone());
@@ -884,7 +885,7 @@ impl<'a> AttributeToken<'a> {
                 let e_2 = GT::pow(&precomp_setup.pairing_inv_groth2_g1_g2, &rho_vk);
                 let e_3 = precomp_setup.groth2_neg_g1_y[link.attribute_count() - 1]
                     .pow(&self.blindings_vk[i - 2]);
-                let com_i_vk = GT::mul(&GT::mul(&e_1, &e_2), &e_3);
+                let com_i_vk = &(&e_1 * &e_2) * &e_3;
 
                 com_t.push(com_i_vk);
                 r_t.push(rr_t);
@@ -986,11 +987,11 @@ impl<'a> AttributeToken<'a> {
                     );
                     // e(g1, ipk)^-c * e(y0, g2)^-c = ( e(g1, ipk) * e(y0, g2) )^-c
                     // e(g1, ipk) * e(y0, g2)
-                    let e_2 = GT::mul(&precomputed.groth1_g1_ipk, &precomputed.groth1_y0_g2);
+                    let e_2 = &precomputed.groth1_g1_ipk * &precomputed.groth1_y0_g2;
                     // ( e(g1, ipk) * e(y0, g2) )^-c
                     let e_3 = GT::pow(&e_2, &challenge_neg);
                     // e(resp_s_i, r'_i) * ( e(g1, ipk) * e(y0, g2) )^-c
-                    GT::mul(&e_1, &e_3)
+                    &e_1 * &e_3
                 } else {
                     let e_1 = GT::ate_2_pairing(
                         &resp.odd_level_resp_s[i / 2],
@@ -998,7 +999,7 @@ impl<'a> AttributeToken<'a> {
                         &groth1_neg_g1,
                         &resp.even_level_resp_vk[(i / 2) - 1],
                     );
-                    GT::mul(&e_1, &y0_g2_c)
+                    &e_1 * &y0_g2_c
                 };
                 comms_s.push(com_i_s);
 
@@ -1016,7 +1017,7 @@ impl<'a> AttributeToken<'a> {
                                 &groth1_neg_g2,
                             );
                             let e_2 = GT::pow(&precomputed.groth1_y_ipk[j], &challenge_neg);
-                            com_t.push(GT::mul(&e_1, &e_2));
+                            com_t.push(&e_1 * &e_2);
                         } else {
                             com_t.push(GT::ate_multi_pairing(vec![
                                 (
@@ -1040,7 +1041,7 @@ impl<'a> AttributeToken<'a> {
                                 &groth1_g2_c,
                             );
                             let e_2 = GT::pow(&precomputed.groth1_y_ipk[j], &challenge_neg);
-                            com_t.push(GT::mul(&e_1, &e_2));
+                            com_t.push(&e_1 * &e_2);
                         } else {
                             com_t.push(GT::ate_multi_pairing(vec![
                                 (
@@ -1068,17 +1069,17 @@ impl<'a> AttributeToken<'a> {
                         );
                         let e_2 =
                             GT::pow(&precomputed.groth1_y_ipk[attr_count - 1], &challenge_neg);
-                        GT::mul(&e_1, &e_2)
+                        &e_1 * &e_2
                     } else {
                         let e_1 = GT::ate_pairing(
                             &resp.odd_level_resp_t[i / 2][attr_count - 1],
                             &comm.odd_level_blinded_r[i / 2],
                         );
                         let e_3 = GT::pow(&precomputed.pairing_inv_groth1_g1_g2, &resp.resp_csk);
-                        let e_4 = GT::mul(&e_1, &e_3);
+                        let e_4 = &e_1 * &e_3;
                         let e_5 =
                             GT::pow(&precomputed.groth1_y_ipk[attr_count - 1], &challenge_neg);
-                        GT::mul(&e_4, &e_5)
+                        &e_4 * &e_5
                     }
                 } else {
                     if i != L {
@@ -1101,7 +1102,7 @@ impl<'a> AttributeToken<'a> {
                             &resp.even_level_resp_vk[(i / 2) - 1],
                         );
                         let e_3 = GT::pow(&precomputed.pairing_inv_groth1_g1_g2, &resp.resp_csk);
-                        GT::mul(&e_1, &e_3)
+                        &e_1 * &e_3
                     }
                 };
                 com_t.push(com_i_vk);
@@ -1132,7 +1133,7 @@ impl<'a> AttributeToken<'a> {
                     &resp.odd_level_resp_vk[(i / 2) - 1],
                     &groth2_neg_g2,
                 );
-                let com_i_s = GT::mul(&e_1, &g1_y0_c);
+                let com_i_s = &e_1 * g1_y0_c;
                 comms_s.push(com_i_s);
 
                 let mut com_t = Vec::<GT>::with_capacity(comm.comms_t[i - 1].len());
@@ -1196,7 +1197,7 @@ impl<'a> AttributeToken<'a> {
                         &(-&setup_params_2.y[attr_count - 1]),
                     );
                     let e_3 = GT::pow(&precomputed.pairing_inv_groth2_g1_g2, &resp.resp_csk);
-                    GT::mul(&e_1, &e_3)
+                    &e_1 * &e_3
                 };
                 com_t.push(com_i_vk);
                 comms_t.push(com_t);
