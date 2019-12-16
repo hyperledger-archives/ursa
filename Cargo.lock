@@ -1492,7 +1492,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "ursa"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "aead 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "aes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1720,7 +1720,7 @@ dependencies = [
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ursa 0.3.0",
+ "ursa 0.3.1",
  "zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
