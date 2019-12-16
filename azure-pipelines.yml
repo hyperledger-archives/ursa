@@ -5,6 +5,9 @@ trigger:
 
 pr: [master]
 
+variables:
+  SODIUM_BUILD_STATIC: 1
+
 jobs:
   - job: rustfmt
     pool:
@@ -69,7 +72,11 @@ jobs:
     steps:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
-        displayName: 'Install rust'
+          rustc --version
+          rustup toolchain install nightly
+          rustup default nightly
+          rustc --version
+        displayName: 'Install rust, select nightly'
       - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
         displayName: 'build asm'
   - job: secp256k1
