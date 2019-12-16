@@ -15,7 +15,6 @@ mod test {
     use self::ed25519::Ed25519Sha512;
     use super::super::{SignatureScheme, Signer};
     use super::*;
-    use hex;
     use keys::{KeyGenOption, PrivateKey, PublicKey};
     use libsodium_ffi as ffi;
 

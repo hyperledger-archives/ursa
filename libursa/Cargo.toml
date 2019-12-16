@@ -1,6 +1,6 @@
 [package]
 name = "ursa"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Hyperledger Ursa Contributors"]
 description = "This is the shared crypto library for Hyperledger components."
 license = "Apache-2.0"
@@ -70,19 +70,21 @@ benchmarkaesgcm = ["openssl"]
 benchmarked25519 = ["libsodium-ffi"]
 benchmarksecp256k1 = ["secp256k1", "openssl"]
 benchmarkxchacha20poly1305 = ["libsodium-ffi"]
-bls = []
+bls = ["amcl_wrapper"]
 bn_openssl = ["openssl", "int_traits"]
 bn_rust = ["num-bigint", "glass_pumpkin", "int_traits", "num-integer", "num-traits"]
-cl = []
+cl = ["time"]
 chacha20poly1305 = ["rustchacha20poly1305"]
 chacha20poly1305_libsodium = ["libsodium-ffi"]
 encryption = ["aes-cbc", "aes-gcm", "chacha20poly1305"]
 encryption_asm = ["aescbc_openssl", "aesgcm_openssl", "chacha20poly1305_libsodium"]
 ffi = ["ffi-support"]
-native_secp256k1 = ["secp256k1"]
+native_ed25519 = ["ed25519-dalek/std", "ed25519-dalek/u64_backend"]
+native_secp256k1 = ["secp256k1", "hex"]
 nightly = ["sha2/asm", "sha3", "blake2/simd_asm", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend"]
 pair_amcl = ["amcl"]
-portable = ["bn_rust", "pair_amcl", "serialization", "rustlibsecp256k1", "cl", "bls", "std", "encryption"]
+portable = ["bn_rust", "pair_amcl", "serialization", "portable_secp256k1", "cl", "bls", "std", "encryption"]
+portable_secp256k1 = ["rustlibsecp256k1", "hex"]
 serialization = ["serde", "serde_json", "serde_derive"]
 std = ["sha2/std", "sha3", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
 wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "sha3", "js-sys", "rust-crypto-wasm", "encryption"]
@@ -92,7 +94,7 @@ aead = { version = "0.2", optional = true }
 aes = { version = "0.3", optional = true }
 aes-gcm = { version = "0.3.0", optional = true }
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
-amcl_wrapper = {version = "0.1.7", features = ["bls381"] }
+amcl_wrapper = {version = "0.1.7", features = ["bls381"], optional = true }
 arrayref = "0.3.5"
 blake2 = { version = "0.8", default-features = false, optional = true }
 block-modes = { version = "0.3", optional = true }
@@ -104,7 +106,7 @@ failure = "0.1.6"
 ffi-support = { version = "0.3.5", optional = true }
 generic-array = "0.13"
 glass_pumpkin = { version = "0.3", optional = true }
-hex = "0.4.0"
+hex = { version = "0.4.0", optional = true }
 hmac = { version = "0.7", optional = true }
 int_traits = { version = "0.1.1", optional = true }
 js-sys = { version = "0.3.13", optional = true }
@@ -128,7 +130,7 @@ serde_json = { version = "1.0",  optional = true}
 sha2 = { version = "0.8", default-features = false, optional = true }
 sha3 = { version = "0.8", optional = true }
 subtle = { version = "2.2.1", optional = true }
-time = "0.1"
+time = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
 zeroize = { version = "1.0", features = ["zeroize_derive"] }
 

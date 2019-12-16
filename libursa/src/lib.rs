@@ -1,7 +1,3 @@
-#[cfg(feature = "wasm")]
-extern crate console_error_panic_hook;
-#[cfg(feature = "wasm")]
-extern crate js_sys;
 #[deny(
     warnings,
     unused_qualifications,
@@ -9,6 +5,10 @@ extern crate js_sys;
     trivial_casts,
     trivial_numeric_casts
 )]
+#[cfg(feature = "wasm")]
+extern crate console_error_panic_hook;
+#[cfg(feature = "wasm")]
+extern crate js_sys;
 #[cfg(feature = "wasm")]
 extern crate wasm_bindgen;
 
@@ -27,7 +27,6 @@ extern crate failure;
 #[macro_use]
 extern crate log;
 pub extern crate blake2;
-#[macro_use]
 extern crate generic_array;
 extern crate hex;
 #[cfg(any(test, feature = "encryption_asm"))]
@@ -84,7 +83,7 @@ extern crate num_traits;
 #[cfg(feature = "ffi")]
 #[macro_use]
 extern crate ffi_support;
-
+#[cfg(feature = "time")]
 extern crate time;
 
 #[cfg(feature = "wasm")]
