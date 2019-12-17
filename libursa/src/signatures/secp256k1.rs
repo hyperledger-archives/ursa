@@ -1,13 +1,11 @@
 use super::*;
-use generic_array::typenum::U32;
+use sha2::digest::generic_array::typenum::U32;
 use CryptoError;
 
 use rand::rngs::OsRng;
 
-#[cfg(feature = "wasm")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "wasm")]
-use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 pub const PRIVATE_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 33;
@@ -74,7 +72,7 @@ impl EcdsaPublicKeyHandler for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "wasm")]
+#[cfg(feature = "serde")]
 impl Serialize for EcdsaSecp256k1Sha256 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -84,7 +82,7 @@ impl Serialize for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "wasm")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -101,7 +99,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
 
             fn visit_str<E>(self, _: &str) -> Result<EcdsaSecp256k1Sha256, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
                 Ok(EcdsaSecp256k1Sha256::new())
             }
@@ -111,10 +109,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(all(
-    feature = "native_secp256k1",
-    not(any(feature = "portable", feature = "wasm"))
-))]
+#[cfg(any(feature = "ecdsa_secp256k1_native", feature = "ecdsa_secp256k1_asm"))]
 mod ecdsa_secp256k1 {
     use super::*;
     use libsecp256k1;
@@ -221,10 +216,7 @@ mod ecdsa_secp256k1 {
     }
 }
 
-#[cfg(all(
-    any(feature = "portable", feature = "wasm"),
-    not(feature = "native_secp256k1")
-))]
+#[cfg(feature = "ecdsa_secp256k1")]
 mod ecdsa_secp256k1 {
     use super::*;
     use rustlibsecp256k1;
@@ -254,7 +246,7 @@ mod ecdsa_secp256k1 {
         };
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdsaSecp256k1Impl {}
 
     impl EcdsaSecp256k1Impl {
@@ -436,11 +428,7 @@ mod test {
         let scheme = EcdsaSecp256k1Sha256::new();
         let p = PublicKey(hex::decode(PUBLIC_KEY).unwrap());
 
-        let result = scheme.verify(
-            &MESSAGE_1,
-            hex::decode(SIGNATURE_1).unwrap().as_slice(),
-            &p,
-        );
+        let result = scheme.verify(&MESSAGE_1, hex::decode(SIGNATURE_1).unwrap().as_slice(), &p);
         assert!(result.is_ok());
         assert!(result.unwrap());
 

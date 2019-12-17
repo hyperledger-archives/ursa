@@ -1,146 +1,160 @@
-#[deny(
-    warnings,
-    unused_qualifications,
+#![deny(
     unused_import_braces,
-    trivial_casts,
     trivial_numeric_casts
 )]
-#[cfg(feature = "wasm")]
-extern crate console_error_panic_hook;
-#[cfg(feature = "wasm")]
-extern crate js_sys;
-#[cfg(feature = "wasm")]
-extern crate wasm_bindgen;
-
-/// Portable try to solely use Rust and no external C libraries.
-/// This is considered less secure only because the Rust code may not have had a
-/// security audited yet.
-///
-/// Native uses external C libraries that have had a security audit performed
-#[cfg(feature = "pair_amcl")]
+#[cfg(feature = "aead")]
+extern crate aead;
+#[cfg(feature = "aes")]
+extern crate aes;
+#[cfg(feature = "aes-gcm")]
+extern crate aes_gcm;
+#[cfg(feature = "amcl")]
 extern crate amcl;
-extern crate amcl_wrapper;
+#[cfg(feature = "block-modes")]
+extern crate block_modes;
+#[cfg(feature = "block-padding")]
+extern crate block_padding;
+#[cfg(feature = "hmac")]
+extern crate hmac;
+#[cfg(any(test, feature = "libsodium-ffi"))]
+extern crate libsodium_ffi;
+#[cfg(any(test, feature = "openssl"))]
+extern crate openssl;
+#[cfg(feature = "rand")]
+extern crate rand;
+#[cfg(feature = "rand_chacha")]
+extern crate rand_chacha;
+#[cfg(feature = "rustchacha20poly1305")]
+extern crate rustchacha20poly1305;
+#[cfg(feature = "subtle")]
+extern crate subtle;
+#[cfg(feature = "lazy_static")]
+#[macro_use]
+extern crate lazy_static;
+#[cfg(feature = "blake2")]
+pub extern crate blake2;
+#[cfg(test)]
+extern crate bytebuffer;
+#[cfg(feature = "ed25519-dalek")]
+extern crate ed25519_dalek;
+#[cfg(feature = "sha2")]
+pub extern crate sha2;
+#[cfg(feature = "sha3")]
+pub extern crate sha3;
+#[cfg(feature = "zeroize")]
+extern crate zeroize;
+#[cfg(feature = "arrayref")]
 #[macro_use]
 extern crate arrayref;
-extern crate env_logger;
+#[cfg(feature = "amcl_wrapper")]
+extern crate amcl_wrapper;
+#[cfg(feature = "failure")]
 extern crate failure;
-#[macro_use]
-extern crate log;
-pub extern crate blake2;
-extern crate generic_array;
-extern crate hex;
-#[cfg(any(test, feature = "encryption_asm"))]
-extern crate libsodium_ffi;
-extern crate rand;
-extern crate rand_chacha;
-#[cfg(all(
-    any(feature = "portable", feature = "wasm"),
-    not(feature = "native_secp256k1")
-))]
-extern crate rustlibsecp256k1;
-#[cfg(any(
-    test,
-    all(
-        feature = "native_secp256k1",
-        not(any(feature = "portable", feature = "wasm"))
-    )
-))]
-extern crate secp256k1 as libsecp256k1;
-pub extern crate sha2;
-pub extern crate sha3;
-extern crate zeroize;
-
-// To use macros from util inside of other modules it must me loaded first.
-#[macro_use]
-pub mod utils;
-
-#[cfg(feature = "serialization")]
-extern crate serde;
-
-#[cfg(feature = "serialization")]
-#[allow(unused_imports)] // Remove false positive warning. See https://github.com/rust-lang/rust/issues/44342
-#[macro_use]
-extern crate serde_derive;
-
-#[cfg(feature = "serialization")]
-#[macro_use]
-extern crate serde_json;
-
-#[cfg(any(test, feature = "bn_openssl", feature = "aescbc_asm"))]
-extern crate openssl;
-
-#[cfg(any(feature = "bn_openssl", feature = "bn_rust"))]
-extern crate int_traits;
-
-#[cfg(feature = "bn_rust")]
+#[cfg(feature = "glass_pumpkin")]
 extern crate glass_pumpkin;
-#[cfg(feature = "bn_rust")]
+#[cfg(feature = "int_traits")]
+extern crate int_traits;
+#[cfg(feature = "log")]
+#[cfg_attr(any(feature = "cl", feature = "cl_native", feature = "ffi"), macro_use)]
+extern crate log;
+#[cfg(feature = "num-bigint")]
 extern crate num_bigint;
-#[cfg(feature = "bn_rust")]
+#[cfg(feature = "num-integer")]
 extern crate num_integer;
-#[cfg(feature = "bn_rust")]
+#[cfg(feature = "num-traits")]
 extern crate num_traits;
+#[cfg(feature = "rustlibsecp256k1")]
+extern crate rustlibsecp256k1;
+#[cfg(any(test, feature = "secp256k1"))]
+extern crate secp256k1 as libsecp256k1;
+#[cfg(feature = "serde")]
+extern crate serde;
+#[cfg(any(test, feature = "ffi"))]
+#[cfg_attr(any(feature = "cl", feature = "cl_native", feature = "ffi"), macro_use)]
+extern crate serde_json;
 #[cfg(feature = "ffi")]
 #[macro_use]
 extern crate ffi_support;
-#[cfg(feature = "time")]
-extern crate time;
+#[cfg(feature = "console_error_panic_hook")]
+extern crate console_error_panic_hook;
+#[cfg(feature = "js-sys")]
+extern crate js_sys;
+#[cfg(feature = "wasm-bindgen")]
+extern crate wasm_bindgen;
 
-#[cfg(feature = "wasm")]
-extern crate crypto;
-#[cfg(not(feature = "wasm"))]
-extern crate ed25519_dalek;
-
-#[cfg(any(feature = "encryption_asm", feature = "encryption"))]
-extern crate aead;
-#[cfg(any(feature = "encryption"))]
-extern crate aes;
-#[cfg(any(feature = "encryption"))]
-extern crate aes_gcm;
-#[cfg(any(feature = "encryption"))]
-extern crate block_modes;
-#[cfg(any(feature = "encryption"))]
-extern crate hmac;
-#[cfg(any(feature = "encryption"))]
-extern crate rustchacha20poly1305;
-#[cfg(any(feature = "encryption"))]
-extern crate subtle;
-
-#[cfg(feature = "cl")]
+#[cfg(any(
+    feature = "ed25519",
+    feature = "ed25519_asm",
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "bls_bls12381",
+    feature = "cl",
+    feature = "cl_native",
+    feature = "ffi"
+))]
 #[macro_use]
-pub mod cl;
-#[cfg(feature = "bls")]
-pub mod bls;
+pub mod utils;
 
-#[cfg(feature = "bn_openssl")]
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
+pub mod bls;
+#[cfg(feature = "cl_native")]
 #[path = "bn/openssl.rs"]
 pub mod bn;
-
-#[cfg(feature = "bn_rust")]
+#[cfg(feature = "cl")]
 #[path = "bn/rust.rs"]
 pub mod bn;
-
+#[cfg(any(feature = "cl", feature = "cl_native"))]
+pub mod cl;
+#[cfg(any(
+    feature = "aescbc",
+    feature = "aescbc_native",
+    feature = "aesgcm",
+    feature = "aesgcm_native",
+    feature = "chacha20poly1305",
+    feature = "chacha20poly1305_native"
+))]
+pub mod encryption;
+#[cfg(any(
+    feature = "bls_bn254",
+    feature = "bls_bn254_asm",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "cl",
+    feature = "cl_native",
+    feature = "ffi"
+))]
 pub mod errors;
 #[cfg(feature = "ffi")]
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub mod ffi;
-
-#[cfg(feature = "pair_amcl")]
+#[cfg(any(feature = "blake2", feature = "sha2", feature = "sha3"))]
+pub mod hash;
+#[cfg(any(
+    feature = "ed25519",
+    feature = "ed25519_asm",
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "bls_bls12381"
+))]
+pub mod keys;
+#[cfg(any(
+    feature = "bls_bn254",
+    feature = "bls_bn254_asm",
+    feature = "cl",
+    feature = "cl_native"
+))]
 #[path = "pair/amcl.rs"]
 pub mod pair;
-
-#[macro_use]
-extern crate lazy_static;
-
-#[cfg(test)]
-extern crate bytebuffer;
-
-pub mod encoding;
-pub mod encryption;
-pub mod hash;
-pub mod keys;
+#[cfg(any(
+    feature = "ed25519",
+    feature = "ed25519_asm",
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "bls_bls12381"
+))]
 pub mod signatures;
-
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
@@ -171,7 +185,7 @@ impl std::fmt::Display for CryptoError {
     }
 }
 
-#[cfg(any(test, all(feature = "native_secp256k1", not(feature = "portable"))))]
+#[cfg(feature = "secp256k1")]
 impl From<libsecp256k1::Error> for CryptoError {
     fn from(error: libsecp256k1::Error) -> CryptoError {
         match error {
@@ -198,6 +212,9 @@ impl From<libsecp256k1::Error> for CryptoError {
             }
             libsecp256k1::Error::NotEnoughMemory => {
                 CryptoError::ParseError("Not Enough Memory".to_string())
+            }
+            libsecp256k1::Error::CallbackPanicked => {
+                CryptoError::ParseError("Callback panicked".to_string())
             }
         }
     }

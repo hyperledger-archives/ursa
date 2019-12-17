@@ -1,10 +1,13 @@
 use super::Encryptor;
-use aead::{generic_array::GenericArray, Aead, Error, NewAead, Payload};
-use generic_array::typenum::{Unsigned, U0, U16, U24, U32, U48};
-#[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "serialization")]
-use serde::ser::{Serialize, Serializer};
+use aead::{
+    generic_array::{
+        typenum::{Unsigned, U0, U16, U24, U32, U48},
+        GenericArray,
+    },
+    Aead, Error, NewAead, Payload,
+};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     os::raw,
     ptr,
@@ -126,7 +129,7 @@ impl Aead for XChaCha20Poly1305 {
 
 default_impl!(XChaCha20Poly1305);
 drop_impl!(XChaCha20Poly1305);
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 serialize_impl!(XChaCha20Poly1305, XChaCha20Poly1305Visitor);
 #[cfg(test)]
 mod tests {

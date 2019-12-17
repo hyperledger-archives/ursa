@@ -1,6 +1,7 @@
 use aead::{generic_array::typenum::Unsigned, NewAead};
 use encryption::random_vec;
 use encryption::symm::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 

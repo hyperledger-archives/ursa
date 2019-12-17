@@ -10,10 +10,8 @@ use aes::{Aes128, Aes256};
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 use hmac::{Hmac, Mac};
-#[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "serialization")]
-use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use sha2::{Sha256, Sha512};
 use subtle::ConstantTimeEq;
 use zeroize::Zeroize;
@@ -126,6 +124,7 @@ macro_rules! aes_cbc_hmac_impl {
 
         default_impl!($name);
         drop_impl!($name);
+        #[cfg(feature = "serde")]
         serialize_impl!($name, $visitor);
     };
 }
