@@ -1,7 +1,4 @@
-#![deny(
-    unused_import_braces,
-    trivial_numeric_casts
-)]
+#![deny(unused_import_braces, trivial_numeric_casts)]
 #[cfg(feature = "aead")]
 extern crate aead;
 #[cfg(feature = "aes")]
