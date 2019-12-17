@@ -1,13 +1,16 @@
 use errors::prelude::*;
 use pair::{GroupOrderElement, Pair, PointG1, PointG2};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sha3::Keccak256;
 
 /// BLS generator point.
 /// BLS algorithm requires choosing of generator point that must be known to all parties.
 /// The most of BLS methods require generator to be provided.
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct Generator {
     point: PointG2,
     bytes: Vec<u8>,
@@ -63,7 +66,8 @@ impl Generator {
 }
 
 /// BLS sign key.
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct SignKey {
     group_order_element: GroupOrderElement,
     bytes: Vec<u8>,
@@ -122,7 +126,8 @@ impl SignKey {
 }
 
 /// BLS verification key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 pub struct VerKey {
     point: PointG2,
     bytes: Vec<u8>,
@@ -185,7 +190,8 @@ impl VerKey {
 }
 
 /// Proof of possession for BLS verification key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 pub struct ProofOfPossession {
     point: PointG1,
     bytes: Vec<u8>,
@@ -256,7 +262,8 @@ impl ProofOfPossession {
 }
 
 /// BLS signature.
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct Signature {
     point: PointG1,
     bytes: Vec<u8>,
@@ -300,7 +307,8 @@ impl Signature {
 }
 
 /// BLS multi signature.
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug)]
 pub struct MultiSignature {
     point: PointG1,
     bytes: Vec<u8>,

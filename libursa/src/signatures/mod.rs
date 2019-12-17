@@ -1,12 +1,24 @@
+#[cfg(feature = "bls_bls12381")]
 pub mod bls;
+#[cfg(any(feature = "ed25519", feature = "ed25519_asm"))]
 pub mod ed25519;
+#[cfg(any(
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm"
+))]
 pub mod secp256k1;
 
 pub mod prelude {
-    pub use super::{
-        ed25519::ed25519::Ed25519Sha512, secp256k1::EcdsaSecp256k1Sha256, EcdsaPublicKeyHandler,
-        SignatureScheme, Signer,
-    };
+    #[cfg(any(feature = "ed25519", feature = "ed25519_asm"))]
+    pub use super::ed25519::Ed25519Sha512;
+    #[cfg(any(
+        feature = "ecdsa_secp256k1",
+        feature = "ecdsa_secp256k1_native",
+        feature = "ecdsa_secp256k1_asm"
+    ))]
+    pub use super::{secp256k1::EcdsaSecp256k1Sha256, EcdsaPublicKeyHandler};
+    pub use super::{SignatureScheme, Signer};
 }
 
 use keys::{KeyGenOption, PrivateKey, PublicKey};
@@ -70,6 +82,11 @@ impl<'a, 'b, T: 'a + SignatureScheme> Signer<'a, 'b, T> {
     }
 }
 
+#[cfg(any(
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm"
+))]
 pub trait EcdsaPublicKeyHandler {
     /// Returns the compressed bytes
     fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8>;

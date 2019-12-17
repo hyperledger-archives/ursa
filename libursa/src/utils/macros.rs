@@ -91,7 +91,7 @@ macro_rules! impl_bytearray {
                     formatter,
                     "{} {{ {} }}",
                     stringify!($thing),
-                    bin2hex(&self.0[..])
+                    hex::encode(&self.0[..])
                 )
             }
         }
@@ -102,7 +102,7 @@ macro_rules! impl_bytearray {
                     formatter,
                     "{} {{ {} }}",
                     stringify!($thing),
-                    bin2hex(&self.0[..])
+                    hex::encode(&self.0[..])
                 )
             }
         }
@@ -120,39 +120,36 @@ macro_rules! impl_bytearray {
             }
         }
 
-        #[cfg(feature = "serialization")]
-        impl serde::ser::Serialize for $thing {
+        #[cfg(feature = "serde")]
+        impl serde::Serialize for $thing {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
-                S: ::serde::ser::Serializer,
+                S: serde::Serializer,
             {
-                serializer.serialize_newtype_struct(stringify!($thing), &bin2hex(&self.0[..]))
+                serializer.serialize_newtype_struct(stringify!($thing), &hex::encode(&self.0[..]))
             }
         }
 
-        #[cfg(feature = "serialization")]
-        impl<'a> serde::de::Deserialize<'a> for $thing {
+        #[cfg(feature = "serde")]
+        impl<'a> serde::Deserialize<'a> for $thing {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
-                D: ::serde::de::Deserializer<'a>,
+                D: serde::Deserializer<'a>,
             {
                 struct Thingvisitor;
 
                 impl<'a> ::serde::de::Visitor<'a> for Thingvisitor {
                     type Value = $thing;
 
-                    fn expecting(
-                        &self,
-                        formatter: &mut ::std::fmt::Formatter,
-                    ) -> ::std::fmt::Result {
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                         write!(formatter, "expected {}", stringify!($thing))
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<$thing, E>
                     where
-                        E: ::serde::de::Error,
+                        E: serde::de::Error,
                     {
-                        Ok($thing(hex2bin(value).map_err(::serde::de::Error::custom)?))
+                        Ok($thing(hex::decode(value).map_err(E::custom)?))
                     }
                 }
 

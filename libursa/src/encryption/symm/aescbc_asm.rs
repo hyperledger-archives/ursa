@@ -1,6 +1,11 @@
 use super::Encryptor;
-use aead::{generic_array::GenericArray, Aead, Error, NewAead, Payload};
-use generic_array::typenum::{Unsigned, U0, U16, U32, U48, U64};
+use aead::{
+    generic_array::{
+        typenum::{Unsigned, U0, U16, U32, U48, U64},
+        GenericArray,
+    },
+    Aead, Error, NewAead, Payload,
+};
 use openssl::{
     hash::MessageDigest,
     memcmp,
@@ -8,10 +13,8 @@ use openssl::{
     sign::Signer,
     symm::{decrypt as openssl_decrypt, encrypt as openssl_encrypt, Cipher as OpenSslCipher},
 };
-#[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "serialization")]
-use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use zeroize::Zeroize;
 
 macro_rules! aes_cbc_hmac_impl {
@@ -124,6 +127,7 @@ macro_rules! aes_cbc_hmac_impl {
 
         default_impl!($name);
         drop_impl!($name);
+        #[cfg(feature = "serde")]
         serialize_impl!($name, $visitor);
     };
 }

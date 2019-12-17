@@ -10,6 +10,9 @@ use amcl_wrapper::{
     group_elem_g2::G2,
     types_g2::GroupG2_SIZE,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use CryptoError;
 
 pub const PRIVATE_KEY_SIZE: usize = MODBYTES;
@@ -52,7 +55,8 @@ macro_rules! bls_impl {
             SignatureGroup::from_msg_hash(value.as_slice())
         }
 
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Clone)]
         pub struct PublicKey(Generator);
 
         impl PublicKey {
@@ -80,7 +84,8 @@ macro_rules! bls_impl {
 
         /// Represents an aggregated BLS public key that mitigates the rogue key attack
         /// for verifying aggregated signatures.
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Clone)]
         pub struct AggregatedPublicKey(Generator);
 
         impl From<&[PublicKey]> for AggregatedPublicKey {
@@ -133,7 +138,8 @@ macro_rules! bls_impl {
         ///
         /// To make messages distinct, use `new_with_rk_mitigation`. If using
         /// proof of possession mitigation, use `new`.
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Clone)]
         pub struct Signature(SignatureGroup);
 
         impl Signature {
@@ -253,7 +259,8 @@ macro_rules! bls_impl {
         /// where signers are known entities in a group.
         /// Virtually identical to a signature but should
         /// use a different domain separation than `Signature`.
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Clone)]
         pub struct ProofOfPossession(SignatureGroup);
 
         impl ProofOfPossession {
@@ -283,7 +290,8 @@ macro_rules! bls_impl {
             }
         }
 
-        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Clone)]
         pub struct AggregatedSignature(SignatureGroup);
 
         impl AggregatedSignature {

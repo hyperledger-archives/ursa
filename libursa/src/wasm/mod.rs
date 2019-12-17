@@ -1,19 +1,20 @@
 #[macro_use]
 mod macros;
-#[cfg(feature = "bls")]
+#[cfg(feature = "bls_bn254")]
 pub mod bls;
 
+#[cfg(feature = "ed25519")]
 pub mod ed25519;
+#[cfg(feature = "encryption")]
 pub mod encryption;
+#[cfg(feature = "ecdsa_secp256k1")]
 pub mod secp256k1;
 
-//#[cfg(feature = "cl")]
-//pub mod cl;
-
+#[cfg(any(feature = "ed25519", feature = "ecdsa_secp256k1"))]
 use keys::{PrivateKey, PublicKey};
 
 use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
-use serde;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

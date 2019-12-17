@@ -1,7 +1,15 @@
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 pub mod bls;
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 pub mod cl;
+#[cfg(any(feature = "encryption", feature = "encryption_asm"))]
 pub mod encryption;
 pub mod logger;
+#[cfg(any(
+    feature = "signatures",
+    feature = "signatures_native",
+    feature = "signatures_asm"
+))]
 pub mod signatures;
 
 use errors::prelude::*;
@@ -180,7 +188,7 @@ pub extern "C" fn ursa_get_current_error(error_json_p: *mut *const c_char) {
     trace!("ursa_get_current_error: <<<");
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "cl", feature = "cl_native")))]
 mod tests {
     use super::*;
 

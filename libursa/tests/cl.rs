@@ -1,11 +1,11 @@
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-#[cfg(feature = "cl")]
+#[cfg(feature = "serde")]
+extern crate serde;
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 extern crate ursa;
 
-#[cfg(feature = "cl")]
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 mod cl_tests {
+    use serde::{Deserialize, Serialize};
     use std::collections::HashSet;
     use ursa::cl::issuer::Issuer;
     use ursa::cl::prover::Prover;

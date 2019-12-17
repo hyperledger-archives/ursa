@@ -60,34 +60,40 @@ path = "bin/test_xchacha20poly1305.rs"
 required-features = ["benchmarkxchacha20poly1305"]
 
 [features]
-default = ["bn_openssl", "pair_amcl", "serialization", "native_secp256k1", "ffi", "cl", "bls", "std", "encryption_asm"]
-aes-cbc = ["aead", "aes", "block-modes", "block-padding", "hmac", "sha2", "subtle"]
-aescbc_openssl = ["aead", "openssl"]
-aesgcm_openssl = ["aead", "openssl"]
-asm = ["bn_openssl", "pair_amcl", "serialization", "encryption_asm", "native_secp256k1", "ffi", "cl", "bls", "nightly"]
+default = ["encryption", "ffi", "hashes", "serde", "signatures_native"]
+aescbc = ["aead", "aes", "block-modes", "block-padding", "hex", "hmac", "rand", "sha2/std", "subtle", "zeroize"]
+aescbc_native = ["aead", "hex", "rand", "openssl", "zeroize"]
+aesgcm_native = ["aead", "hex", "rand", "openssl", "zeroize"]
+aesgcm = ["aead", "aes-gcm", "hex", "rand", "zeroize"]
+asm = ["encryption_asm", "ffi", "hashes_asm", "serde", "signatures_asm"]
 benchmarkaescbc = ["openssl"]
 benchmarkaesgcm = ["openssl"]
 benchmarked25519 = ["libsodium-ffi"]
 benchmarksecp256k1 = ["secp256k1", "openssl"]
 benchmarkxchacha20poly1305 = ["libsodium-ffi"]
-bls = ["amcl_wrapper"]
-bn_openssl = ["openssl", "int_traits"]
-bn_rust = ["num-bigint", "glass_pumpkin", "int_traits", "num-integer", "num-traits"]
-cl = ["time"]
-chacha20poly1305 = ["rustchacha20poly1305"]
-chacha20poly1305_libsodium = ["libsodium-ffi"]
-encryption = ["aes-cbc", "aes-gcm", "chacha20poly1305"]
-encryption_asm = ["aescbc_openssl", "aesgcm_openssl", "chacha20poly1305_libsodium"]
-ffi = ["ffi-support"]
-native_ed25519 = ["ed25519-dalek/std", "ed25519-dalek/u64_backend"]
-native_secp256k1 = ["secp256k1", "hex"]
-nightly = ["sha2/asm", "sha3", "blake2/simd_asm", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend"]
-pair_amcl = ["amcl"]
-portable = ["bn_rust", "pair_amcl", "serialization", "portable_secp256k1", "cl", "bls", "std", "encryption"]
-portable_secp256k1 = ["rustlibsecp256k1", "hex"]
-serialization = ["serde", "serde_json", "serde_derive"]
-std = ["sha2/std", "sha3", "blake2/std", "ed25519-dalek/std", "ed25519-dalek/u64_backend"]
-wasm = ["wasm-bindgen", "console_error_panic_hook", "pair_amcl", "bn_rust", "serialization", "rustlibsecp256k1", "bls", "blake2/std", "sha2/std", "sha3", "js-sys", "rust-crypto-wasm", "encryption"]
+bls_bls12381 = ["amcl_wrapper", "hex", "zeroize"]
+bls_bn254 = ["amcl", "failure", "log", "rand", "sha2/std", "sha3"]
+bls_bn254_asm = ["amcl", "failure", "log", "rand", "sha2/asm", "sha3"]
+cl = ["amcl", "failure", "glass_pumpkin", "int_traits", "lazy_static", "log", "num-bigint", "num-integer", "num-traits", "rand", "sha2/std", "time"]
+cl_native = ["amcl", "failure", "int_traits", "lazy_static", "log", "openssl", "rand", "time"]
+chacha20poly1305 = ["aead", "hex", "rand", "rustchacha20poly1305", "zeroize"]
+chacha20poly1305_native = ["aead", "hex", "lazy_static", "libsodium-ffi", "rand", "zeroize"]
+ecdsa_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "rustlibsecp256k1", "sha2/std", "zeroize"]
+ecdsa_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/std", "zeroize"]
+ecdsa_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/asm", "zeroize"]
+ed25519 = ["arrayref", "ed25519-dalek/std", "ed25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "zeroize"]
+ed25519_asm = ["arrayref", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend", "hex", "rand", "rand_chacha", "sha2/asm", "zeroize"]
+encryption = ["aescbc", "aesgcm", "chacha20poly1305"]
+encryption_asm = ["aescbc_native", "aesgcm_native", "chacha20poly1305_native"]
+ffi = ["failure", "ffi-support", "log", "serde", "serde_json", "time"]
+hashes = ["blake2/std", "sha2/std", "sha3"]
+hashes_asm = ["blake2/simd_asm", "sha2/asm", "sha3"]
+portable = ["clear_on_drop/no_cc", "encryption", "hashes", "serde", "signatures"]
+portable_wasm = ["portable", "wasm"]
+signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
+signatures_native = ["cl_native", "ed25519", "ecdsa_secp256k1_native", "bls_bls12381", "bls_bn254"]
+signatures_asm = ["cl_native", "ed25519_asm", "ecdsa_secp256k1_asm", "bls_bls12381", "bls_bn254_asm"]
+wasm = ["console_error_panic_hook", "js-sys", "rand/wasm-bindgen", "wasm-bindgen"]
 
 [dependencies]
 aead = { version = "0.2", optional = true }
@@ -95,24 +101,24 @@ aes = { version = "0.3", optional = true }
 aes-gcm = { version = "0.3.0", optional = true }
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
 amcl_wrapper = {version = "0.1.7", features = ["bls381"], optional = true }
-arrayref = "0.3.5"
+arrayref = { version = "0.3.5", optional = true }
 blake2 = { version = "0.8", default-features = false, optional = true }
 block-modes = { version = "0.3", optional = true }
 block-padding = { version = "0.1", optional = true }
+clear_on_drop = { version = "0.2.3", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
 ed25519-dalek = { version = "1.0.0-pre.2", default-features = false, optional = true }
 env_logger = "0.7.0"
-failure = "0.1.6"
+failure = { version = "0.1.6", optional = true }
 ffi-support = { version = "0.3.5", optional = true }
-generic-array = "0.13"
 glass_pumpkin = { version = "0.3", optional = true }
 hex = { version = "0.4.0", optional = true }
 hmac = { version = "0.7", optional = true }
 int_traits = { version = "0.1.1", optional = true }
 js-sys = { version = "0.3.13", optional = true }
-lazy_static = "1.4"
-libsodium-ffi = { version = "0.1.17", optional = true }
-log = "0.4.8"
+lazy_static = { version = "1.4", optional = true }
+libsodium-ffi = { version = "0.2.2", optional = true }
+log = { version = "0.4.8", optional = true }
 num-bigint = { version = "0.2", features = ["rand"], optional = true }
 num-integer = { version = "0.1", optional = true }
 num-traits = { version = "0.2", optional = true }
@@ -122,25 +128,24 @@ rand = { version = "0.6", features = ["wasm-bindgen"] }
 rand_chacha = "0.1"
 rustchacha20poly1305 = { version = "0.3.1", package = "chacha20poly1305", optional = true }
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1", optional = true }
-rust-crypto-wasm = { version = "0.3.1", optional = true }
-secp256k1 = { version = "0.15", optional = true, features = ["rand", "serde"]}
-serde = { version = "1.0",  optional = true}
-serde_derive = { version = "1.0",  optional = true}
-serde_json = { version = "1.0",  optional = true}
+secp256k1 = { version = "0.17", optional = true, features = ["rand", "serde"]}
+serde = { version = "1.0", features = ["derive"],  optional = true}
+serde_json = { version = "1.0", optional = true }
 sha2 = { version = "0.8", default-features = false, optional = true }
 sha3 = { version = "0.8", optional = true }
 subtle = { version = "2.2.1", optional = true }
 time = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
-zeroize = { version = "1.0", features = ["zeroize_derive"] }
+zeroize = { version = "1.0", features = ["zeroize_derive"], optional =  true }
 
 [dev-dependencies]
 bytebuffer-rs = "0.3.0"
 criterion = "0.3"
-libsodium-ffi = "0.1.17"
+libsodium-ffi = "0.2.2"
 openssl = "0.10"
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1" }
-secp256k1 = "0.15"
+secp256k1 = "0.17"
+serde_json = "1.0"
 
 [[bench]]
 name = "cks_revok"

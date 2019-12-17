@@ -1,3 +1,4 @@
+#[cfg(feature = "cl")]
 macro_rules! check_opt_reference {
     ($ref:ident, $thing:tt) => {
         if $ref.is_null() {
@@ -11,10 +12,11 @@ macro_rules! check_opt_reference {
 
 macro_rules! maperr {
     ($expr:expr) => {
-        $expr.map_err(|e| stringify!(e))?
+        $expr.map_err(|_e| stringify!(_e))?
     };
 }
 
+#[cfg(feature = "cl")]
 macro_rules! finalize {
     ($expr:expr) => {
         $expr.0.finalize().map_err(|e| e.to_string())?

@@ -39,10 +39,12 @@ use aead::{
     generic_array::{typenum::Unsigned, ArrayLength, GenericArray},
     Aead, Error, NewAead, Payload,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::str::FromStr;
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 macro_rules! serialize_impl {
     ($name:ident, $serializevisitor:ident) => {
         impl Serialize for $name {
@@ -76,9 +78,9 @@ macro_rules! serialize_impl {
 
                     fn visit_str<E>(self, value: &str) -> Result<$name, E>
                     where
-                        E: DError,
+                        E: serde::de::Error,
                     {
-                        let key = hex::decode(value).map_err(DError::custom)?;
+                        let key = hex::decode(value).map_err(E::custom)?;
                         Ok($name::new(GenericArray::clone_from_slice(key.as_slice())))
                     }
                 }
@@ -333,26 +335,37 @@ impl<D: Encryptor> DynEncryptor for D {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EncryptorType {
+    #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
     Aes128CbcHmac256,
+    #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
     Aes256CbcHmac512,
+    #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
     Aes128Gcm,
+    #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
     Aes256Gcm,
+    #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
     XChaCha20Poly1305,
 }
 
 impl EncryptorType {
     pub fn is_valid_keysize(self, size: usize) -> bool {
         match self {
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes128CbcHmac256 => {
                 size == <aescbc::Aes128CbcHmac256 as NewAead>::KeySize::to_usize()
             }
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes256CbcHmac512 => {
                 size == <aescbc::Aes256CbcHmac512 as NewAead>::KeySize::to_usize()
             }
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes128Gcm => size == <aesgcm::Aes128Gcm as NewAead>::KeySize::to_usize(),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes256Gcm => size == <aesgcm::Aes256Gcm as NewAead>::KeySize::to_usize(),
+            #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
             EncryptorType::XChaCha20Poly1305 => {
                 size == <xchacha20poly1305::XChaCha20Poly1305 as NewAead>::KeySize::to_usize()
             }
@@ -361,14 +374,19 @@ impl EncryptorType {
 
     pub fn is_valid_noncesize(self, size: usize) -> bool {
         match self {
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes128CbcHmac256 => {
                 size == <aescbc::Aes128CbcHmac256 as Aead>::NonceSize::to_usize()
             }
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes256CbcHmac512 => {
                 size == <aescbc::Aes256CbcHmac512 as Aead>::NonceSize::to_usize()
             }
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes128Gcm => size == <aesgcm::Aes128Gcm as Aead>::NonceSize::to_usize(),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes256Gcm => size == <aesgcm::Aes256Gcm as Aead>::NonceSize::to_usize(),
+            #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
             EncryptorType::XChaCha20Poly1305 => {
                 size == <xchacha20poly1305::XChaCha20Poly1305 as Aead>::NonceSize::to_usize()
             }
@@ -377,18 +395,23 @@ impl EncryptorType {
 
     pub fn gen_encryptor<A: AsRef<[u8]>>(self, key: A) -> Box<dyn DynEncryptor> {
         match self {
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes128CbcHmac256 => Box::new(aescbc::Aes128CbcHmac256::new(
                 GenericArray::clone_from_slice(key.as_ref()),
             )),
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes256CbcHmac512 => Box::new(aescbc::Aes256CbcHmac512::new(
                 GenericArray::clone_from_slice(key.as_ref()),
             )),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes128Gcm => Box::new(aesgcm::Aes128Gcm::new(
                 GenericArray::clone_from_slice(key.as_ref()),
             )),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes256Gcm => Box::new(aesgcm::Aes256Gcm::new(
                 GenericArray::clone_from_slice(key.as_ref()),
             )),
+            #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
             EncryptorType::XChaCha20Poly1305 => {
                 Box::new(xchacha20poly1305::XChaCha20Poly1305::new(
                     GenericArray::clone_from_slice(key.as_ref()),
@@ -403,10 +426,15 @@ impl FromStr for EncryptorType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             "aes-128-cbc-hmac-256" => Ok(EncryptorType::Aes128CbcHmac256),
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             "aes-256-cbc-hmac-512" => Ok(EncryptorType::Aes256CbcHmac512),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             "aes-128-gcm" => Ok(EncryptorType::Aes128Gcm),
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             "aes-256-gcm" => Ok(EncryptorType::Aes256Gcm),
+            #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
             "xchacha20poly1305" => Ok(EncryptorType::XChaCha20Poly1305),
             _ => Err(format!("Invalid type: {}", s)),
         }
@@ -416,10 +444,15 @@ impl FromStr for EncryptorType {
 impl std::fmt::Display for EncryptorType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = match *self {
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes128CbcHmac256 => "aes-128-cbc-hmac-256",
+            #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes256CbcHmac512 => "aes-256-cbc-hmac-512",
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes128Gcm => "aes-128-gcm",
+            #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
             EncryptorType::Aes256Gcm => "aes-256-gcm",
+            #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
             EncryptorType::XChaCha20Poly1305 => "xchacha20poly1305",
         };
         write!(f, "{}", s)
@@ -503,7 +536,7 @@ macro_rules! tests_impl {
             assert_eq!(dummytext.to_vec(), plaintext);
         }
 
-        #[cfg(feature = "serialization")]
+        #[cfg(feature = "serde")]
         #[test]
         fn serialization() {
             let aes = $name::default();
@@ -521,7 +554,9 @@ macro_rules! tests_impl {
                 use std::mem;
                 use std::slice;
 
-                unsafe { slice::from_raw_parts(x as *const T as *const u8, mem::size_of_val(x)) }
+                unsafe {
+                    slice::from_raw_parts(x as *const T as *const u8, mem::size_of_val(x))
+                }
             }
 
             assert!(as_bytes(&aes.key).iter().all(|b| *b == 0u8));
@@ -529,21 +564,21 @@ macro_rules! tests_impl {
     };
 }
 
-#[cfg(feature = "aescbc_openssl")]
+#[cfg(feature = "aescbc_native")]
 #[path = "aescbc_asm.rs"]
 pub mod aescbc;
-#[cfg(feature = "aes-cbc")]
+#[cfg(feature = "aescbc")]
 #[path = "aescbc.rs"]
 pub mod aescbc;
 
-#[cfg(feature = "aesgcm_openssl")]
+#[cfg(feature = "aesgcm_native")]
 #[path = "aesgcm_asm.rs"]
 pub mod aesgcm;
-#[cfg(feature = "aes-gcm")]
+#[cfg(feature = "aesgcm")]
 #[path = "aesgcm.rs"]
 pub mod aesgcm;
 
-#[cfg(feature = "chacha20poly1305_libsodium")]
+#[cfg(feature = "chacha20poly1305_native")]
 #[path = "xchacha20poly1305_asm.rs"]
 pub mod xchacha20poly1305;
 
@@ -552,10 +587,11 @@ pub mod xchacha20poly1305;
 pub mod xchacha20poly1305;
 
 pub mod prelude {
-    pub use super::{
-        aescbc::{Aes128CbcHmac256, Aes256CbcHmac512},
-        aesgcm::{Aes128Gcm, Aes256Gcm},
-        xchacha20poly1305::XChaCha20Poly1305,
-        DynEncryptor, Encryptor, EncryptorType, SymmetricEncryptor,
-    };
+    #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
+    pub use super::aescbc::{Aes128CbcHmac256, Aes256CbcHmac512};
+    #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
+    pub use super::aesgcm::{Aes128Gcm, Aes256Gcm};
+    #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
+    pub use super::xchacha20poly1305::XChaCha20Poly1305;
+    pub use super::{DynEncryptor, Encryptor, EncryptorType, SymmetricEncryptor};
 }

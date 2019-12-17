@@ -15,11 +15,9 @@ use amcl::rand::RAND;
 
 use std::fmt::{Debug, Error, Formatter};
 
-#[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "serialization")]
-use serde::ser::{Error as SError, Serialize, Serializer};
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "serde")]
 use std::fmt;
 
 use rand::prelude::*;
@@ -189,17 +187,20 @@ impl Debug for PointG1 {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl Serialize for PointG1 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("PointG1", &self.to_string().map_err(SError::custom)?)
+        serializer.serialize_newtype_struct(
+            "PointG1",
+            &self.to_string().map_err(serde::ser::Error::custom)?,
+        )
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for PointG1 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -216,9 +217,9 @@ impl<'a> Deserialize<'a> for PointG1 {
 
             fn visit_str<E>(self, value: &str) -> Result<PointG1, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
-                Ok(PointG1::from_string(value).map_err(DError::custom)?)
+                Ok(PointG1::from_string(value).map_err(E::custom)?)
             }
         }
 
@@ -327,17 +328,20 @@ impl Debug for PointG2 {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl Serialize for PointG2 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("PointG2", &self.to_string().map_err(SError::custom)?)
+        serializer.serialize_newtype_struct(
+            "PointG2",
+            &self.to_string().map_err(serde::ser::Error::custom)?,
+        )
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for PointG2 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -354,9 +358,9 @@ impl<'a> Deserialize<'a> for PointG2 {
 
             fn visit_str<E>(self, value: &str) -> Result<PointG2, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
-                Ok(PointG2::from_string(value).map_err(DError::custom)?)
+                Ok(PointG2::from_string(value).map_err(E::custom)?)
             }
         }
 
@@ -506,7 +510,7 @@ impl Debug for GroupOrderElement {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl Serialize for GroupOrderElement {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -514,12 +518,12 @@ impl Serialize for GroupOrderElement {
     {
         serializer.serialize_newtype_struct(
             "GroupOrderElement",
-            &self.to_string().map_err(SError::custom)?,
+            &self.to_string().map_err(serde::ser::Error::custom)?,
         )
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for GroupOrderElement {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -536,9 +540,9 @@ impl<'a> Deserialize<'a> for GroupOrderElement {
 
             fn visit_str<E>(self, value: &str) -> Result<GroupOrderElement, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
-                Ok(GroupOrderElement::from_string(value).map_err(DError::custom)?)
+                Ok(GroupOrderElement::from_string(value).map_err(E::custom)?)
             }
         }
 
@@ -619,17 +623,20 @@ impl Debug for Pair {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl Serialize for Pair {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("Pair", &self.to_string().map_err(SError::custom)?)
+        serializer.serialize_newtype_struct(
+            "Pair",
+            &self.to_string().map_err(serde::ser::Error::custom)?,
+        )
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for Pair {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -646,9 +653,9 @@ impl<'a> Deserialize<'a> for Pair {
 
             fn visit_str<E>(self, value: &str) -> Result<Pair, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
-                Ok(Pair::from_string(value).map_err(DError::custom)?)
+                Ok(Pair::from_string(value).map_err(E::custom)?)
             }
         }
 
