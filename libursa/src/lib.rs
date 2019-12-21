@@ -27,17 +27,24 @@ extern crate failure;
 #[macro_use]
 extern crate log;
 pub extern crate blake2;
+#[macro_use]
 extern crate generic_array;
 extern crate hex;
-#[cfg(test)]
+#[cfg(any(test, feature = "encryption_asm"))]
 extern crate libsodium_ffi;
 extern crate rand;
 extern crate rand_chacha;
-#[cfg(all(any(feature = "portable", feature = "wasm"), not(feature = "native")))]
+#[cfg(all(
+    any(feature = "portable", feature = "wasm"),
+    not(feature = "native_secp256k1")
+))]
 extern crate rustlibsecp256k1;
 #[cfg(any(
     test,
-    all(feature = "native", not(any(feature = "portable", feature = "wasm")))
+    all(
+        feature = "native_secp256k1",
+        not(any(feature = "portable", feature = "wasm"))
+    )
 ))]
 extern crate secp256k1 as libsecp256k1;
 pub extern crate sha2;
@@ -60,7 +67,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 
-#[cfg(any(test, feature = "bn_openssl"))]
+#[cfg(any(test, feature = "bn_openssl", feature = "aescbc_asm"))]
 extern crate openssl;
 
 #[cfg(any(feature = "bn_openssl", feature = "bn_rust"))]
@@ -84,6 +91,21 @@ extern crate time;
 extern crate crypto;
 #[cfg(not(feature = "wasm"))]
 extern crate ed25519_dalek;
+
+#[cfg(any(feature = "encryption_asm", feature = "encryption"))]
+extern crate aead;
+#[cfg(any(feature = "encryption"))]
+extern crate aes;
+#[cfg(any(feature = "encryption"))]
+extern crate aes_gcm;
+#[cfg(any(feature = "encryption"))]
+extern crate block_modes;
+#[cfg(any(feature = "encryption"))]
+extern crate hmac;
+#[cfg(any(feature = "encryption"))]
+extern crate rustchacha20poly1305;
+#[cfg(any(feature = "encryption"))]
+extern crate subtle;
 
 #[cfg(feature = "cl")]
 #[macro_use]
@@ -111,7 +133,11 @@ pub mod pair;
 #[macro_use]
 extern crate lazy_static;
 
+#[cfg(test)]
+extern crate bytebuffer;
+
 pub mod encoding;
+pub mod encryption;
 pub mod hash;
 pub mod keys;
 pub mod signatures;
@@ -146,7 +172,7 @@ impl std::fmt::Display for CryptoError {
     }
 }
 
-#[cfg(feature = "native")]
+#[cfg(any(test, all(feature = "native_secp256k1", not(feature = "portable"))))]
 impl From<libsecp256k1::Error> for CryptoError {
     fn from(error: libsecp256k1::Error) -> CryptoError {
         match error {

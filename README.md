@@ -53,8 +53,8 @@ found in Libursa.
 
 Ursa uses the following external dependencies:
 
-- [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
-  newer (Written in C)
+- [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) (Written in C)
+- [libsodium 1.0.18 or greater](https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz) (Written in C)
 - [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (Written in C)
 
 Ursa uses the following external dependencies for testing:
