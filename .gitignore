@@ -7,4 +7,4 @@ build
 .cache
 .DS_Store
 **/*.rs.bk
-Podfile.lock
+*.lock
