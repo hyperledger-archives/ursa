@@ -1,6 +1,6 @@
 # HYPERLEDGER URSA
 
-[![Build Status](https://travis-ci.org/hyperledger/ursa.svg?branch=travis-ci)](https://travis-ci.org/hyperledger/ursa)
+[![Build Status](https://dev.azure.com/Hyperledger/Ursa/_apis/build/status/hyperledger.ursa?branchName=master)](https://dev.azure.com/Hyperledger/Ursa/_build/latest?definitionId=66&branchName=master)
 [![Build status](https://ci.appveyor.com/api/projects/status/1htmp82mdvmfjjap?svg=true)](https://ci.appveyor.com/project/hyperledger/ursa)
 
 - [Introduction](#introduction)
