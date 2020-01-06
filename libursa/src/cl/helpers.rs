@@ -704,7 +704,7 @@ mod tests {
 
     #[test]
     fn four_squares_works() {
-        let res = four_squares(107 as i32);
+        let res = four_squares(107);
         let res_data = res.unwrap();
 
         assert_eq!(
@@ -724,7 +724,7 @@ mod tests {
             res_data.get("3").unwrap().to_dec().unwrap()
         );
 
-        let res = four_squares(112 as i32);
+        let res = four_squares(112);
         let res_data = res.unwrap();
 
         assert_eq!(
@@ -744,7 +744,7 @@ mod tests {
             res_data.get("3").unwrap().to_dec().unwrap()
         );
 
-        let res = four_squares(253 as i32);
+        let res = four_squares(253);
         let res_data = res.unwrap();
 
         assert_eq!(
@@ -764,7 +764,7 @@ mod tests {
             res_data.get("3").unwrap().to_dec().unwrap()
         );
 
-        let res = four_squares(1506099439 as i32);
+        let res = four_squares(1506099439);
         let res_data = res.unwrap();
 
         assert_eq!(
@@ -787,7 +787,7 @@ mod tests {
 
     #[test]
     fn transform_u32_to_array_of_u8_works() {
-        let int = 0x74BA7445;
+        let int = 0x74BA_7445;
         let answer = vec![0x74, 0xBA, 0x74, 0x45];
         assert_eq!(transform_u32_to_array_of_u8(int), answer)
     }
