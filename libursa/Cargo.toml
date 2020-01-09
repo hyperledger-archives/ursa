@@ -93,7 +93,7 @@ portable_wasm = ["portable", "wasm"]
 signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
 signatures_native = ["cl_native", "ed25519", "ecdsa_secp256k1_native", "bls_bls12381", "bls_bn254"]
 signatures_asm = ["cl_native", "ed25519_asm", "ecdsa_secp256k1_asm", "bls_bls12381", "bls_bn254_asm"]
-wasm = ["console_error_panic_hook", "js-sys", "rand/wasm-bindgen", "wasm-bindgen"]
+wasm = ["console_error_panic_hook", "failure", "hex", "js-sys", "log", "rand/wasm-bindgen", "serde", "serde_json", "wasm-bindgen", "zeroize"]
 
 [dependencies]
 aead = { version = "0.2", optional = true }

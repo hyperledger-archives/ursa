@@ -67,7 +67,15 @@ extern crate secp256k1 as libsecp256k1;
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(any(test, feature = "ffi"))]
-#[cfg_attr(any(feature = "cl", feature = "cl_native", feature = "ffi"), macro_use)]
+#[cfg_attr(
+    any(
+        feature = "cl",
+        feature = "cl_native",
+        feature = "ffi",
+        feature = "wasm"
+    ),
+    macro_use
+)]
 extern crate serde_json;
 #[cfg(feature = "ffi")]
 #[macro_use]
@@ -80,15 +88,16 @@ extern crate js_sys;
 extern crate wasm_bindgen;
 
 #[cfg(any(
-    feature = "ed25519",
-    feature = "ed25519_asm",
-    feature = "ecdsa_secp256k1",
-    feature = "ecdsa_secp256k1_native",
-    feature = "ecdsa_secp256k1_asm",
     feature = "bls_bls12381",
     feature = "cl",
     feature = "cl_native",
-    feature = "ffi"
+    feature = "ecdsa_secp256k1",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "ed25519",
+    feature = "ed25519_asm",
+    feature = "ffi",
+    feature = "wasm"
 ))]
 #[macro_use]
 pub mod utils;
@@ -119,7 +128,8 @@ pub mod encryption;
     feature = "ecdsa_secp256k1_asm",
     feature = "cl",
     feature = "cl_native",
-    feature = "ffi"
+    feature = "ffi",
+    feature = "wasm"
 ))]
 pub mod errors;
 #[cfg(feature = "ffi")]
@@ -127,12 +137,13 @@ pub mod ffi;
 #[cfg(any(feature = "blake2", feature = "sha2", feature = "sha3"))]
 pub mod hash;
 #[cfg(any(
-    feature = "ed25519",
-    feature = "ed25519_asm",
+    feature = "bls_bls12381",
     feature = "ecdsa_secp256k1",
     feature = "ecdsa_secp256k1_native",
     feature = "ecdsa_secp256k1_asm",
-    feature = "bls_bls12381"
+    feature = "ed25519",
+    feature = "ed25519_asm",
+    feature = "wasm"
 ))]
 pub mod keys;
 #[cfg(any(

@@ -10,7 +10,7 @@ pub mod encryption;
 #[cfg(feature = "ecdsa_secp256k1")]
 pub mod secp256k1;
 
-#[cfg(any(feature = "ed25519", feature = "ecdsa_secp256k1"))]
+//#[cfg(any(feature = "ed25519", feature = "ecdsa_secp256k1"))]
 use keys::{PrivateKey, PublicKey};
 
 use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
