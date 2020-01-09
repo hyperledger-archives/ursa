@@ -1,4 +1,16 @@
 #![deny(unused_import_braces, trivial_numeric_casts)]
+
+#[cfg(all(feature = "ecdsa_secp256k1", feature = "ecdsa_secp256k1_native"))]
+compile_error!("Cannot compile both features 'ecdsa_sepc256k1' and 'ecdsa_secp256k1_native'");
+#[cfg(all(feature = "ecdsa_secp256k1", feature = "ecdsa_secp256k1_asm"))]
+compile_error!("Cannot compile both features 'ecdsa_sepc256k1' and 'ecdsa_secp256k1_asm'");
+#[cfg(all(feature = "ecdsa_secp256k1_native", feature = "ecdsa_secp256k1_asm"))]
+compile_error!("Cannot compile both features 'ecdsa_sepc256k1_native' and 'ecdsa_secp256k1_asm'");
+#[cfg(all(feature = "ed25519", feature = "ed25519_asm"))]
+compile_error!("Cannot compile both features 'ed25519' and 'ed25519_asm'");
+#[cfg(all(feature = "cl", feature = "cl_native"))]
+compile_error!("Cannot compile both features 'cl' and 'cl_native'");
+
 #[cfg(feature = "aead")]
 extern crate aead;
 #[cfg(feature = "aes")]
