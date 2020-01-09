@@ -7,7 +7,8 @@ pub mod ctypes;
     feature = "ecdsa_secp256k1",
     feature = "ecdsa_secp256k1_native",
     feature = "ecdsa_secp256k1_asm",
-    feature = "bls_bls12381"
+    feature = "bls_bls12381",
+    feature = "wasm"
 ))]
 #[macro_use]
 pub mod macros;
