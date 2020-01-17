@@ -8,9 +8,6 @@ use openssl::hash::{hash, Hasher, MessageDigest};
 
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-//use serde::ser::{Error as SError, Serialize, Serializer};
-//#[cfg(feature = "serde")]
-//use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
 #[cfg(feature = "serde")]
 use std::fmt;
 
