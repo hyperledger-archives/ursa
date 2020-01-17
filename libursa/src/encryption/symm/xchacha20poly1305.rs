@@ -49,6 +49,27 @@ impl Aead for XChaCha20Poly1305 {
         let plaintext = aead.decrypt(nonce, ciphertext)?;
         Ok(plaintext)
     }
+
+    // TODO
+    fn encrypt_in_place_detached(
+        &self,
+        _nonce: &GenericArray<u8, Self::NonceSize>,
+        _associated_data: &[u8],
+        _buffer: &mut [u8],
+    ) -> Result<GenericArray<u8, Self::TagSize>, Error> {
+        unimplemented!();
+    }
+
+    // TODO
+    fn decrypt_in_place_detached(
+        &self,
+        _nonce: &GenericArray<u8, Self::NonceSize>,
+        _associated_data: &[u8],
+        _buffer: &mut [u8],
+        _tag: &GenericArray<u8, Self::TagSize>,
+    ) -> Result<(), Error> {
+        unimplemented!();
+    }
 }
 
 default_impl!(XChaCha20Poly1305);
