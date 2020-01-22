@@ -13,8 +13,6 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 use std::cmp::Ord;
 use std::cmp::Ordering;
-//#[cfg(feature = "ffi")]
-//use std::error::Error;
 use std::fmt;
 
 pub struct BigNumberContext;
