@@ -1195,7 +1195,11 @@ impl ProofBuilder {
             ));
         }
 
-        if predicates_attrs.intersection(&sub_proof_request.revealed_attrs).count() != 0 {
+        if predicates_attrs
+            .intersection(&sub_proof_request.revealed_attrs)
+            .count()
+            != 0
+        {
             return Err(err_msg(
                 UrsaCryptoErrorKind::InvalidStructure,
                 "ProofRequest can't contain an attribute as a revealed value and as a predicate at the same time",
