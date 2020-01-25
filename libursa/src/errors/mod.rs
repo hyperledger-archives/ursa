@@ -115,6 +115,7 @@ impl From<Context<UrsaCryptoErrorKind>> for UrsaCryptoError {
     }
 }
 
+#[cfg(feature = "logger")]
 impl From<log::SetLoggerError> for UrsaCryptoError {
     fn from(err: log::SetLoggerError) -> UrsaCryptoError {
         err.context(UrsaCryptoErrorKind::InvalidState).into()

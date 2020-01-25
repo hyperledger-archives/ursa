@@ -85,9 +85,10 @@ ed25519 = ["arrayref", "ed25519-dalek/std", "ed25519-dalek/u64_backend", "hex", 
 ed25519_asm = ["arrayref", "ed25519-dalek/nightly", "ed25519-dalek/avx2_backend", "hex", "rand", "rand_chacha", "sha2/asm", "zeroize"]
 encryption = ["aescbc", "aesgcm", "chacha20poly1305"]
 encryption_asm = ["aescbc_native", "aesgcm_native", "chacha20poly1305_native"]
-ffi = ["failure", "ffi-support", "log", "serde", "serde_json", "time"]
+ffi = ["failure", "ffi-support", "logger", "serde", "serde_json", "time"]
 hashes = ["blake2/std", "sha2/std", "sha3"]
 hashes_asm = ["blake2/simd_asm", "sha2/asm", "sha3"]
+logger = ["env_logger", "log"]
 portable = ["clear_on_drop/no_cc", "encryption", "hashes", "serde", "signatures"]
 portable_wasm = ["portable", "wasm"]
 signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
@@ -108,7 +109,7 @@ block-padding = { version = "0.1", optional = true }
 clear_on_drop = { version = "0.2.3", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
 ed25519-dalek = { version = "1.0.0-pre.2", default-features = false, optional = true }
-env_logger = "0.7.0"
+env_logger = { version = "0.7.0", optional = true }
 failure = { version = "0.1.6", optional = true }
 ffi-support = { version = "0.3.5", optional = true }
 glass_pumpkin = { version = "0.3", optional = true }
