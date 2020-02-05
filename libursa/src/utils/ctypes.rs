@@ -21,6 +21,7 @@ pub fn string_to_cstring(s: String) -> CString {
     CString::new(s).unwrap()
 }
 
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 macro_rules! check_useful_c_byte_array {
     ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
         if $ptr.is_null() {
@@ -40,6 +41,7 @@ macro_rules! check_useful_c_byte_array {
     };
 }
 
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 macro_rules! check_useful_opt_c_byte_array {
     ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
         if !$ptr.is_null() && $len <= 0 {
@@ -55,6 +57,12 @@ macro_rules! check_useful_opt_c_byte_array {
     };
 }
 
+#[cfg(any(
+    feature = "cl",
+    feature = "cl_native",
+    feature = "bls_bn254",
+    feature = "bls_bn254_asm"
+))]
 macro_rules! check_useful_c_reference {
     ($ptr:ident, $type:ty, $err:expr) => {
         if $ptr.is_null() {
@@ -66,6 +74,7 @@ macro_rules! check_useful_c_reference {
     };
 }
 
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 macro_rules! check_useful_mut_c_reference {
     ($ptr:ident, $type:ty, $err:expr) => {
         if $ptr.is_null() {
@@ -77,6 +86,7 @@ macro_rules! check_useful_mut_c_reference {
     };
 }
 
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 macro_rules! check_useful_opt_c_reference {
     ($ptr:ident, $type:ty) => {
         let $ptr: Option<&$type> = if $ptr.is_null() {
@@ -87,6 +97,7 @@ macro_rules! check_useful_opt_c_reference {
     };
 }
 
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 macro_rules! check_useful_c_reference_array {
     ($ptrs:ident, $ptrs_len:ident, $type:ty, $err1:expr, $err2:expr) => {
         if $ptrs.is_null() {
@@ -109,6 +120,7 @@ macro_rules! check_useful_c_reference_array {
     };
 }
 
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 macro_rules! check_useful_hashset {
     ($ptr:ident, $len:expr, $err1:expr, $err2:expr) => {
         if $ptr.is_null() {
@@ -120,6 +132,12 @@ macro_rules! check_useful_hashset {
     };
 }
 
+#[cfg(any(
+    feature = "cl",
+    feature = "cl_native",
+    feature = "bls_bn254",
+    feature = "bls_bn254_asm"
+))]
 macro_rules! check_useful_c_ptr {
     ($ptr:ident, $err1:expr) => {
         if $ptr.is_null() {
@@ -129,6 +147,7 @@ macro_rules! check_useful_c_ptr {
     };
 }
 
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 macro_rules! check_useful_c_str {
     ($x:ident, $e:expr) => {
         let $x = match c_str_to_string($x) {

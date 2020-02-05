@@ -319,7 +319,7 @@ fn bench_cks_verify_revok_on_demand_issuance(c: &mut Criterion) {
 
 criterion_group! {
     name = cks_prove_revok_on_demand;
-    config = Criterion::default().sample_size(3);
+    config = Criterion::default().sample_size(10);
     //config = Criterion::default();
     targets =
     bench_cks_prove_revok_on_demand_issuance,
@@ -327,7 +327,7 @@ criterion_group! {
 
 criterion_group! {
     name = cks_verify_revok_on_demand;
-    config = Criterion::default().sample_size(3);
+    config = Criterion::default().sample_size(10);
     //config = Criterion::default();
     targets =
     bench_cks_verify_revok_on_demand_issuance,

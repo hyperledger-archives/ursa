@@ -1,19 +1,19 @@
 #[macro_use]
 mod macros;
-#[cfg(feature = "bls")]
+#[cfg(feature = "bls_bn254")]
 pub mod bls;
 
+#[cfg(feature = "ed25519")]
 pub mod ed25519;
+#[cfg(feature = "encryption")]
+pub mod encryption;
+#[cfg(feature = "ecdsa_secp256k1")]
 pub mod secp256k1;
 
-#[cfg(feature = "cl")]
-pub mod cl;
-
-use encoding::hex::{bin2hex, hex2bin};
 use keys::{PrivateKey, PublicKey};
 
 use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
-use serde;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -32,31 +32,54 @@ pub struct KeyPair {
 
 impl From<&PublicKey> for WasmPublicKey {
     fn from(pk: &PublicKey) -> WasmPublicKey {
-        WasmPublicKey(bin2hex(&pk[..]))
+        WasmPublicKey(hex::encode(&pk[..]))
+    }
+}
+
+impl From<PublicKey> for WasmPublicKey {
+    fn from(pk: PublicKey) -> WasmPublicKey {
+        WasmPublicKey(hex::encode(&pk[..]))
     }
 }
 
 impl From<Vec<u8>> for WasmPublicKey {
     fn from(value: Vec<u8>) -> WasmPublicKey {
-        WasmPublicKey(bin2hex(value.as_slice()))
+        WasmPublicKey(hex::encode(value.as_slice()))
     }
 }
 
 impl From<&WasmPublicKey> for PublicKey {
     fn from(pk: &WasmPublicKey) -> PublicKey {
-        PublicKey(hex2bin(&pk.0).unwrap().to_vec())
+        PublicKey(hex::decode(&pk.0).unwrap().to_vec())
+    }
+}
+impl From<WasmPublicKey> for PublicKey {
+    fn from(pk: WasmPublicKey) -> PublicKey {
+        PublicKey(hex::decode(&pk.0).unwrap().to_vec())
     }
 }
 
 impl From<&PrivateKey> for WasmPrivateKey {
     fn from(sk: &PrivateKey) -> WasmPrivateKey {
-        WasmPrivateKey(bin2hex(&sk[..]))
+        WasmPrivateKey(hex::encode(&sk[..]))
+    }
+}
+
+impl From<PrivateKey> for WasmPrivateKey {
+    fn from(sk: PrivateKey) -> WasmPrivateKey {
+        WasmPrivateKey(hex::encode(&sk[..]))
     }
 }
 
 impl From<&WasmPrivateKey> for PrivateKey {
     fn from(pk: &WasmPrivateKey) -> PrivateKey {
-        PrivateKey(hex2bin(&pk.0).unwrap().to_vec())
+        PrivateKey(hex::decode(&pk.0).unwrap().to_vec())
+    }
+}
+
+impl From<WasmPrivateKey> for PrivateKey {
+    fn from(pk: WasmPrivateKey) -> PrivateKey {
+        PrivateKey(hex::decode(&pk.0).unwrap().to_vec())
     }
 }
 

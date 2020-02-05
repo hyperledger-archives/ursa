@@ -1,9 +1,19 @@
+#[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 pub mod bls;
+#[cfg(any(feature = "cl", feature = "cl_native"))]
 pub mod cl;
+#[cfg(any(feature = "encryption", feature = "encryption_asm"))]
+pub mod encryption;
 pub mod logger;
+#[cfg(any(
+    feature = "signatures",
+    feature = "signatures_native",
+    feature = "signatures_asm"
+))]
 pub mod signatures;
 
 use errors::prelude::*;
+use ffi_support::ByteBuffer;
 use std::os::raw::c_char;
 
 /// Used for receiving a ByteBuffer from C that was allocated by either C or Rust.
@@ -34,6 +44,20 @@ impl ByteArray {
             unsafe { std::slice::from_raw_parts(self.data, self.length).to_vec() }
         }
     }
+
+    pub fn to_opt_vec(&self) -> Option<Vec<u8>> {
+        if self.data.is_null() {
+            None
+        } else if self.length == 0 {
+            Some(Vec::new())
+        } else {
+            Some(unsafe { std::slice::from_raw_parts(self.data, self.length).to_vec() })
+        }
+    }
+
+    pub fn into_byte_buffer(self) -> ByteBuffer {
+        unsafe { std::mem::transmute(self) }
+    }
 }
 
 impl From<&Vec<u8>> for ByteArray {
@@ -42,6 +66,15 @@ impl From<&Vec<u8>> for ByteArray {
             length: input.len(),
             data: input.as_slice().as_ptr() as *const u8,
         }
+    }
+}
+impl From<Vec<u8>> for ByteArray {
+    fn from(input: Vec<u8>) -> ByteArray {
+        let mut buf = input.into_boxed_slice();
+        let data = buf.as_mut_ptr();
+        let len = buf.len();
+        std::mem::forget(buf);
+        Self { data, length: len }
     }
 }
 
@@ -53,6 +86,15 @@ impl From<&[u8]> for ByteArray {
         }
     }
 }
+
+impl From<ByteBuffer> for ByteArray {
+    fn from(b: ByteBuffer) -> Self {
+        b.into_vec().into()
+    }
+}
+
+define_bytebuffer_destructor!(ursa_bytebuffer_free);
+define_string_destructor!(ursa_string_free);
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(usize)]
@@ -146,7 +188,7 @@ pub extern "C" fn ursa_get_current_error(error_json_p: *mut *const c_char) {
     trace!("ursa_get_current_error: <<<");
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "cl", feature = "cl_native")))]
 mod tests {
     use super::*;
 

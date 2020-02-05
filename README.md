@@ -1,6 +1,6 @@
 # HYPERLEDGER URSA
 
-[![Build Status](https://travis-ci.org/hyperledger/ursa.svg?branch=travis-ci)](https://travis-ci.org/hyperledger/ursa)
+[![Build Status](https://dev.azure.com/Hyperledger/Ursa/_apis/build/status/hyperledger.ursa?branchName=master)](https://dev.azure.com/Hyperledger/Ursa/_build/latest?definitionId=66&branchName=master)
 [![Build status](https://ci.appveyor.com/api/projects/status/1htmp82mdvmfjjap?svg=true)](https://ci.appveyor.com/project/hyperledger/ursa)
 
 - [Introduction](#introduction)
@@ -48,15 +48,9 @@ found in Libursa.
 
 Ursa uses the following external dependencies:
 
-- [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) or
-  newer (Written in C)
+- [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) (Written in C)
+- [libsodium 1.0.18 or greater](https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz) (Written in C)
 - [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (Written in C)
-
-Ursa uses the following external dependencies for testing:
-
-- [libsodium
-  1.0.18](https://download.libsodium.org/libsodium/releases/old/libsodium-1.0.16.tar.gz)
-  (Written in C)
 
 These dependencies are used when building in the default secure mode. These
 libraries are widely known.  There is a goal to be able to compile Ursa from

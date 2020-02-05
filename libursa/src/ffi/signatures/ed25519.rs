@@ -33,8 +33,8 @@
 //         return 1;
 //     }
 //
-//     ursa_ed25519_bytebuffer_free(*public_key);
-//     ursa_ed25519_bytebuffer_free(*private_key);
+//     ursa_bytebuffer_free(*public_key);
+//     ursa_bytebuffer_free(*private_key);
 //
 //     free(seed->data);
 //     free(seed);
@@ -44,13 +44,13 @@
 //     if (!ursa_ed25519_keypair_new(public_key, private_key, err)) {
 //         printf("Failed to generate keys\n");
 //
-//         ursa_ed25519_bytebuffer_free(*public_key);
-//         ursa_ed25519_bytebuffer_free(*private_key);
+//         ursa_bytebuffer_free(*public_key);
+//         ursa_bytebuffer_free(*private_key);
 //
 //         free(public_key);
 //         free(private_key);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -92,7 +92,7 @@
 //         free(message);
 //         free(signature);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -103,9 +103,9 @@
 //     if (!ursa_ed25519_verify(message, signature, public_key, err)) {
 //         printf("Verification failed.");
 //
-//         ursa_ed25519_bytebuffer_free(*public_key);
-//         ursa_ed25519_bytebuffer_free(*private_key);
-//         ursa_ed25519_bytebuffer_free(*signature);
+//         ursa_bytebuffer_free(*public_key);
+//         ursa_bytebuffer_free(*private_key);
+//         ursa_bytebuffer_free(*signature);
 //
 //         free(public_key);
 //         free(private_key);
@@ -113,7 +113,7 @@
 //         free(message);
 //         free(signature);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //         free(err);
 //
 //         return 1;
@@ -121,19 +121,19 @@
 //     printf("Verified!\n");
 //
 //     // ExternError messages also need to be freed from memory
-//     ursa_ed25519_bytebuffer_free(*signature);
+//     ursa_bytebuffer_free(*signature);
 //     free(message->data);
 //     message->len = 0;
 //
 //     if (!ursa_ed25519_sign(message->data, message->len, private_key->data, private_key->len, signature, err)) {
 //         printf("Expected signing error: %s\n", err->message);
 //
-//         ursa_ed25519_string_free(err->message);
+//         ursa_string_free(err->message);
 //     }
 //
 //
-//     ursa_ed25519_bytebuffer_free(*public_key);
-//     ursa_ed25519_bytebuffer_free(*private_key);
+//     ursa_bytebuffer_free(*public_key);
+//     ursa_bytebuffer_free(*private_key);
 //
 //     free(public_key);
 //     free(private_key);
@@ -148,7 +148,7 @@
 use super::super::ByteArray;
 use keys::{KeyGenOption, PrivateKey, PublicKey};
 use signatures::ed25519;
-use signatures::SignatureScheme;
+use signatures::prelude::*;
 
 use ffi_support::{ByteBuffer, ErrorCode, ExternError};
 
@@ -245,7 +245,7 @@ pub extern "C" fn ursa_ed25519_sign(
     signature: &mut ByteBuffer,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     let sk = PrivateKey(private_key.to_vec());
 
     match scheme.sign(message.to_vec().as_slice(), &sk) {
@@ -274,7 +274,7 @@ pub extern "C" fn ursa_ed25519_verify(
     public_key: &ByteArray,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     let pk = PublicKey(public_key.to_vec());
 
     match scheme.verify(
@@ -306,7 +306,7 @@ fn ursa_ed25519_keypair_gen(
     private_key: Option<&mut ByteBuffer>,
     err: &mut ExternError,
 ) -> i32 {
-    let scheme = ed25519::Ed25519Sha512::new();
+    let scheme = Ed25519Sha512::new();
     match scheme.keypair(option) {
         Ok((pk, sk)) => {
             *err = ExternError::success();
@@ -326,13 +326,9 @@ fn ursa_ed25519_keypair_gen(
     }
 }
 
-define_bytebuffer_destructor!(ursa_ed25519_bytebuffer_free);
-define_string_destructor!(ursa_ed25519_string_free);
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use encoding::hex::bin2hex;
 
     #[test]
     fn ffi_keypair() {
@@ -369,9 +365,9 @@ mod tests {
         let sk = private_key.into_vec();
         assert_eq!(
             "3b77a042f1de02f6d5f418f36a20fd68c8329fe3bbfbecd26a2d72878cd827f8".to_string(),
-            bin2hex(pk.as_slice())
+            hex::encode(pk.as_slice())
         );
-        assert_eq!("b2ff47a7b9693f810e1b8c3dea9659628838977a4b08a8306cb56d1395c8cd153b77a042f1de02f6d5f418f36a20fd68c8329fe3bbfbecd26a2d72878cd827f8".to_string(), bin2hex(sk.as_slice()));
+        assert_eq!("b2ff47a7b9693f810e1b8c3dea9659628838977a4b08a8306cb56d1395c8cd153b77a042f1de02f6d5f418f36a20fd68c8329fe3bbfbecd26a2d72878cd827f8".to_string(), hex::encode(sk.as_slice()));
 
         let mut public_key = ByteBuffer::new_with_size(ursa_ed25519_get_public_key_size() as usize);
         let sk_wrapper = ByteArray::from(&sk);
@@ -429,7 +425,7 @@ mod tests {
         let sig = signature.into_vec();
         let sig_wrapper = ByteArray::from(&sig);
         let pk_wrapper = ByteArray::from(&pk);
-        assert_eq!("f61dc466c3094522987cf9bdbadf8a455bc9401d0e56e1a7696483de85c646216648eb9f7f8003822d4c8702016ffe3b4a218ed776776ae5b53d5394bbadb509".to_string(), bin2hex(sig.as_slice()));
+        assert_eq!("f61dc466c3094522987cf9bdbadf8a455bc9401d0e56e1a7696483de85c646216648eb9f7f8003822d4c8702016ffe3b4a218ed776776ae5b53d5394bbadb509".to_string(), hex::encode(sig.as_slice()));
         let res = ursa_ed25519_verify(&message_wrapper, &sig_wrapper, &pk_wrapper, &mut error);
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());

@@ -1,8 +1,10 @@
 [package]
 name = "zmix"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["The Hyperledger Ursa Contributors"]
 license = "Apache-2.0"
+description = "A library for doing zero-knowledge proofs"
+keywords = ["cryptography", "aead", "hash", "signature", "zkp", "zero-knowledge"]
 
 [lib]
 name = "zmix"
@@ -19,15 +21,17 @@ PS_Signature_G2 = []
 PS_Signature_G1 = []
 
 [dependencies]
-rand = "0.7"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-failure = "0.1"
-zeroize = { version = "1.0", features = ["zeroize_derive"] }
-lazy_static = "1.4"
-sha2 = { version = "0.8", default-features = false, optional = true }
-ursa = { version = "0.2", path = "../libursa", default-features = false, optional = true }
+bulletproofs_amcl = { version = "0.1.0", path = "./bulletproofs_amcl" }
 criterion = "0.3"
+failure = "0.1"
+lazy_static = "1.4"
+merlin = "1"
+rand = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = { version = "0.8", default-features = false, optional = true }
+ursa = { version = "0.3", path = "../libursa", default-features = false, optional = true }
+zeroize = { version = "1.0", features = ["zeroize_derive"] }
 
 [[bench]]
 name = "bbs_vs_ps"
@@ -38,6 +42,6 @@ rand_chacha = "0.2"
 serde_json = "1.0"
 
 [dependencies.amcl_wrapper]
-version = "0.1.7"
+version = "0.2.3"
 default-features = false
 features = ["bls381"]

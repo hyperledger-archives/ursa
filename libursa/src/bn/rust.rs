@@ -1,23 +1,18 @@
 use errors::prelude::*;
 
 use glass_pumpkin::{prime, safe_prime};
-use hash::{sha2, Digest};
 use num_bigint::{BigInt, BigUint, RandBigInt, Sign, ToBigInt};
 use num_integer::Integer;
 use num_traits::identities::{One, Zero};
 use num_traits::{Num, Pow, Signed, ToPrimitive};
 use rand::rngs::OsRng;
+use sha2::{self, Digest};
 
-#[cfg(feature = "serialization")]
-use serde::ser::{Error as SError, Serialize, Serializer};
-
-#[cfg(feature = "serialization")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 use std::cmp::Ord;
 use std::cmp::Ordering;
-#[cfg(feature = "ffi")]
-use std::error::Error;
 use std::fmt;
 
 pub struct BigNumberContext;
@@ -532,17 +527,20 @@ impl PartialEq for BigNumber {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl Serialize for BigNumber {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_newtype_struct("BigNumber", &self.to_dec().map_err(SError::custom)?)
+        serializer.serialize_newtype_struct(
+            "BigNumber",
+            &self.to_dec().map_err(serde::ser::Error::custom)?,
+        )
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for BigNumber {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -559,9 +557,9 @@ impl<'a> Deserialize<'a> for BigNumber {
 
             fn visit_str<E>(self, value: &str) -> Result<BigNumber, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
-                Ok(BigNumber::from_dec(value).map_err(DError::custom)?)
+                Ok(BigNumber::from_dec(value).map_err(E::custom)?)
             }
         }
 
@@ -611,8 +609,6 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use serde_json;
 
     const RANGE_LEFT: usize = 592;
     const RANGE_RIGHT: usize = 592;

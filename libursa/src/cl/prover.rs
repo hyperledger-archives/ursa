@@ -1195,6 +1195,17 @@ impl ProofBuilder {
             ));
         }
 
+        if predicates_attrs
+            .intersection(&sub_proof_request.revealed_attrs)
+            .count()
+            != 0
+        {
+            return Err(err_msg(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "ProofRequest can't contain an attribute as a revealed value and as a predicate at the same time",
+            ));
+        }
+
         trace!("ProofBuilder::_check_add_sub_proof_request_params_consistency: <<<");
 
         Ok(())

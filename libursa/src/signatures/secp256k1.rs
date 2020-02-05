@@ -1,13 +1,11 @@
 use super::*;
-use generic_array::typenum::U32;
+use sha2::digest::generic_array::typenum::U32;
 use CryptoError;
 
 use rand::rngs::OsRng;
 
-#[cfg(feature = "portable")]
-use serde::de::{Deserialize, Deserializer, Error as DError, Visitor};
-#[cfg(feature = "portable")]
-use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serde")]
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 pub const PRIVATE_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 33;
@@ -74,7 +72,7 @@ impl EcdsaPublicKeyHandler for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "portable")]
+#[cfg(feature = "serde")]
 impl Serialize for EcdsaSecp256k1Sha256 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -84,7 +82,7 @@ impl Serialize for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(feature = "portable")]
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -101,7 +99,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
 
             fn visit_str<E>(self, _: &str) -> Result<EcdsaSecp256k1Sha256, E>
             where
-                E: DError,
+                E: serde::de::Error,
             {
                 Ok(EcdsaSecp256k1Sha256::new())
             }
@@ -111,7 +109,7 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
     }
 }
 
-#[cfg(all(feature = "native", not(feature = "portable")))]
+#[cfg(any(feature = "ecdsa_secp256k1_native", feature = "ecdsa_secp256k1_asm"))]
 mod ecdsa_secp256k1 {
     use super::*;
     use libsecp256k1;
@@ -218,7 +216,7 @@ mod ecdsa_secp256k1 {
     }
 }
 
-#[cfg(all(feature = "portable", not(feature = "native")))]
+#[cfg(feature = "ecdsa_secp256k1")]
 mod ecdsa_secp256k1 {
     use super::*;
     use rustlibsecp256k1;
@@ -248,7 +246,7 @@ mod ecdsa_secp256k1 {
         };
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdsaSecp256k1Impl {}
 
     impl EcdsaSecp256k1Impl {
@@ -361,7 +359,6 @@ mod ecdsa_secp256k1 {
 mod test {
     use super::EcdsaPublicKeyHandler;
     use super::*;
-    use encoding::hex;
     use libsecp256k1;
     use openssl::bn::{BigNum, BigNumContext};
     use openssl::ec::{EcGroup, EcKey, EcPoint};
@@ -387,10 +384,10 @@ mod test {
     #[test]
     fn secp256k1_load_keys() {
         let scheme = EcdsaSecp256k1Sha256::new();
-        let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
+        let secret = PrivateKey(hex::decode(PRIVATE_KEY).unwrap());
         let sres = scheme.keypair(Some(KeyGenOption::FromSecretKey(secret)));
         assert!(sres.is_ok());
-        let pres = scheme.parse(hex::hex2bin(PUBLIC_KEY).unwrap().as_slice());
+        let pres = scheme.parse(hex::decode(PUBLIC_KEY).unwrap().as_slice());
         assert!(pres.is_ok());
         let (p1, _) = sres.unwrap();
         assert_eq!(p1, pres.unwrap());
@@ -399,7 +396,7 @@ mod test {
     #[test]
     fn secp256k1_compatibility() {
         let scheme = EcdsaSecp256k1Sha256::new();
-        let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
+        let secret = PrivateKey(hex::decode(PRIVATE_KEY).unwrap());
         let (p, s) = scheme
             .keypair(Some(KeyGenOption::FromSecretKey(secret)))
             .unwrap();
@@ -429,19 +426,15 @@ mod test {
     #[test]
     fn secp256k1_verify() {
         let scheme = EcdsaSecp256k1Sha256::new();
-        let p = PublicKey(hex::hex2bin(PUBLIC_KEY).unwrap());
+        let p = PublicKey(hex::decode(PUBLIC_KEY).unwrap());
 
-        let result = scheme.verify(
-            &MESSAGE_1,
-            hex::hex2bin(SIGNATURE_1).unwrap().as_slice(),
-            &p,
-        );
+        let result = scheme.verify(&MESSAGE_1, hex::decode(SIGNATURE_1).unwrap().as_slice(), &p);
         assert!(result.is_ok());
         assert!(result.unwrap());
 
         let context = libsecp256k1::Secp256k1::new();
         let pk =
-            libsecp256k1::key::PublicKey::from_slice(hex::hex2bin(PUBLIC_KEY).unwrap().as_slice())
+            libsecp256k1::key::PublicKey::from_slice(hex::decode(PUBLIC_KEY).unwrap().as_slice())
                 .unwrap();
 
         let h = sha2::Sha256::digest(&MESSAGE_1);
@@ -449,7 +442,7 @@ mod test {
 
         //Check if signatures produced here can be verified by libsecp256k1
         let mut signature =
-            libsecp256k1::Signature::from_compact(&hex::hex2bin(SIGNATURE_1).unwrap()[..]).unwrap();
+            libsecp256k1::Signature::from_compact(&hex::decode(SIGNATURE_1).unwrap()[..]).unwrap();
         signature.normalize_s();
         let result = context.verify(&msg, &signature, &pk);
         assert!(result.is_ok());
@@ -473,7 +466,7 @@ mod test {
     #[test]
     fn secp256k1_sign() {
         let scheme = EcdsaSecp256k1Sha256::new();
-        let secret = PrivateKey(hex::hex2bin(PRIVATE_KEY).unwrap());
+        let secret = PrivateKey(hex::decode(PRIVATE_KEY).unwrap());
         let (p, s) = scheme
             .keypair(Some(KeyGenOption::FromSecretKey(secret)))
             .unwrap();
@@ -490,7 +483,7 @@ mod test {
                 //And that private keys can sign with other libraries
                 let context = libsecp256k1::Secp256k1::new();
                 let sk = libsecp256k1::key::SecretKey::from_slice(
-                    hex::hex2bin(PRIVATE_KEY).unwrap().as_slice(),
+                    hex::decode(PRIVATE_KEY).unwrap().as_slice(),
                 )
                 .unwrap();
 
@@ -562,7 +555,7 @@ mod test {
     fn secp256k1_publickey_compression() {
         let scheme = EcdsaSecp256k1Sha256::new();
 
-        let pk = PublicKey(hex::hex2bin(PUBLIC_KEY).unwrap());
+        let pk = PublicKey(hex::decode(PUBLIC_KEY).unwrap());
 
         let res = scheme.public_key_compressed(&pk);
         assert_eq!(res[..], pk[..]);

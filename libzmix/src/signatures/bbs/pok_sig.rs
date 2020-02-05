@@ -27,7 +27,7 @@ pub struct PoKOfSignature {
     secrets_2: FieldElementVector,
 }
 
-// Contains the randmomized signature as well as the proof of 2 discrete log relations.
+// Contains the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
     pub a_prime: G1,
@@ -137,16 +137,17 @@ impl PoKOfSignature {
         })
     }
 
+    /// Return byte representation of public elements so they can be used for challenge computation.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.a_prime.to_bytes());
         bytes.append(&mut self.a_bar.to_bytes());
-        bytes.append(&mut self.d.to_bytes());
 
         // For 1st PoKVC
+        // self.a_prime is included as part of self.pok_vc_1
         bytes.append(&mut self.pok_vc_1.to_bytes());
 
         // For 2nd PoKVC
+        // self.d is included as part of self.pok_vc_2
         bytes.append(&mut self.pok_vc_2.to_bytes());
 
         bytes
@@ -171,6 +172,50 @@ impl PoKOfSignature {
 }
 
 impl PoKOfSignatureProof {
+    /// Return bytes that need to be hashed for generating challenge. Takes `self.a_bar`,
+    /// `self.a_prime` and `self.d` and commitment and instance data of the two proof of knowledge protocols.
+    pub fn get_bytes_for_challenge(
+        &self,
+        revealed_msg_indices: HashSet<usize>,
+        vk: &PublicKey,
+    ) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.append(&mut self.a_bar.to_bytes());
+
+        bytes.append(&mut self.a_prime.to_bytes());
+        bytes.append(&mut vk.h0.to_bytes());
+        bytes.append(&mut self.proof_vc_1.commitment.to_bytes());
+
+        bytes.append(&mut self.d.to_bytes());
+        bytes.append(&mut vk.h0.to_bytes());
+        for i in 0..vk.message_count() {
+            if revealed_msg_indices.contains(&i) {
+                continue;
+            }
+            let mut b = vk.h[i].to_bytes();
+            bytes.append(&mut b);
+        }
+        bytes.append(&mut self.proof_vc_2.commitment.to_bytes());
+        bytes
+    }
+
+    /// Get the response from post-challenge phase of the Sigma protocol for the given message index `msg_idx`.
+    /// Used when comparing message equality
+    pub fn get_resp_for_message(&self, msg_idx: usize) -> Result<FieldElement, BBSError> {
+        // 2 elements in self.proof_vc_2.responses are reserved for `&signature.e` and `r2`
+        if msg_idx >= (self.proof_vc_2.responses.len() - 2) {
+            return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
+                msg: format!(
+                    "Message index was given {} but should be less than {}",
+                    msg_idx,
+                    self.proof_vc_2.responses.len() - 2
+                ),
+            }));
+        }
+        // 2 added to the index, since 0th and 1st index are reserved for `&signature.e` and `r2`
+        Ok(self.proof_vc_2.responses[2 + msg_idx].clone())
+    }
+
     pub fn verify(
         &self,
         vk: &PublicKey,
@@ -254,9 +299,15 @@ mod tests {
 
         let pok =
             PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, HashSet::new()).unwrap();
-        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
-        let proof = pok.gen_proof(&challenge).unwrap();
-        assert!(proof.verify(&verkey, HashMap::new(), &challenge).unwrap());
+        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let challenge_bytes = proof.get_bytes_for_challenge(HashSet::new(), &verkey);
+        let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
+        assert!(proof
+            .verify(&verkey, HashMap::new(), &challenge_verifier)
+            .unwrap());
     }
 
     #[test]
@@ -281,25 +332,28 @@ mod tests {
             revealed_indices.clone(),
         )
         .unwrap();
-        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
-        let proof = pok.gen_proof(&challenge).unwrap();
+        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         let mut revealed_msgs = HashMap::new();
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
+        // The verifier generates the challenge on its own.
+        let chal_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
+        let challenge_verifier = FieldElement::from_msg_hash(&chal_bytes);
         assert!(proof
-            .verify(&verkey, revealed_msgs.clone(), &challenge)
+            .verify(&verkey, revealed_msgs.clone(), &challenge_verifier)
             .unwrap());
 
         // Reveal wrong message
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
         assert!(!proof
-            .verify(&verkey, revealed_msgs_1.clone(), &challenge)
+            .verify(&verkey, revealed_msgs_1.clone(), &challenge_verifier)
             .unwrap());
 
-        //PoK with supplied blindings
+        // PoK with supplied blindings
         let blindings = FieldElementVector::random(message_count - revealed_indices.len());
         let pok = PoKOfSignature::init(
             &sig,
@@ -313,10 +367,90 @@ mod tests {
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
-        let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
-        let proof = pok.gen_proof(&challenge).unwrap();
+        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let challenge_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
+        let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
         assert!(proof
-            .verify(&verkey, revealed_msgs.clone(), &challenge)
+            .verify(&verkey, revealed_msgs.clone(), &challenge_verifier)
             .unwrap());
+    }
+
+    #[test]
+    fn test_PoK_multiple_sigs_with_same_msg() {
+        // Prove knowledge of multiple signatures and the equality of a specific message under both signatures.
+        // Knowledge of 2 signatures and their corresponding messages is being proven.
+        // 2nd message in the 1st signature and 5th message in the 2nd signature are to be proven equal without revealing them
+
+        let message_count = 5;
+        let (vk, signkey) = generate(message_count).unwrap();
+
+        let same_msg = FieldElement::random();
+        let mut msgs_1 = FieldElementVector::random(message_count - 1);
+        msgs_1.insert(1, same_msg.clone());
+        let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
+        assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
+
+        let mut msgs_2 = FieldElementVector::random(message_count - 1);
+        msgs_2.insert(4, same_msg.clone());
+        let sig_2 = Signature::new(msgs_2.as_slice(), &signkey, &vk).unwrap();
+        assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
+
+        // A particular message is same
+        assert_eq!(msgs_1[1], msgs_2[4]);
+
+        let same_blinding = FieldElement::random();
+
+        let mut blindings_1 = FieldElementVector::random(message_count - 1);
+        blindings_1.insert(1, same_blinding.clone());
+
+        let mut blindings_2 = FieldElementVector::random(message_count - 1);
+        blindings_2.insert(4, same_blinding.clone());
+
+        // Blinding for the same message is kept same
+        assert_eq!(blindings_1[1], blindings_2[4]);
+
+        let pok_1 = PoKOfSignature::init(
+            &sig_1,
+            &vk,
+            msgs_1.as_slice(),
+            Some(blindings_1.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+        let pok_2 = PoKOfSignature::init(
+            &sig_2,
+            &vk,
+            msgs_2.as_slice(),
+            Some(blindings_2.as_slice()),
+            HashSet::new(),
+        )
+        .unwrap();
+
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut pok_1.to_bytes());
+        chal_bytes.append(&mut pok_2.to_bytes());
+
+        let chal_prover = FieldElement::from_msg_hash(&chal_bytes);
+
+        let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
+        let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
+
+        // The verifier generates the challenge on its own.
+        let mut chal_bytes = vec![];
+        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(HashSet::new(), &vk));
+        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(HashSet::new(), &vk));
+        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+
+        // Response for the same message should be same (this check is made by the verifier)
+        assert_eq!(
+            proof_1.get_resp_for_message(1).unwrap(),
+            proof_2.get_resp_for_message(4).unwrap()
+        );
+
+        assert!(proof_1.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
+        assert!(proof_2.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
     }
 }

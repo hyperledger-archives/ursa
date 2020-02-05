@@ -39,38 +39,38 @@ impl NonCredentialSchema {
 #[wasm_bindgen]
 pub struct CredentialValues(cl::CredentialValuesBuilder);
 
-#[wasm_bindgen]
-impl CredentialValues {
-    pub fn new() -> CredentialValues {
-        CredentialValues(cl::CredentialValuesBuilder::new().unwrap())
-    }
-
-    pub fn add_master_secret(&mut self, value: &MasterSecret) -> Result<(), JsValue> {
-        let ms = maperr!(value.0.value());
-        maperr!(self.0.add_value_hidden("master_secret", &ms));
-        Ok(())
-    }
-
-    pub fn add_known(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
-        maperr!(self.0.add_dec_known(attr, value));
-        Ok(())
-    }
-
-    pub fn add_hidden(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
-        maperr!(self.0.add_dec_hidden(attr, value));
-        Ok(())
-    }
-
-    pub fn add_commitment(
-        &mut self,
-        attr: &str,
-        value: &str,
-        blinding_factor: &str,
-    ) -> Result<(), JsValue> {
-        maperr!(self.0.add_dec_commitment(attr, value, blinding_factor));
-        Ok(())
-    }
-}
+//#[wasm_bindgen]
+//impl CredentialValues {
+//    pub fn new() -> CredentialValues
+//        CredentialValues(cl::CredentialValuesBuilder::new().unwrap())
+//    }
+//
+//    pub fn add_master_secret(&mut self, value: &MasterSecret) -> Result<(), JsValue> {
+//        let ms = maperr!(value.0.value());
+//        maperr!(self.0.add_value_hidden("master_secret", &ms));
+//        Ok(())
+//    }
+//
+//    pub fn add_known(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
+//        maperr!(self.0.add_dec_known(attr, value));
+//        Ok(())
+//    }
+//
+//    pub fn add_hidden(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
+//        maperr!(self.0.add_dec_hidden(attr, value));
+//        Ok(())
+//    }
+//
+//    pub fn add_commitment(
+//        &mut self,
+//        attr: &str,
+//        value: &str,
+//        blinding_factor: &str,
+//    ) -> Result<(), JsValue> {
+//        maperr!(self.0.add_dec_commitment(attr, value, blinding_factor));
+//        Ok(())
+//    }
+//}
 
 #[wasm_bindgen]
 pub struct CredentialPrimaryPublicKey(cl::CredentialPrimaryPublicKey);
@@ -426,8 +426,9 @@ impl ProofVerifier {
     }
 
     pub fn verify(&self, proof: &Proof, nonce: &Nonce) -> Result<bool, JsValue> {
-        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
-        Ok(res)
+//        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
+//        Ok(res)
+        unimplemented!();
     }
 }
 
