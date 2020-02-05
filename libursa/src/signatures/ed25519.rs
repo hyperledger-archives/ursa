@@ -17,6 +17,21 @@ use CryptoError;
 
 pub struct Ed25519Sha512;
 
+#[cfg(any(feature = "x25519", feature = "x25519_asm"))]
+impl Ed25519Sha512 {
+    pub fn ver_key_to_key_exchange(pk: &PublicKey) -> Result<PublicKey, CryptoError> {
+        use curve25519_dalek::edwards::CompressedEdwardsY;
+
+        // PublicKey is a CompressedEdwardsY in dalek. So we decompress it to get the
+        // EdwardsPoint which can then be used convert to the Montgomery Form.
+        let cey = CompressedEdwardsY::from_slice(&pk[..]);
+        match cey.decompress() {
+            Some(ep) => Ok(PublicKey(ep.to_montgomery().as_bytes().to_vec())),
+            None => Err(CryptoError::ParseError(format!("Invalid public key provided. Cannot convert to key exchange key")))
+        }
+    }
+}
+
 impl SignatureScheme for Ed25519Sha512 {
     fn new() -> Self {
         Self
@@ -179,5 +194,15 @@ mod test {
             }
             Err(er) => assert!(false, er),
         }
+    }
+
+    #[cfg(any(feature = "x25519", feature = "x25519_asm"))]
+    #[test]
+    fn ed25519_to_x25519() {
+        let scheme = Ed25519Sha512::new();
+        let (p, _) = scheme.keypair(None).unwrap();
+
+        let res = Ed25519Sha512::ver_key_to_key_exchange(&p);
+        assert!(res.is_ok());
     }
 }
