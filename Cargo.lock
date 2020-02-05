@@ -1795,6 +1795,7 @@ dependencies = [
  "clear_on_drop",
  "console_error_panic_hook",
  "criterion",
+ "curve25519-dalek",
  "ed25519-dalek",
  "env_logger",
  "failure",
@@ -1822,6 +1823,7 @@ dependencies = [
  "subtle 2.2.2",
  "time",
  "wasm-bindgen",
+ "x25519-dalek",
  "zeroize 1.1.0",
 ]
 
@@ -1955,6 +1957,17 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "x25519-dalek"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ee1585dc1484373cbc1cee7aafda26634665cf449436fd6e24bfd1fad230538"
+dependencies = [
+ "clear_on_drop",
+ "curve25519-dalek",
+ "rand_core 0.3.1",
+]
 
 [[package]]
 name = "xattr"

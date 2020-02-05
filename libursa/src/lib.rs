@@ -98,6 +98,12 @@ extern crate console_error_panic_hook;
 extern crate js_sys;
 #[cfg(feature = "wasm-bindgen")]
 extern crate wasm_bindgen;
+#[cfg(feature = "x25519-dalek")]
+extern crate x25519_dalek;
+#[cfg(feature = "curve25519-dalek")]
+extern crate curve25519_dalek;
+#[cfg(feature = "hex")]
+extern crate hex;
 
 #[cfg(any(
     feature = "bls_bls12381",
@@ -109,6 +115,8 @@ extern crate wasm_bindgen;
     feature = "ed25519",
     feature = "ed25519_asm",
     feature = "ffi",
+    feature = "x25519",
+    feature = "x25519_asm",
     feature = "wasm"
 ))]
 #[macro_use]
@@ -148,6 +156,8 @@ pub mod errors;
 pub mod ffi;
 #[cfg(any(feature = "blake2", feature = "sha2", feature = "sha3"))]
 pub mod hash;
+#[cfg(any(feature = "x25519", feature = "x25519_asm"))]
+pub mod kex;
 #[cfg(any(
     feature = "bls_bls12381",
     feature = "ecdsa_secp256k1",
@@ -155,6 +165,8 @@ pub mod hash;
     feature = "ecdsa_secp256k1_asm",
     feature = "ed25519",
     feature = "ed25519_asm",
+    feature = "x25519",
+    feature = "x25519_asm",
     feature = "wasm"
 ))]
 pub mod keys;
