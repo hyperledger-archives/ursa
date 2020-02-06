@@ -229,7 +229,7 @@ mod ecdsa_secp256k1 {
     use amcl::secp256k1::{ecdh, ecp};
 
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    pub struct EcdsaSecp256k1Impl {}
+    pub struct EcdsaSecp256k1Impl;
 
     impl EcdsaSecp256k1Impl {
         pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {

@@ -107,18 +107,23 @@ mod ecdh_secp256k1 {
 #[cfg(feature = "ecdh_secp256k1")]
 mod ecdh_secp256k1 {
     use super::*;
-    use rustlibsecp256k1::{SecretKey, PublicKey as Secp256k1PublicKey, SharedSecret};
-    use sha2::Digest;
-    use sha2::digest::generic_array::typenum::U32;
 
     use rand::rngs::OsRng;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
+    use rustlibsecp256k1::{SecretKey, PublicKey as Secp256k1PublicKey, SharedSecret};
+
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+
+    use sha2::Digest;
+    use sha2::digest::generic_array::typenum::U32;
     use zeroize::Zeroize;
     const PUBLIC_UNCOMPRESSED_KEY_SIZE: usize = 65;
 
     use amcl::secp256k1::{ecdh, ecp};
 
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdhSecp256k1Impl;
 
     impl EcdhSecp256k1Impl {
