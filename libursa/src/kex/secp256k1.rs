@@ -24,23 +24,33 @@ impl KeyExchangeScheme for EcdhSecp256k1Sha256 {
         local_private_key: &PrivateKey,
         remote_public_key: &PublicKey,
     ) -> Result<SessionKey, CryptoError> {
-        self.0.compute_shared_secret::<sha2::Sha256>(local_private_key, remote_public_key)
+        self.0
+            .compute_shared_secret::<sha2::Sha256>(local_private_key, remote_public_key)
     }
 
-    fn public_key_size() -> usize { PUBLIC_KEY_SIZE }
-    fn private_key_size() -> usize { PRIVATE_KEY_SIZE }
-    fn shared_secret_size() -> usize { PRIVATE_KEY_SIZE }
+    fn public_key_size() -> usize {
+        PUBLIC_KEY_SIZE
+    }
+    fn private_key_size() -> usize {
+        PRIVATE_KEY_SIZE
+    }
+    fn shared_secret_size() -> usize {
+        PRIVATE_KEY_SIZE
+    }
 }
 
 #[cfg(any(feature = "ecdh_secp256k1_native", feature = "ecdh_secp256k1_asm"))]
 mod ecdh_secp256k1 {
     use super::*;
-    use libsecp256k1::{key::{SecretKey, PublicKey as Secp256k1PublicKey}, ecdh::SharedSecret};
+    use libsecp256k1::{
+        ecdh::SharedSecret,
+        key::{PublicKey as Secp256k1PublicKey, SecretKey},
+    };
     use rand::rngs::OsRng;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
-    use sha2::Digest;
     use sha2::digest::generic_array::typenum::U32;
+    use sha2::Digest;
     use zeroize::Zeroize;
 
     pub struct EcdhSecp256k1Impl(libsecp256k1::Secp256k1<libsecp256k1::All>);
@@ -111,13 +121,13 @@ mod ecdh_secp256k1 {
     use rand::rngs::OsRng;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
-    use rustlibsecp256k1::{SecretKey, PublicKey as Secp256k1PublicKey, SharedSecret};
+    use rustlibsecp256k1::{PublicKey as Secp256k1PublicKey, SecretKey, SharedSecret};
 
     #[cfg(feature = "serde")]
     use serde::{Deserialize, Serialize};
 
-    use sha2::Digest;
     use sha2::digest::generic_array::typenum::U32;
+    use sha2::Digest;
     use zeroize::Zeroize;
     const PUBLIC_UNCOMPRESSED_KEY_SIZE: usize = 65;
 
@@ -127,7 +137,9 @@ mod ecdh_secp256k1 {
     pub struct EcdhSecp256k1Impl;
 
     impl EcdhSecp256k1Impl {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self {
+            Self
+        }
         pub fn keypair<D>(
             &self,
             option: Option<KeyGenOption>,
@@ -172,12 +184,15 @@ mod ecdh_secp256k1 {
         where
             D: Digest<OutputSize = U32> + Default,
         {
-            let sk = SecretKey::parse(array_ref!(&local_private_key[..], 0, PRIVATE_KEY_SIZE)).map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
+            let sk = SecretKey::parse(array_ref!(&local_private_key[..], 0, PRIVATE_KEY_SIZE))
+                .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
             let mut uncompressed = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
             ecp::ECP::frombytes(&remote_public_key[..]).tobytes(&mut uncompressed, false);
-            let pk = Secp256k1PublicKey::parse(&uncompressed).map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
+            let pk = Secp256k1PublicKey::parse(&uncompressed)
+                .map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
 
-            let secret: SharedSecret<D> = SharedSecret::new(&pk, &sk).map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
+            let secret: SharedSecret<D> = SharedSecret::new(&pk, &sk)
+                .map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
             Ok(SessionKey(secret.as_ref().to_vec()))
         }
     }
@@ -212,7 +227,10 @@ mod tests {
 
     #[test]
     fn secp256k1_compatibility() {
-        use libsecp256k1::{key::{PublicKey, SecretKey}, ecdh::SharedSecret};
+        use libsecp256k1::{
+            ecdh::SharedSecret,
+            key::{PublicKey, SecretKey},
+        };
 
         let scheme = EcdhSecp256k1Sha256::new();
         let (pk, sk) = scheme.keypair(None).unwrap();
@@ -220,6 +238,9 @@ mod tests {
         let sk1 = SecretKey::from_slice(&sk[..]).unwrap();
         let pk1 = PublicKey::from_slice(&pk[..]).unwrap();
         let secret = SharedSecret::new(&pk1, &sk1);
-        assert_eq!(secret.as_ref(), scheme.compute_shared_secret(&sk, &pk).unwrap().as_ref());
+        assert_eq!(
+            secret.as_ref(),
+            scheme.compute_shared_secret(&sk, &pk).unwrap().as_ref()
+        );
     }
 }
