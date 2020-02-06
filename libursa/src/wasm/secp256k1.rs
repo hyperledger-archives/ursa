@@ -109,7 +109,7 @@ impl EcdhSecp256k1Sha256 {
         Ok(pk)
     }
 
-    pub fn compute_shared_secret(&self, sk: &WasmPrivateKey, pk: &WasmPublicKey) -> Result<WasmSessionKey, JsValue> {
+    pub fn computeSharedSecret(&self, sk: &WasmPrivateKey, pk: &WasmPublicKey) -> Result<WasmSessionKey, JsValue> {
         let sk = PrivateKey::from(sk);
         let pk = PublicKey::from(pk);
         let secret = maperr!(self.0.compute_shared_secret(&sk, &pk));

@@ -9,6 +9,8 @@ pub mod ed25519;
 pub mod encryption;
 #[cfg(feature = "ecdsa_secp256k1")]
 pub mod secp256k1;
+#[cfg(feature = "x25519")]
+pub mod x25519;
 
 use keys::{PrivateKey, PublicKey, SessionKey};
 
