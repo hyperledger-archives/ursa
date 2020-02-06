@@ -1,11 +1,10 @@
 use keys::{KeyGenOption, PrivateKey, PublicKey};
-use signatures::secp256k1::EcdsaSecp256k1Sha256 as EcdsaSecp256k1Sha256Impl;
-use signatures::EcdsaPublicKeyHandler;
-use signatures::SignatureScheme;
+use signatures::{EcdsaPublicKeyHandler, SignatureScheme, secp256k1::EcdsaSecp256k1Sha256 as EcdsaSecp256k1Sha256Impl};
+use kex::{KeyExchangeScheme, secp256k1::EcdhSecp256k1Sha256 as EcdhSecp256k1Sha256Impl};
 
 use wasm_bindgen::prelude::*;
 
-use super::{KeyPair, WasmPrivateKey, WasmPublicKey};
+use super::{KeyPair, WasmPrivateKey, WasmPublicKey, WasmSessionKey};
 
 #[wasm_bindgen]
 pub struct EcdsaSecp256k1Sha256(EcdsaSecp256k1Sha256Impl);
@@ -74,5 +73,47 @@ impl EcdsaSecp256k1Sha256 {
     pub fn parseToPublicKey(&self, bytes: &[u8]) -> Result<WasmPublicKey, JsValue> {
         let pk = maperr!(self.0.parse(bytes));
         Ok(WasmPublicKey::from(&pk))
+    }
+}
+
+#[wasm_bindgen]
+pub struct EcdhSecp256k1Sha256(EcdhSecp256k1Sha256Impl);
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+impl EcdhSecp256k1Sha256 {
+    pub fn new() -> EcdhSecp256k1Sha256 {
+        EcdhSecp256k1Sha256(EcdhSecp256k1Sha256Impl::new())
+    }
+
+    pub fn keypair(&self) -> Result<KeyPair, JsValue> {
+        let (pk, sk) = maperr!(self.0.keypair(None));
+        let pk = WasmPublicKey::from(&pk);
+        let sk = WasmPrivateKey::from(&sk);
+        Ok(KeyPair { pk, sk })
+    }
+
+    pub fn keyPairFromSeed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
+        let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))));
+        let pk = WasmPublicKey::from(&pk);
+        let sk = WasmPrivateKey::from(&sk);
+        Ok(KeyPair { pk, sk })
+    }
+
+    pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
+        let sk = PrivateKey::from(sk);
+        let (pk, _) = maperr!(self
+            .0
+            .keypair(Some(KeyGenOption::FromSecretKey(sk.clone()))));
+        let pk = WasmPublicKey::from(&pk);
+        Ok(pk)
+    }
+
+    pub fn compute_shared_secret(&self, sk: &WasmPrivateKey, pk: &WasmPublicKey) -> Result<WasmSessionKey, JsValue> {
+        let sk = PrivateKey::from(sk);
+        let pk = PublicKey::from(pk);
+        let secret = maperr!(self.0.compute_shared_secret(&sk, &pk));
+        let secret = WasmSessionKey::from(secret);
+        Ok(secret)
     }
 }

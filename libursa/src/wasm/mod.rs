@@ -10,7 +10,7 @@ pub mod encryption;
 #[cfg(feature = "ecdsa_secp256k1")]
 pub mod secp256k1;
 
-use keys::{PrivateKey, PublicKey};
+use keys::{PrivateKey, PublicKey, SessionKey};
 
 use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,10 @@ pub struct WasmPrivateKey(String);
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WasmPublicKey(String);
+
+#[wasm_bindgen]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WasmSessionKey(String);
 
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
@@ -80,6 +84,12 @@ impl From<&WasmPrivateKey> for PrivateKey {
 impl From<WasmPrivateKey> for PrivateKey {
     fn from(pk: WasmPrivateKey) -> PrivateKey {
         PrivateKey(hex::decode(&pk.0).unwrap().to_vec())
+    }
+}
+
+impl From<SessionKey> for WasmSessionKey {
+    fn from(secret: SessionKey) -> WasmSessionKey {
+        WasmSessionKey(hex::encode(&secret[..]))
     }
 }
 
