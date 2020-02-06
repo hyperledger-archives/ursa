@@ -33,6 +33,7 @@ impl Drop for KeyGenOption {
     }
 }
 
+#[cfg(feature = "serde")]
 #[test]
 fn serialize_tests() {
     let t = vec![1u8, 1u8, 2u8, 2u8, 3u8, 3u8, 4u8, 4u8];
