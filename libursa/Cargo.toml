@@ -116,8 +116,8 @@ block-modes = { version = "0.3", optional = true }
 block-padding = { version = "0.1", optional = true }
 clear_on_drop = { version = "0.2.3", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
-curve25519-dalek = { version = "1.2.3", default-features = false, optional = true }
-ed25519-dalek = { version = "1.0.0-pre.2", default-features = false, optional = true }
+curve25519-dalek = { version = "=1.2.3", default-features = false, optional = true }
+ed25519-dalek = { version = "=1.0.0-pre.2", default-features = false, optional = true }
 env_logger = { version = "0.7.0", optional = true }
 failure = { version = "0.1.6", optional = true }
 ffi-support = { version = "0.3.5", optional = true }
@@ -134,8 +134,8 @@ num-integer = { version = "0.1", optional = true }
 num-traits = { version = "0.2", optional = true }
 openssl = { version = "0.10", optional = true }
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
-rand = { version = "0.6", features = ["wasm-bindgen"], optional = true }
-rand_chacha = { version = "0.1", optional = true }
+rand = { version = "=0.6.5", features = ["wasm-bindgen"], optional = true }
+rand_chacha = { version = "=0.1.1", optional = true }
 rustchacha20poly1305 = { version = "0.3.1", package = "chacha20poly1305", optional = true }
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1", optional = true }
 secp256k1 = { version = "0.17", optional = true, features = ["rand", "serde"]}
@@ -146,8 +146,8 @@ sha3 = { version = "0.8", optional = true }
 subtle = { version = "2.2.1", optional = true }
 time = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
-x25519-dalek = { version = "0.5", optional = true, default-features = false }
-zeroize = { version = "1.0", features = ["zeroize_derive"], optional =  true }
+x25519-dalek = { version = "=0.5.2", optional = true, default-features = false }
+zeroize = { version = "1.1", features = ["zeroize_derive"], optional =  true }
 
 [dev-dependencies]
 bytebuffer-rs = "0.3.0"

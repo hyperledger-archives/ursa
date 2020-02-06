@@ -114,5 +114,5 @@ jobs:
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         displayName: 'Install rust'
-      - script: $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=wasm
+      - script: $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=portable_wasm
         displayName: 'wasm pack'
