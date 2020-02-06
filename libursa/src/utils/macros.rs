@@ -1,3 +1,22 @@
+#[cfg(any(feature = "ecdsa_secp256k1", feature = "ecdh_secp256k1"))]
+macro_rules! array_copy {
+    ($src:expr, $dst:expr) => {
+        for i in 0..$dst.len() {
+            $dst[i] = $src[i];
+        }
+    };
+    ($src:expr, $dst:expr, $offset:expr, $length:expr) => {
+        for i in 0..$length {
+            $dst[i + $offset] = $src[i]
+        }
+    };
+    ($src:expr, $src_offset:expr, $dst:expr, $dst_offset:expr, $length:expr) => {
+        for i in 0..$length {
+            $dst[i + $dst_offset] = $src[i + $src_offset]
+        }
+    };
+}
+
 macro_rules! impl_bytearray {
     ($thing:ident) => {
         impl $thing {
@@ -117,6 +136,12 @@ macro_rules! impl_bytearray {
         impl ::std::ops::Drop for $thing {
             fn drop(&mut self) {
                 self.0.zeroize();
+            }
+        }
+
+        impl AsRef<[u8]> for $thing {
+            fn as_ref(&self) -> &[u8] {
+                self.0.as_slice()
             }
         }
 

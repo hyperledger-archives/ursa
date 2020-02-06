@@ -27,7 +27,9 @@ impl Ed25519Sha512 {
         let cey = CompressedEdwardsY::from_slice(&pk[..]);
         match cey.decompress() {
             Some(ep) => Ok(PublicKey(ep.to_montgomery().as_bytes().to_vec())),
-            None => Err(CryptoError::ParseError(format!("Invalid public key provided. Cannot convert to key exchange key")))
+            None => Err(CryptoError::ParseError(format!(
+                "Invalid public key provided. Cannot convert to key exchange key"
+            ))),
         }
     }
 }

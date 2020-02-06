@@ -94,21 +94,24 @@ extern crate serde_json;
 extern crate ffi_support;
 #[cfg(feature = "console_error_panic_hook")]
 extern crate console_error_panic_hook;
+#[cfg(feature = "curve25519-dalek")]
+extern crate curve25519_dalek;
+#[cfg(feature = "hex")]
+extern crate hex;
 #[cfg(feature = "js-sys")]
 extern crate js_sys;
 #[cfg(feature = "wasm-bindgen")]
 extern crate wasm_bindgen;
 #[cfg(feature = "x25519-dalek")]
 extern crate x25519_dalek;
-#[cfg(feature = "curve25519-dalek")]
-extern crate curve25519_dalek;
-#[cfg(feature = "hex")]
-extern crate hex;
 
 #[cfg(any(
     feature = "bls_bls12381",
     feature = "cl",
     feature = "cl_native",
+    feature = "ecdh_secp256k1",
+    feature = "ecdh_secp256k1_native",
+    feature = "ecdh_secp256k1_asm",
     feature = "ecdsa_secp256k1",
     feature = "ecdsa_secp256k1_native",
     feature = "ecdsa_secp256k1_asm",
@@ -156,10 +159,19 @@ pub mod errors;
 pub mod ffi;
 #[cfg(any(feature = "blake2", feature = "sha2", feature = "sha3"))]
 pub mod hash;
-#[cfg(any(feature = "x25519", feature = "x25519_asm"))]
+#[cfg(any(
+    feature = "ecdh_secp256k1",
+    feature = "ecdh_secp256k1_native",
+    feature = "ecdh_secp256k1_asm",
+    feature = "x25519",
+    feature = "x25519_asm"
+))]
 pub mod kex;
 #[cfg(any(
     feature = "bls_bls12381",
+    feature = "ecdh_secp256k1",
+    feature = "ecdh_secp256k1_native",
+    feature = "ecdh_secp256k1_asm",
     feature = "ecdsa_secp256k1",
     feature = "ecdsa_secp256k1_native",
     feature = "ecdsa_secp256k1_asm",
@@ -167,7 +179,7 @@ pub mod kex;
     feature = "ed25519_asm",
     feature = "x25519",
     feature = "x25519_asm",
-    feature = "wasm"
+feature = "wasm"
 ))]
 pub mod keys;
 #[cfg(any(
