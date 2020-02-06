@@ -179,7 +179,7 @@ pub mod kex;
     feature = "ed25519_asm",
     feature = "x25519",
     feature = "x25519_asm",
-feature = "wasm"
+    feature = "wasm"
 ))]
 pub mod keys;
 #[cfg(any(

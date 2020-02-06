@@ -1,5 +1,5 @@
-use keys::{KeyGenOption, PrivateKey, PublicKey};
 use kex::{x25519::X25519Sha256 as X25519Sha256Impl, KeyExchangeScheme};
+use keys::{KeyGenOption, PrivateKey, PublicKey};
 
 use wasm_bindgen::prelude::*;
 
@@ -11,7 +11,9 @@ pub struct X25519Sha256;
 #[wasm_bindgen]
 #[allow(non_snake_case)]
 impl X25519Sha256 {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     pub fn keypair(&self) -> Result<KeyPair, JsValue> {
         let scheme = X25519Sha256Impl {};
@@ -38,7 +40,11 @@ impl X25519Sha256 {
         Ok(pk.into())
     }
 
-    pub fn computeSharedSecret(&self, sk: &WasmPrivateKey, pk: &WasmPublicKey) -> Result<WasmSessionKey, JsValue> {
+    pub fn computeSharedSecret(
+        &self,
+        sk: &WasmPrivateKey,
+        pk: &WasmPublicKey,
+    ) -> Result<WasmSessionKey, JsValue> {
         let sk = PrivateKey::from(sk);
         let pk = PublicKey::from(pk);
         let scheme = X25519Sha256Impl {};

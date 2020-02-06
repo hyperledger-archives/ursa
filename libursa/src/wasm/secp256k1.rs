@@ -1,6 +1,9 @@
+use kex::{secp256k1::EcdhSecp256k1Sha256 as EcdhSecp256k1Sha256Impl, KeyExchangeScheme};
 use keys::{KeyGenOption, PrivateKey, PublicKey};
-use signatures::{EcdsaPublicKeyHandler, SignatureScheme, secp256k1::EcdsaSecp256k1Sha256 as EcdsaSecp256k1Sha256Impl};
-use kex::{KeyExchangeScheme, secp256k1::EcdhSecp256k1Sha256 as EcdhSecp256k1Sha256Impl};
+use signatures::{
+    secp256k1::EcdsaSecp256k1Sha256 as EcdsaSecp256k1Sha256Impl, EcdsaPublicKeyHandler,
+    SignatureScheme,
+};
 
 use wasm_bindgen::prelude::*;
 
@@ -109,7 +112,11 @@ impl EcdhSecp256k1Sha256 {
         Ok(pk)
     }
 
-    pub fn computeSharedSecret(&self, sk: &WasmPrivateKey, pk: &WasmPublicKey) -> Result<WasmSessionKey, JsValue> {
+    pub fn computeSharedSecret(
+        &self,
+        sk: &WasmPrivateKey,
+        pk: &WasmPublicKey,
+    ) -> Result<WasmSessionKey, JsValue> {
         let sk = PrivateKey::from(sk);
         let pk = PublicKey::from(pk);
         let secret = maperr!(self.0.compute_shared_secret(&sk, &pk));
