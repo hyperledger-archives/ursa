@@ -8,7 +8,7 @@ readme =  "../README.md"
 repository = "https://github.com/hyperledger/ursa"
 documentation = "https://docs.rs/ursa"
 homepage = "https://crates.io/crates/ursa"
-keywords = ["cryptography", "aead", "hash", "signature", "zkp", "zero-knowledge"]
+keywords = ["cryptography", "aead", "hash", "signature", "zero-knowledge"]
 include = [
     "src/bls/**/*.rs",
     "src/bn/**/*.rs",
@@ -17,6 +17,7 @@ include = [
     "src/encryption/**/*.rs",
     "src/errors/**/*.rs",
     "src/hash/**/*.rs",
+    "src/kex/**/*.rs",
     "src/pair/**/*.rs",
     "src/signatures/**/*.rs",
     "src/utils/**/*.rs",
