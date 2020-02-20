@@ -3,7 +3,7 @@
 use super::errors::{PSError, PSErrorKind};
 use super::keys::Verkey;
 use super::signature::Signature;
-use super::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{ate_2_pairing, OtherGroup, OtherGroupVec};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};

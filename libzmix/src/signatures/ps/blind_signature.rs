@@ -1,9 +1,9 @@
 // Scheme defined in section 6.1 supporting blind signatures
 
 use super::errors::{PSError, PSErrorKind};
-use super::keys::{Params, Sigkey, Verkey};
+use super::keys::{Params, Sigkey};
 use super::signature::Signature;
-use super::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{SignatureGroup, SignatureGroupVec};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -68,7 +68,7 @@ impl BlindSignature {
         let (sigma_1, mut sigma_2) = Signature::sign_with_sigma_1_generated_from_given_exp(
             messages, sigkey, &u, offset, &params.g,
         )?;
-        sigma_2 += (commitment * &u);
+        sigma_2 += commitment * &u;
         Ok(Signature { sigma_1, sigma_2 })
     }
 

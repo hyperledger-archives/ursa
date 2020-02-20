@@ -1,7 +1,7 @@
 use super::helper_constraints::constrain_lc_with_scalar;
 use super::helper_constraints::non_zero::is_nonzero_gadget;
 use crate::errors::{R1CSError, R1CSErrorKind};
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{ConstraintSystem, Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;

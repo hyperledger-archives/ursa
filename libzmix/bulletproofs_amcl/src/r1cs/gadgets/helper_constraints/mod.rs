@@ -47,7 +47,6 @@ fn get_bit_count(num_digits: usize, base: u8) -> usize {
 /// n > 8 is not needed anyway where this is being used. Only return `num_digits` of the representation
 pub fn get_repr_in_power_2_base(n: u8, scalar: &FieldElement, num_digits: usize) -> Vec<u8> {
     assert!(n <= 8);
-    let byte_size = get_byte_size(num_digits, 1 << n);
     let mut s = scalar.to_bignum();
     s.norm();
 

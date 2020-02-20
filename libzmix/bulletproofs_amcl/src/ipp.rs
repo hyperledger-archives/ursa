@@ -5,7 +5,7 @@
 use crate::errors::{BulletproofError, BulletproofErrorKind};
 use crate::transcript::TranscriptProtocol;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use core::iter;
 use merlin::Transcript;
