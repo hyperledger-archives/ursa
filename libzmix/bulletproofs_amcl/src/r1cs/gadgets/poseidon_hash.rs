@@ -1,16 +1,13 @@
-use super::helper_constraints::constrain_lc_with_scalar;
 use crate::errors::{R1CSError, R1CSErrorKind};
-use crate::r1cs::linear_combination::AllocatedQuantity;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{Prover, R1CSProof, Variable, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, Rng};
-use std::time::{Duration, Instant};
 
 use super::helper_constraints::poseidon::{
-    PoseidonParams, Poseidon_hash_2, Poseidon_hash_2_gadget, Poseidon_hash_4,
-    Poseidon_hash_4_gadget, Poseidon_hash_8, Poseidon_hash_8_gadget, SboxType, CAP_CONST_W_3,
+    PoseidonParams, Poseidon_hash_2_gadget,
+    Poseidon_hash_4_gadget, Poseidon_hash_8_gadget, SboxType, CAP_CONST_W_3,
     CAP_CONST_W_5, CAP_CONST_W_9,
 };
 use amcl_wrapper::commitment::commit_to_field_element;

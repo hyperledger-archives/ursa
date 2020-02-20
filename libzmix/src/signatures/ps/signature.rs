@@ -1,6 +1,6 @@
 use super::errors::{PSError, PSErrorKind};
 use super::keys::{Sigkey, Verkey};
-use super::{ate_2_pairing, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{ate_2_pairing, OtherGroupVec, SignatureGroup};
 use crate::amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;

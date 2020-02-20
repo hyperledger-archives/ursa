@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-
-use amcl_wrapper::constants::MODBYTES;
-
 use crate::errors::{BulletproofError, R1CSError};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
-use super::poseidon::{PoseidonParams, Poseidon_hash_8, Poseidon_hash_8_constraints, SboxType};
-use super::{constrain_lc_with_scalar, get_bit_count, get_byte_size};
+use super::{constrain_lc_with_scalar, get_bit_count};
 use crate::r1cs::gadgets::helper_constraints::{get_repr_in_power_2_base, LeafValueType};
 use crate::r1cs::gadgets::merkle_tree_hash::{
     Arity8MerkleTreeHash, Arity8MerkleTreeHashConstraints,
@@ -40,7 +35,7 @@ where
     pub fn new(
         hash_func: &'a MTH,
         depth: usize,
-        hash_db: &mut HashDb<DBVal_8_ary>,
+        hash_db: &mut dyn HashDb<DBVal_8_ary>,
     ) -> Result<VanillaSparseMerkleTree_8<'a, MTH>, BulletproofError> {
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
@@ -80,7 +75,7 @@ where
         &mut self,
         idx: &FieldElement,
         val: FieldElement,
-        hash_db: &mut HashDb<DBVal_8_ary>,
+        hash_db: &mut dyn HashDb<DBVal_8_ary>,
     ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key
         let mut siblings_wrap = Some(Vec::<ProofNode_8_ary>::new());
@@ -123,7 +118,7 @@ where
         &self,
         idx: &FieldElement,
         proof: &mut Option<Vec<ProofNode_8_ary>>,
-        hash_db: &HashDb<DBVal_8_ary>,
+        hash_db: &dyn HashDb<DBVal_8_ary>,
     ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
@@ -204,7 +199,7 @@ where
     fn update_db_with_key_val(
         key: &FieldElement,
         val: DBVal_8_ary,
-        hash_db: &mut HashDb<DBVal_8_ary>,
+        hash_db: &mut dyn HashDb<DBVal_8_ary>,
     ) {
         hash_db.insert(key.to_bytes(), val);
     }
@@ -301,11 +296,11 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<
             Some(l) => {
                 let octet = l[i / 3];
                 let b0 = (octet >> 0) & 1;
-                let b0_1 = (1 - b0);
+                let b0_1 = 1 - b0;
                 let b1 = (octet >> 1) & 1;
-                let b1_1 = (1 - b1);
+                let b1_1 = 1 - b1;
                 let b2 = (octet >> 2) & 1;
-                let b2_1 = (1 - b2);
+                let b2_1 = 1 - b2;
                 (
                     Some((FieldElement::from(b0), FieldElement::from(b0_1))),
                     Some((FieldElement::from(b1), FieldElement::from(b1_1))),

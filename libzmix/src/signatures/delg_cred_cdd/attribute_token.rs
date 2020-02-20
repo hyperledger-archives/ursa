@@ -11,7 +11,6 @@ use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2LookupTable, G2Vector, G2};
 use std::collections::{HashMap, HashSet};
-use std::ops::Mul;
 
 pub type OddLevelAttribute = G1;
 pub type EvenLevelAttribute = G2;

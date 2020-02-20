@@ -1,30 +1,20 @@
-use super::helper_constraints::constrain_lc_with_scalar;
 use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{Prover, R1CSProof, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use rand::{CryptoRng, Rng};
 
-use crate::r1cs::gadgets::poseidon_hash::{
-    allocate_capacity_const_for_prover, allocate_capacity_const_for_verifier,
-};
-
-use super::helper_constraints::poseidon::{PoseidonParams, SboxType};
 use super::helper_constraints::sparse_merkle_tree_4_ary::{
-    vanilla_merkle_merkle_tree_4_verif_gadget, DBVal_4_ary, ProofNode_4_ary,
-    VanillaSparseMerkleTree_4,
+    vanilla_merkle_merkle_tree_4_verif_gadget, ProofNode_4_ary
 };
-use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
 use crate::r1cs::gadgets::helper_constraints::{
     get_blinding_for_merkle_tree_prover, LeafValueType,
 };
-use crate::r1cs::gadgets::merkle_tree_hash::{
-    Arity4MerkleTreeHash, Arity4MerkleTreeHashConstraints,
-};
+use crate::r1cs::gadgets::merkle_tree_hash::Arity4MerkleTreeHashConstraints;
 
 // If the leaf value (`leaf`) is not hidden from the verifier, then it will not be committed to
 pub fn prove_leaf_inclusion_4_ary_merkle_tree<

@@ -1,13 +1,8 @@
-use std::collections::HashMap;
-
-use amcl_wrapper::constants::MODBYTES;
-
 use crate::errors::{BulletproofError, R1CSError};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 
-use super::poseidon::{PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType};
 use super::{constrain_lc_with_scalar, get_byte_size};
 use crate::r1cs::gadgets::helper_constraints::{
     allocated_leaf_index_to_bytes, get_repr_in_power_2_base, LeafValueType,
@@ -45,10 +40,10 @@ where
     pub fn new(
         hash_func: &'a MTH,
         depth: usize,
-        hash_db: &mut HashDb<DBVal_4_ary>,
+        hash_db: &mut dyn HashDb<DBVal_4_ary>,
     ) -> Result<VanillaSparseMerkleTree_4<'a, MTH>, BulletproofError> {
-        /// Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
-        /// Since all leaves are same, all nodes at the same level will have the same value.
+        // Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
+        // Since all leaves are same, all nodes at the same level will have the same value.
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
@@ -83,7 +78,7 @@ where
         &mut self,
         idx: &FieldElement,
         val: FieldElement,
-        hash_db: &mut HashDb<DBVal_4_ary>,
+        hash_db: &mut dyn HashDb<DBVal_4_ary>,
     ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key. siblings are the the sibling nodes at each level from
         // the root to the leaf for the `idx`
@@ -125,7 +120,7 @@ where
         &self,
         idx: &FieldElement,
         proof: &mut Option<Vec<ProofNode_4_ary>>,
-        hash_db: &HashDb<DBVal_4_ary>,
+        hash_db: &dyn HashDb<DBVal_4_ary>,
     ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
@@ -199,7 +194,7 @@ where
     fn update_db_with_key_val(
         key: &FieldElement,
         val: DBVal_4_ary,
-        hash_db: &mut HashDb<DBVal_4_ary>,
+        hash_db: &mut dyn HashDb<DBVal_4_ary>,
     ) {
         hash_db.insert(key.to_bytes(), val);
     }

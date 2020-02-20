@@ -1,4 +1,4 @@
-use crate::errors::{BulletproofError, BulletproofErrorKind, R1CSError, R1CSErrorKind};
+use crate::errors::{BulletproofError, BulletproofErrorKind, R1CSError};
 use crate::r1cs::linear_combination::AllocatedQuantity;
 use crate::r1cs::{ConstraintSystem, LinearCombination, Variable};
 use amcl_wrapper::field_elem::FieldElement;
@@ -375,7 +375,7 @@ pub fn Poseidon_permutation_constraints<'a, CS: ConstraintSystem>(
         let width = sbox_outs.len();
         for i in 0..width {
             for j in 0..width {
-                next_inputs[i] += (&matrix_2[j][i] * sbox_outs[j].clone());
+                next_inputs[i] += &matrix_2[j][i] * sbox_outs[j].clone();
             }
         }
     }
@@ -567,8 +567,6 @@ pub fn Poseidon_hash_2_constraints<'a, CS: ConstraintSystem>(
 ) -> Result<LinearCombination, R1CSError> {
     assert_eq!(inputs.len(), 2);
 
-    let width = params.width;
-
     // Always keep the 1st input as 0
     let mut input = vec![capacity_const];
     input.append(&mut inputs);
@@ -636,7 +634,6 @@ pub fn Poseidon_hash_4_constraints<'a, CS: ConstraintSystem>(
     sbox_type: &SboxType,
 ) -> Result<LinearCombination, R1CSError> {
     // TODO: Code deduplication with macros
-    let width = params.width;
     // Only 4 inputs to the permutation are set to the input of this hash function.
     assert_eq!(inputs.len(), 4);
 
