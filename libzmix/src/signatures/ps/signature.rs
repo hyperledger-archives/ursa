@@ -126,8 +126,6 @@ impl Signature {
 mod tests {
     use super::super::keys::keygen;
     use super::*;
-    // For benchmarking
-    use std::time::{Duration, Instant};
 
     #[test]
     fn test_signature_all_known_messages() {
