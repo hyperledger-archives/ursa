@@ -334,7 +334,7 @@ mod tests {
     #[test]
     fn test_PoK_sig() {
         use signatures::ps::SignatureGroup;
-        
+
         let count_msgs = 5;
         let params = Params::new("test".as_bytes());
         let (vk, sk) = keygen(count_msgs, &params);
