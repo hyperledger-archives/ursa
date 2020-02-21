@@ -213,6 +213,8 @@ mod tests {
 
     #[test]
     fn test_VSMT_4_Verif() {
+        use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_5;
+
         let width = 5;
 
         let mut db = InMemoryHashDb::<DBVal_4_ary>::new();
