@@ -63,7 +63,7 @@ impl PoKOfSignature {
                 return Err(PSErrorKind::GeneralError {
                     msg: format!("Index {} should be less than {}", idx, messages.len()),
                 }
-                    .into());
+                .into());
             }
         }
         Signature::check_verkey_and_messages_compat(messages, vk)?;
@@ -77,7 +77,7 @@ impl PoKOfSignature {
                             (messages.len() - revealed_msg_indices.len())
                         ),
                     }
-                        .into());
+                    .into());
                 }
                 b.iter().map(Some).collect()
             }
@@ -190,7 +190,7 @@ impl PoKOfSignatureProof {
                     self.proof_vc.responses.len() - 1
                 ),
             }
-                .into());
+            .into());
         }
         // 1 added to the index, since 0th index is reserved for randomization (`t`)
         Ok(self.proof_vc.responses[1 + msg_idx].clone())
@@ -369,7 +369,7 @@ mod tests {
             Some(blindings.as_slice()),
             HashSet::new(),
         )
-            .unwrap();
+        .unwrap();
         let chal_prover = FieldElement::from_msg_hash(&pok_1.to_bytes());
         let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
 
@@ -403,7 +403,7 @@ mod tests {
             None,
             revealed_msg_indices.clone(),
         )
-            .unwrap();
+        .unwrap();
 
         let chal_prover = FieldElement::from_msg_hash(&pok.to_bytes());
 
@@ -438,7 +438,7 @@ mod tests {
             Some(blindings.as_slice()),
             revealed_msg_indices.clone(),
         )
-            .unwrap();
+        .unwrap();
         let chal_prover = FieldElement::from_msg_hash(&pok_1.to_bytes());
         let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
 
@@ -460,7 +460,7 @@ mod tests {
             Some(blindings_more.as_slice()),
             revealed_msg_indices.clone(),
         )
-            .is_err());
+        .is_err());
         let blindings_less =
             FieldElementVector::random(count_msgs - revealed_msg_indices.len() - 1);
         assert!(PoKOfSignature::init(
@@ -471,7 +471,7 @@ mod tests {
             Some(blindings_less.as_slice()),
             revealed_msg_indices.clone(),
         )
-            .is_err());
+        .is_err());
     }
 
     #[test]
@@ -491,7 +491,7 @@ mod tests {
             None,
             HashSet::new(),
         )
-            .is_err());
+        .is_err());
     }
 
     #[test]
@@ -568,7 +568,7 @@ mod tests {
             None,
             HashSet::new(),
         )
-            .unwrap();
+        .unwrap();
         let pok_2 = PoKOfSignature::init(
             &sig_2,
             &vk,
@@ -577,7 +577,7 @@ mod tests {
             None,
             HashSet::new(),
         )
-            .unwrap();
+        .unwrap();
 
         let mut chal_bytes = vec![];
         chal_bytes.append(&mut pok_1.to_bytes());
@@ -645,7 +645,7 @@ mod tests {
             Some(blindings_1.as_slice()),
             HashSet::new(),
         )
-            .unwrap();
+        .unwrap();
         let pok_2 = PoKOfSignature::init(
             &sig_2,
             &vk,
@@ -654,7 +654,7 @@ mod tests {
             Some(blindings_2.as_slice()),
             HashSet::new(),
         )
-            .unwrap();
+        .unwrap();
 
         let mut chal_bytes = vec![];
         chal_bytes.append(&mut pok_1.to_bytes());

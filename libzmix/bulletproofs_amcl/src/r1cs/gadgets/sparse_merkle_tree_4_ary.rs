@@ -218,16 +218,16 @@ mod tests {
         let mut db = InMemoryHashDb::<DBVal_4_ary>::new();
 
         #[cfg(feature = "bls381")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "bn254")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "secp256k1")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "ed25519")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         let total_rounds = full_b + partial_rounds + full_e;
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
@@ -284,7 +284,7 @@ mod tests {
                 &G,
                 &H,
             )
-                .unwrap();
+            .unwrap();
 
             let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
             verify_proof_of_leaf_inclusion_4_ary_merkle_tree(
@@ -300,7 +300,7 @@ mod tests {
                 &G,
                 &H,
             )
-                .unwrap();
+            .unwrap();
 
             // Test with leaf value known to verifier
             let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
@@ -320,7 +320,7 @@ mod tests {
                 &G,
                 &H,
             )
-                .unwrap();
+            .unwrap();
 
             let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_5);
             verify_proof_of_leaf_inclusion_4_ary_merkle_tree(
@@ -336,7 +336,7 @@ mod tests {
                 &G,
                 &H,
             )
-                .unwrap();
+            .unwrap();
         }
     }
 }

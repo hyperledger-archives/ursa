@@ -406,6 +406,6 @@ mod tests {
             &ipp_proof.L,
             &ipp_proof.R,
         )
-            .unwrap();
+        .unwrap();
     }
 }
