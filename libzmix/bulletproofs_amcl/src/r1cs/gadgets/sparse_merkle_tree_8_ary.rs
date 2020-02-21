@@ -204,12 +204,12 @@ pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree<MTHC: Arity8MerkleTreeHa
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_9;
+    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_8_ary::DBVal_8_ary;
     use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHashConstraints, PoseidonHash_8};
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
     use amcl_wrapper::group_elem::GroupElement;
-    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_8_ary::DBVal_8_ary;
-    use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_9;
 
     #[test]
     fn test_VSMT_8_Verif() {
@@ -218,16 +218,16 @@ mod tests {
         let mut db = InMemoryHashDb::<DBVal_8_ary>::new();
 
         #[cfg(feature = "bls381")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "bn254")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "secp256k1")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "ed25519")]
-            let (full_b, full_e, partial_rounds) = (4, 4, 56);
+        let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         let total_rounds = full_b + partial_rounds + full_e;
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
@@ -283,7 +283,7 @@ mod tests {
             &G,
             &H,
         )
-            .unwrap();
+        .unwrap();
 
         let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_9);
         verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
@@ -299,7 +299,7 @@ mod tests {
             &G,
             &H,
         )
-            .unwrap();
+        .unwrap();
 
         // Test with leaf value known to verifier
         let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_9);
@@ -319,7 +319,7 @@ mod tests {
             &G,
             &H,
         )
-            .unwrap();
+        .unwrap();
 
         let mut hash_func = PoseidonHashConstraints::new(&hash_params, sbox, CAP_CONST_W_9);
         verify_proof_of_leaf_inclusion_8_ary_merkle_tree(
@@ -335,6 +335,6 @@ mod tests {
             &G,
             &H,
         )
-            .unwrap();
+        .unwrap();
     }
 }
