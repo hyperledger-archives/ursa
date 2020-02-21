@@ -24,6 +24,7 @@ pub struct InnerProductArgumentProof {
 }
 
 pub struct IPP {}
+
 impl IPP {
     /// Create an inner-product proof. Adaptation of Protocol 2 from the paper.
     /// G_factors and H_factors are the element-wise multiplicands (scalar multiplication) of vectors
@@ -405,6 +406,6 @@ mod tests {
             &ipp_proof.L,
             &ipp_proof.R,
         )
-        .unwrap();
+            .unwrap();
     }
 }
