@@ -2437,7 +2437,7 @@ mod tests {
             )
             .is_err());
 
-        let resp_1 = at_1
+        let _resp_1 = at_1
             .response(&com_1, &l_1_issuer_sk, &c_1, vec![], vec![&l_1_issuer_vk])
             .unwrap();
 

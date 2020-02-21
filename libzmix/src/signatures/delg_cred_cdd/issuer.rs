@@ -484,6 +484,7 @@ impl RootIssuer {
 mod tests {
     use super::*;
     // For benchmarking
+    use amcl_wrapper::group_elem::GroupElement;
     use amcl_wrapper::group_elem_g1::G1;
     use amcl_wrapper::group_elem_g2::G2;
     use std::time::Instant;
