@@ -519,7 +519,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!(
             "Proving time for Poseidon 2:1 with sbox {:?} is: {:?}",
             sbox_type,
@@ -539,7 +539,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!("Verification time is: {:?}", start.elapsed());
     }
 
@@ -575,7 +575,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!(
             "Proving time for Poseidon 4:1 with sbox {:?} is: {:?}",
             sbox_type,
@@ -595,7 +595,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!("Verification time is: {:?}", start.elapsed());
     }
 
@@ -635,7 +635,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!(
             "Proving time for Poseidon 8:1 with sbox {:?} is: {:?}",
             sbox_type,
@@ -655,7 +655,7 @@ mod tests {
             &G,
             &H,
         )
-        .unwrap();
+            .unwrap();
         println!("Verification time is: {:?}", start.elapsed());
     }
 
@@ -664,16 +664,16 @@ mod tests {
         let width = 3;
 
         #[cfg(feature = "bls381")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 55);
+            let (full_b, full_e, partial_rounds) = (4, 4, 55);
 
         #[cfg(feature = "bn254")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 55);
+            let (full_b, full_e, partial_rounds) = (4, 4, 55);
 
         #[cfg(feature = "secp256k1")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 55);
+            let (full_b, full_e, partial_rounds) = (4, 4, 55);
 
         #[cfg(feature = "ed25519")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 55);
+            let (full_b, full_e, partial_rounds) = (4, 4, 55);
 
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
@@ -687,16 +687,16 @@ mod tests {
         let width = 5;
 
         #[cfg(feature = "bls381")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 56);
+            let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "bn254")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 56);
+            let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "secp256k1")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 56);
+            let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         #[cfg(feature = "ed25519")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 56);
+            let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
@@ -710,16 +710,16 @@ mod tests {
         let width = 9;
 
         #[cfg(feature = "bls381")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 57);
+            let (full_b, full_e, partial_rounds) = (4, 4, 57);
 
         #[cfg(feature = "bn254")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 57);
+            let (full_b, full_e, partial_rounds) = (4, 4, 57);
 
         #[cfg(feature = "secp256k1")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 57);
+            let (full_b, full_e, partial_rounds) = (4, 4, 57);
 
         #[cfg(feature = "ed25519")]
-        let (full_b, full_e, partial_rounds) = (4, 4, 57);
+            let (full_b, full_e, partial_rounds) = (4, 4, 57);
 
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
