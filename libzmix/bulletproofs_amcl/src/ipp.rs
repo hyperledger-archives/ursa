@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn test_ipp() {
         use crate::amcl_wrapper::group_elem::GroupElement;
-        
+
         let n = 8;
         let G: G1Vector = get_generators("g", n).into();
         let H: G1Vector = get_generators("h", n).into();
