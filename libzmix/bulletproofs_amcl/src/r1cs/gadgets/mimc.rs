@@ -104,6 +104,7 @@ pub fn verify_knowledge_of_preimage_of_mimc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::helper_constraints::mimc::mimc;
     use crate::utils::get_generators;
     use amcl_wrapper::group_elem::GroupElement;
     use rand::rngs::OsRng;
