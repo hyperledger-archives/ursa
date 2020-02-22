@@ -206,7 +206,10 @@ pub fn verify_proof_of_leaf_inclusion_4_ary_merkle_tree<MTHC: Arity4MerkleTreeHa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_4_ary::DBVal_4_ary;
+    use crate::r1cs::gadgets::helper_constraints::poseidon::{PoseidonParams, SboxType};
+    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_4_ary::{
+        DBVal_4_ary, VanillaSparseMerkleTree_4,
+    };
     use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHashConstraints, PoseidonHash_4};
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
