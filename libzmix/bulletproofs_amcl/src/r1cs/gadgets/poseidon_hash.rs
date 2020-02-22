@@ -484,7 +484,7 @@ pub fn verify_proof_of_knowledge_of_preimage_of_Poseidon_8(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::r1cs::gadgets::helper_constraints::poseidon::Poseidon_hash_2;
+    use crate::r1cs::gadgets::helper_constraints::poseidon::{Poseidon_hash_2, Poseidon_hash_4};
     use crate::utils::get_generators;
     use amcl_wrapper::group_elem::GroupElement;
     use rand::rngs::OsRng;
