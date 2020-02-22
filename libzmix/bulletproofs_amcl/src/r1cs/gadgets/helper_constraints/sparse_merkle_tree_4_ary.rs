@@ -373,6 +373,7 @@ pub fn vanilla_merkle_merkle_tree_4_verif_gadget<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::helper_constraints::poseidon::{PoseidonParams, SboxType};
     use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash_4;
     use crate::utils::hash_db::InMemoryHashDb;
 
