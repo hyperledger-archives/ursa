@@ -210,6 +210,7 @@ mod tests {
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
     use amcl_wrapper::group_elem::GroupElement;
+    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_4_ary::DBVal_4_ary;
 
     #[test]
     fn test_VSMT_4_Verif() {
