@@ -87,7 +87,7 @@ pub fn verify_set_membership(
 
     let var_val = verifier.commit(commitments.remove(0));
 
-    for _ in 1..set_length + 1 {
+    for _ in 1..=set_length {
         let var_diff = verifier.commit(commitments.remove(0));
         diff_vars.push(var_diff);
     }
