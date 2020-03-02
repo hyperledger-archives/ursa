@@ -270,7 +270,7 @@ impl PoKOfSignatureProof {
         }
         // pr = g1 * h1^-m1 * h2^-m2.... = (g1 * h1^m1 * h2^m2....)^-1 for all disclosed messages m_i
         let pr = -bases_disclosed
-            .multi_scalar_mul_var_time(&exponents)
+            .multi_scalar_mul_var_time(exponents.as_slice())
             .unwrap();
         if !self
             .proof_vc_2

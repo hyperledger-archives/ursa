@@ -1,6 +1,6 @@
 [package]
 name = "ursa"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Hyperledger Ursa Contributors"]
 description = "This is the shared crypto library for Hyperledger components."
 license = "Apache-2.0"
@@ -110,7 +110,7 @@ aead = { version = "0.2", optional = true }
 aes = { version = "0.3", optional = true }
 aes-gcm = { version = "0.3.0", optional = true }
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
-amcl_wrapper = {version = "0.1.7", features = ["bls381"], optional = true }
+amcl_wrapper = {version = "0.3.5", features = ["bls381"], optional = true }
 arrayref = { version = "0.3.5", optional = true }
 blake2 = { version = "0.8", default-features = false, optional = true }
 block-modes = { version = "0.3", optional = true }

@@ -1370,7 +1370,9 @@ fn binary_scalar_mul_g2(g2: &G2, h2: &G2, r1: &FieldElement, r2: &FieldElement) 
     let mut f_vec = FieldElementVector::with_capacity(2);
     f_vec.push(r1.clone());
     f_vec.push(r2.clone());
-    g2_vec.multi_scalar_mul_const_time(&f_vec).unwrap()
+    g2_vec
+        .multi_scalar_mul_const_time(f_vec.as_slice())
+        .unwrap()
 }
 
 #[cfg(test)]
