@@ -55,7 +55,7 @@ pub struct Prover<'a, 'b> {
 
     /// This list holds closures that will be called in the second phase of the protocol,
     /// when non-randomized variables are committed.
-    deferred_constraints: Vec<Box<Fn(&mut RandomizingProver<'a, 'b>) -> Result<(), R1CSError>>>,
+    deferred_constraints: Vec<Box<dyn Fn(&mut RandomizingProver<'a, 'b>) -> Result<(), R1CSError>>>,
 
     /// Index of a pending multiplier that's not fully assigned yet.
     pending_multiplier: Option<usize>,

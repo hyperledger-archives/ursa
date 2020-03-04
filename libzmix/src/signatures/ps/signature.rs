@@ -1,6 +1,6 @@
 use super::errors::{PSError, PSErrorKind};
 use super::keys::{Sigkey, Verkey};
-use super::{ate_2_pairing, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{ate_2_pairing, OtherGroupVec, SignatureGroup};
 use crate::amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::GroupElement;
@@ -126,8 +126,6 @@ impl Signature {
 mod tests {
     use super::super::keys::keygen;
     use super::*;
-    // For benchmarking
-    use std::time::{Duration, Instant};
 
     #[test]
     fn test_signature_all_known_messages() {

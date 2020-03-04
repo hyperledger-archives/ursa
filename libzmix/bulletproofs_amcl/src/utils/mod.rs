@@ -3,13 +3,9 @@ extern crate rand;
 pub mod hash_db;
 pub mod vector_poly;
 
-use rand::RngCore;
-
-use amcl_wrapper::errors::ValueError;
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::G1;
-use amcl_wrapper::types::{BigNum, DoubleBigNum};
 
 pub fn get_generators(prefix: &str, n: usize) -> Vec<G1> {
     let mut gens: Vec<G1> = Vec::with_capacity(n);

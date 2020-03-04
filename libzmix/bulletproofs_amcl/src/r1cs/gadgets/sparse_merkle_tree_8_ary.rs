@@ -1,24 +1,16 @@
-use super::helper_constraints::constrain_lc_with_scalar;
 use crate::errors::{R1CSError, R1CSErrorKind};
 use crate::r1cs::linear_combination::AllocatedQuantity;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{Prover, R1CSProof, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use rand::{CryptoRng, Rng};
 
-use crate::r1cs::gadgets::poseidon_hash::{
-    allocate_capacity_const_for_prover, allocate_capacity_const_for_verifier,
-};
-
-use super::helper_constraints::poseidon::{PoseidonParams, SboxType};
 use super::helper_constraints::sparse_merkle_tree_8_ary::{
-    vanilla_merkle_merkle_tree_8_verif_gadget, DBVal_8_ary, ProofNode_8_ary,
-    VanillaSparseMerkleTree_8,
+    vanilla_merkle_merkle_tree_8_verif_gadget, ProofNode_8_ary,
 };
-use crate::r1cs::gadgets::helper_constraints::poseidon::CAP_CONST_W_9;
 use crate::r1cs::gadgets::helper_constraints::{
     get_blinding_for_merkle_tree_prover, LeafValueType,
 };
@@ -212,6 +204,12 @@ pub fn verify_proof_of_leaf_inclusion_8_ary_merkle_tree<MTHC: Arity8MerkleTreeHa
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::helper_constraints::poseidon::{
+        PoseidonParams, SboxType, CAP_CONST_W_9,
+    };
+    use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_8_ary::{
+        DBVal_8_ary, VanillaSparseMerkleTree_8,
+    };
     use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHashConstraints, PoseidonHash_8};
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;

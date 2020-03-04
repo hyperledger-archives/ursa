@@ -5,7 +5,7 @@
 use crate::errors::{BulletproofError, BulletproofErrorKind};
 use crate::transcript::TranscriptProtocol;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use core::iter;
 use merlin::Transcript;
@@ -24,6 +24,7 @@ pub struct InnerProductArgumentProof {
 }
 
 pub struct IPP {}
+
 impl IPP {
     /// Create an inner-product proof. Adaptation of Protocol 2 from the paper.
     /// G_factors and H_factors are the element-wise multiplicands (scalar multiplication) of vectors
@@ -349,6 +350,8 @@ mod tests {
 
     #[test]
     fn test_ipp() {
+        use crate::amcl_wrapper::group_elem::GroupElement;
+
         let n = 8;
         let G: G1Vector = get_generators("g", n).into();
         let H: G1Vector = get_generators("h", n).into();

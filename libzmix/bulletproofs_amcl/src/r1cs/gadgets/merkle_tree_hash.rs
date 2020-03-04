@@ -8,7 +8,6 @@ use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, Variable, Verifie
 use amcl_wrapper::commitment::commit_to_field_element;
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::G1;
-use criterion::AxisScale::Linear;
 
 // The interfaced defined here are expected to change as we add more Bulletproof
 // friendly hash functions.

@@ -9,7 +9,6 @@ use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1LookupTable, G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
-use signatures::delg_cred_cdd::issuer::Sigkey;
 
 pub type GrothSigkey = FieldElement;
 

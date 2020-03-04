@@ -5,7 +5,7 @@ use super::groth_sig::{
 };
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use amcl_wrapper::group_elem::GroupElementVector;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
 
@@ -484,6 +484,7 @@ impl RootIssuer {
 mod tests {
     use super::*;
     // For benchmarking
+    use amcl_wrapper::group_elem::GroupElement;
     use amcl_wrapper::group_elem_g1::G1;
     use amcl_wrapper::group_elem_g2::G2;
     use std::time::Instant;

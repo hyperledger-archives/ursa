@@ -1,4 +1,3 @@
-use crate::errors::R1CSError;
 use crate::r1cs::{ConstraintSystem, Variable};
 use amcl_wrapper::field_elem::FieldElement;
 

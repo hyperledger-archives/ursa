@@ -51,7 +51,7 @@ pub struct Verifier<'a> {
     /// when non-randomized variables are committed.
     /// After that, the option will flip to None and additional calls to `randomize_constraints`
     /// will invoke closures immediately.
-    deferred_constraints: Vec<Box<Fn(&mut RandomizingVerifier<'a>) -> Result<(), R1CSError>>>,
+    deferred_constraints: Vec<Box<dyn Fn(&mut RandomizingVerifier<'a>) -> Result<(), R1CSError>>>,
 
     /// Index of a pending multiplier that's not fully assigned yet.
     pending_multiplier: Option<usize>,

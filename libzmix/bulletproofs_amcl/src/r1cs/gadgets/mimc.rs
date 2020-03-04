@@ -1,13 +1,11 @@
-use super::helper_constraints::constrain_lc_with_scalar;
 use crate::errors::{R1CSError, R1CSErrorKind};
-use crate::r1cs::linear_combination::AllocatedQuantity;
-use crate::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Variable, Verifier};
+use crate::r1cs::{Prover, R1CSProof, Verifier};
 use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use merlin::Transcript;
 use rand::{CryptoRng, Rng};
 
-use super::helper_constraints::mimc::{mimc, mimc_gadget};
+use super::helper_constraints::mimc::mimc_gadget;
 
 /// Takes a Prover and enforces the constraints of MiMC hash with 2 inputs and 1 output
 pub fn prove_mimc_preimage<R: Rng + CryptoRng>(
@@ -106,6 +104,7 @@ pub fn verify_knowledge_of_preimage_of_mimc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::r1cs::gadgets::helper_constraints::mimc::mimc;
     use crate::utils::get_generators;
     use amcl_wrapper::group_elem::GroupElement;
     use rand::rngs::OsRng;

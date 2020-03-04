@@ -3,7 +3,7 @@
 use super::errors::{PSError, PSErrorKind};
 use super::keys::Verkey;
 use super::signature::Signature;
-use super::{ate_2_pairing, OtherGroup, OtherGroupVec, SignatureGroup, SignatureGroupVec};
+use super::{ate_2_pairing, OtherGroup, OtherGroupVec};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
@@ -333,6 +333,8 @@ mod tests {
 
     #[test]
     fn test_PoK_sig() {
+        use signatures::ps::SignatureGroup;
+
         let count_msgs = 5;
         let params = Params::new("test".as_bytes());
         let (vk, sk) = keygen(count_msgs, &params);
@@ -456,7 +458,7 @@ mod tests {
             &params,
             msgs.as_slice(),
             Some(blindings_more.as_slice()),
-            revealed_msg_indices.clone()
+            revealed_msg_indices.clone(),
         )
         .is_err());
         let blindings_less =
@@ -467,7 +469,7 @@ mod tests {
             &params,
             msgs.as_slice(),
             Some(blindings_less.as_slice()),
-            revealed_msg_indices.clone()
+            revealed_msg_indices.clone(),
         )
         .is_err());
     }
@@ -487,7 +489,7 @@ mod tests {
             &params,
             bigger_msgs.as_slice(),
             None,
-            HashSet::new()
+            HashSet::new(),
         )
         .is_err());
     }
