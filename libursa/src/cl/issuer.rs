@@ -463,7 +463,7 @@ impl Issuer {
     /// # Arguments
     /// * `rev_reg` - Revocation registry.
     /// * `max_cred_num` - Max credential number in revocation registry.
-    ///  * rev_idx` - Index of the user in the revocation registry.
+    /// * `rev_idx` - Index of the user in the revocation registry.
     /// * `rev_tails_accessor` - Revocation registry tails accessor.
     ///
     /// # Example
@@ -562,7 +562,7 @@ impl Issuer {
     /// # Arguments
     /// * `rev_reg` - Revocation registry.
     /// * `max_cred_num` - Max credential number in revocation registry.
-    ///  * rev_idx` - Index of the user in the revocation registry.
+    /// * `rev_idx` - Index of the user in the revocation registry.
     /// * `rev_tails_accessor` - Revocation registry tails accessor.
     ///
     /// # Example
@@ -652,6 +652,118 @@ impl Issuer {
 
         trace!(
             "Issuer::recovery_credential: <<< rev_reg_delta: {:?}",
+            rev_reg_delta
+        );
+
+        Ok(rev_reg_delta)
+    }
+
+    /// Updates a revocation registry with sets of issued and revoked credential indexes.
+    ///
+    /// # Arguments
+    /// * `rev_reg` - Revocation registry.
+    /// * `max_cred_num` - Max credential number in revocation registry.
+    /// * `issued` - Set of issued credentials (if using issuance on demand).
+    /// * `revoked` - Set of revoked credentials.
+    /// * `rev_tails_accessor` - Revocation registry tails accessor.
+    ///
+    /// # Example
+    /// ```
+    /// use std::collections::HashSet;
+    /// use ursa::cl::{new_nonce, SimpleTailsAccessor};
+    /// use ursa::cl::issuer::Issuer;
+    /// use ursa::cl::prover::Prover;
+    ///
+    /// let mut credential_schema_builder = Issuer::new_credential_schema_builder().unwrap();
+    /// credential_schema_builder.add_attr("name").unwrap();
+    /// let credential_schema = credential_schema_builder.finalize().unwrap();
+    ///
+    /// let mut non_credential_schema_builder = Issuer::new_non_credential_schema_builder().unwrap();
+    /// non_credential_schema_builder.add_attr("master_secret").unwrap();
+    /// let non_credential_schema = non_credential_schema_builder.finalize().unwrap();
+    ///
+    /// let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) = Issuer::new_credential_def(&credential_schema, &non_credential_schema, true).unwrap();
+    ///
+    /// let max_cred_num = 5;
+    /// let (_rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) = Issuer::new_revocation_registry_def(&cred_pub_key, max_cred_num, false).unwrap();
+    ///
+    /// let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
+    ///
+    /// let master_secret = Prover::new_master_secret().unwrap();
+    ///
+    /// let mut credential_values_builder = Issuer::new_credential_values_builder().unwrap();
+    /// credential_values_builder.add_value_hidden("master_secret", &master_secret.value().unwrap());
+    /// credential_values_builder.add_dec_known("name", "1139481716457488690172217916278103335").unwrap();
+    /// let cred_values = credential_values_builder.finalize().unwrap();
+    ///
+    /// let credential_nonce = new_nonce().unwrap();
+    ///
+    /// let (blinded_credential_secrets, _credential_secrets_blinding_factors, blinded_credential_secrets_correctness_proof) =
+    ///     Prover::blind_credential_secrets(&cred_pub_key, &cred_key_correctness_proof, &cred_values, &credential_nonce).unwrap();
+    /// let credential_issuance_nonce = new_nonce().unwrap();
+    ///
+    /// let rev_idx = 1;
+    /// let (_cred_signature, _signature_correctness_proof, _rev_reg_delta) =
+    ///     Issuer::sign_credential_with_revoc("CnEDk9HrMnmiHXEV1WFgbVCRteYnPqsJwrTdcZaNhFVW",
+    ///                                        &blinded_credential_secrets,
+    ///                                        &blinded_credential_secrets_correctness_proof,
+    ///                                        &credential_nonce,
+    ///                                        &credential_issuance_nonce,
+    ///                                        &cred_values,
+    ///                                        &cred_pub_key,
+    ///                                        &cred_priv_key,
+    ///                                        rev_idx,
+    ///                                        max_cred_num,
+    ///                                        false,
+    ///                                        &mut rev_reg,
+    ///                                        &rev_key_priv,
+    ///                                         &simple_tail_accessor).unwrap();
+    /// let mut issued = HashSet::new();
+    /// issued.insert(rev_idx);
+    /// let revoked = HashSet::new();
+    /// Issuer::update_revocation_registry(&mut rev_reg, max_cred_num, issued, revoked, &simple_tail_accessor).unwrap();
+    /// ```
+    pub fn update_revocation_registry<RTA>(
+        rev_reg: &mut RevocationRegistry,
+        max_cred_num: u32,
+        issued: HashSet<u32>,
+        revoked: HashSet<u32>,
+        rev_tails_accessor: &RTA,
+    ) -> UrsaCryptoResult<RevocationRegistryDelta>
+    where
+        RTA: RevocationTailsAccessor,
+    {
+        trace!(
+            "Issuer::update_revocation_registry: >>> rev_reg: {:?}, max_cred_num: {:?}, issued: {:?}, revoked: {:?}",
+            rev_reg,
+            max_cred_num,
+            secret!(&issued),
+            secret!(&revoked)
+        );
+
+        let prev_acc = rev_reg.accum;
+        for rev_idx in issued.iter() {
+            let tail_id = Self::_get_index(max_cred_num, *rev_idx);
+            rev_tails_accessor.access_tail(tail_id, &mut |tail| {
+                rev_reg.accum = rev_reg.accum.add(tail).unwrap()
+            })?;
+        }
+        for rev_idx in revoked.iter() {
+            let tail_id = Self::_get_index(max_cred_num, *rev_idx);
+            rev_tails_accessor.access_tail(tail_id, &mut |tail| {
+                rev_reg.accum = rev_reg.accum.sub(tail).unwrap()
+            })?;
+        }
+
+        let rev_reg_delta = RevocationRegistryDelta {
+            prev_accum: Some(prev_acc),
+            accum: rev_reg.accum,
+            issued,
+            revoked,
+        };
+
+        trace!(
+            "Issuer::update_revocation_registry: <<< rev_reg_delta: {:?}",
             rev_reg_delta
         );
 
