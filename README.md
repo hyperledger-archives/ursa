@@ -37,12 +37,50 @@ Ursa is divided into two sub libraries: libursa and libzmix.
 Designed for cryptographic primitives like simple digital signatures, encryption
 schemes, and key exchange.
 
+### Supported Signatures
+
+- ECDSA
+  - Secp256k1
+- EdDSA
+  - Ed25519 (Curve25519 in Twisted Edwards Form)
+- Boneh Lynn Shachum (BLS) Signature
+  - Any Pairing friendly curves
+- Camenisch Lysyanskaya
+  - RSA based
+
+### Supported Key Agreement
+
+- ECDH
+  - Secp256k1
+  - X25519 (Curve25519 in Montgomery Form)
+
+### Symmetric Encryption
+
+- AES-CBC
+- AES-GCM
+- XCHACHA20-POLY1305
+
 ## Libzmix
 
 A generic way to create zero-knowledge proofs, proving statements
 about multiple cryptographic building blocks, containing signatures,
 commitments, and verifiable encryption. Libzmix uses many of the building blocks
 found in Libursa.
+
+### Supported Zero Knowledge Proof capabilities
+- Singature Proofs of Knowledge
+- Bulletproofs
+- Range proofs
+- Set Membership
+
+### Supported Signatures
+
+- Boneh Boyen Shachum (BBS+)
+  - Any Pairing friendly curves
+- Pointcheval Saunders
+  - Any pairing friendly curves
+- Groth
+  - Any Pairing friendly curves
 
 # Dependencies
 
