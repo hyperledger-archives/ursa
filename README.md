@@ -68,7 +68,7 @@ commitments, and verifiable encryption. Libzmix uses many of the building blocks
 found in Libursa.
 
 ### Supported Zero Knowledge Proof capabilities
-- Singature Proofs of Knowledge
+- Signature Proofs of Knowledge
 - Bulletproofs
 - Range proofs
 - Set Membership
