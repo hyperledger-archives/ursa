@@ -1,6 +1,6 @@
 [package]
 name = "ursa"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["Hyperledger Ursa Contributors"]
 description = "This is the shared crypto library for Hyperledger components."
 license = "Apache-2.0"
