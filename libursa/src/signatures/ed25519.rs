@@ -22,7 +22,7 @@ impl Ed25519Sha512 {
     pub fn ver_key_to_key_exchange(pk: &PublicKey) -> Result<PublicKey, CryptoError> {
         use curve25519_dalek::edwards::CompressedEdwardsY;
 
-        // Verify its a valid public key
+        // Verify it's a valid public key
         PK::from_bytes(&pk[..]).map_err(|e| CryptoError::ParseError(e.to_string()))?;
         // PublicKey is a CompressedEdwardsY in dalek. So we decompress it to get the
         // EdwardsPoint which can then be used convert to the Montgomery Form.
