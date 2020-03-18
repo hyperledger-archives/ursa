@@ -36,8 +36,7 @@ impl KeyExchangeScheme for X25519Sha256 {
                 }
             },
             None => {
-                let mut rng =
-                    OsRng::new().map_err(|e| CryptoError::KeyGenError(e.msg.to_string()))?;
+                let mut rng = OsRng::default();
                 let sk = StaticSecret::new(&mut rng);
                 let pk = X25519PublicKey::from(&sk);
                 (pk, sk)

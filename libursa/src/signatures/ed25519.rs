@@ -125,8 +125,7 @@ impl SignatureScheme for Ed25519Sha512 {
                     .map_err(|e| CryptoError::KeyGenError(e.to_string()))?,
             },
             None => {
-                let mut rng =
-                    OsRng::new().map_err(|e| CryptoError::KeyGenError(e.msg.to_string()))?;
+                let mut rng = OsRng::default();
                 Keypair::generate(&mut rng)
             }
         };
