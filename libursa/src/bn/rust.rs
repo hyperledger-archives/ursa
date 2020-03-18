@@ -72,7 +72,7 @@ impl BigNumber {
     ) -> UrsaCryptoResult<BigNumber> {
         let mut res;
         let mut iteration = 0;
-        let mut rng = OsRng::new()?;
+        let mut rng = OsRng::default();
         let mut start = match start.bn.to_biguint() {
             Some(bn) => bn,
             None => {
@@ -127,13 +127,13 @@ impl BigNumber {
     }
 
     pub fn rand(size: usize) -> UrsaCryptoResult<BigNumber> {
-        let mut rng = OsRng::new()?;
-        let res = rng.gen_biguint(size).to_bigint();
+        let mut rng = OsRng::default();
+        let res = rng.gen_biguint(size as u64).to_bigint();
         Ok(BigNumber { bn: res.unwrap() })
     }
 
     pub fn rand_range(&self) -> UrsaCryptoResult<BigNumber> {
-        let mut rng = OsRng::new()?;
+        let mut rng = OsRng::default();
         let res = rng.gen_bigint_range(&BigInt::zero(), &self.bn);
         match res.to_bigint() {
             Some(bn) => Ok(BigNumber { bn }),
@@ -356,7 +356,7 @@ impl BigNumber {
 
         match a.bn.to_u64() {
             Some(num) => Ok(BigNumber {
-                bn: self.bn.pow(num),
+                bn: self.bn.clone().pow(num),
             }),
             None => Err(UrsaCryptoError::from_msg(
                 UrsaCryptoErrorKind::InvalidState,

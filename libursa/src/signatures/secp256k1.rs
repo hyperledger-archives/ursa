@@ -161,10 +161,8 @@ mod ecdsa_secp256k1 {
                     }
                 },
                 None => {
-                    let mut rng =
-                        OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
                     let mut s = [0u8; PRIVATE_KEY_SIZE];
-                    rng.fill_bytes(&mut s);
+                    OsRng.fill_bytes(&mut s);
                     let k = D::digest(&s);
                     s.zeroize();
                     libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
@@ -278,8 +276,7 @@ mod ecdsa_secp256k1 {
                     KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk),
                 },
                 None => {
-                    let mut rng =
-                        OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
+                    let mut rng = OsRng::default();
                     rng.fill_bytes(&mut sk);
                     let d = D::digest(&sk[..]);
                     sk.clone_from_slice(d.as_slice());

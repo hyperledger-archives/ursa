@@ -9,8 +9,7 @@ pub mod symm;
 // Helpful for generating bytes using the operating system random number generator
 pub fn random_vec(bytes: usize) -> Result<Vec<u8>, Error> {
     let mut value = vec![0u8; bytes];
-    let mut rng = OsRng::new().map_err(|_| Error)?;
-    rng.fill_bytes(value.as_mut_slice());
+    OsRng.fill_bytes(value.as_mut_slice());
     Ok(value)
 }
 

@@ -162,9 +162,7 @@ mod ecdh_secp256k1 {
                     KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk),
                 },
                 None => {
-                    let mut rng =
-                        OsRng::new().map_err(|err| CryptoError::KeyGenError(format!("{}", err)))?;
-                    rng.fill_bytes(&mut sk);
+                    OsRng.fill_bytes(&mut sk);
                     let d = D::digest(&sk[..]);
                     sk.clone_from_slice(d.as_slice());
                 }
