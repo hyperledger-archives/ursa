@@ -17,6 +17,7 @@ use pair::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::Hash;
+use std::iter::FromIterator;
 
 /// Creates random nonce
 ///
@@ -681,12 +682,10 @@ impl Witness {
 
         let mut issued = if issuance_by_default {
             (1..=max_cred_num)
-                .collect::<HashSet<u32>>()
-                .difference(&rev_reg_delta.revoked)
-                .cloned()
-                .collect::<HashSet<u32>>()
+                .filter(|idx| !rev_reg_delta.revoked.contains(idx))
+                .collect::<BTreeSet<u32>>()
         } else {
-            rev_reg_delta.issued.clone()
+            BTreeSet::from_iter(rev_reg_delta.issued.iter().cloned())
         };
 
         issued.remove(&rev_idx);
