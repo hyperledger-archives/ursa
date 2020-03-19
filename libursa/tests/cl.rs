@@ -6,7 +6,7 @@ extern crate ursa;
 #[cfg(any(feature = "cl", feature = "cl_native"))]
 mod cl_tests {
     use serde::{Deserialize, Serialize};
-    use std::collections::HashSet;
+    use std::collections::{BTreeSet, HashSet};
     use ursa::cl::issuer::Issuer;
     use ursa::cl::prover::Prover;
     use ursa::cl::verifier::Verifier;
@@ -3706,12 +3706,12 @@ mod cl_tests {
             assert!(proof_verifier.verify(&proof, &nonce).unwrap());
 
             // 14. Issuer revokes credential
-            let mut revoked = HashSet::new();
+            let mut revoked = BTreeSet::new();
             revoked.insert(rev_idx);
             Issuer::update_revocation_registry(
                 &mut rev_reg,
                 max_cred_num,
-                HashSet::new(),
+                BTreeSet::new(),
                 revoked.clone(),
                 &simple_tail_accessor,
             )
@@ -3737,7 +3737,7 @@ mod cl_tests {
                 &mut rev_reg,
                 max_cred_num,
                 revoked.clone(),
-                HashSet::new(),
+                BTreeSet::new(),
                 &simple_tail_accessor,
             )
             .unwrap();

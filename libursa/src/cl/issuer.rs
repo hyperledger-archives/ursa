@@ -7,7 +7,8 @@ use errors::prelude::*;
 use pair::*;
 use utils::commitment::get_pedersen_commitment;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::iter::FromIterator;
 
 /// Trust source that provides credentials to prover.
 pub struct Issuer {}
@@ -718,16 +719,16 @@ impl Issuer {
     ///                                        &mut rev_reg,
     ///                                        &rev_key_priv,
     ///                                         &simple_tail_accessor).unwrap();
-    /// let mut issued = HashSet::new();
+    /// let mut issued = BTreeSet::new();
     /// issued.insert(rev_idx);
-    /// let revoked = HashSet::new();
+    /// let revoked = BTreeSet::new();
     /// Issuer::update_revocation_registry(&mut rev_reg, max_cred_num, issued, revoked, &simple_tail_accessor).unwrap();
     /// ```
     pub fn update_revocation_registry<RTA>(
         rev_reg: &mut RevocationRegistry,
         max_cred_num: u32,
-        issued: HashSet<u32>,
-        revoked: HashSet<u32>,
+        issued: BTreeSet<u32>,
+        revoked: BTreeSet<u32>,
         rev_tails_accessor: &RTA,
     ) -> UrsaCryptoResult<RevocationRegistryDelta>
     where
@@ -758,8 +759,8 @@ impl Issuer {
         let rev_reg_delta = RevocationRegistryDelta {
             prev_accum: Some(prev_acc),
             accum: rev_reg.accum,
-            issued,
-            revoked,
+            issued: HashSet::from_iter(issued),
+            revoked: HashSet::from_iter(revoked),
         };
 
         trace!(
