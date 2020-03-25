@@ -385,6 +385,19 @@ pub struct CredentialKeyCorrectnessProof {
     xr_cap: Vec<(String, BigNumber)>,
 }
 
+impl CredentialKeyCorrectnessProof {
+    pub fn try_clone(&self) -> UrsaCryptoResult<CredentialKeyCorrectnessProof> {
+        Ok(CredentialKeyCorrectnessProof {
+            c: self.c.try_clone()?,
+            xz_cap: self.xz_cap.try_clone()?,
+            xr_cap: self.xr_cap.iter().try_fold(vec![], |mut acc, (s, bn)| {
+                acc.push((s.clone(), bn.try_clone()?));
+                UrsaCryptoResult::Ok(acc)
+            })?,
+        })
+    }
+}
+
 /// `Revocation Public Key` is used to verify that credential was'nt revoked by Issuer.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
