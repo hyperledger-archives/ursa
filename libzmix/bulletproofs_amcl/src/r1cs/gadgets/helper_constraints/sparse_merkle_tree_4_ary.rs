@@ -12,14 +12,14 @@ use crate::r1cs::gadgets::merkle_tree_hash::{
 };
 use crate::utils::hash_db::HashDb;
 
-pub type DBVal_4_ary = [FieldElement; 4];
-pub type ProofNode_4_ary = [FieldElement; 3];
+pub type DbVal4ary = [FieldElement; 4];
+pub type ProofNode4ary = [FieldElement; 3];
 
 // Consider usage of SHA-2/3 as a hash function as well for testing. Testing constraint system will
 // be hard with SHA as don't have constraints for now.
 /// Sparse merkle tree with arity 4, .i.e each node has 4 children.
 #[derive(Clone, Debug)]
-pub struct VanillaSparseMerkleTree_4<'a, MTH: Arity4MerkleTreeHash> {
+pub struct VanillaSparseMerkleTree4<'a, MTH: Arity4MerkleTreeHash> {
     pub depth: usize,
     hash_func: &'a MTH,
     pub root: FieldElement,
@@ -27,11 +27,11 @@ pub struct VanillaSparseMerkleTree_4<'a, MTH: Arity4MerkleTreeHash> {
 
 /// For details here of sparse merkle trees, check here https://ethresear.ch/t/optimizing-sparse-merkle-trees/3751
 
-// The logic of `VanillaSparseMerkleTree_4` and `VanillaSparseMerkleTree_8` is same. Only the arity
+// The logic of `VanillaSparseMerkleTree4` and `VanillaSparseMerkleTree8` is same. Only the arity
 // and hence the hash function differs. The code is still kept separate for clarity. If code is to be
 // combined then a generic implementation will take the hash and database as type parameters.
 
-impl<'a, MTH> VanillaSparseMerkleTree_4<'a, MTH>
+impl<'a, MTH> VanillaSparseMerkleTree4<'a, MTH>
 where
     MTH: Arity4MerkleTreeHash,
 {
@@ -40,8 +40,8 @@ where
     pub fn new(
         hash_func: &'a MTH,
         depth: usize,
-        hash_db: &mut dyn HashDb<DBVal_4_ary>,
-    ) -> Result<VanillaSparseMerkleTree_4<'a, MTH>, BulletproofError> {
+        hash_db: &mut dyn HashDb<DbVal4ary>,
+    ) -> Result<VanillaSparseMerkleTree4<'a, MTH>, BulletproofError> {
         // Hash for the each level of the tree when all leaves are same (choosing zero here arbitrarily).
         // Since all leaves are same, all nodes at the same level will have the same value.
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
@@ -50,7 +50,7 @@ where
             let prev = &empty_tree_hashes[i - 1];
             let input: Vec<FieldElement> = (0..4).map(|_| prev.clone()).collect();
             // Hash all 4 children at once
-            let mut val: DBVal_4_ary = [
+            let mut val: DbVal4ary = [
                 FieldElement::zero(),
                 FieldElement::zero(),
                 FieldElement::zero(),
@@ -66,7 +66,7 @@ where
 
         let root = empty_tree_hashes[depth].clone();
 
-        Ok(VanillaSparseMerkleTree_4 {
+        Ok(VanillaSparseMerkleTree4 {
             depth,
             hash_func,
             root,
@@ -78,11 +78,11 @@ where
         &mut self,
         idx: &FieldElement,
         val: FieldElement,
-        hash_db: &mut dyn HashDb<DBVal_4_ary>,
+        hash_db: &mut dyn HashDb<DbVal4ary>,
     ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key. siblings are the the sibling nodes at each level from
         // the root to the leaf for the `idx`
-        let mut siblings_wrap = Some(Vec::<ProofNode_4_ary>::new());
+        let mut siblings_wrap = Some(Vec::<ProofNode4ary>::new());
         self.get(&idx, &mut siblings_wrap, hash_db)?;
         let mut siblings = siblings_wrap.unwrap();
 
@@ -98,7 +98,7 @@ where
             // Insert the value at the position determined by the base 4 digit
             sibling_elem.insert(d as usize, cur_val);
 
-            let mut db_val: DBVal_4_ary = [
+            let mut db_val: DbVal4ary = [
                 FieldElement::zero(),
                 FieldElement::zero(),
                 FieldElement::zero(),
@@ -119,14 +119,14 @@ where
     pub fn get(
         &self,
         idx: &FieldElement,
-        proof: &mut Option<Vec<ProofNode_4_ary>>,
-        hash_db: &dyn HashDb<DBVal_4_ary>,
+        proof: &mut Option<Vec<ProofNode4ary>>,
+        hash_db: &dyn HashDb<DbVal4ary>,
     ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
         // TODO: more comments
         let need_proof = proof.is_some();
-        let mut proof_vec = Vec::<ProofNode_4_ary>::new();
+        let mut proof_vec = Vec::<ProofNode4ary>::new();
 
         let mut children;
         for d in path {
@@ -134,7 +134,7 @@ where
             children = hash_db.get(&k)?;
             cur_node = &children[d as usize];
             if need_proof {
-                let mut proof_node: ProofNode_4_ary = [
+                let mut proof_node: ProofNode4ary = [
                     FieldElement::zero(),
                     FieldElement::zero(),
                     FieldElement::zero(),
@@ -165,7 +165,7 @@ where
         &self,
         idx: &FieldElement,
         val: &FieldElement,
-        proof: &[ProofNode_4_ary],
+        proof: &[ProofNode4ary],
         root: Option<&FieldElement>,
     ) -> Result<bool, BulletproofError> {
         let mut path = Self::leaf_index_to_path(&idx, self.depth);
@@ -193,8 +193,8 @@ where
 
     fn update_db_with_key_val(
         key: &FieldElement,
-        val: DBVal_4_ary,
-        hash_db: &mut dyn HashDb<DBVal_4_ary>,
+        val: DbVal4ary,
+        hash_db: &mut dyn HashDb<DbVal4ary>,
     ) {
         hash_db.insert(key.to_bytes(), val);
     }
@@ -374,14 +374,14 @@ pub fn vanilla_merkle_merkle_tree_4_verif_gadget<
 mod tests {
     use super::*;
     use crate::r1cs::gadgets::helper_constraints::poseidon::{PoseidonParams, SboxType};
-    use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash_4;
+    use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash4;
     use crate::utils::hash_db::InMemoryHashDb;
 
     #[test]
     fn test_vanilla_sparse_merkle_tree_4() {
         let width = 5;
 
-        let mut db = InMemoryHashDb::<DBVal_4_ary>::new();
+        let mut db = InMemoryHashDb::<DbVal4ary>::new();
 
         #[cfg(feature = "bls381")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
@@ -398,11 +398,11 @@ mod tests {
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         let tree_depth = 17;
-        let hash_func = PoseidonHash_4 {
+        let hash_func = PoseidonHash4 {
             params: &hash_params,
             sbox: &SboxType::Quint,
         };
-        let mut tree = VanillaSparseMerkleTree_4::new(&hash_func, tree_depth, &mut db).unwrap();
+        let mut tree = VanillaSparseMerkleTree4::new(&hash_func, tree_depth, &mut db).unwrap();
 
         for i in 1..10 {
             let s = FieldElement::from(i as u64);
@@ -412,7 +412,7 @@ mod tests {
         for i in 1..10 {
             let s = FieldElement::from(i as u32);
             assert_eq!(s, tree.get(&s, &mut None, &db).unwrap());
-            let mut proof_vec = Vec::<ProofNode_4_ary>::new();
+            let mut proof_vec = Vec::<ProofNode4ary>::new();
             let mut proof = Some(proof_vec);
             assert_eq!(s, tree.get(&s, &mut proof, &db).unwrap());
             proof_vec = proof.unwrap();

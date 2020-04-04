@@ -15,8 +15,8 @@ mod tests {
     #[test]
     fn test_2_factors_r1cs() {
         // Prove knowledge of `p` and `q` such that given an `r`, `p * q = r`
-        let G: G1Vector = get_generators("G", 8).into();
-        let H: G1Vector = get_generators("H", 8).into();
+        let big_g: G1Vector = get_generators("G", 8).into();
+        let big_h: G1Vector = get_generators("H", 8).into();
         let g = G1::from_msg_hash("g".as_bytes());
         let h = G1::from_msg_hash("h".as_bytes());
 
@@ -48,7 +48,7 @@ mod tests {
                 comms.push(com_q);
             }
 
-            let proof = prover.prove(&G, &H).unwrap();
+            let proof = prover.prove(&big_g, &big_h).unwrap();
 
             (proof, comms)
         };
@@ -65,14 +65,14 @@ mod tests {
             verifier.constrain(o - lc);
         }
 
-        assert!(verifier.verify(&proof, &g, &h, &G, &H).is_ok());
+        assert!(verifier.verify(&proof, &g, &h, &big_g, &big_h).is_ok());
     }
 
     #[test]
     fn test_factor_r1cs() {
         // Prove knowledge of `p`, `q`, `r` and `s` such that given an `s`, `p * q * r = s`
-        let G: G1Vector = get_generators("G", 8).into();
-        let H: G1Vector = get_generators("H", 8).into();
+        let big_g: G1Vector = get_generators("G", 8).into();
+        let big_h: G1Vector = get_generators("H", 8).into();
         let g = G1::from_msg_hash("g".as_bytes());
         let h = G1::from_msg_hash("h".as_bytes());
 
@@ -109,7 +109,7 @@ mod tests {
                 comms.push(com_r);
             }
 
-            let proof = prover.prove(&G, &H).unwrap();
+            let proof = prover.prove(&big_g, &big_h).unwrap();
 
             (proof, comms)
         };
@@ -128,6 +128,6 @@ mod tests {
             verifier.constrain(o2 - lc);
         }
 
-        assert!(verifier.verify(&proof, &g, &h, &G, &H).is_ok());
+        assert!(verifier.verify(&proof, &g, &h, &big_g, &big_h).is_ok());
     }
 }

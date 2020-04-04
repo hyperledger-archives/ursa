@@ -3,7 +3,7 @@ mod tests {
     extern crate merlin;
     use bulletproofs_amcl as bulletproofs;
 
-    use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Prover, Variable, Verifier};
+    use bulletproofs::r1cs::{Prover, Verifier};
 
     use bulletproofs::r1cs::gadgets::bound_check::{prove_bounded_num, verify_bounded_num};
 
@@ -18,7 +18,6 @@ mod tests {
         prove_set_non_membership, verify_set_non_membership,
     };
     use merlin::Transcript;
-    use rand::rngs::OsRng;
     use rand::Rng;
 
     #[test]
@@ -40,8 +39,8 @@ mod tests {
         let max_3 = 1090;
         let v_3 = rng.gen_range(min_3, max_3);
 
-        let G: G1Vector = get_generators("G", 512).into();
-        let H: G1Vector = get_generators("H", 512).into();
+        let big_g: G1Vector = get_generators("G", 512).into();
+        let big_h: G1Vector = get_generators("H", 512).into();
         let g = G1::from_msg_hash("g".as_bytes());
         let h = G1::from_msg_hash("h".as_bytes());
 
@@ -83,7 +82,7 @@ mod tests {
         )
         .unwrap();
 
-        let proof = prover.prove(&G, &H).unwrap();
+        let proof = prover.prove(&big_g, &big_h).unwrap();
 
         let mut verifier_transcript = Transcript::new(transcript_label);
         let mut verifier = Verifier::new(&mut verifier_transcript);
@@ -92,7 +91,7 @@ mod tests {
         verify_bounded_num(min_2, max_2, max_bits_in_val, comms_2, &mut verifier).unwrap();
         verify_bounded_num(min_3, max_3, max_bits_in_val, comms_3, &mut verifier).unwrap();
 
-        assert!(verifier.verify(&proof, &g, &h, &G, &H).is_ok())
+        assert!(verifier.verify(&proof, &g, &h, &big_g, &big_h).is_ok())
     }
 
     #[test]
@@ -119,8 +118,8 @@ mod tests {
         let present_value = FieldElement::from(125);
         let absent_value = FieldElement::from(10);
 
-        let G: G1Vector = get_generators("G", 256).into();
-        let H: G1Vector = get_generators("H", 256).into();
+        let big_g: G1Vector = get_generators("G", 256).into();
+        let big_h: G1Vector = get_generators("H", 256).into();
         let g = G1::from_msg_hash("g".as_bytes());
         let h = G1::from_msg_hash("h".as_bytes());
 
@@ -158,7 +157,7 @@ mod tests {
         )
         .unwrap();
 
-        let proof = prover.prove(&G, &H).unwrap();
+        let proof = prover.prove(&big_g, &big_h).unwrap();
 
         let mut verifier_transcript = Transcript::new(transcript_label);
         let mut verifier = Verifier::new(&mut verifier_transcript);
@@ -169,6 +168,6 @@ mod tests {
 
         verify_set_non_membership(set.as_slice(), comms_3, &mut verifier).unwrap();
 
-        assert!(verifier.verify(&proof, &g, &h, &G, &H).is_ok())
+        assert!(verifier.verify(&proof, &g, &h, &big_g, &big_h).is_ok())
     }
 }

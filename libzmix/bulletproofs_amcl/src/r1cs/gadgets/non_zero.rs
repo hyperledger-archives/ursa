@@ -91,9 +91,6 @@ mod tests {
 
     #[test]
     fn test_non_zero_gadget() {
-        use rand::rngs::OsRng;
-        use rand::Rng;
-
         let mut rng = rand::thread_rng();
 
         let value = FieldElement::random();

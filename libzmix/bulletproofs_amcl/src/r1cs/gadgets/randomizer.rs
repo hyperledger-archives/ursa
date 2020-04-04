@@ -19,8 +19,8 @@ use super::helper_constraints::poseidon::{
     PoseidonParams, Poseidon_hash_4, Poseidon_hash_4_constraints, SboxType,
 };
 use super::helper_constraints::sparse_merkle_tree_4_ary::{
-    vanilla_merkle_merkle_tree_4_verif_gadget, DBVal_4_ary, ProofNode_4_ary,
-    VanillaSparseMerkleTree_4,
+    vanilla_merkle_merkle_tree_4_verif_gadget, DbVal4ary, ProofNode4ary,
+    VanillaSparseMerkleTree4,
 };
 
 use crate::errors::R1CSError;
@@ -89,8 +89,8 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     depth: usize,
     orig_root: Variable, // original root is hidden since its correlating across several proofs
-    new_tree: &mut VanillaSparseMerkleTree_4,
-    new_db: &mut HashDb<DBVal_4_ary>,
+    new_tree: &mut VanillaSparseMerkleTree4,
+    new_db: &mut HashDb<DbVal4ary>,
     indices: Vec<FieldElement>, // For future: `indices` can be made hidden too
     orig_vals: Vec<Variable>,   // values of the original tree
     mut orig_vals_proofs: Vec<Vec<Variable>>, // merkle proofs for values of the original tree
@@ -110,7 +110,7 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
         let idx = &indices[i];
         let orig_vals_proof = &mut orig_vals_proofs[i];
 
-        let mut path_for_update = VanillaSparseMerkleTree_4::leaf_index_to_path(idx, depth);
+        let mut path_for_update = VanillaSparseMerkleTree4::leaf_index_to_path(idx, depth);
         let path_for_get = path_for_update.clone(); // Path from root to leaf
         path_for_update.reverse(); // Path from leaf to root
 
@@ -159,7 +159,7 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
         let idx = &indices[i];
         let orig_val = orig_vals[i];
 
-        let mut path = VanillaSparseMerkleTree_4::leaf_index_to_path(idx, depth);
+        let mut path = VanillaSparseMerkleTree4::leaf_index_to_path(idx, depth);
 
         let mut orig_val_lc = LinearCombination::from(orig_val);
         // Move in reverse order in path, i.e. leaf to root, updating `new_tree_modified_nodes` on nodes from leaf leading to root.
@@ -198,10 +198,10 @@ pub fn randomizer_gadget<CS: ConstraintSystem>(
 
 /// XXX ORIGINAL TREE AS ARGUMENT SEEMS ODD. BETTER PASS THE PROOF.
 pub fn gen_proof_for_randomizer(
-    orig_tree: &VanillaSparseMerkleTree_4,
-    orig_db: &HashDb<DBVal_4_ary>,
-    new_tree: &mut VanillaSparseMerkleTree_4,
-    new_db: &mut HashDb<DBVal_4_ary>,
+    orig_tree: &VanillaSparseMerkleTree4,
+    orig_db: &HashDb<DbVal4ary>,
+    new_tree: &mut VanillaSparseMerkleTree4,
+    new_db: &mut HashDb<DbVal4ary>,
     modified_indices: &[FieldElement],
     orig_vals: &[FieldElement],
     tree_depth: usize,
@@ -228,7 +228,7 @@ pub fn gen_proof_for_randomizer(
 
     //for (i, v) in modified_indices {
     for i in 0..modified_indices.len() {
-        let mut merkle_proof_vec = Vec::<ProofNode_4_ary>::new();
+        let mut merkle_proof_vec = Vec::<ProofNode4ary>::new();
         let mut merkle_proof = Some(merkle_proof_vec);
         let _v = orig_tree.get(&modified_indices[i], &mut merkle_proof, orig_db)?;
         assert_eq!(_v, orig_vals[i]);
@@ -280,8 +280,8 @@ pub fn gen_proof_for_randomizer(
 }
 
 pub fn verify_proof_for_randomizer(
-    new_tree: &mut VanillaSparseMerkleTree_4,
-    new_db: &mut HashDb<DBVal_4_ary>,
+    new_tree: &mut VanillaSparseMerkleTree4,
+    new_db: &mut HashDb<DbVal4ary>,
     modified_indices: &[FieldElement], // For future: `modified_indices` can be made hidden too
     tree_depth: usize,
     hash_params: &PoseidonParams,
@@ -349,7 +349,7 @@ mod tests {
     fn test_randomizer() {
         let width = 5;
 
-        let mut orig_db = InMemoryHashDb::<DBVal_4_ary>::new();
+        let mut orig_db = InMemoryHashDb::<DbVal4ary>::new();
 
         #[cfg(feature = "bls381")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
@@ -380,7 +380,7 @@ mod tests {
             println!("Will modify {} entries", indices.len());
         }
 
-        let mut orig_tree = VanillaSparseMerkleTree_4::new(&hash_params, tree_depth, &mut orig_db);
+        let mut orig_tree = VanillaSparseMerkleTree4::new(&hash_params, tree_depth, &mut orig_db);
         for i in 0..data_size {
             // Next line is a temporary workaround
             let idx = FieldElement::from(i as u64);

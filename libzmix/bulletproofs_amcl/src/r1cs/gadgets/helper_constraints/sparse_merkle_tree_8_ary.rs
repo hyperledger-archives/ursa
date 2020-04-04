@@ -12,22 +12,22 @@ use crate::utils::hash_db::HashDb;
 
 const ARITY: usize = 8;
 
-pub type DBVal_8_ary = [FieldElement; ARITY];
-pub type ProofNode_8_ary = [FieldElement; ARITY - 1];
+pub type DbVal8ary = [FieldElement; ARITY];
+pub type ProofNode8ary = [FieldElement; ARITY - 1];
 
-// The logic of `VanillaSparseMerkleTree_4` and `VanillaSparseMerkleTree_8` is same. Only the arity
+// The logic of `VanillaSparseMerkleTree4` and `VanillaSparseMerkleTree8` is same. Only the arity
 // and hence the hash function differs. The code is still kept separate for clarity. If code is to be
 // combined then a generic implementation will take the hash and database as type parameters.
 
 /// Sparse merkle tree with arity 8, .i.e each node has 8 children.
 #[derive(Clone, Debug)]
-pub struct VanillaSparseMerkleTree_8<'a, MTH: Arity8MerkleTreeHash> {
+pub struct VanillaSparseMerkleTree8<'a, MTH: Arity8MerkleTreeHash> {
     pub depth: usize,
     hash_func: &'a MTH,
     pub root: FieldElement,
 }
 
-impl<'a, MTH> VanillaSparseMerkleTree_8<'a, MTH>
+impl<'a, MTH> VanillaSparseMerkleTree8<'a, MTH>
 where
     MTH: Arity8MerkleTreeHash,
 {
@@ -35,14 +35,14 @@ where
     pub fn new(
         hash_func: &'a MTH,
         depth: usize,
-        hash_db: &mut dyn HashDb<DBVal_8_ary>,
-    ) -> Result<VanillaSparseMerkleTree_8<'a, MTH>, BulletproofError> {
+        hash_db: &mut dyn HashDb<DbVal8ary>,
+    ) -> Result<VanillaSparseMerkleTree8<'a, MTH>, BulletproofError> {
         let mut empty_tree_hashes: Vec<FieldElement> = vec![];
         empty_tree_hashes.push(FieldElement::zero());
         for i in 1..=depth {
             let prev = &empty_tree_hashes[i - 1];
             let inp: Vec<FieldElement> = (0..ARITY).map(|_| prev.clone()).collect();
-            let mut input: DBVal_8_ary = [
+            let mut input: DbVal8ary = [
                 FieldElement::zero(),
                 FieldElement::zero(),
                 FieldElement::zero(),
@@ -63,7 +63,7 @@ where
 
         let root = empty_tree_hashes[depth].clone();
 
-        Ok(VanillaSparseMerkleTree_8 {
+        Ok(VanillaSparseMerkleTree8 {
             depth,
             hash_func,
             root,
@@ -75,10 +75,10 @@ where
         &mut self,
         idx: &FieldElement,
         val: FieldElement,
-        hash_db: &mut dyn HashDb<DBVal_8_ary>,
+        hash_db: &mut dyn HashDb<DbVal8ary>,
     ) -> Result<FieldElement, BulletproofError> {
         // Find path to insert the new key
-        let mut siblings_wrap = Some(Vec::<ProofNode_8_ary>::new());
+        let mut siblings_wrap = Some(Vec::<ProofNode8ary>::new());
         self.get(idx, &mut siblings_wrap, hash_db)?;
         let mut siblings = siblings_wrap.unwrap();
 
@@ -92,7 +92,7 @@ where
             let mut sibling = siblings.pop().unwrap().to_vec();
             // Insert the value at the position determined by the base 4 digit
             sibling.insert(d as usize, cur_val);
-            let mut input: DBVal_8_ary = [
+            let mut input: DbVal8ary = [
                 FieldElement::zero(),
                 FieldElement::zero(),
                 FieldElement::zero(),
@@ -117,14 +117,14 @@ where
     pub fn get(
         &self,
         idx: &FieldElement,
-        proof: &mut Option<Vec<ProofNode_8_ary>>,
-        hash_db: &dyn HashDb<DBVal_8_ary>,
+        proof: &mut Option<Vec<ProofNode8ary>>,
+        hash_db: &dyn HashDb<DbVal8ary>,
     ) -> Result<FieldElement, BulletproofError> {
         let path = Self::leaf_index_to_path(idx, self.depth);
         let mut cur_node = &self.root;
 
         let need_proof = proof.is_some();
-        let mut proof_vec = Vec::<ProofNode_8_ary>::new();
+        let mut proof_vec = Vec::<ProofNode8ary>::new();
 
         let mut children;
         for d in path {
@@ -141,7 +141,7 @@ where
                         j += 1;
                     }
                 }
-                let mut proof_nodes: ProofNode_8_ary = [
+                let mut proof_nodes: ProofNode8ary = [
                     FieldElement::zero(),
                     FieldElement::zero(),
                     FieldElement::zero(),
@@ -170,7 +170,7 @@ where
         &self,
         idx: &FieldElement,
         val: &FieldElement,
-        proof: &[ProofNode_8_ary],
+        proof: &[ProofNode8ary],
         root: Option<&FieldElement>,
     ) -> Result<bool, BulletproofError> {
         let mut path = Self::leaf_index_to_path(idx, self.depth);
@@ -198,8 +198,8 @@ where
 
     fn update_db_with_key_val(
         key: &FieldElement,
-        val: DBVal_8_ary,
-        hash_db: &mut dyn HashDb<DBVal_8_ary>,
+        val: DbVal8ary,
+        hash_db: &mut dyn HashDb<DbVal8ary>,
     ) {
         hash_db.insert(key.to_bytes(), val);
     }
@@ -473,15 +473,14 @@ pub fn vanilla_merkle_merkle_tree_8_verif_gadget<
 mod tests {
     use super::*;
     use crate::r1cs::gadgets::helper_constraints::poseidon::{PoseidonParams, SboxType};
-    use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash_8;
-    use crate::utils::get_generators;
+    use crate::r1cs::gadgets::merkle_tree_hash::PoseidonHash8;
     use crate::utils::hash_db::InMemoryHashDb;
 
     #[test]
     fn test_vanilla_sparse_merkle_tree_8() {
         let width = 9;
 
-        let mut db = InMemoryHashDb::<DBVal_8_ary>::new();
+        let mut db = InMemoryHashDb::<DbVal8ary>::new();
 
         #[cfg(feature = "bls381")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
@@ -498,11 +497,11 @@ mod tests {
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
 
         let tree_depth = 12;
-        let hash_func = PoseidonHash_8 {
+        let hash_func = PoseidonHash8 {
             params: &hash_params,
             sbox: &SboxType::Quint,
         };
-        let mut tree = VanillaSparseMerkleTree_8::new(&hash_func, tree_depth, &mut db).unwrap();
+        let mut tree = VanillaSparseMerkleTree8::new(&hash_func, tree_depth, &mut db).unwrap();
 
         for i in 1..20 {
             let s = FieldElement::from(i as u64);
@@ -512,7 +511,7 @@ mod tests {
         for i in 1..20 {
             let s = FieldElement::from(i as u32);
             assert_eq!(s, tree.get(&s, &mut None, &db).unwrap());
-            let mut proof_vec = Vec::<ProofNode_8_ary>::new();
+            let mut proof_vec = Vec::<ProofNode8ary>::new();
             let mut proof = Some(proof_vec);
             assert_eq!(s, tree.get(&s, &mut proof, &db).unwrap());
             proof_vec = proof.unwrap();

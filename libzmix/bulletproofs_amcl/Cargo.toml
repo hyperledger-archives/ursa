@@ -1,7 +1,7 @@
 [package]
 name = "bulletproofs_amcl"
 version = "0.2.0"
-authors = ["lovesh harchandani <lovesh.bond@gmail.com>"]
+authors = ["Hyperledger Ursa Maintainers"]
 edition = "2018"
 
 [dependencies]
@@ -16,7 +16,7 @@ criterion = "0.3"
 failure = "0.1"
 
 [dependencies.amcl_wrapper]
-version = "0.2.3"
+version = "0.3.5"
 default-features = false
 features = ["bls381"]
 

@@ -104,21 +104,21 @@ pub trait Arity8MerkleTreeHashConstraints {
     ) -> Result<LinearCombination, R1CSError>;
 }
 
-pub struct MiMC_2<'a> {
+pub struct Mimc2<'a> {
     pub constants: &'a [FieldElement],
 }
 
-pub struct PoseidonHash_2<'a> {
+pub struct PoseidonHash2<'a> {
     pub params: &'a PoseidonParams,
     pub sbox: &'a SboxType,
 }
 
-pub struct PoseidonHash_4<'a> {
+pub struct PoseidonHash4<'a> {
     pub params: &'a PoseidonParams,
     pub sbox: &'a SboxType,
 }
 
-pub struct PoseidonHash_8<'a> {
+pub struct PoseidonHash8<'a> {
     pub params: &'a PoseidonParams,
     pub sbox: &'a SboxType,
 }
@@ -130,27 +130,27 @@ pub struct PoseidonHashConstraints<'a> {
     capacity_const_var: Option<Variable>,
 }
 
-impl<'a> Arity2MerkleTreeHash for MiMC_2<'a> {
+impl<'a> Arity2MerkleTreeHash for Mimc2<'a> {
     fn hash(&self, inputs: Vec<FieldElement>) -> Result<FieldElement, BulletproofError> {
         Ok(mimc(&inputs[0], &inputs[1], self.constants))
     }
 }
 
-impl<'a> Arity2MerkleTreeHash for PoseidonHash_2<'a> {
+impl<'a> Arity2MerkleTreeHash for PoseidonHash2<'a> {
     fn hash(&self, inputs: Vec<FieldElement>) -> Result<FieldElement, BulletproofError> {
         Self::is_num_inputs_correct(&inputs)?;
         Poseidon_hash_2(inputs, &self.params, &self.sbox)
     }
 }
 
-impl<'a> Arity4MerkleTreeHash for PoseidonHash_4<'a> {
+impl<'a> Arity4MerkleTreeHash for PoseidonHash4<'a> {
     fn hash(&self, inputs: Vec<FieldElement>) -> Result<FieldElement, BulletproofError> {
         Self::is_num_inputs_correct(&inputs)?;
         Poseidon_hash_4(inputs, &self.params, &self.sbox)
     }
 }
 
-impl<'a> Arity8MerkleTreeHash for PoseidonHash_8<'a> {
+impl<'a> Arity8MerkleTreeHash for PoseidonHash8<'a> {
     fn hash(&self, inputs: Vec<FieldElement>) -> Result<FieldElement, BulletproofError> {
         Self::is_num_inputs_correct(&inputs)?;
         Poseidon_hash_8(inputs, &self.params, &self.sbox)
