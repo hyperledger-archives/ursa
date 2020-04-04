@@ -670,7 +670,7 @@ impl Issuer {
     ///
     /// # Example
     /// ```
-    /// use std::collections::HashSet;
+    /// use std::collections::BTreeSet;
     /// use ursa::cl::{new_nonce, SimpleTailsAccessor};
     /// use ursa::cl::issuer::Issuer;
     /// use ursa::cl::prover::Prover;
