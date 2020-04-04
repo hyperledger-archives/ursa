@@ -379,7 +379,7 @@ mod tests {
     }
 
     #[test]
-    fn test_PoK_multiple_sigs_with_same_msg() {
+    fn test_pok_multiple_sigs_with_same_msg() {
         // Prove knowledge of multiple signatures and the equality of a specific message under both signatures.
         // Knowledge of 2 signatures and their corresponding messages is being proven.
         // 2nd message in the 1st signature and 5th message in the 2nd signature are to be proven equal without revealing them

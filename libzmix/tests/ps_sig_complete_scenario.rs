@@ -10,7 +10,7 @@ use zmix::signatures::ps::keys::Params;
 use zmix::signatures::ps::prelude::*;
 
 #[test]
-fn test_PS_sig_and_proof_of_knowledge_of_sig() {
+fn test_ps_sig_and_proof_of_knowledge_of_sig() {
     // For PS signature
     // A complete scenario showing requesting of signature, creation of signature, verification of signature,
     // proving knowledge of signature and verifying this proof of knowledge.

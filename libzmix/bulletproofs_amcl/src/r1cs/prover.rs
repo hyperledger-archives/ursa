@@ -190,101 +190,101 @@ impl<'a, 'b> Prover<'a, 'b> {
     }
 
     // This is used only for debugging
-    #[cfg(test)]
-    fn get_weight_matrices(
-        &self,
-    ) -> (
-        Vec<FieldElementVector>,
-        Vec<FieldElementVector>,
-        Vec<FieldElementVector>,
-        Vec<FieldElementVector>,
-    ) {
-        let n = self.a_L.len();
-        let m = self.v.len();
-        let q = self.constraints.len();
-        let mut WL = vec![FieldElementVector::new(n); q];
-        let mut WR = vec![FieldElementVector::new(n); q];
-        let mut WO = vec![FieldElementVector::new(n); q];
-        let mut WV = vec![FieldElementVector::new(m); q];
-
-        for (r, lc) in self.constraints.iter().enumerate() {
-            for (var, coeff) in &lc.terms {
-                match var {
-                    Variable::MultiplierLeft(i) => {
-                        let (i, coeff) = (*i, coeff.clone());
-                        WL[r][i] = coeff;
-                    }
-                    Variable::MultiplierRight(i) => {
-                        let (i, coeff) = (*i, coeff.clone());
-                        WR[r][i] = coeff;
-                    }
-                    Variable::MultiplierOutput(i) => {
-                        let (i, coeff) = (*i, coeff.clone());
-                        WO[r][i] = coeff;
-                    }
-                    Variable::Committed(i) => {
-                        let (i, coeff) = (*i, coeff.clone());
-                        WV[r][i] = coeff;
-                    }
-                    Variable::One() => {
-                        // The prover doesn't need to handle constant terms
-                    }
-                }
-            }
-        }
-
-        (WL, WR, WO, WV)
-    }
+    // #[cfg(test)]
+    // fn get_weight_matrices(
+    //     &self,
+    // ) -> (
+    //     Vec<FieldElementVector>,
+    //     Vec<FieldElementVector>,
+    //     Vec<FieldElementVector>,
+    //     Vec<FieldElementVector>,
+    // ) {
+    //     let n = self.a_L.len();
+    //     let m = self.v.len();
+    //     let q = self.constraints.len();
+    //     let mut WL = vec![FieldElementVector::new(n); q];
+    //     let mut WR = vec![FieldElementVector::new(n); q];
+    //     let mut WO = vec![FieldElementVector::new(n); q];
+    //     let mut WV = vec![FieldElementVector::new(m); q];
+    //
+    //     for (r, lc) in self.constraints.iter().enumerate() {
+    //         for (var, coeff) in &lc.terms {
+    //             match var {
+    //                 Variable::MultiplierLeft(i) => {
+    //                     let (i, coeff) = (*i, coeff.clone());
+    //                     WL[r][i] = coeff;
+    //                 }
+    //                 Variable::MultiplierRight(i) => {
+    //                     let (i, coeff) = (*i, coeff.clone());
+    //                     WR[r][i] = coeff;
+    //                 }
+    //                 Variable::MultiplierOutput(i) => {
+    //                     let (i, coeff) = (*i, coeff.clone());
+    //                     WO[r][i] = coeff;
+    //                 }
+    //                 Variable::Committed(i) => {
+    //                     let (i, coeff) = (*i, coeff.clone());
+    //                     WV[r][i] = coeff;
+    //                 }
+    //                 Variable::One() => {
+    //                     // The prover doesn't need to handle constant terms
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     (WL, WR, WO, WV)
+    // }
 
     // This is used only for debugging
-    #[cfg(test)]
-    fn flattened_constraints_elaborated(
-        &self,
-        z: &FieldElement,
-    ) -> (
-        FieldElementVector,
-        FieldElementVector,
-        FieldElementVector,
-        FieldElementVector,
-    ) {
-        use amcl_wrapper::field_elem::multiply_row_vector_with_matrix;
-
-        let (WL, WR, WO, WV) = self.get_weight_matrices();
-
-        /*println!("Left Weight matrix");
-        util::print_2d_matrix(&WL);
-        println!("Right Weight matrix");
-        util::print_2d_matrix(&WR);
-        println!("Out Weight matrix");
-        util::print_2d_matrix(&WO);
-        println!("Comm Weight matrix");
-        util::print_2d_matrix(&WV);*/
-
-        let q = self.constraints.len();
-        let z_exp: FieldElementVector = FieldElementVector::new_vandermonde_vector(z, q + 1)
-            .into_iter()
-            .skip(1)
-            .collect::<Vec<_>>()
-            .into();
-
-        let minus_z_exp: FieldElementVector = z_exp
-            .iter()
-            .map(|e| (*e).negation())
-            .collect::<Vec<_>>()
-            .into();
-        let wL = multiply_row_vector_with_matrix(&z_exp, &WL).unwrap();
-        let wR = multiply_row_vector_with_matrix(&z_exp, &WR).unwrap();
-        let wO = multiply_row_vector_with_matrix(&z_exp, &WO).unwrap();
-        let wV = multiply_row_vector_with_matrix(&minus_z_exp, &WV).unwrap();
-
-        /*println!("Flattened weights");
-        util::print_vector(&wL);
-        util::print_vector(&wR);
-        util::print_vector(&wO);
-        util::print_vector(&wV);*/
-
-        (wL, wR, wO, wV)
-    }
+    // #[cfg(test)]
+    // fn flattened_constraints_elaborated(
+    //     &self,
+    //     z: &FieldElement,
+    // ) -> (
+    //     FieldElementVector,
+    //     FieldElementVector,
+    //     FieldElementVector,
+    //     FieldElementVector,
+    // ) {
+    //     use amcl_wrapper::field_elem::multiply_row_vector_with_matrix;
+    //
+    //     let (WL, WR, WO, WV) = self.get_weight_matrices();
+    //
+    //     /*println!("Left Weight matrix");
+    //     util::print_2d_matrix(&WL);
+    //     println!("Right Weight matrix");
+    //     util::print_2d_matrix(&WR);
+    //     println!("Out Weight matrix");
+    //     util::print_2d_matrix(&WO);
+    //     println!("Comm Weight matrix");
+    //     util::print_2d_matrix(&WV);*/
+    //
+    //     let q = self.constraints.len();
+    //     let z_exp: FieldElementVector = FieldElementVector::new_vandermonde_vector(z, q + 1)
+    //         .into_iter()
+    //         .skip(1)
+    //         .collect::<Vec<_>>()
+    //         .into();
+    //
+    //     let minus_z_exp: FieldElementVector = z_exp
+    //         .iter()
+    //         .map(|e| (*e).negation())
+    //         .collect::<Vec<_>>()
+    //         .into();
+    //     let wL = multiply_row_vector_with_matrix(&z_exp, &WL).unwrap();
+    //     let wR = multiply_row_vector_with_matrix(&z_exp, &WR).unwrap();
+    //     let wO = multiply_row_vector_with_matrix(&z_exp, &WO).unwrap();
+    //     let wV = multiply_row_vector_with_matrix(&minus_z_exp, &WV).unwrap();
+    //
+    //     /*println!("Flattened weights");
+    //     util::print_vector(&wL);
+    //     util::print_vector(&wR);
+    //     util::print_vector(&wO);
+    //     util::print_vector(&wV);*/
+    //
+    //     (wL, wR, wO, wV)
+    // }
 
     fn eval(&self, lc: &LinearCombination) -> FieldElement {
         lc.terms
@@ -366,7 +366,8 @@ impl<'a, 'b> Prover<'a, 'b> {
         .unwrap();
 
         // A_O = <a_O, G> + o_blinding * B_blinding
-        let A_O1 = G_n1.inner_product_const_time(&self.a_O).unwrap() + self.h * &o_blinding1;
+        let A_O1 =
+            G_n1.inner_product_const_time(self.a_O.as_slice()).unwrap() + self.h * &o_blinding1;
 
         // S = <s_L, G> + <s_R, H> + s_blinding * B_blinding
         let S1 = commit_to_field_element_vectors(&G_n1, &H_n1, &self.h, &s_L1, &s_R1, &s_blinding1)
@@ -436,7 +437,7 @@ impl<'a, 'b> Prover<'a, 'b> {
                 )
                 .unwrap(),
                 // A_O = <a_O, G> + o_blinding * B_blinding
-                G_n2.inner_product_const_time(&a_O_n2).unwrap() + self.h * &o_blinding2,
+                G_n2.inner_product_const_time(a_O_n2.as_slice()).unwrap() + self.h * &o_blinding2,
                 // S = <s_L, G> + <s_R, H> + s_blinding * B_blinding
                 commit_to_field_element_vectors(&G_n2, &H_n2, self.h, &s_L2, &s_R2, &s_blinding2)
                     .unwrap(),

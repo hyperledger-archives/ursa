@@ -188,7 +188,6 @@ mod tests {
 
     #[test]
     fn test_bound_check_gadget() {
-        use rand::rngs::OsRng;
         use rand::Rng;
 
         let mut rng = rand::thread_rng();

@@ -259,7 +259,7 @@ impl IPP {
         bases.append(&mut R_vec.clone());
 
         let expected_P = G1Vector::from(bases)
-            .multi_scalar_mul_var_time(&exponents.into())
+            .multi_scalar_mul_var_time(exponents.as_slice())
             .unwrap();
 
         if expected_P == *P {
@@ -391,7 +391,9 @@ mod tests {
         _2.append(&mut G.clone());
         _2.append(&mut H.clone());
         _2.push(u.clone());
-        let P = G1Vector::from(_2).multi_scalar_mul_var_time(&_1).unwrap();
+        let P = G1Vector::from(_2)
+            .multi_scalar_mul_var_time(_1.as_slice())
+            .unwrap();
 
         let mut new_trans1 = Transcript::new(b"innerproduct");
         IPP::verify_ipp(
