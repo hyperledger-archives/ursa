@@ -182,8 +182,8 @@ section = "admin"
 revision = "1"
 priority = "optional"
 assets = [
-    ["../target/release/libursa.a", "usr/lib/ursa/libursa.a", "644"],
-    ["../target/release/libursa.so", "usr/lib/ursa/libursa.so", "644"],
+    ["../target/release/libursa.a", "usr/lib/libursa.a", "644"],
+    ["../target/release/libursa.so", "usr/lib/libursa.so", "644"],
     ["include/ursa_crypto.h", "usr/include/ursa/ursa_crypto.h", "644"],
     ["include/ursa_crypto_ed25519.h", "usr/include/ursa/ursa_crypto_ed25519.h", "644"]
 ]
