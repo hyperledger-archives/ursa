@@ -198,6 +198,7 @@ impl<'a> Verifier<'a> {
         (wL, wR, wO, wV, wc)
     }
 
+    // Only used for debugging purposes
     // #[cfg(test)]
     // fn get_weight_matrices(
     //     &self,
