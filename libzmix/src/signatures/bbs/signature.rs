@@ -11,6 +11,7 @@ use amcl_wrapper::{
     group_elem_g2::G2,
 };
 
+pub use amcl_wrapper::group_elem_g1::G1 as BlindedSignatureCommitment;
 use amcl_wrapper::field_elem::FieldElementVector;
 use amcl_wrapper::group_elem_g1::G1Vector;
 use std::collections::BTreeMap;
@@ -81,7 +82,7 @@ impl Signature {
     /// `signkey`: The secret key for signing
     /// `verkey`: The corresponding public key to secret key
     pub fn new_blind(
-        commitment: &G1,
+        commitment: &BlindedSignatureCommitment,
         messages: &BTreeMap<usize, SignatureMessage>,
         signkey: &SecretKey,
         verkey: &PublicKey
@@ -118,7 +119,7 @@ impl Signature {
     // 1 or more messages are captured in `commitment`. The remaining known messages are in `messages`.
     // This is a blind signature.
     pub fn new_with_committed_messages(
-        commitment: &G1,
+        commitment: &BlindedSignatureCommitment,
         messages: &[SignatureMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
