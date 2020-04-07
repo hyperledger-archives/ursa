@@ -306,7 +306,11 @@ mod tests {
         bases.push(verkey.h0.clone());
         bases.push(verkey.h[0].clone());
 
-        let challenge_hash = committed.gen_challenge(commitment.to_bytes());
+        let nonce = vec![1u8, 1u8, 1u8, 1u8, 2u8, 2u8, 2u8, 2u8];
+        let mut extra = Vec::new();
+        extra.extend_from_slice(&commitment.to_bytes());
+        extra.extend_from_slice(nonce.as_slice());
+        let challenge_hash = committed.gen_challenge(extra);
         let proof = committed
             .gen_proof(&challenge_hash, hidden_msgs.as_slice())
             .unwrap();
@@ -320,6 +324,8 @@ mod tests {
             &signkey,
             &verkey,
         );
+        assert!(proof.verify_complete_proof(bases.as_slice(), &commitment, &challenge_hash, nonce.as_slice()).unwrap());
+
         assert!(sig.is_ok());
         let sig = sig.unwrap();
         //First test should fail since the signature is blinded

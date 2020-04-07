@@ -162,10 +162,10 @@ macro_rules! impl_PoK_VC {
         impl $ProverCommitted {
             pub fn to_bytes(&self) -> Vec<u8> {
                 let mut bytes = vec![];
+                bytes.append(&mut self.commitment.to_bytes());
                 for b in self.gens.as_slice() {
                     bytes.append(&mut b.to_bytes());
                 }
-                bytes.append(&mut self.commitment.to_bytes());
                 bytes
             }
 
@@ -227,6 +227,39 @@ macro_rules! impl_PoK_VC {
                     .unwrap()
                     - &self.commitment;
                 Ok(pr.is_identity())
+            }
+
+            /// Assumes this is the entire proof and is not a sub proof
+            pub fn verify_complete_proof(
+                &self,
+                bases: &[$group_element],
+                commitment: &$group_element,
+                challenge: &FieldElement,
+                nonce: &[u8]
+            ) -> Result<bool, PoKVCError> {
+                if bases.len() != self.responses.len() {
+                    return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
+                        bases: bases.len(),
+                        exponents: self.responses.len(),
+                    }
+                    .into());
+                }
+                let mut points = $group_element_vec::from(bases);
+                let mut scalars = self.responses.clone();
+                points.push(commitment.clone());
+                scalars.push(challenge.clone());
+                let pr = points
+                    .multi_scalar_mul_var_time(scalars.as_slice())
+                    .unwrap();
+                let mut pr_bytes = pr.to_bytes();
+                for b in bases.iter() {
+                    pr_bytes.append(&mut b.to_bytes())
+                }
+                pr_bytes.extend_from_slice(commitment.to_bytes().as_slice());
+                pr_bytes.extend_from_slice(nonce);
+                let hash = FieldElement::from_msg_hash(pr_bytes.as_slice()) - challenge;
+                let pr = pr - &self.commitment;
+                Ok(pr.is_identity() && hash.is_zero())
             }
 
             /// Convert to raw bytes
