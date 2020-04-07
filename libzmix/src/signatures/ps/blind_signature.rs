@@ -7,6 +7,7 @@ use super::{SignatureGroup, SignatureGroupVec};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use signatures::ps::SIGNATURE_GROUP_SIZE;
 
 // The public key described in the paper is split into `BlindingKey` and `Verkey`. Only `Verkey` is
 // needed by the verifier. `BlindingKey` is used by the user to request a blind signature.
@@ -37,7 +38,8 @@ impl_PoK_VC!(
     ProverCommittedSignatureGroup,
     ProofSignatureGroup,
     SignatureGroup,
-    SignatureGroupVec
+    SignatureGroupVec,
+    SIGNATURE_GROUP_SIZE
 );
 
 pub struct BlindSignature {}
