@@ -162,10 +162,10 @@ macro_rules! impl_PoK_VC {
         impl $ProverCommitted {
             pub fn to_bytes(&self) -> Vec<u8> {
                 let mut bytes = vec![];
-                bytes.append(&mut self.commitment.to_bytes());
                 for b in self.gens.as_slice() {
                     bytes.append(&mut b.to_bytes());
                 }
+                bytes.append(&mut self.commitment.to_bytes());
                 bytes
             }
 
@@ -251,10 +251,11 @@ macro_rules! impl_PoK_VC {
                 let pr = points
                     .multi_scalar_mul_var_time(scalars.as_slice())
                     .unwrap();
-                let mut pr_bytes = pr.to_bytes();
+                let mut pr_bytes = Vec::new();
                 for b in bases.iter() {
                     pr_bytes.append(&mut b.to_bytes())
                 }
+                pr_bytes.append(&mut pr.to_bytes());
                 pr_bytes.extend_from_slice(commitment.to_bytes().as_slice());
                 pr_bytes.extend_from_slice(nonce);
                 let hash = FieldElement::from_msg_hash(pr_bytes.as_slice()) - challenge;

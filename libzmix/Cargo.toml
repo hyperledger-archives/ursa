@@ -35,6 +35,7 @@ sha2 = { version = "0.8", default-features = false, optional = true }
 sha3 = { version = "0.8", default-features = false, optional = true }
 ursa = { version = "0.3", path = "../libursa", default-features = false, optional = true }
 zeroize = { version = "1.1", features = ["zeroize_derive"] }
+hex = "0.4.2"
 
 [[bench]]
 name = "bbs_vs_ps"
