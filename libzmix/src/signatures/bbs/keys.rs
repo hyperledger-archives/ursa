@@ -8,7 +8,7 @@ use hash2curve::DomainSeparationTag;
 use crate::errors::prelude::*;
 
 pub mod prelude {
-    pub use super::{generate, PublicKey, SecretKey, DeterministicPublicKey};
+    pub use super::{generate, PublicKey, SecretKey, DeterministicPublicKey, KeyGenOption};
     pub use hash2curve::DomainSeparationTag;
     pub use amcl_wrapper::constants::FieldElement_SIZE as SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::FieldElement_SIZE as MESSAGE_SIZE;
