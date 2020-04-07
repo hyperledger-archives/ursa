@@ -765,6 +765,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
+name = "hash2curve"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5a05e2e152ddcce934b90dfff46c68b1bc466a6481b0808d867defa14ec57d4"
+dependencies = [
+ "digest",
+ "failure",
+ "miracl_amcl",
+ "sha2",
+ "subtle 2.2.2",
+ "subtle-encoding",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1962,6 +1976,7 @@ dependencies = [
  "bulletproofs_amcl",
  "criterion",
  "failure",
+ "hash2curve",
  "lazy_static",
  "merlin",
  "rand 0.7.3",
@@ -1969,6 +1984,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sha3",
  "ursa",
  "zeroize",
 ]
