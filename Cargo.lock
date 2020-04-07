@@ -1978,6 +1978,7 @@ dependencies = [
  "criterion",
  "failure",
  "hash2curve",
+ "hex",
  "lazy_static",
  "merlin",
  "rand 0.7.3",
