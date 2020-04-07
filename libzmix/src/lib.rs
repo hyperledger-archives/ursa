@@ -7,8 +7,16 @@ extern crate serde;
 extern crate serde_json;
 
 extern crate bulletproofs_amcl as bulletproofs;
+#[cfg(feature = "hash2curve")]
+pub extern crate hash2curve;
 extern crate merlin;
 extern crate rand;
+#[cfg(feature = "sha2")]
+extern crate sha2;
+#[cfg(feature = "sha3")]
+extern crate sha3;
+#[cfg(feature = "ursa")]
+pub extern crate ursa;
 
 #[macro_use]
 pub mod commitments;

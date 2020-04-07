@@ -13,6 +13,7 @@ use amcl_wrapper::{
 
 use amcl_wrapper::field_elem::FieldElementVector;
 use amcl_wrapper::group_elem_g1::G1Vector;
+use std::collections::BTreeMap;
 
 macro_rules! check_verkey_message {
     ($statment:expr, $count1:expr, $count2:expr) => {
@@ -23,6 +24,8 @@ macro_rules! check_verkey_message {
         }
     };
 }
+
+pub const SIGNATURE_SIZE: usize = GroupG1_SIZE + MODBYTES * 2;
 
 /// A BBS+ signature.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -35,7 +38,7 @@ pub struct Signature {
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
 impl Signature {
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(GroupG1_SIZE + MODBYTES * 2);
+        let mut out = Vec::with_capacity(SIGNATURE_SIZE);
         out.extend_from_slice(self.a.to_bytes().as_slice());
         out.extend_from_slice(self.e.to_bytes().as_slice());
         out.extend_from_slice(self.s.to_bytes().as_slice());
@@ -43,8 +46,7 @@ impl Signature {
     }
 
     pub fn from_bytes(data: &[u8]) -> Result<Signature, BBSError> {
-        let expected = GroupG1_SIZE + MODBYTES * 2;
-        if data.len() != expected {
+        if data.len() != SIGNATURE_SIZE {
             return Err(BBSError::from_kind(BBSErrorKind::SignatureIncorrectSize(
                 data.len(),
             )));
@@ -69,6 +71,48 @@ impl Signature {
     ) -> Result<Self, BBSError> {
         check_verkey_message!(messages.is_empty(), verkey.message_count(), messages.len());
         Signature::new_with_committed_messages(&G1::new(), messages, signkey, verkey)
+    }
+
+    /// 1 or more messages have been hidden by the signature recipient. The remaining
+    /// known messages are in `messages`. To which generator they correspond is in `message_indices`.
+    ///
+    /// `commitment`: h<sub>0</sub><sup>s</sup> * h<sub>[i]</sub><sup>m<sub>i</sub></sup>
+    /// `messages`: Messages to be signed where each value is 0 < m ≤ r and the key is the index in the public.h to which is used as base
+    /// `signkey`: The secret key for signing
+    /// `verkey`: The corresponding public key to secret key
+    pub fn new_blind(
+        commitment: &G1,
+        messages: &BTreeMap<usize, SignatureMessage>,
+        signkey: &SecretKey,
+        verkey: &PublicKey
+    ) -> Result<Self, BBSError> {
+        check_verkey_message!(
+            messages.len() > verkey.message_count(),
+            verkey.message_count(),
+            messages.len()
+        );
+        let e = FieldElement::random();
+        let s = FieldElement::random();
+
+        let mut points = G1Vector::with_capacity(messages.len() + 2);
+        let mut scalars = FieldElementVector::with_capacity(messages.len() + 2);
+        // g1*h0^blinding_factor*hi^mi.....
+        points.push(G1::generator());
+        scalars.push(FieldElement::one());
+        points.push(verkey.h0.clone());
+        scalars.push(s.clone());
+
+        for (i, m) in messages.iter() {
+            points.push(verkey.h[*i].clone());
+            scalars.push(m.clone());
+        }
+        let b = commitment + points.multi_scalar_mul_const_time(scalars.as_slice()).unwrap();
+
+        let mut exp = signkey.clone();
+        exp += &e;
+        exp.inverse_mut();
+        let a = b * exp;
+        Ok(Signature { a, e, s })
     }
 
     // 1 or more messages are captured in `commitment`. The remaining known messages are in `messages`.
