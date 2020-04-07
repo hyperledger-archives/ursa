@@ -19,7 +19,7 @@ pub mod prelude {
 #[derive(Debug, Clone)]
 pub enum KeyGenOption {
     UseSeed(Vec<u8>),
-    FromSecretKey(Vec<u8>)
+    FromSecretKey(SecretKey)
 }
 
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
@@ -94,7 +94,7 @@ impl DeterministicPublicKey {
         let secret = match option {
             Some(ref o) => match o {
                 KeyGenOption::UseSeed(ref v) => FieldElement::from_msg_hash(v.as_slice()),
-                KeyGenOption::FromSecretKey(ref sk) => FieldElement::from_bytes(&sk[..]).unwrap()
+                KeyGenOption::FromSecretKey(ref sk) => sk.clone()
             },
             None => FieldElement::random()
         };
