@@ -3,6 +3,8 @@
 pub extern crate amcl_wrapper;
 extern crate failure;
 #[macro_use]
+extern crate arrayref;
+#[macro_use]
 extern crate serde;
 extern crate serde_json;
 

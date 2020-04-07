@@ -14,6 +14,7 @@ use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
+use amcl_wrapper::{constants::GroupG1_SIZE, types_g2::GroupG2_SIZE};
 use failure::{Backtrace, Context, Fail};
 use std::fmt;
 
@@ -78,7 +79,7 @@ impl fmt::Display for PoKVCError {
 
 #[macro_export]
 macro_rules! impl_PoK_VC {
-    ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
+    ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident, $group_element_size: expr ) => {
         /// Proof of knowledge of messages in a vector commitment.
         /// Commit for each message.
         #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -227,6 +228,48 @@ macro_rules! impl_PoK_VC {
                     - &self.commitment;
                 Ok(pr.is_identity())
             }
+
+            /// Convert to raw bytes
+            pub fn to_bytes(&self) -> Vec<u8> {
+                let mut result = self.commitment.to_bytes();
+                let len: u32 = self.responses.len() as u32;
+                result.extend_from_slice(&len.to_be_bytes()[..]);
+                for r in self.responses.iter() {
+                    result.extend_from_slice(r.to_bytes().as_slice());
+                }
+                result
+            }
+
+            pub fn from_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
+                if data.len() < $group_element_size + 4 {
+                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                }
+                let commitment = $group_element::from_bytes(&data[..$group_element_size])
+                    .map_err(|_|  PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+
+                let mut offset = $group_element_size;
+
+                let length = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+                offset += 4;
+
+                if data.len() < offset + length * amcl_wrapper::constants::FieldElement_SIZE {
+                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                }
+
+                let mut responses = FieldElementVector::with_capacity(length);
+
+                for _ in 0..length {
+                    let end = offset + amcl_wrapper::constants::FieldElement_SIZE;
+                    let r = FieldElement::from_bytes(&data[offset..end])
+                        .map_err(|_| PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+                    responses.push(r);
+                    offset = end;
+                }
+                Ok(Self {
+                    commitment,
+                    responses
+                })
+            }
         }
     };
 }
@@ -262,12 +305,17 @@ macro_rules! test_PoK_VC {
         let commitment = gens
             .multi_scalar_mul_const_time(secrets.as_slice())
             .unwrap();
-        let challenge = committed.gen_challenge(commitment.to_bytes());
+        let challenge = committed.gen_challenge(committed.to_bytes());
         let proof = committed.gen_proof(&challenge, secrets.as_slice()).unwrap();
 
         assert!(proof
             .verify(gens.as_slice(), &commitment, &challenge)
             .unwrap());
+
+        let proof_bytes = proof.to_bytes();
+        assert_eq!(proof_bytes.len(), $group_element::random().to_bytes().len() + 4 + amcl_wrapper::constants::FieldElement_SIZE * proof.responses.len());
+        let res_proof_cp = $Proof::from_bytes(&proof_bytes);
+        assert!(res_proof_cp.is_ok());
 
         // Unequal number of generators and responses
         let mut gens_1 = gens.clone();
@@ -297,10 +345,10 @@ macro_rules! test_PoK_VC {
 }
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
-impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
+impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
-impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector);
+impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector, GroupG2_SIZE);
 
 #[cfg(test)]
 mod tests {
