@@ -10,8 +10,9 @@ use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::G2;
+use amcl_wrapper::constants::GroupG1_SIZE;
 
-impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector);
+impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
 
 // XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
 #[derive(Debug, Clone, Serialize, Deserialize)]

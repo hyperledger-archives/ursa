@@ -22,6 +22,8 @@ pub(crate) fn ate_2_pairing(
 ) -> GT {
     GT::ate_2_pairing(g2, g1, h2, h1)
 }
+#[cfg(feature = "PS_Signature_G2")]
+pub const SIGNATURE_GROUP_SIZE: usize = amcl_wrapper::types_g2::GroupG2_SIZE;
 
 #[cfg(feature = "PS_Signature_G1")]
 pub type SignatureGroup = amcl_wrapper::group_elem_g1::G1;
@@ -40,6 +42,8 @@ pub(crate) fn ate_2_pairing(
 ) -> GT {
     GT::ate_2_pairing(g1, g2, h1, h2)
 }
+#[cfg(feature = "PS_Signature_G1")]
+pub const SIGNATURE_GROUP_SIZE: usize = amcl_wrapper::constants::GroupG1_SIZE;
 
 pub mod blind_signature;
 pub mod errors;

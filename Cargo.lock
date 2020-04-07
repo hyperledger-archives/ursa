@@ -1973,6 +1973,7 @@ name = "zmix"
 version = "0.3.1"
 dependencies = [
  "amcl_wrapper",
+ "arrayref",
  "bulletproofs_amcl",
  "criterion",
  "failure",
