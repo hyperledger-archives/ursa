@@ -3,7 +3,7 @@ use super::signature::{compute_b_const_time, Signature};
 use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
 use crate::errors::prelude::*;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
@@ -46,7 +46,7 @@ impl PoKOfSignature {
         vk: &PublicKey,
         messages: &[FieldElement],
         blindings: Option<&[FieldElement]>,
-        revealed_msg_indices: HashSet<usize>,
+        revealed_msg_indices: BTreeSet<usize>,
     ) -> Result<Self, BBSError> {
         if messages.len() != vk.message_count() {
             return Err(BBSError::from_kind(
@@ -177,7 +177,7 @@ impl PoKOfSignatureProof {
     /// `self.a_prime` and `self.d` and commitment and instance data of the two proof of knowledge protocols.
     pub fn get_bytes_for_challenge(
         &self,
-        revealed_msg_indices: HashSet<usize>,
+        revealed_msg_indices: BTreeSet<usize>,
         vk: &PublicKey,
     ) -> Vec<u8> {
         let mut bytes = vec![];
@@ -220,7 +220,7 @@ impl PoKOfSignatureProof {
     pub fn verify(
         &self,
         vk: &PublicKey,
-        revealed_msgs: HashMap<usize, FieldElement>,
+        revealed_msgs: BTreeMap<usize, FieldElement>,
         challenge: &FieldElement,
     ) -> Result<bool, BBSError> {
         vk.validate()?;
@@ -281,6 +281,63 @@ impl PoKOfSignatureProof {
         }
         Ok(true)
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut output = Vec::new();
+        output.append(&mut self.a_prime.to_bytes());
+        output.append(&mut self.a_bar.to_bytes());
+        output.append(&mut self.d.to_bytes());
+        let mut proof1_bytes = self.proof_vc_1.to_bytes();
+        let proof1_len: u32 = proof1_bytes.len() as u32;
+        output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
+        output.append(&mut proof1_bytes);
+        let mut proof2_bytes = self.proof_vc_2.to_bytes();
+        let proof2_len: u32 = proof2_bytes.len() as u32;
+        output.extend_from_slice(&proof2_len.to_be_bytes()[..]);
+        output.append(&mut proof2_bytes);
+        output
+    }
+
+    pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
+        if data.len() < GroupG1_SIZE*3 {
+            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("Invalid proof bytes. Expected {}", GroupG1_SIZE*3)}));
+        }
+        let mut offset = 0;
+        let mut end = GroupG1_SIZE;
+        let a_prime = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+
+        offset = end;
+        end = offset + GroupG1_SIZE;
+
+        let a_bar = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        offset = end;
+        end = offset + GroupG1_SIZE;
+
+        let d = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        offset = end;
+        end = offset + 4;
+        let proof1_bytes = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+
+        offset = end;
+        end = offset + proof1_bytes;
+        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+
+        offset = end;
+        end = offset + 4;
+        let proof2_bytes = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+
+        offset = end;
+        end = offset + proof2_bytes;
+
+        let proof_vc_2 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        Ok(Self {
+            a_prime,
+            a_bar,
+            d,
+            proof_vc_1,
+            proof_vc_2
+        })
+    }
 }
 
 #[cfg(test)]
@@ -298,16 +355,20 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
 
-        let pok =
-            PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, HashSet::new()).unwrap();
+        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, BTreeSet::new()).unwrap();
         let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
+        // Test to_bytes
+        let proof_bytes = proof.to_bytes();
+        let proof_cp = PoKOfSignatureProof::from_bytes(&proof_bytes);
+        assert!(proof_cp.is_ok());
+
         // The verifier generates the challenge on its own.
-        let challenge_bytes = proof.get_bytes_for_challenge(HashSet::new(), &verkey);
+        let challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
         let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
         assert!(proof
-            .verify(&verkey, HashMap::new(), &challenge_verifier)
+            .verify(&verkey, BTreeMap::new(), &challenge_verifier)
             .unwrap());
     }
 
@@ -321,7 +382,7 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
 
-        let mut revealed_indices = HashSet::new();
+        let mut revealed_indices = BTreeSet::new();
         revealed_indices.insert(0);
         revealed_indices.insert(2);
 
@@ -336,7 +397,7 @@ mod tests {
         let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
-        let mut revealed_msgs = HashMap::new();
+        let mut revealed_msgs = BTreeMap::new();
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
@@ -364,7 +425,7 @@ mod tests {
             revealed_indices.clone(),
         )
         .unwrap();
-        let mut revealed_msgs = HashMap::new();
+        let mut revealed_msgs = BTreeMap::new();
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
@@ -418,7 +479,7 @@ mod tests {
             &vk,
             msgs_1.as_slice(),
             Some(blindings_1.as_slice()),
-            HashSet::new(),
+            BTreeSet::new(),
         )
         .unwrap();
         let pok_2 = PoKOfSignature::init(
@@ -426,7 +487,7 @@ mod tests {
             &vk,
             msgs_2.as_slice(),
             Some(blindings_2.as_slice()),
-            HashSet::new(),
+            BTreeSet::new(),
         )
         .unwrap();
 
@@ -441,8 +502,8 @@ mod tests {
 
         // The verifier generates the challenge on its own.
         let mut chal_bytes = vec![];
-        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(HashSet::new(), &vk));
-        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(HashSet::new(), &vk));
+        chal_bytes.append(&mut proof_1.get_bytes_for_challenge(BTreeSet::new(), &vk));
+        chal_bytes.append(&mut proof_2.get_bytes_for_challenge(BTreeSet::new(), &vk));
         let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
 
         // Response for the same message should be same (this check is made by the verifier)
@@ -451,7 +512,7 @@ mod tests {
             proof_2.get_resp_for_message(4).unwrap()
         );
 
-        assert!(proof_1.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
-        assert!(proof_2.verify(&vk, HashMap::new(), &chal_verifier).unwrap());
+        assert!(proof_1.verify(&vk, BTreeMap::new(), &chal_verifier).unwrap());
+        assert!(proof_2.verify(&vk, BTreeMap::new(), &chal_verifier).unwrap());
     }
 }

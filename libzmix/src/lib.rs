@@ -19,6 +19,8 @@ extern crate sha2;
 extern crate sha3;
 #[cfg(feature = "ursa")]
 pub extern crate ursa;
+#[cfg(feature = "hex")]
+extern crate hex;
 
 #[macro_use]
 pub mod commitments;
