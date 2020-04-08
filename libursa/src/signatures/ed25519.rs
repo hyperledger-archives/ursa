@@ -56,8 +56,8 @@ impl Ed25519Sha512 {
             return Err(CryptoError::ParseError(format!("Invalid secret provided")));
         }
         let mut private = vec![0u8; 64];
-        private[0..32].copy_from_slice(seed);
-        let sk = SK::from_bytes(&private[..32]).unwrap();
+        private[..32].copy_from_slice(&seed[..32]);
+        let sk = SK::from_bytes(&seed[..32]).unwrap();
         let pk = PK::from(&sk).to_bytes().to_vec();
         private[32..].copy_from_slice(pk.as_ref());
         Ok((PublicKey(pk), PrivateKey(private)))
