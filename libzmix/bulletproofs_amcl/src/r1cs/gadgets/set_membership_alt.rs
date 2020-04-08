@@ -218,9 +218,6 @@ mod tests {
 
     #[test]
     fn test_set_membership_alt() {
-        use rand::rngs::OsRng;
-        use rand::Rng;
-
         let mut rng = rand::thread_rng();
 
         let set: Vec<u64> = vec![2, 3, 5, 6, 8, 20, 25];

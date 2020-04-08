@@ -9,7 +9,7 @@ use std::time::Instant;
 use rand::{CryptoRng, Rng};
 
 use super::helper_constraints::sparse_merkle_tree_8_ary::{
-    vanilla_merkle_merkle_tree_8_verif_gadget, ProofNode_8_ary,
+    vanilla_merkle_merkle_tree_8_verif_gadget, ProofNode8ary,
 };
 use crate::r1cs::gadgets::helper_constraints::{
     get_blinding_for_merkle_tree_prover, LeafValueType,
@@ -25,7 +25,7 @@ pub fn prove_leaf_inclusion_8_ary_merkle_tree<
     leaf_index: FieldElement,
     hide_leaf: bool, // Indicates whether the leaf value is hidden from the verifier or not
     blindings: Option<Vec<FieldElement>>,
-    mut merkle_proof: Vec<ProofNode_8_ary>,
+    mut merkle_proof: Vec<ProofNode8ary>,
     root: &FieldElement,
     tree_depth: usize,
     hash_func: &mut MTHC,
@@ -127,7 +127,7 @@ pub fn gen_proof_of_leaf_inclusion_8_ary_merkle_tree<
     leaf_index: FieldElement,
     hide_leaf: bool, // Indicates whether the leaf value is hidden from the verifier or not
     randomness: Option<Vec<FieldElement>>,
-    merkle_proof: Vec<ProofNode_8_ary>,
+    merkle_proof: Vec<ProofNode8ary>,
     root: &FieldElement,
     tree_depth: usize,
     hash_func: &mut MTHC,
@@ -208,9 +208,9 @@ mod tests {
         PoseidonParams, SboxType, CAP_CONST_W_9,
     };
     use crate::r1cs::gadgets::helper_constraints::sparse_merkle_tree_8_ary::{
-        DBVal_8_ary, VanillaSparseMerkleTree_8,
+        DbVal8ary, VanillaSparseMerkleTree8,
     };
-    use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHashConstraints, PoseidonHash_8};
+    use crate::r1cs::gadgets::merkle_tree_hash::{PoseidonHash8, PoseidonHashConstraints};
     use crate::utils::get_generators;
     use crate::utils::hash_db::InMemoryHashDb;
     use amcl_wrapper::group_elem::GroupElement;
@@ -219,7 +219,7 @@ mod tests {
     fn test_VSMT_8_Verif() {
         let width = 9;
 
-        let mut db = InMemoryHashDb::<DBVal_8_ary>::new();
+        let mut db = InMemoryHashDb::<DbVal8ary>::new();
 
         #[cfg(feature = "bls381")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
@@ -233,23 +233,23 @@ mod tests {
         #[cfg(feature = "ed25519")]
         let (full_b, full_e, partial_rounds) = (4, 4, 56);
 
-        let total_rounds = full_b + partial_rounds + full_e;
+        // let total_rounds = full_b + partial_rounds + full_e;
         let hash_params = PoseidonParams::new(width, full_b, full_e, partial_rounds).unwrap();
         let tree_depth = 8;
         let sbox = &SboxType::Quint;
 
-        let hash_func = PoseidonHash_8 {
+        let hash_func = PoseidonHash8 {
             params: &hash_params,
             sbox,
         };
-        let mut tree = VanillaSparseMerkleTree_8::new(&hash_func, tree_depth, &mut db).unwrap();
+        let mut tree = VanillaSparseMerkleTree8::new(&hash_func, tree_depth, &mut db).unwrap();
 
         for i in 1..=10 {
             let s = FieldElement::from(i as u32);
             tree.update(&s, s.clone(), &mut db).unwrap();
         }
 
-        let mut merkle_proof_vec = Vec::<ProofNode_8_ary>::new();
+        let mut merkle_proof_vec = Vec::<ProofNode8ary>::new();
         let mut merkle_proof = Some(merkle_proof_vec);
         let k = FieldElement::from(9u32);
         assert_eq!(k, tree.get(&k, &mut merkle_proof, &db).unwrap());

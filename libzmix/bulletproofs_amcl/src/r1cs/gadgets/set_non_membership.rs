@@ -150,9 +150,6 @@ mod tests {
 
     #[test]
     fn test_set_non_membership() {
-        use rand::rngs::OsRng;
-        use rand::Rng;
-
         let mut rng = rand::thread_rng();
 
         let set = vec![

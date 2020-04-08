@@ -489,8 +489,6 @@ mod tests {
     };
     use crate::utils::get_generators;
     use amcl_wrapper::group_elem::GroupElement;
-    use rand::rngs::OsRng;
-    use rand::Rng;
     use std::time::Instant;
 
     fn check_hash_2(hash_params: &PoseidonParams, sbox_type: &SboxType) {

@@ -107,9 +107,7 @@ mod tests {
     use crate::r1cs::gadgets::helper_constraints::mimc::mimc;
     use crate::utils::get_generators;
     use amcl_wrapper::group_elem::GroupElement;
-    use rand::rngs::OsRng;
-    use rand::Rng;
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
 
     #[test]
     fn test_mimc() {
