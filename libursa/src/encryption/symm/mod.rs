@@ -579,6 +579,14 @@ pub mod aesgcm;
 pub mod aesgcm;
 
 #[cfg(feature = "chacha20poly1305_native")]
+#[path = "chacha20poly1305_asm.rs"]
+pub mod chacha20poly1305;
+
+#[cfg(feature = "chacha20poly1305")]
+#[path = "chacha20poly1305.rs"]
+pub mod chacha20poly1305;
+
+#[cfg(feature = "chacha20poly1305_native")]
 #[path = "xchacha20poly1305_asm.rs"]
 pub mod xchacha20poly1305;
 
@@ -591,6 +599,8 @@ pub mod prelude {
     pub use super::aescbc::{Aes128CbcHmac256, Aes256CbcHmac512};
     #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
     pub use super::aesgcm::{Aes128Gcm, Aes256Gcm};
+    #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
+    pub use super::chacha20poly1305::ChaCha20Poly1305;
     #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
     pub use super::xchacha20poly1305::XChaCha20Poly1305;
     pub use super::{DynEncryptor, Encryptor, EncryptorType, SymmetricEncryptor};
