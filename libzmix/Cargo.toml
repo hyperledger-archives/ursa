@@ -15,7 +15,6 @@ default = ["std", "ursa/default"]
 portable = ["std", "ursa/portable"]
 asm = ["std", "sha2/asm", "ursa/asm"]
 std = ["bbs", "ver_enc", "PS_Signature_G2", "sha2/std"]
-bbs = ["hash2curve", "sha2", "ursa/default"]
 ver_enc = []
 PS_Signature_G2 = []
 PS_Signature_G1 = []
@@ -23,9 +22,9 @@ PS_Signature_G1 = []
 [dependencies]
 arrayref = "0.3.6"
 bulletproofs_amcl = { version = "0.2.0", path = "./bulletproofs_amcl" }
+bbs =  { version = "0.1.0", path = "./bbs", optional = true }
 criterion = "0.3"
 failure = "0.1"
-hash2curve = { version = "0.0.4", features = ["bls"], optional = true }
 lazy_static = "1.4"
 merlin = "1"
 rand = "0.7"

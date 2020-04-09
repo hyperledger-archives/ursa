@@ -44,8 +44,6 @@ trait SignatureScheme {
     fn verify(&self, signature: &[u8], message: &[u8], ver_key: &[u8]) -> bool;
 }
 
-#[cfg(feature = "bbs")]
-pub mod bbs;
 pub mod delg_cred_cdd;
 #[cfg(any(feature = "PS_Signature_G2", feature = "PS_Signature_G1"))]
 pub mod ps;
