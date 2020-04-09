@@ -1,9 +1,7 @@
-use super::keys::PublicKey;
-use super::signature::{compute_b_const_time, Signature};
-use crate::commitments::pok_vc::{PoKVCError, PoKVCErrorKind};
+use crate::keys::PublicKey;
+use crate::signature::{compute_b_const_time, Signature};
+use crate::pok_vc::{PoKVCError, PoKVCErrorKind};
 use crate::errors::prelude::*;
-
-use std::collections::{BTreeMap, BTreeSet};
 
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
@@ -12,35 +10,52 @@ use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::G2;
 use amcl_wrapper::constants::GroupG1_SIZE;
 
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+
 impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
 
-// XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
+/// Proof of Knowledge of a Signature that is used by the prover
+/// to construct `PoKOfSignatureProof`.
+///
+/// XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignature {
+    /// A' in section 4.5
     pub a_prime: G1,
+    /// \overline{A} in section 4.5
     pub a_bar: G1,
+    /// d in section 4.5
     pub d: G1,
-    // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
+    /// For proving relation a_bar / d == a_prime^{-e} * h_0^r2
     pub pok_vc_1: ProverCommittedG1,
+    /// The messages
     secrets_1: FieldElementVector,
-    // For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
+    /// For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
     pub pok_vc_2: ProverCommittedG1,
+    /// The blinding factors
     secrets_2: FieldElementVector,
 }
 
-// Contains the proof of 2 discrete log relations.
+/// The actual proof that is sent from prover to verifier.
+///
+/// Contains the proof of 2 discrete log relations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoKOfSignatureProof {
+    /// A' in section 4.5
     pub a_prime: G1,
+    /// \overline{A} in section 4.5
     pub a_bar: G1,
+    /// d in section 4.5
     pub d: G1,
-    // Proof of relation a_bar / d == a_prime^{-e} * h_0^r2
+    /// Proof of relation a_bar / d == a_prime^{-e} * h_0^r2
     pub proof_vc_1: ProofG1,
-    // Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
+    /// Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
     pub proof_vc_2: ProofG1,
 }
 
 impl PoKOfSignature {
+    /// Creates the initial proof data before a Fiat-Shamir calculation
     pub fn init(
         signature: &Signature,
         vk: &PublicKey,
@@ -154,6 +169,8 @@ impl PoKOfSignature {
         bytes
     }
 
+    /// Given the challenge value, compute the s values for Fiat-Shamir and return the actual
+    /// proof to be sent to the verifier
     pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
         let proof_vc_1 = self
             .pok_vc_1
@@ -217,6 +234,7 @@ impl PoKOfSignatureProof {
         Ok(self.proof_vc_2.responses[2 + msg_idx].clone())
     }
 
+    /// Validate the proof
     pub fn verify(
         &self,
         vk: &PublicKey,
@@ -282,6 +300,7 @@ impl PoKOfSignatureProof {
         Ok(true)
     }
 
+    /// Convert the proof to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut output = Vec::new();
         output.append(&mut self.a_prime.to_bytes());
@@ -298,6 +317,7 @@ impl PoKOfSignatureProof {
         output
     }
 
+    /// Convert the byte slice into a proof
     pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
         if data.len() < GroupG1_SIZE*3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("Invalid proof bytes. Expected {}", GroupG1_SIZE*3)}));
@@ -343,7 +363,7 @@ impl PoKOfSignatureProof {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use signatures::bbs::keys::generate;
+    use crate::keys::generate;
 
     #[test]
     fn pok_signature_no_revealed_messages() {

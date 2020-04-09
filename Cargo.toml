@@ -2,5 +2,6 @@
 members = [
   "libursa",
   "libzmix",
-  "libzmix/bulletproofs_amcl"
+  "libzmix/bulletproofs_amcl",
+  "libzmix/bbs",
 ]
