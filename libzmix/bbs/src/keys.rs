@@ -132,7 +132,7 @@ impl DeterministicPublicKey {
             .into();
         let mut current_h = h0.clone();
         let mut h = Vec::new();
-        for i in 1..message_count {
+        for i in 0..message_count {
             data.clear();
             data.extend_from_slice(&current_h.to_bytes());
             data.push(0u8);
@@ -224,6 +224,8 @@ mod tests {
         let dst = DomainSeparationTag::new(b"TEST", None, None, None).unwrap();
 
         let pk = dpk.to_public_key(5, dst);
+
+        assert_eq!(pk.message_count(), 5);
 
         for i in 0..pk.h.len() {
             assert_ne!(pk.h0, pk.h[i], "h[0] == h[{}]", i + 1);

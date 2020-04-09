@@ -255,7 +255,7 @@ macro_rules! impl_PoK_VC {
                 scalars.push(challenge.clone());
                 let pr = points
                     .multi_scalar_mul_var_time(scalars.as_slice())
-                    .unwrap()
+                    .unwrap();
                 Ok(pr)
             }
 
