@@ -1,19 +1,22 @@
-use crate::keys::PublicKey;
-use crate::signature::{compute_b_const_time, Signature};
-use crate::pok_vc::{PoKVCError, PoKVCErrorKind};
 use crate::errors::prelude::*;
+use crate::keys::PublicKey;
+use crate::pok_vc::prelude::*;
+use crate::signature::{compute_b_const_time, Signature};
 
+use amcl_wrapper::constants::GroupG1_SIZE;
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::G2;
-use amcl_wrapper::constants::GroupG1_SIZE;
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
+/// Convenience importing module
+pub mod prelude {
+    pub use super::{PoKOfSignature, PoKOfSignatureProof};
+}
 
 /// Proof of Knowledge of a Signature that is used by the prover
 /// to construct `PoKOfSignatureProof`.
@@ -319,28 +322,46 @@ impl PoKOfSignatureProof {
 
     /// Convert the byte slice into a proof
     pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
-        if data.len() < GroupG1_SIZE*3 {
-            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("Invalid proof bytes. Expected {}", GroupG1_SIZE*3)}));
+        if data.len() < GroupG1_SIZE * 3 {
+            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("Invalid proof bytes. Expected {}", GroupG1_SIZE * 3),
+            }));
         }
         let mut offset = 0;
         let mut end = GroupG1_SIZE;
-        let a_prime = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        let a_prime = G1::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
 
         offset = end;
         end = offset + GroupG1_SIZE;
 
-        let a_bar = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        let a_bar = G1::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
         offset = end;
         end = offset + GroupG1_SIZE;
 
-        let d = G1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        let d = G1::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
         offset = end;
         end = offset + 4;
         let proof1_bytes = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
 
         offset = end;
         end = offset + proof1_bytes;
-        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
 
         offset = end;
         end = offset + 4;
@@ -349,13 +370,17 @@ impl PoKOfSignatureProof {
         offset = end;
         end = offset + proof2_bytes;
 
-        let proof_vc_2 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSError::from_kind(BBSErrorKind::PoKVCError { msg: format!("{}", e) }))?;
+        let proof_vc_2 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
         Ok(Self {
             a_prime,
             a_bar,
             d,
             proof_vc_1,
-            proof_vc_2
+            proof_vc_2,
         })
     }
 }
@@ -375,7 +400,8 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
 
-        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, BTreeSet::new()).unwrap();
+        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, BTreeSet::new())
+            .unwrap();
         let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
@@ -532,7 +558,11 @@ mod tests {
             proof_2.get_resp_for_message(4).unwrap()
         );
 
-        assert!(proof_1.verify(&vk, BTreeMap::new(), &chal_verifier).unwrap());
-        assert!(proof_2.verify(&vk, BTreeMap::new(), &chal_verifier).unwrap());
+        assert!(proof_1
+            .verify(&vk, BTreeMap::new(), &chal_verifier)
+            .unwrap());
+        assert!(proof_2
+            .verify(&vk, BTreeMap::new(), &chal_verifier)
+            .unwrap());
     }
 }

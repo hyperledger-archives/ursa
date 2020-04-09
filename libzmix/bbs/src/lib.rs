@@ -15,8 +15,6 @@
 //! The holder can then un-blind the signature finishing a 2-PC computation
 //!
 //! BBS+ signatures can be used for TPM DAA attestations or Verifiable Credentials.
-//!
-//!
 
 #![deny(
     warnings,
@@ -24,14 +22,15 @@
     unsafe_code,
     unused_import_braces,
     unused_lifetimes,
-    unused_qualifications,
+    unused_qualifications
 )]
 
-#[macro_use] extern crate arrayref;
+#[macro_use]
+extern crate arrayref;
 
 use amcl_wrapper::{
-    group_elem_g1::{G1, G1Vector},
-    field_elem::{FieldElement, FieldElementVector}
+    field_elem::{FieldElement, FieldElementVector},
+    group_elem_g1::{G1Vector, G1},
 };
 
 /// Macros and classes used for creating proofs of knowledge
@@ -39,6 +38,9 @@ use amcl_wrapper::{
 pub mod pok_vc;
 /// The errors that BBS+ throws
 pub mod errors;
+/// Represents steps taken by the issuer to create a BBS+ signature
+/// whether its 2PC or all in one
+pub mod issuer;
 /// BBS+ key classes
 pub mod keys;
 /// Methods and structs for creating signature proofs of knowledge
@@ -60,16 +62,21 @@ pub type SignatureNonce = FieldElement;
 pub type SignatureBlinding = FieldElement;
 
 mod types {
-    pub use super::{BlindedSignatureCommitment, SignatureMessage, SignatureBlinding, SignatureMessageVector, SignatureNonce, SignaturePointVector};
+    pub use super::{
+        BlindedSignatureCommitment, SignatureBlinding, SignatureMessage, SignatureMessageVector,
+        SignatureNonce, SignaturePointVector,
+    };
 }
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::{BlindedSignatureCommitment, SignatureMessage, SignatureBlinding, SignatureMessageVector, SignatureNonce, SignaturePointVector};
     pub use super::keys::prelude::*;
+    pub use super::pok_sig::prelude::*;
+    pub use super::pok_vc::prelude::*;
     pub use super::signature::prelude::*;
-    pub use super::pok_sig::{
-        PoKOfSignature, PoKOfSignatureProof, ProofG1, ProverCommittedG1, ProverCommittingG1,
+    pub use super::{
+        BlindedSignatureCommitment, SignatureBlinding, SignatureMessage, SignatureMessageVector,
+        SignatureNonce, SignaturePointVector,
     };
     pub use amcl_wrapper::constants::FieldElement_SIZE as SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::FieldElement_SIZE as MESSAGE_SIZE;
