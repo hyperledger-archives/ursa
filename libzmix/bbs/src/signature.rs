@@ -1,20 +1,20 @@
-use super::super::SignatureBlinding;
-use super::super::SignatureMessage;
-use super::keys::{PublicKey, SecretKey};
+use super::types::*;
+use crate::keys::{PublicKey, SecretKey};
 use crate::errors::prelude::*;
 use amcl_wrapper::{
     constants::{GroupG1_SIZE, MODBYTES},
     extension_field_gt::GT,
-    field_elem::FieldElement,
     group_elem::{GroupElement, GroupElementVector},
     group_elem_g1::G1,
     group_elem_g2::G2,
 };
-
-pub use amcl_wrapper::group_elem_g1::G1 as BlindedSignatureCommitment;
-use amcl_wrapper::field_elem::FieldElementVector;
-use amcl_wrapper::group_elem_g1::G1Vector;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+/// Convenience module
+pub mod prelude {
+    pub use super::{Signature, SIGNATURE_SIZE};
+}
 
 macro_rules! check_verkey_message {
     ($statment:expr, $count1:expr, $count2:expr) => {
@@ -26,18 +26,23 @@ macro_rules! check_verkey_message {
     };
 }
 
+/// The number of bytes in a signature
 pub const SIGNATURE_SIZE: usize = GroupG1_SIZE + MODBYTES * 2;
 
 /// A BBS+ signature.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Signature {
+    /// A
     pub a: G1,
-    pub e: FieldElement,
-    pub s: FieldElement,
+    /// e
+    pub e: SignatureNonce,
+    /// s
+    pub s: SignatureNonce,
 }
 
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
 impl Signature {
+    /// Convert the signature to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(SIGNATURE_SIZE);
         out.extend_from_slice(self.a.to_bytes().as_slice());
@@ -46,6 +51,7 @@ impl Signature {
         out
     }
 
+    /// Convert the byte slice into a Signature
     pub fn from_bytes(data: &[u8]) -> Result<Signature, BBSError> {
         if data.len() != SIGNATURE_SIZE {
             return Err(BBSError::from_kind(BBSErrorKind::SignatureIncorrectSize(
@@ -54,24 +60,41 @@ impl Signature {
         }
         let mut index = 0;
         let a = G1::from_bytes(&data[0..GroupG1_SIZE])
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::SignatureValueIncorrectSize))?;
+            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
         index += GroupG1_SIZE;
-        let e = FieldElement::from_bytes(&data[index..(index + MODBYTES)])
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::SignatureValueIncorrectSize))?;
+        let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
+            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
         index += MODBYTES;
-        let s = FieldElement::from_bytes(&data[index..(index + MODBYTES)])
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::SignatureValueIncorrectSize))?;
+        let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
+            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
         Ok(Signature { a, e, s })
     }
 
-    // No committed messages, All messages known to signer.
+    /// No committed messages, All messages known to signer.
     pub fn new(
         messages: &[SignatureMessage],
         signkey: &SecretKey,
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
-        check_verkey_message!(messages.is_empty(), verkey.message_count(), messages.len());
-        Signature::new_with_committed_messages(&G1::new(), messages, signkey, verkey)
+        check_verkey_message!(
+            messages.len() > verkey.message_count(),
+            verkey.message_count(),
+            messages.len()
+        );
+        let e = SignatureNonce::random();
+        let s = SignatureNonce::random();
+        let b = compute_b_const_time(
+            &G1::new(),
+            verkey,
+            messages,
+            &s,
+            verkey.message_count() - messages.len(),
+        );
+        let mut exp = signkey.clone();
+        exp += &e;
+        exp.inverse_mut();
+        let a = b * exp;
+        Ok(Signature { a, e, s })
     }
 
     /// 1 or more messages have been hidden by the signature recipient. The remaining
@@ -92,14 +115,14 @@ impl Signature {
             verkey.message_count(),
             messages.len()
         );
-        let e = FieldElement::random();
-        let s = FieldElement::random();
+        let e = SignatureNonce::random();
+        let s = SignatureNonce::random();
 
-        let mut points = G1Vector::with_capacity(messages.len() + 2);
-        let mut scalars = FieldElementVector::with_capacity(messages.len() + 2);
+        let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
+        let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
         // g1*h0^blinding_factor*hi^mi.....
         points.push(G1::generator());
-        scalars.push(FieldElement::one());
+        scalars.push(SignatureNonce::one());
         points.push(verkey.h0.clone());
         scalars.push(s.clone());
 
@@ -116,41 +139,13 @@ impl Signature {
         Ok(Signature { a, e, s })
     }
 
-    // 1 or more messages are captured in `commitment`. The remaining known messages are in `messages`.
-    // This is a blind signature.
-    pub fn new_with_committed_messages(
-        commitment: &BlindedSignatureCommitment,
-        messages: &[SignatureMessage],
-        signkey: &SecretKey,
-        verkey: &PublicKey,
-    ) -> Result<Self, BBSError> {
-        check_verkey_message!(
-            messages.len() > verkey.message_count(),
-            verkey.message_count(),
-            messages.len()
-        );
-        let e = FieldElement::random();
-        let s = FieldElement::random();
-        let b = compute_b_const_time(
-            commitment,
-            verkey,
-            messages,
-            &s,
-            verkey.message_count() - messages.len(),
-        );
-        let mut exp = signkey.clone();
-        exp += &e;
-        exp.inverse_mut();
-        let a = b * exp;
-        Ok(Signature { a, e, s })
-    }
-
+    /// Generate the signature blinding factor that will be used to unblind the signature
     pub fn generate_blinding() -> SignatureBlinding {
         SignatureBlinding::random()
     }
 
-    // Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
-    // Takes the blinding used in the commitment.
+    /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
+    /// Takes the blinding factor used in the commitment.
     pub fn get_unblinded_signature(&self, blinding: &SignatureBlinding) -> Self {
         Signature {
             a: self.a.clone(),
@@ -159,7 +154,7 @@ impl Signature {
         }
     }
 
-    // Verify a signature. During proof of knowledge also, this method is used after extending the verkey
+    /// Verify a signature. During proof of knowledge also, this method is used after extending the verkey
     pub fn verify(
         &self,
         messages: &[SignatureMessage],
@@ -178,16 +173,16 @@ impl Signature {
 
 fn prep_vec_for_b(
     public_key: &PublicKey,
-    messages: &[FieldElement],
-    blinding_factor: &FieldElement,
+    messages: &[SignatureMessage],
+    blinding_factor: &SignatureBlinding,
     offset: usize,
-) -> (G1Vector, FieldElementVector) {
-    let mut points = G1Vector::with_capacity(messages.len() + 2);
-    let mut scalars = FieldElementVector::with_capacity(messages.len() + 2);
+) -> (SignaturePointVector, SignatureMessageVector) {
+    let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
+    let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
     // XXX: g1 should not be a generator but a setup param
     // prep for g1*h0^blinding_factor*hi^mi.....
     points.push(G1::generator());
-    scalars.push(FieldElement::one());
+    scalars.push(SignatureNonce::one());
     points.push(public_key.h0.clone());
     scalars.push(blinding_factor.clone());
 
@@ -199,11 +194,11 @@ fn prep_vec_for_b(
 }
 
 /// Helper function for computing the `b` value. Internal helper function
-pub fn compute_b_const_time(
-    starting_value: &G1,
+pub(crate) fn compute_b_const_time(
+    starting_value: &BlindedSignatureCommitment,
     public_key: &PublicKey,
-    messages: &[FieldElement],
-    blinding_factor: &FieldElement,
+    messages: &[SignatureMessage],
+    blinding_factor: &SignatureBlinding,
     offset: usize,
 ) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
@@ -214,11 +209,11 @@ pub fn compute_b_const_time(
 }
 
 /// Helper function for computing the `b` value. Internal helper function
-pub fn compute_b_var_time(
-    starting_value: &G1,
+pub(crate) fn compute_b_var_time(
+    starting_value: &BlindedSignatureCommitment,
     public_key: &PublicKey,
-    messages: &[FieldElement],
-    blinding_factor: &FieldElement,
+    messages: &[SignatureMessage],
+    blinding_factor: &SignatureBlinding,
     offset: usize,
 ) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
@@ -238,11 +233,11 @@ mod tests {
     fn signature_serialization() {
         let sig = Signature {
             a: G1::random(),
-            e: FieldElement::random(),
-            s: FieldElement::random(),
+            e: SignatureNonce::random(),
+            s: SignatureNonce::random(),
         };
         let bytes = sig.to_bytes();
-        assert_eq!(bytes.len(), GroupG1_SIZE + MODBYTES * 2);
+        assert_eq!(bytes.len(), SIGNATURE_SIZE);
         let sig_2 = Signature::from_bytes(bytes.as_slice()).unwrap();
         assert_eq!(sig, sig_2);
     }
@@ -250,20 +245,20 @@ mod tests {
     #[test]
     fn gen_signature() {
         let message_count = 5;
-        let messages = FieldElementVector::random(message_count);
+        let messages = SignatureMessageVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
         assert!(res.is_ok());
         let messages = Vec::new();
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
-        assert!(res.is_err());
+        assert!(res.is_ok());
     }
 
     #[test]
     fn signature_validation() {
         let message_count = 5;
-        let messages = FieldElementVector::random(message_count);
+        let messages = SignatureMessageVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -273,7 +268,7 @@ mod tests {
 
         let mut messages = Vec::new();
         for _ in 0..message_count {
-            messages.push(FieldElement::random());
+            messages.push(SignatureMessage::random());
         }
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.is_ok());
@@ -283,7 +278,7 @@ mod tests {
     #[test]
     fn signature_committed_messages() {
         let message_count = 4;
-        let messages = FieldElementVector::random(message_count);
+        let messages = SignatureMessageVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         //User blinds first attribute
@@ -318,9 +313,13 @@ mod tests {
         assert!(proof
             .verify(bases.as_slice(), &commitment, &challenge_hash)
             .unwrap());
-        let sig = Signature::new_with_committed_messages(
+        let mut known = BTreeMap::new();
+        for i in 1..message_count {
+            known.insert(i, messages[i].clone());
+        }
+        let sig = Signature::new_blind(
             &commitment,
-            &messages.as_slice()[1..],
+            &known,
             &signkey,
             &verkey,
         );

@@ -2,43 +2,53 @@ use amcl_wrapper::{
     constants::GroupG1_SIZE, errors::SerzDeserzError, field_elem::FieldElement,
     group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2, types_g2::GroupG2_SIZE,
 };
+use generic_array::{GenericArray, typenum::U192};
 use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use hash2curve::DomainSeparationTag;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::prelude::*;
 
+/// Convenience importing module
 pub mod prelude {
     pub use super::{generate, PublicKey, SecretKey, DeterministicPublicKey, KeyGenOption};
     pub use hash2curve::DomainSeparationTag;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as SECRET_KEY_SIZE;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as MESSAGE_SIZE;
-    pub use amcl_wrapper::constants::GroupG1_SIZE as COMMITMENT_SIZE;
-    pub use amcl_wrapper::types_g2::GroupG2_SIZE as PUBLIC_KEY_SIZE;
 }
 
+/// The various ways a key can be constructed other than random
 #[derive(Debug, Clone)]
 pub enum KeyGenOption {
+    /// The hash of these bytes will be used as the private key
     UseSeed(Vec<u8>),
+    /// The actual secret key, used to construct the public key
     FromSecretKey(SecretKey)
 }
 
-// https://eprint.iacr.org/2016/663.pdf Section 4.3
+/// The secret key is field element 0 < `x` < `r`
+/// where `r` is the curve order. See Section 4.3 in
+/// <https://eprint.iacr.org/2016/663.pdf>
 pub type SecretKey = FieldElement;
 
-/// `PublicKey` consists of a blinding generator `h0`, a commitment to the secret key `w`
+/// `PublicKey` consists of a blinding generator `h_0`,
+/// a commitment to the secret key `w`
 /// and a generator for each message in `h`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PublicKey {
+    /// Blinding factor generator
     pub h0: G1,     //blinding factor base
+    /// Base for each message to be signed
     pub h: Vec<G1>, //base for each message to be signed
+    /// Commitment to the private key
     pub w: G2,      //commitment to private key
 }
 
 impl PublicKey {
+    /// Return how many messages this public key can be used to sign
     pub fn message_count(&self) -> usize {
         self.h.len()
     }
 
+    /// Convert the key to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(GroupG1_SIZE * (self.h.len() + 1) + 4 + GroupG2_SIZE);
         out.extend_from_slice(self.w.to_bytes().as_slice());
@@ -50,6 +60,7 @@ impl PublicKey {
         out
     }
 
+    /// Convert the byte slice into a public key
     pub fn from_bytes(data: &[u8]) -> Result<Self, SerzDeserzError> {
         let mut index = 0;
         let w = G2::from_bytes(&data[0..GroupG2_SIZE])?;
@@ -72,7 +83,7 @@ impl PublicKey {
         Ok(PublicKey { w, h0, h })
     }
 
-    // Make sure no generator is identity
+    /// Make sure no generator is identity
     pub fn validate(&self) -> Result<(), BBSError> {
         if self.h0.is_identity() || self.w.is_identity() || self.h.iter().any(|v| v.is_identity()) {
             Err(BBSError::from_kind(BBSErrorKind::MalformedPublicKey))
@@ -83,6 +94,7 @@ impl PublicKey {
 }
 
 /// Used to deterministically generate all other generators given a commitment to a private key
+/// This is effectively a BLS signature public key
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeterministicPublicKey {
     w: G2,
@@ -103,6 +115,9 @@ impl DeterministicPublicKey {
     }
 
     /// Convert to a normal public key but deterministically derive all the generators
+    /// using the hash to curve algorithm BLS12381G1_XMD:SHA-256_SSWU_RO denoted as H2C
+    /// h_0 <- H2C(w || I2OSP(0, 1) || I2OSP(message_count, 4))
+    /// h_i <- H2C(h_i-1 || I2OSP(0, 1) || I2OSP(i, 4))
     pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> PublicKey {
         let point_hasher = Bls12381G1Sswu::new(dst);
 
@@ -135,13 +150,15 @@ impl DeterministicPublicKey {
         }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.w.to_bytes()
+    /// Convert the key to raw bytes
+    pub fn to_bytes(&self) -> GenericArray<u8, U192> {
+        GenericArray::clone_from_slice(self.w.to_bytes().as_slice())
     }
 
-    pub fn from_bytes(data: &[u8]) -> Result<Self, SerzDeserzError> {
-        let w = G2::from_bytes(&data)?;
-        Ok(DeterministicPublicKey { w })
+    /// Convert the byte slice into a public key
+    pub fn from_bytes(data: GenericArray<u8, U192>) -> Self {
+        let w = G2::from_bytes(&data.as_slice()).unwrap();
+        DeterministicPublicKey { w }
     }
 }
 
@@ -151,7 +168,7 @@ impl From<G2> for DeterministicPublicKey {
     }
 }
 
-/// Create a new BBS+ keypair
+/// Create a new BBS+ keypair. The generators of the public key are generated at random
 pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError> {
     if message_count == 0 {
         return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
