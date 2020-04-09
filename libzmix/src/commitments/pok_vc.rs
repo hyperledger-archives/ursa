@@ -235,7 +235,7 @@ macro_rules! impl_PoK_VC {
                 bases: &[$group_element],
                 commitment: &$group_element,
                 challenge: &FieldElement,
-                nonce: &[u8]
+                nonce: &[u8],
             ) -> Result<bool, PoKVCError> {
                 if bases.len() != self.responses.len() {
                     return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
@@ -276,10 +276,17 @@ macro_rules! impl_PoK_VC {
 
             pub fn from_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
                 if data.len() < $group_element_size + 4 {
-                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
                 }
-                let commitment = $group_element::from_bytes(&data[..$group_element_size])
-                    .map_err(|_|  PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+                let commitment =
+                    $group_element::from_bytes(&data[..$group_element_size]).map_err(|_| {
+                        PoKVCError::from(PoKVCErrorKind::GeneralError {
+                            msg: format!("Bad data"),
+                        })
+                    })?;
 
                 let mut offset = $group_element_size;
 
@@ -287,21 +294,27 @@ macro_rules! impl_PoK_VC {
                 offset += 4;
 
                 if data.len() < offset + length * amcl_wrapper::constants::FieldElement_SIZE {
-                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
                 }
 
                 let mut responses = FieldElementVector::with_capacity(length);
 
                 for _ in 0..length {
                     let end = offset + amcl_wrapper::constants::FieldElement_SIZE;
-                    let r = FieldElement::from_bytes(&data[offset..end])
-                        .map_err(|_| PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+                    let r = FieldElement::from_bytes(&data[offset..end]).map_err(|_| {
+                        PoKVCError::from(PoKVCErrorKind::GeneralError {
+                            msg: format!("Bad data"),
+                        })
+                    })?;
                     responses.push(r);
                     offset = end;
                 }
                 Ok(Self {
                     commitment,
-                    responses
+                    responses,
                 })
             }
         }
@@ -347,7 +360,12 @@ macro_rules! test_PoK_VC {
             .unwrap());
 
         let proof_bytes = proof.to_bytes();
-        assert_eq!(proof_bytes.len(), $group_element::random().to_bytes().len() + 4 + amcl_wrapper::constants::FieldElement_SIZE * proof.responses.len());
+        assert_eq!(
+            proof_bytes.len(),
+            $group_element::random().to_bytes().len()
+                + 4
+                + amcl_wrapper::constants::FieldElement_SIZE * proof.responses.len()
+        );
         let res_proof_cp = $Proof::from_bytes(&proof_bytes);
         assert!(res_proof_cp.is_ok());
 
@@ -379,10 +397,24 @@ macro_rules! test_PoK_VC {
 }
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
-impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
+impl_PoK_VC!(
+    ProverCommittingG1,
+    ProverCommittedG1,
+    ProofG1,
+    G1,
+    G1Vector,
+    GroupG1_SIZE
+);
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
-impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector, GroupG2_SIZE);
+impl_PoK_VC!(
+    ProverCommittingG2,
+    ProverCommittedG2,
+    ProofG2,
+    G2,
+    G2Vector,
+    GroupG2_SIZE
+);
 
 #[cfg(test)]
 mod tests {

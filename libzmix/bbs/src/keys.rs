@@ -2,16 +2,16 @@ use amcl_wrapper::{
     constants::GroupG1_SIZE, errors::SerzDeserzError, field_elem::FieldElement,
     group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2, types_g2::GroupG2_SIZE,
 };
-use generic_array::{GenericArray, typenum::U192};
-use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
+use generic_array::{typenum::U192, GenericArray};
 use hash2curve::DomainSeparationTag;
+use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::{generate, PublicKey, SecretKey, DeterministicPublicKey, KeyGenOption};
+    pub use super::{generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey};
     pub use hash2curve::DomainSeparationTag;
 }
 
@@ -21,7 +21,7 @@ pub enum KeyGenOption {
     /// The hash of these bytes will be used as the private key
     UseSeed(Vec<u8>),
     /// The actual secret key, used to construct the public key
-    FromSecretKey(SecretKey)
+    FromSecretKey(SecretKey),
 }
 
 /// The secret key is field element 0 < `x` < `r`
@@ -35,11 +35,11 @@ pub type SecretKey = FieldElement;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PublicKey {
     /// Blinding factor generator
-    pub h0: G1,     //blinding factor base
+    pub h0: G1, //blinding factor base
     /// Base for each message to be signed
     pub h: Vec<G1>, //base for each message to be signed
     /// Commitment to the private key
-    pub w: G2,      //commitment to private key
+    pub w: G2, //commitment to private key
 }
 
 impl PublicKey {
@@ -106,9 +106,9 @@ impl DeterministicPublicKey {
         let secret = match option {
             Some(ref o) => match o {
                 KeyGenOption::UseSeed(ref v) => FieldElement::from_msg_hash(v.as_slice()),
-                KeyGenOption::FromSecretKey(ref sk) => sk.clone()
+                KeyGenOption::FromSecretKey(ref sk) => sk.clone(),
             },
-            None => FieldElement::random()
+            None => FieldElement::random(),
         };
         let w = &G2::generator() * &secret;
         (Self { w }, secret)
@@ -127,7 +127,8 @@ impl DeterministicPublicKey {
         data.extend_from_slice(&(message_count.clone() as u32).to_be_bytes()[..]);
         let h0: G1 = point_hasher
             .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
-            .unwrap().0
+            .unwrap()
+            .0
             .into();
         let mut current_h = h0.clone();
         let mut h = Vec::new();
@@ -138,7 +139,8 @@ impl DeterministicPublicKey {
             data.extend_from_slice(&(i as u32).to_be_bytes()[..]);
             current_h = point_hasher
                 .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
-                .unwrap().0
+                .unwrap()
+                .0
                 .into();
             h.push(current_h.clone());
         }
@@ -226,7 +228,7 @@ mod tests {
         for i in 0..pk.h.len() {
             assert_ne!(pk.h0, pk.h[i], "h[0] == h[{}]", i + 1);
 
-            for j in (i+1)..pk.h.len() {
+            for j in (i + 1)..pk.h.len() {
                 assert_ne!(pk.h[i], pk.h[j], "h[{}] == h[{}]", i + 1, j + 1);
             }
         }
