@@ -163,6 +163,7 @@ dependencies = [
  "failure",
  "generic-array 0.13.2",
  "hash2curve",
+ "hex",
  "serde",
  "sha2",
 ]
