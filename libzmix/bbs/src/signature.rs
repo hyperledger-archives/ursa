@@ -1,6 +1,6 @@
 use super::types::*;
-use crate::keys::{PublicKey, SecretKey};
 use crate::errors::prelude::*;
+use crate::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
     constants::{GroupG1_SIZE, MODBYTES},
     extension_field_gt::GT,
@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 /// Convenience module
 pub mod prelude {
-    pub use super::{Signature, SIGNATURE_SIZE};
+    pub use super::{BlindSignature, Signature, SIGNATURE_SIZE};
 }
 
 macro_rules! check_verkey_message {
@@ -29,6 +29,108 @@ macro_rules! check_verkey_message {
 /// The number of bytes in a signature
 pub const SIGNATURE_SIZE: usize = GroupG1_SIZE + MODBYTES * 2;
 
+macro_rules! sig_byte_impl {
+    () => {
+        /// Convert the signature to raw bytes
+        pub fn to_bytes(&self) -> Vec<u8> {
+            let mut out = Vec::with_capacity(SIGNATURE_SIZE);
+            out.extend_from_slice(self.a.to_bytes().as_slice());
+            out.extend_from_slice(self.e.to_bytes().as_slice());
+            out.extend_from_slice(self.s.to_bytes().as_slice());
+            out
+        }
+
+        /// Convert the byte slice into a Signature
+        pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
+            if data.len() != SIGNATURE_SIZE {
+                return Err(BBSErrorKind::SignatureIncorrectSize(data.len()).into());
+            }
+            let mut index = 0;
+            let a = G1::from_bytes(&data[0..GroupG1_SIZE])
+                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
+            index += GroupG1_SIZE;
+            let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
+                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
+            index += MODBYTES;
+            let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
+                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
+            Ok(Self { a, e, s })
+        }
+    };
+}
+
+/// A BBS+ blind signature
+/// structurally identical to `Signature` but is used to help
+/// with misuse and confusion.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BlindSignature {
+    /// A
+    pub a: G1,
+    /// e
+    pub e: SignatureNonce,
+    /// s
+    pub s: SignatureNonce,
+}
+
+impl BlindSignature {
+    /// 1 or more messages have been hidden by the signature recipient. The remaining
+    /// known messages are in `messages`. To which generator they correspond is in `message_indices`.
+    ///
+    /// `commitment`: h<sub>0</sub><sup>s</sup> * h<sub>[i]</sub><sup>m<sub>i</sub></sup>
+    /// `messages`: Messages to be signed where each value is 0 < m ≤ r and the key is the index in the public.h to which is used as base
+    /// `signkey`: The secret key for signing
+    /// `verkey`: The corresponding public key to secret key
+    pub fn new(
+        commitment: &BlindedSignatureCommitment,
+        messages: &BTreeMap<usize, SignatureMessage>,
+        signkey: &SecretKey,
+        verkey: &PublicKey,
+    ) -> Result<Self, BBSError> {
+        check_verkey_message!(
+            messages.len() > verkey.message_count(),
+            verkey.message_count(),
+            messages.len()
+        );
+        let e = SignatureNonce::random();
+        let s = SignatureNonce::random();
+
+        let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
+        let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
+        // g1*h0^blinding_factor*hi^mi.....
+        points.push(G1::generator());
+        scalars.push(SignatureNonce::one());
+        points.push(verkey.h0.clone());
+        scalars.push(s.clone());
+
+        for (i, m) in messages.iter() {
+            points.push(verkey.h[*i].clone());
+            scalars.push(m.clone());
+        }
+        let b = commitment
+            + points
+                .multi_scalar_mul_const_time(scalars.as_slice())
+                .unwrap();
+
+        let mut exp = signkey.clone();
+        exp += &e;
+        exp.inverse_mut();
+        let a = b * exp;
+        Ok(Self { a, e, s })
+    }
+
+    /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
+    /// Takes the blinding factor used in the commitment.
+    pub fn to_unblinded(&self, blinding: &SignatureBlinding) -> Signature {
+        Signature {
+            a: self.a.clone(),
+            s: self.s.clone() + blinding,
+            e: self.e.clone(),
+        }
+    }
+
+    sig_byte_impl!();
+}
+
 /// A BBS+ signature.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Signature {
@@ -42,34 +144,6 @@ pub struct Signature {
 
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
 impl Signature {
-    /// Convert the signature to raw bytes
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(SIGNATURE_SIZE);
-        out.extend_from_slice(self.a.to_bytes().as_slice());
-        out.extend_from_slice(self.e.to_bytes().as_slice());
-        out.extend_from_slice(self.s.to_bytes().as_slice());
-        out
-    }
-
-    /// Convert the byte slice into a Signature
-    pub fn from_bytes(data: &[u8]) -> Result<Signature, BBSError> {
-        if data.len() != SIGNATURE_SIZE {
-            return Err(BBSError::from_kind(BBSErrorKind::SignatureIncorrectSize(
-                data.len(),
-            )));
-        }
-        let mut index = 0;
-        let a = G1::from_bytes(&data[0..GroupG1_SIZE])
-            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
-        index += GroupG1_SIZE;
-        let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
-            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
-        index += MODBYTES;
-        let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
-            .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
-        Ok(Signature { a, e, s })
-    }
-
     /// No committed messages, All messages known to signer.
     pub fn new(
         messages: &[SignatureMessage],
@@ -94,64 +168,12 @@ impl Signature {
         exp += &e;
         exp.inverse_mut();
         let a = b * exp;
-        Ok(Signature { a, e, s })
-    }
-
-    /// 1 or more messages have been hidden by the signature recipient. The remaining
-    /// known messages are in `messages`. To which generator they correspond is in `message_indices`.
-    ///
-    /// `commitment`: h<sub>0</sub><sup>s</sup> * h<sub>[i]</sub><sup>m<sub>i</sub></sup>
-    /// `messages`: Messages to be signed where each value is 0 < m ≤ r and the key is the index in the public.h to which is used as base
-    /// `signkey`: The secret key for signing
-    /// `verkey`: The corresponding public key to secret key
-    pub fn new_blind(
-        commitment: &BlindedSignatureCommitment,
-        messages: &BTreeMap<usize, SignatureMessage>,
-        signkey: &SecretKey,
-        verkey: &PublicKey
-    ) -> Result<Self, BBSError> {
-        check_verkey_message!(
-            messages.len() > verkey.message_count(),
-            verkey.message_count(),
-            messages.len()
-        );
-        let e = SignatureNonce::random();
-        let s = SignatureNonce::random();
-
-        let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
-        let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
-        // g1*h0^blinding_factor*hi^mi.....
-        points.push(G1::generator());
-        scalars.push(SignatureNonce::one());
-        points.push(verkey.h0.clone());
-        scalars.push(s.clone());
-
-        for (i, m) in messages.iter() {
-            points.push(verkey.h[*i].clone());
-            scalars.push(m.clone());
-        }
-        let b = commitment + points.multi_scalar_mul_const_time(scalars.as_slice()).unwrap();
-
-        let mut exp = signkey.clone();
-        exp += &e;
-        exp.inverse_mut();
-        let a = b * exp;
-        Ok(Signature { a, e, s })
+        Ok(Self { a, e, s })
     }
 
     /// Generate the signature blinding factor that will be used to unblind the signature
     pub fn generate_blinding() -> SignatureBlinding {
         SignatureBlinding::random()
-    }
-
-    /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
-    /// Takes the blinding factor used in the commitment.
-    pub fn get_unblinded_signature(&self, blinding: &SignatureBlinding) -> Self {
-        Signature {
-            a: self.a.clone(),
-            s: self.s.clone() + blinding,
-            e: self.e.clone(),
-        }
     }
 
     /// Verify a signature. During proof of knowledge also, this method is used after extending the verkey
@@ -169,6 +191,8 @@ impl Signature {
         let a = (&G2::generator() * &self.e) + &verkey.w;
         Ok(GT::ate_2_pairing(&self.a, &a, &(-&b), &G2::generator()).is_one())
     }
+
+    sig_byte_impl!();
 }
 
 fn prep_vec_for_b(
@@ -225,9 +249,10 @@ pub(crate) fn compute_b_var_time(
 
 #[cfg(test)]
 mod tests {
-    use super::super::keys::generate;
-    use super::super::pok_sig::ProverCommittingG1;
     use super::*;
+    use crate::keys::generate;
+    use crate::pok_vc::ProverCommittingG1;
+    use crate::SignatureMessageVector;
 
     #[test]
     fn signature_serialization() {
@@ -317,22 +342,20 @@ mod tests {
         for i in 1..message_count {
             known.insert(i, messages[i].clone());
         }
-        let sig = Signature::new_blind(
-            &commitment,
-            &known,
-            &signkey,
-            &verkey,
-        );
-        assert!(proof.verify_complete_proof(bases.as_slice(), &commitment, &challenge_hash, nonce.as_slice()).unwrap());
+        let sig = BlindSignature::new(&commitment, &known, &signkey, &verkey);
+        assert!(proof
+            .verify_complete_proof(
+                bases.as_slice(),
+                &commitment,
+                &challenge_hash,
+                nonce.as_slice()
+            )
+            .unwrap());
 
         assert!(sig.is_ok());
         let sig = sig.unwrap();
-        //First test should fail since the signature is blinded
-        let res = sig.verify(messages.as_slice(), &verkey);
-        assert!(res.is_ok());
-        assert!(!res.unwrap());
 
-        let sig = sig.get_unblinded_signature(&blinding);
+        let sig = sig.to_unblinded(&blinding);
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.is_ok());
         assert!(res.unwrap());

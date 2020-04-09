@@ -28,13 +28,16 @@ pub enum BBSErrorKind {
     #[fail(display = "Error from PoKVC module {:?}", msg)]
     PoKVCError {
         /// The error message
-        msg: String
+        msg: String,
     },
+    /// Incorrect number of bytes passed to from_bytes methods
+    #[fail(display = "Invalid number of bytes. Expected {}, found {}", 0, 0)]
+    InvalidNumberOfBytes(usize, usize),
     /// A Generic error
     #[fail(display = "{:?}", msg)]
     GeneralError {
         /// The error message
-        msg: String
+        msg: String,
     },
 }
 
@@ -149,4 +152,3 @@ impl From<PoKVCError> for BBSError {
         }
     }
 }
-

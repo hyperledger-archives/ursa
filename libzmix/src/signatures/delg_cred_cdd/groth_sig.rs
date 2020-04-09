@@ -123,7 +123,7 @@ macro_rules! impl_GrothSig_randomize {
                 T: self.T.scaled_by(&r_prime_inv),
             }
         }
-    }
+    };
 }
 
 impl_GrothS!(

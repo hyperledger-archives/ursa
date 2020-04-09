@@ -19,6 +19,11 @@ use failure::{Backtrace, Context, Fail};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Convenience importing module
+pub mod prelude {
+    pub use super::{PoKVCError, PoKVCErrorKind, ProofG1, ProverCommittedG1, ProverCommittingG1};
+}
+
 /// The errors that can happen when creating a proof of knowledge of a signature
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
 pub enum PoKVCErrorKind {
@@ -31,14 +36,14 @@ pub enum PoKVCErrorKind {
         /// The number of found bases
         bases: usize,
         /// The number of found exponents
-        exponents: usize
+        exponents: usize,
     },
 
     /// A generic error
     #[fail(display = "Error with message {:?}", msg)]
     GeneralError {
         /// The error message
-        msg: String
+        msg: String,
     },
 }
 
@@ -229,13 +234,11 @@ macro_rules! impl_PoK_VC {
         }
 
         impl $Proof {
-            /// Verify that bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
-            pub fn verify(
-                &self,
-                bases: &[$group_element],
-                commitment: &$group_element,
-                challenge: &FieldElement,
-            ) -> Result<bool, PoKVCError> {
+            /// Computes the piece that goes into verifying the overall proof component
+            /// by computing the c == H(U || \widehat{U} || nonce)
+            /// This returns the \widehat{U}
+            /// commitment is U
+            pub fn get_challenge_contribution(&self, bases: &[$group_element], commitment: &$group_element, challenge: &FieldElement) -> Result<$group_element, PoKVCError> {
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
                 // =>
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
@@ -253,7 +256,17 @@ macro_rules! impl_PoK_VC {
                 let pr = points
                     .multi_scalar_mul_var_time(scalars.as_slice())
                     .unwrap()
-                    - &self.commitment;
+                Ok(pr)
+            }
+
+            /// Verify that bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
+            pub fn verify(
+                &self,
+                bases: &[$group_element],
+                commitment: &$group_element,
+                challenge: &FieldElement,
+            ) -> Result<bool, PoKVCError> {
+               let pr = self.get_challenge_contribution(bases, commitment, challenge)? - &self.commitment;
                 Ok(pr.is_identity())
             }
 
@@ -264,7 +277,7 @@ macro_rules! impl_PoK_VC {
                 bases: &[$group_element],
                 commitment: &$group_element,
                 challenge: &FieldElement,
-                nonce: &[u8]
+                nonce: &[u8],
             ) -> Result<bool, PoKVCError> {
                 if bases.len() != self.responses.len() {
                     return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
@@ -306,10 +319,17 @@ macro_rules! impl_PoK_VC {
             /// Convert from raw bytes
             pub fn from_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
                 if data.len() < $group_element_size + 4 {
-                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
                 }
-                let commitment = $group_element::from_bytes(&data[..$group_element_size])
-                    .map_err(|_|  PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+                let commitment =
+                    $group_element::from_bytes(&data[..$group_element_size]).map_err(|_| {
+                        PoKVCError::from(PoKVCErrorKind::GeneralError {
+                            msg: format!("Bad data"),
+                        })
+                    })?;
 
                 let mut offset = $group_element_size;
 
@@ -317,21 +337,27 @@ macro_rules! impl_PoK_VC {
                 offset += 4;
 
                 if data.len() < offset + length * amcl_wrapper::constants::FieldElement_SIZE {
-                    return Err(PoKVCErrorKind::GeneralError { msg: format!("Invalid length") }.into())
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
                 }
 
                 let mut responses = FieldElementVector::with_capacity(length);
 
                 for _ in 0..length {
                     let end = offset + amcl_wrapper::constants::FieldElement_SIZE;
-                    let r = FieldElement::from_bytes(&data[offset..end])
-                        .map_err(|_| PoKVCError::from(PoKVCErrorKind::GeneralError { msg: format!("Bad data") }))?;
+                    let r = FieldElement::from_bytes(&data[offset..end]).map_err(|_| {
+                        PoKVCError::from(PoKVCErrorKind::GeneralError {
+                            msg: format!("Bad data"),
+                        })
+                    })?;
                     responses.push(r);
                     offset = end;
                 }
                 Ok(Self {
                     commitment,
-                    responses
+                    responses,
                 })
             }
         }
@@ -377,7 +403,12 @@ macro_rules! test_PoK_VC {
             .unwrap());
 
         let proof_bytes = proof.to_bytes();
-        assert_eq!(proof_bytes.len(), $group_element::random().to_bytes().len() + 4 + amcl_wrapper::constants::FieldElement_SIZE * proof.responses.len());
+        assert_eq!(
+            proof_bytes.len(),
+            $group_element::random().to_bytes().len()
+                + 4
+                + amcl_wrapper::constants::FieldElement_SIZE * proof.responses.len()
+        );
         let res_proof_cp = $Proof::from_bytes(&proof_bytes);
         assert!(res_proof_cp.is_ok());
 
@@ -409,10 +440,24 @@ macro_rules! test_PoK_VC {
 }
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
-impl_PoK_VC!(ProverCommittingG1, ProverCommittedG1, ProofG1, G1, G1Vector, GroupG1_SIZE);
+impl_PoK_VC!(
+    ProverCommittingG1,
+    ProverCommittedG1,
+    ProofG1,
+    G1,
+    G1Vector,
+    GroupG1_SIZE
+);
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
-impl_PoK_VC!(ProverCommittingG2, ProverCommittedG2, ProofG2, G2, G2Vector, GroupG2_SIZE);
+impl_PoK_VC!(
+    ProverCommittingG2,
+    ProverCommittedG2,
+    ProofG2,
+    G2,
+    G2Vector,
+    GroupG2_SIZE
+);
 
 #[cfg(test)]
 mod tests {
