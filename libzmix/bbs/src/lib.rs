@@ -84,5 +84,5 @@ pub mod prelude {
     pub use amcl_wrapper::types_g2::GroupG2_SIZE as PUBLIC_KEY_SIZE;
     pub use generic_array::typenum::U192 as DeterministicPublicKeySize;
     pub use generic_array::GenericArray;
-    pub use amcl_wrapper::group_elem::GroupElementVector;
+    pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 }
