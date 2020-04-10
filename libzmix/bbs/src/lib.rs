@@ -224,11 +224,29 @@ pub struct ProofRequest {
     pub verification_key: PublicKey,
 }
 
+// impl ProofRequest {
+//     pub fn to_bytes(&self) -> Vec<u8> {
+//         let mut result = self.nonce.to_bytes();
+//         let num_messages =
+//     }
+// }
+
 /// Contains the data from a prover to a verifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureProof {
     revealed_messages: BTreeMap<usize, SignatureMessage>,
     proof: PoKOfSignatureProof,
+}
+
+/// Contains the message to be hidden in a proof
+/// with an optional blinding factor.
+///
+/// If blinding_factor is Some(Nonce) then it will use that.
+/// If None, a blinding factor will be generated at random.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofMessage {
+    message: SignatureMessage,
+    blinding_factor: Option<SignatureNonce>
 }
 
 #[cfg(test)]
