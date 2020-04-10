@@ -13,8 +13,11 @@ pub enum BBSErrorKind {
     #[fail(display = "Key Generation Error")]
     KeyGenError,
     /// When there are more messages than public key generators
-    #[fail(display = "Signing Error. Expected {}, found {}", 0, 0)]
-    SigningErrorMessageCountMismatch(usize, usize),
+    #[fail(
+        display = "Public key to message mismatch. Expected {}, found {}",
+        0, 0
+    )]
+    PublicKeyGeneratorMessageCountMismatch(usize, usize),
     /// When the signature is the incorrect size when calling from_bytes
     #[fail(display = "Signature incorrect size. Expected 193, found {}", 0)]
     SignatureIncorrectSize(usize),
