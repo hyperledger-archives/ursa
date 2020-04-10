@@ -1,3 +1,4 @@
+use crate::pok_sig::PoKOfSignatureProofStatus;
 use crate::pok_vc::PoKVCError;
 use failure::{Backtrace, Context, Fail};
 
@@ -36,6 +37,12 @@ pub enum BBSErrorKind {
     /// Incorrect number of bytes passed to from_bytes methods
     #[fail(display = "Invalid number of bytes. Expected {}, found {}", 0, 0)]
     InvalidNumberOfBytes(usize, usize),
+    /// Failed signature poof of knowledge
+    #[fail(display = "The proof failed due to {}", status)]
+    InvalidProof {
+        /// The status of the invalid proof
+        status: PoKOfSignatureProofStatus
+    },
     /// A Generic error
     #[fail(display = "{:?}", msg)]
     GeneralError {

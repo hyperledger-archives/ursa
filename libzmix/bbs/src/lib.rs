@@ -30,8 +30,8 @@ extern crate arrayref;
 
 use errors::prelude::*;
 use keys::prelude::*;
-use pok_vc::prelude::*;
 use pok_sig::prelude::*;
+use pok_vc::prelude::*;
 
 use amcl_wrapper::{
     constants::{FieldElement_SIZE as MESSAGE_SIZE, GroupG1_SIZE as COMMITMENT_SIZE},
@@ -227,9 +227,7 @@ pub struct ProofRequest {
 /// Contains the data from a prover to a verifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureProof {
-    /// Allow the verifier to retrieve the revealed messages.
-    /// Might be shown in a GUI or CLI
-    pub revealed_messages: BTreeMap<usize, SignatureMessage>,
+    revealed_messages: BTreeMap<usize, SignatureMessage>,
     proof: PoKOfSignatureProof,
 }
 
@@ -237,7 +235,7 @@ pub struct SignatureProof {
 mod tests {
     use super::BlindSignatureContext;
     use crate::pok_vc::ProofG1;
-    use crate::{SignatureMessage, SignatureMessageVector, SignatureNonce};
+    use crate::{SignatureMessage, SignatureMessageVector};
     use amcl_wrapper::{group_elem::GroupElement, group_elem_g1::G1};
 
     #[test]

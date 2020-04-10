@@ -104,7 +104,10 @@ impl Prover {
         let mut revealed_messages = BTreeMap::new();
         for i in &request.revealed_messages {
             if *i > messages.len() {
-                return Err(BBSErrorKind::GeneralError { msg: format!("Index out of bounds: {} > {}", i, messages.len()) }.into());
+                return Err(BBSErrorKind::GeneralError {
+                    msg: format!("Index out of bounds: {} > {}", i, messages.len()),
+                }
+                .into());
             }
             revealed_messages.insert(*i, messages[*i].clone());
         }
@@ -122,10 +125,9 @@ impl Prover {
         let challenge_hash = SignatureMessage::from_msg_hash(&challenge_bytes);
         let proof = pok.gen_proof(&challenge_hash)?;
 
-
         Ok(SignatureProof {
             revealed_messages,
-            proof
+            proof,
         })
     }
 }
