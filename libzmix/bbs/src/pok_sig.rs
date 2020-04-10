@@ -12,10 +12,11 @@ use amcl_wrapper::group_elem_g2::G2;
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::{PoKOfSignature, PoKOfSignatureProof};
+    pub use super::{PoKOfSignature, PoKOfSignatureProof, PoKOfSignatureProofStatus};
 }
 
 /// Proof of Knowledge of a Signature that is used by the prover
@@ -38,6 +39,47 @@ pub struct PoKOfSignature {
     pub pok_vc_2: ProverCommittedG1,
     /// The blinding factors
     secrets_2: FieldElementVector,
+}
+
+/// Indicates the status returned from `PoKOfSignatureProof`
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PoKOfSignatureProofStatus {
+    /// The proof verified
+    Success,
+    /// The proof failed because the signature proof of knowledge failed
+    BadSignature,
+    /// The proof failed because a hidden message was invalid when the proof was created
+    BadHiddenMessage,
+    /// The proof failed because a revealed message was invalid
+    BadRevealedMessage,
+}
+
+impl PoKOfSignatureProofStatus {
+    /// Return whether the proof succeeded or not
+    pub fn is_valid(&self) -> bool {
+        match *self {
+            PoKOfSignatureProofStatus::Success => true,
+            _ => false,
+        }
+    }
+}
+
+impl Display for PoKOfSignatureProofStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match *self {
+            PoKOfSignatureProofStatus::Success => write!(f, "Success"),
+            PoKOfSignatureProofStatus::BadHiddenMessage => write!(
+                f,
+                "A message was supplied when the proof was created that was not signed"
+            ),
+            PoKOfSignatureProofStatus::BadRevealedMessage => {
+                write!(f, "A revealed message was supplied that was not signed")
+            }
+            PoKOfSignatureProofStatus::BadSignature => {
+                write!(f, "An invalid signature was supplied")
+            }
+        }
+    }
 }
 
 /// The actual proof that is sent from prover to verifier.
@@ -244,9 +286,9 @@ impl PoKOfSignatureProof {
     pub fn verify(
         &self,
         vk: &PublicKey,
-        revealed_msgs: BTreeMap<usize, FieldElement>,
+        revealed_msgs: &BTreeMap<usize, FieldElement>,
         challenge: &FieldElement,
-    ) -> Result<bool, BBSError> {
+    ) -> Result<PoKOfSignatureProofStatus, BBSError> {
         vk.validate()?;
         for i in revealed_msgs.keys() {
             if *i >= vk.message_count() {
@@ -257,11 +299,11 @@ impl PoKOfSignatureProof {
         }
 
         if self.a_prime.is_identity() {
-            return Ok(false);
+            return Ok(PoKOfSignatureProofStatus::BadSignature);
         }
 
         if !GT::ate_2_pairing(&self.a_prime, &vk.w, &(-&self.a_bar), &G2::generator()).is_one() {
-            return Ok(false);
+            return Ok(PoKOfSignatureProofStatus::BadSignature);
         }
 
         let mut bases = vec![];
@@ -270,7 +312,7 @@ impl PoKOfSignatureProof {
         // a_bar / d
         let a_bar_d = &self.a_bar - &self.d;
         if !self.proof_vc_1.verify(&bases, &a_bar_d, challenge)? {
-            return Ok(false);
+            return Ok(PoKOfSignatureProofStatus::BadHiddenMessage);
         }
 
         let mut bases_pok_vc_2 =
@@ -301,9 +343,9 @@ impl PoKOfSignatureProof {
             .proof_vc_2
             .verify(bases_pok_vc_2.as_slice(), &pr, challenge)?
         {
-            return Ok(false);
+            return Ok(PoKOfSignatureProofStatus::BadRevealedMessage);
         }
-        Ok(true)
+        Ok(PoKOfSignatureProofStatus::Success)
     }
 
     /// Convert the proof to raw bytes
@@ -402,8 +444,10 @@ mod tests {
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
+        let revealed = BTreeMap::new();
+        let revealed_msg = BTreeSet::new();
 
-        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, BTreeSet::new())
+        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, &revealed_msg)
             .unwrap();
         let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
@@ -417,8 +461,8 @@ mod tests {
         let challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
         let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
         assert!(proof
-            .verify(&verkey, BTreeMap::new(), &challenge_verifier)
-            .unwrap());
+            .verify(&verkey, &revealed, &challenge_verifier)
+            .unwrap().is_valid());
     }
 
     #[test]
@@ -440,7 +484,7 @@ mod tests {
             &verkey,
             messages.as_slice(),
             None,
-            revealed_indices.clone(),
+            &revealed_indices,
         )
         .unwrap();
         let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
@@ -454,15 +498,15 @@ mod tests {
         let chal_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
         let challenge_verifier = FieldElement::from_msg_hash(&chal_bytes);
         assert!(proof
-            .verify(&verkey, revealed_msgs.clone(), &challenge_verifier)
-            .unwrap());
+            .verify(&verkey, &revealed_msgs, &challenge_verifier)
+            .unwrap().is_valid());
 
         // Reveal wrong message
         let mut revealed_msgs_1 = revealed_msgs.clone();
         revealed_msgs_1.insert(2, FieldElement::random());
         assert!(!proof
-            .verify(&verkey, revealed_msgs_1.clone(), &challenge_verifier)
-            .unwrap());
+            .verify(&verkey, &revealed_msgs_1, &challenge_verifier)
+            .unwrap().is_valid());
 
         // PoK with supplied blindings
         let blindings = FieldElementVector::random(message_count - revealed_indices.len());
@@ -471,7 +515,7 @@ mod tests {
             &verkey,
             messages.as_slice(),
             Some(blindings.as_slice()),
-            revealed_indices.clone(),
+            &revealed_indices,
         )
         .unwrap();
         let mut revealed_msgs = BTreeMap::new();
@@ -485,8 +529,8 @@ mod tests {
         let challenge_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
         let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
         assert!(proof
-            .verify(&verkey, revealed_msgs.clone(), &challenge_verifier)
-            .unwrap());
+            .verify(&verkey, &revealed_msgs, &challenge_verifier)
+            .unwrap().is_valid());
     }
 
     #[test]
@@ -523,12 +567,13 @@ mod tests {
         // Blinding for the same message is kept same
         assert_eq!(blindings_1[1], blindings_2[4]);
 
+        let revealed = BTreeSet::new();
         let pok_1 = PoKOfSignature::init(
             &sig_1,
             &vk,
             msgs_1.as_slice(),
             Some(blindings_1.as_slice()),
-            BTreeSet::new(),
+            &revealed,
         )
         .unwrap();
         let pok_2 = PoKOfSignature::init(
@@ -536,7 +581,7 @@ mod tests {
             &vk,
             msgs_2.as_slice(),
             Some(blindings_2.as_slice()),
-            BTreeSet::new(),
+            &revealed,
         )
         .unwrap();
 
@@ -560,12 +605,12 @@ mod tests {
             proof_1.get_resp_for_message(1).unwrap(),
             proof_2.get_resp_for_message(4).unwrap()
         );
-
+        let revealed = BTreeMap::new();
         assert!(proof_1
-            .verify(&vk, BTreeMap::new(), &chal_verifier)
-            .unwrap());
+            .verify(&vk, &revealed, &chal_verifier)
+            .unwrap().is_valid());
         assert!(proof_2
-            .verify(&vk, BTreeMap::new(), &chal_verifier)
-            .unwrap());
+            .verify(&vk, &revealed, &chal_verifier)
+            .unwrap().is_valid());
     }
 }
