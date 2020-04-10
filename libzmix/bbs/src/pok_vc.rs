@@ -238,7 +238,12 @@ macro_rules! impl_PoK_VC {
             /// by computing the c == H(U || \widehat{U} || nonce)
             /// This returns the \widehat{U}
             /// commitment is U
-            pub fn get_challenge_contribution(&self, bases: &[$group_element], commitment: &$group_element, challenge: &FieldElement) -> Result<$group_element, PoKVCError> {
+            pub fn get_challenge_contribution(
+                &self,
+                bases: &[$group_element],
+                commitment: &$group_element,
+                challenge: &FieldElement,
+            ) -> Result<$group_element, PoKVCError> {
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
                 // =>
                 // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
@@ -266,7 +271,8 @@ macro_rules! impl_PoK_VC {
                 commitment: &$group_element,
                 challenge: &FieldElement,
             ) -> Result<bool, PoKVCError> {
-               let pr = self.get_challenge_contribution(bases, commitment, challenge)? - &self.commitment;
+                let pr = self.get_challenge_contribution(bases, commitment, challenge)?
+                    - &self.commitment;
                 Ok(pr.is_identity())
             }
 
