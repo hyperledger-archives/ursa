@@ -10,7 +10,9 @@
 //! During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 //! `Proof` can then be verified by the verifier.
 
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
+use crate::prelude::*;
+
+use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
@@ -108,7 +110,7 @@ macro_rules! impl_PoK_VC {
         pub struct $ProverCommitting {
             /// The generators to use as the bases
             pub gens: $group_element_vec,
-            blindings: FieldElementVector,
+            blindings: SignatureMessageVector,
         }
 
         /// Receive or generate challenge. Compute response and proof
@@ -116,7 +118,7 @@ macro_rules! impl_PoK_VC {
         pub struct $ProverCommitted {
             /// The generators to use as the bases
             pub gens: $group_element_vec,
-            blindings: FieldElementVector,
+            blindings: SignatureMessageVector,
             /// The commitment to be verified as part of the proof
             pub commitment: $group_element,
         }
@@ -127,7 +129,7 @@ macro_rules! impl_PoK_VC {
             /// The proof commitment of all base_0*exp_0+base_1*exp_1
             pub commitment: $group_element,
             /// s values in the fiat shamir protocol
-            pub responses: FieldElementVector,
+            pub responses: SignatureMessageVector,
         }
 
         impl $ProverCommitting {
@@ -135,7 +137,7 @@ macro_rules! impl_PoK_VC {
             pub fn new() -> Self {
                 Self {
                     gens: $group_element_vec::new(0),
-                    blindings: FieldElementVector::new(0),
+                    blindings: SignatureMessageVector::new(0),
                 }
             }
 
@@ -222,7 +224,7 @@ macro_rules! impl_PoK_VC {
                     }
                     .into());
                 }
-                let mut responses = FieldElementVector::with_capacity(self.gens.len());
+                let mut responses = SignatureMessageVector::with_capacity(self.gens.len());
                 for i in 0..self.gens.len() {
                     responses.push(&self.blindings[i] - (challenge * &secrets[i]));
                 }
@@ -349,7 +351,7 @@ macro_rules! impl_PoK_VC {
                     .into());
                 }
 
-                let mut responses = FieldElementVector::with_capacity(length);
+                let mut responses = SignatureMessageVector::with_capacity(length);
 
                 for _ in 0..length {
                     let end = offset + amcl_wrapper::constants::FieldElement_SIZE;
@@ -374,7 +376,7 @@ macro_rules! impl_PoK_VC {
 macro_rules! test_PoK_VC {
     ( $n:ident, $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident ) => {
         let mut gens = $group_element_vec::with_capacity($n);
-        let mut secrets = FieldElementVector::with_capacity($n);
+        let mut secrets = SignatureMessageVector::with_capacity($n);
         let mut commiting = $ProverCommitting::new();
         for _ in 0..$n - 1 {
             let g = $group_element::random();
@@ -468,7 +470,7 @@ impl_PoK_VC!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
+    use amcl_wrapper::field_elem::FieldElement;
     use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
     use amcl_wrapper::group_elem_g1::{G1Vector, G1};
     use amcl_wrapper::group_elem_g2::{G2Vector, G2};
