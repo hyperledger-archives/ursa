@@ -43,7 +43,7 @@ impl Issuer {
         nonce: &SignatureNonce,
     ) -> Result<BlindSignature, BBSError> {
         if ctx.verify(messages, verkey, nonce)? {
-            Ok(BlindSignature::new(&ctx.commitment, messages, signkey, verkey))
+            BlindSignature::new(&ctx.commitment, messages, signkey, verkey)
         } else {
             Err(BBSErrorKind::GeneralError {
                 msg: format!("Invalid proof of committed messages"),

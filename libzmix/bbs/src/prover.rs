@@ -99,9 +99,11 @@ impl Prover {
     pub fn new_signature_pok(
         request: &ProofRequest,
         messages: &[SignatureMessage],
+        blindings: Option<&[SignatureNonce]>,
         signature: &Signature,
     ) -> Result<SignatureProof, BBSError> {
         let mut revealed_messages = BTreeMap::new();
+
         for i in &request.revealed_messages {
             if *i > messages.len() {
                 return Err(BBSErrorKind::GeneralError {
@@ -116,7 +118,7 @@ impl Prover {
             &signature,
             &request.verification_key,
             messages,
-            None,
+            blindings,
             &request.revealed_messages,
         )?;
         let mut challenge_bytes = pok.to_bytes();
