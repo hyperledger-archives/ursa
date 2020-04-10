@@ -28,10 +28,19 @@
 #[macro_use]
 extern crate arrayref;
 
+use errors::prelude::*;
+use keys::prelude::*;
+use pok_vc::prelude::*;
+use pok_sig::prelude::*;
+
 use amcl_wrapper::{
+    constants::{FieldElement_SIZE as MESSAGE_SIZE, GroupG1_SIZE as COMMITMENT_SIZE},
     field_elem::{FieldElement, FieldElementVector},
+    group_elem::GroupElement,
     group_elem_g1::{G1Vector, G1},
 };
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Macros and classes used for creating proofs of knowledge
 #[macro_use]
@@ -45,8 +54,14 @@ pub mod issuer;
 pub mod keys;
 /// Methods and structs for creating signature proofs of knowledge
 pub mod pok_sig;
+/// Represents steps taken by the prover to receive a BBS+ signature
+/// and generate ZKPs
+pub mod prover;
 /// Methods and structs for creating signatures
 pub mod signature;
+/// Represents steps taken by the verifier to request signature proofs of knowledge
+/// and selective disclosure proofs
+pub mod verifier;
 
 /// The type for creating commitments to messages that are hidden during issuance.
 pub type BlindedSignatureCommitment = G1;
@@ -63,26 +78,196 @@ pub type SignatureBlinding = FieldElement;
 
 mod types {
     pub use super::{
-        BlindedSignatureCommitment, SignatureBlinding, SignatureMessage, SignatureMessageVector,
-        SignatureNonce, SignaturePointVector,
+        BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
+        SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
+        SignatureProof,
     };
 }
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::keys::prelude::*;
-    pub use super::pok_sig::prelude::*;
-    pub use super::pok_vc::prelude::*;
-    pub use super::signature::prelude::*;
     pub use super::{
-        BlindedSignatureCommitment, SignatureBlinding, SignatureMessage, SignatureMessageVector,
-        SignatureNonce, SignaturePointVector,
+        BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
+        SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
+        SignatureProof,
     };
+    pub use crate::errors::prelude::*;
+    pub use crate::issuer::Issuer;
+    pub use crate::keys::prelude::*;
+    pub use crate::pok_sig::prelude::*;
+    pub use crate::pok_vc::prelude::*;
+    pub use crate::prover::Prover;
+    pub use crate::signature::prelude::*;
+    pub use crate::verifier::Verifier;
     pub use amcl_wrapper::constants::FieldElement_SIZE as SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::FieldElement_SIZE as MESSAGE_SIZE;
     pub use amcl_wrapper::constants::GroupG1_SIZE as COMMITMENT_SIZE;
+    pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
     pub use amcl_wrapper::types_g2::GroupG2_SIZE as PUBLIC_KEY_SIZE;
     pub use generic_array::typenum::U192 as DeterministicPublicKeySize;
     pub use generic_array::GenericArray;
-    pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+}
+
+/// Contains the data used for computing a blind signature and verifying
+/// proof of hidden messages from a prover
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlindSignatureContext {
+    commitment: BlindedSignatureCommitment,
+    challenge_hash: SignatureNonce,
+    proof_of_hidden_messages: ProofG1,
+}
+
+impl BlindSignatureContext {
+    const MIN_LENGTH: usize = COMMITMENT_SIZE + MESSAGE_SIZE + 4;
+    /// Convert to raw bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        result.extend_from_slice(self.commitment.to_bytes().as_slice());
+        result.extend_from_slice(self.challenge_hash.to_bytes().as_slice());
+        let proof_bytes = self.proof_of_hidden_messages.to_bytes();
+        let proof_len = proof_bytes.len() as u32;
+        result.extend_from_slice(&proof_len.to_be_bytes()[..]);
+        result.extend_from_slice(proof_bytes.as_slice());
+        result
+    }
+
+    /// Convert from raw bytes
+    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        let data = data.as_ref();
+
+        if data.len() < Self::MIN_LENGTH {
+            return Err(BBSErrorKind::InvalidNumberOfBytes(Self::MIN_LENGTH, data.len()).into());
+        }
+
+        let mut offset = 0;
+        let mut end = COMMITMENT_SIZE;
+        let commitment =
+            BlindedSignatureCommitment::from_bytes(&data[offset..end]).map_err(|e| {
+                BBSErrorKind::GeneralError {
+                    msg: format!("{:?}", e),
+                }
+            })?;
+
+        offset = end;
+        end = offset + MESSAGE_SIZE;
+        let challenge_hash = SignatureNonce::from_bytes(&data[offset..end]).map_err(|e| {
+            BBSErrorKind::GeneralError {
+                msg: format!("{:?}", e),
+            }
+        })?;
+
+        offset = end;
+        end = offset + 4;
+        let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+        offset = end;
+        end = offset + proof_len;
+        let proof_of_hidden_messages =
+            ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError {
+                msg: format!("{:?}", e),
+            })?;
+        Ok(Self {
+            commitment,
+            challenge_hash,
+            proof_of_hidden_messages,
+        })
+    }
+
+    /// Assumes the proof of hidden messages
+    /// If other proofs were included, those will need to be verified another
+    /// way
+    pub fn verify(
+        &self,
+        messages: &BTreeMap<usize, SignatureMessage>,
+        verkey: &PublicKey,
+        nonce: &SignatureNonce,
+    ) -> Result<bool, BBSError> {
+        // Verify the proof
+        // First get the generators used to create the commitment
+        let mut bases = Vec::new();
+        bases.push(verkey.h0.clone());
+        for i in 0..verkey.message_count() {
+            if !messages.contains_key(&i) {
+                bases.push(verkey.h[i].clone());
+            }
+        }
+
+        let commitment = self.proof_of_hidden_messages.get_challenge_contribution(
+            bases.as_slice(),
+            &self.commitment,
+            &self.challenge_hash,
+        )?;
+
+        let mut challenge_bytes = Vec::new();
+        for b in bases.iter() {
+            challenge_bytes.append(&mut b.to_bytes())
+        }
+        challenge_bytes.append(&mut commitment.to_bytes());
+        challenge_bytes.extend_from_slice(self.commitment.to_bytes().as_slice());
+        challenge_bytes.extend_from_slice(&mut nonce.to_bytes());
+
+        let challenge_result =
+            SignatureMessage::from_msg_hash(challenge_bytes.as_slice()) - &self.challenge_hash;
+        let commitment_result = commitment - &self.commitment;
+        Ok(commitment_result.is_identity() && challenge_result.is_zero())
+    }
+}
+
+/// Contains the data from a verifier to a prover
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofRequest {
+    nonce: SignatureNonce,
+    /// Allow the prover to retrieve which messages should be revealed.
+    /// Might be prompted in a GUI or CLI
+    pub revealed_messages: BTreeSet<usize>,
+    /// Allow the prover to know which public key for which the signature must
+    /// be valid.
+    pub verification_key: PublicKey,
+}
+
+/// Contains the data from a prover to a verifier
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignatureProof {
+    /// Allow the verifier to retrieve the revealed messages.
+    /// Might be shown in a GUI or CLI
+    pub revealed_messages: BTreeMap<usize, SignatureMessage>,
+    proof: PoKOfSignatureProof,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BlindSignatureContext;
+    use crate::pok_vc::ProofG1;
+    use crate::{SignatureMessage, SignatureMessageVector, SignatureNonce};
+    use amcl_wrapper::{group_elem::GroupElement, group_elem_g1::G1};
+
+    #[test]
+    fn blind_signature_context_bytes_test() {
+        let b = BlindSignatureContext {
+            commitment: G1::generator(),
+            challenge_hash: SignatureMessage::random(),
+            proof_of_hidden_messages: ProofG1 {
+                commitment: G1::generator(),
+                responses: SignatureMessageVector::new(0),
+            },
+        };
+
+        let bytes = b.to_bytes();
+        let res = BlindSignatureContext::from_bytes(&bytes);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().to_bytes(), bytes);
+
+        let b = BlindSignatureContext {
+            commitment: G1::generator(),
+            challenge_hash: SignatureMessage::random(),
+            proof_of_hidden_messages: ProofG1 {
+                commitment: G1::generator(),
+                responses: SignatureMessageVector::new(10),
+            },
+        };
+
+        let bytes = b.to_bytes();
+        let res = BlindSignatureContext::from_bytes(&bytes);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().to_bytes(), bytes);
+    }
 }

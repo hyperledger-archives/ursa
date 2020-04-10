@@ -64,14 +64,17 @@ impl PoKOfSignature {
         vk: &PublicKey,
         messages: &[FieldElement],
         blindings: Option<&[FieldElement]>,
-        revealed_msg_indices: BTreeSet<usize>,
+        revealed_msg_indices: &BTreeSet<usize>,
     ) -> Result<Self, BBSError> {
         if messages.len() != vk.message_count() {
             return Err(BBSError::from_kind(
-                BBSErrorKind::SigningErrorMessageCountMismatch(vk.message_count(), messages.len()),
+                BBSErrorKind::PublicKeyGeneratorMessageCountMismatch(
+                    vk.message_count(),
+                    messages.len(),
+                ),
             ));
         }
-        for idx in &revealed_msg_indices {
+        for idx in revealed_msg_indices {
             if *idx >= messages.len() {
                 return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
                     msg: format!("Index {} should be less than {}", idx, messages.len()),

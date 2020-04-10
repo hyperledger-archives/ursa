@@ -19,9 +19,9 @@ pub mod prelude {
 macro_rules! check_verkey_message {
     ($statment:expr, $count1:expr, $count2:expr) => {
         if $statment {
-            return Err(BBSError::from_kind(
-                BBSErrorKind::SigningErrorMessageCountMismatch($count1, $count2),
-            ));
+            return Err(
+                BBSErrorKind::PublicKeyGeneratorMessageCountMismatch($count1, $count2).into(),
+            );
         }
     };
 }
