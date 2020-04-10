@@ -50,7 +50,7 @@ impl Prover {
             committing.commit(&verkey.h[*i], None);
         }
 
-        //Create a random commitment, compute challenges and response.
+        // Create a random commitment, compute challenges and response.
         // The proof of knowledge consists of a commitment and responses
         // Prover and issuer engage in a proof of knowledge for `commitment`
         let commitment = points
