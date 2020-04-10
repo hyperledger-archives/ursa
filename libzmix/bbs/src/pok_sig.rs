@@ -13,6 +13,7 @@ use amcl_wrapper::group_elem_g2::G2;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use crate::ProofMessage;
 
 /// Convenience importing module
 pub mod prelude {
@@ -39,6 +40,8 @@ pub struct PoKOfSignature {
     pub pok_vc_2: ProverCommittedG1,
     /// The blinding factors
     secrets_2: SignatureMessageVector,
+    /// revealed messages
+    pub(crate) revealed_messages: BTreeMap<usize, SignatureMessage>
 }
 
 /// Indicates the status returned from `PoKOfSignatureProof`
@@ -104,9 +107,7 @@ impl PoKOfSignature {
     pub fn init(
         signature: &Signature,
         vk: &PublicKey,
-        messages: &[SignatureMessage],
-        blindings: Option<&[SignatureNonce]>,
-        revealed_msg_indices: &BTreeSet<usize>,
+        messages: &[ProofMessage]
     ) -> Result<Self, BBSError> {
         if messages.len() != vk.message_count() {
             return Err(BBSError::from_kind(
@@ -116,36 +117,27 @@ impl PoKOfSignature {
                 ),
             ));
         }
-        for idx in revealed_msg_indices {
-            if *idx >= messages.len() {
-                return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
-                    msg: format!("Index {} should be less than {}", idx, messages.len()),
-                }));
-            }
-        }
-
-        let mut blindings: Vec<Option<&SignatureNonce>> = match blindings {
-            Some(b) => {
-                if messages.len() - revealed_msg_indices.len() != b.len() {
-                    return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
-                        msg: format!(
-                            "Blindings {} != Hidden messages {}",
-                            b.len(),
-                            messages.len() - revealed_msg_indices.len()
-                        ),
-                    }));
-                }
-                b.iter().map(Some).collect()
-            }
-            None => (0..(messages.len() - revealed_msg_indices.len()))
-                .map(|_| None)
-                .collect(),
-        };
 
         let r1 = SignatureNonce::random();
         let r2 = SignatureNonce::random();
 
-        let b = compute_b_const_time(&G1::new(), vk, messages, &signature.s, 0);
+        let mut temp: Vec<SignatureMessage> = Vec::new();
+        for i in 0..messages.len() {
+            match &messages[i] {
+                ProofMessage::Revealed(r) => temp.push(r.clone()),
+                ProofMessage::Hidden(h) => match h {
+                    HiddenMessage::ProofSpecificBlinding(m) => {
+                        temp.push(m.clone())
+                    },
+                    HiddenMessage::ExternalBlinding(m,b) => {
+                        temp.push(m.clone())
+                    }
+                }
+            }
+        }
+
+
+        let b = compute_b_const_time(&G1::new(), vk, temp.as_slice(), &signature.s, 0);
         let a_prime = &signature.a * &r1;
         let a_bar = &(&b * &r1) - &(&a_prime * &signature.e);
         let d = b.binary_scalar_mul(&vk.h0, &r1, &(-&r2));
@@ -173,7 +165,7 @@ impl PoKOfSignature {
         // and can be efficiently computed as (g1 * h1^m1 * h2^m2.... * h_i^m_i)^-1 and inverse in elliptic group is a point negation which is very cheap
         let mut committing_2 = ProverCommittingG1::new();
         let mut secrets_2 =
-            SignatureMessageVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
+            SignatureMessageVector::with_capacity(2 + messages.len());
         // For d^-r3
         committing_2.commit(&d, None);
         secrets_2.push(-r3);
@@ -181,12 +173,24 @@ impl PoKOfSignature {
         committing_2.commit(&vk.h0, None);
         secrets_2.push(s_prime);
 
+        let mut revealed_messages = BTreeMap::new();
+
         for i in 0..vk.message_count() {
-            if revealed_msg_indices.contains(&i) {
-                continue;
+            match &messages[i] {
+                ProofMessage::Revealed(r) => {
+                    revealed_messages.insert(i,r.clone());
+                },
+                ProofMessage::Hidden(h) => match h {
+                    HiddenMessage::ProofSpecificBlinding(m) => {
+                        committing_2.commit(&vk.h[i], None);
+                        secrets_2.push(m.clone());
+                    },
+                    HiddenMessage::ExternalBlinding(e,b) => {
+                        committing_2.commit(&vk.h[i], Some(b));
+                        secrets_2.push(e.clone());
+                    }
+                }
             }
-            committing_2.commit(&vk.h[i], blindings.remove(0));
-            secrets_2.push(messages[i].clone());
         }
         let pok_vc_2 = committing_2.finish();
 
@@ -198,6 +202,7 @@ impl PoKOfSignature {
             secrets_1,
             pok_vc_2,
             secrets_2,
+            revealed_messages
         })
     }
 

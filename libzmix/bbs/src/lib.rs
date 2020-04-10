@@ -80,7 +80,7 @@ mod types {
     pub use super::{
         BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
         SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
-        SignatureProof,
+        SignatureProof, ProofMessage, HiddenMessage
     };
 }
 
@@ -89,7 +89,7 @@ pub mod prelude {
     pub use super::{
         BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
         SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
-        SignatureProof,
+        SignatureProof, ProofMessage, HiddenMessage
     };
     pub use crate::errors::prelude::*;
     pub use crate::issuer::Issuer;
@@ -215,7 +215,6 @@ impl BlindSignatureContext {
 /// Contains the data from a verifier to a prover
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofRequest {
-    nonce: SignatureNonce,
     /// Allow the prover to retrieve which messages should be revealed.
     /// Might be prompted in a GUI or CLI
     pub revealed_messages: BTreeSet<usize>,
@@ -238,16 +237,28 @@ pub struct SignatureProof {
     proof: PoKOfSignatureProof,
 }
 
-/// Contains the message to be hidden in a proof
-/// with an optional blinding factor.
-///
-/// If blinding_factor is Some(Nonce) then it will use that.
-/// If None, a blinding factor will be generated at random.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProofMessage {
-    message: SignatureMessage,
-    blinding_factor: Option<SignatureNonce>
+pub enum ProofMessage {
+    Revealed(SignatureMessage),
+    Hidden(HiddenMessage)
 }
+
+impl ProofMessage{
+    pub fn get_message(&self) -> SignatureMessage {
+        match *self {
+            ProofMessage::Revealed(r) => r,
+            ProofMessage::Hidden(h) => match h {
+                HiddenMessage::ProofSpecificBlinding(p) => p,
+                HiddenMessage::ExternalBlinding(m,_) => m
+            }
+        }
+    }
+}
+
+pub enum HiddenMessage {
+    ProofSpecificBlinding(SignatureMessage),
+    ExternalBlinding(SignatureMessage, SignatureNonce)
+}
+
 
 #[cfg(test)]
 mod tests {

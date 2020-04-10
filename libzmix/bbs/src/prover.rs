@@ -5,6 +5,7 @@
 use crate::prelude::*;
 
 use std::collections::BTreeMap;
+use crate::ProofMessage;
 
 /// This struct represents a Prover who receives signatures or proves with them.
 /// Provided are methods for 2PC where some are only known to the prover and a blind signature
@@ -96,39 +97,33 @@ impl Prover {
 
     /// Create a new signature proof of knowledge and selective disclosure proof
     /// from a verifier's request
-    pub fn new_signature_pok(
+    ///
+    /// # Arguments
+    /// * `request` - Proof request from verifier
+    /// * `proof_messages` -
+    /// If blinding_factor is Some(Nonce) then it will use that.
+    /// If None, a blinding factor will be generated at random.
+    pub fn commit_signature_pok(
         request: &ProofRequest,
-        messages: &[SignatureMessage],
-        blindings: Option<&[SignatureNonce]>,
+        proof_messages: &[ProofMessage],
         signature: &Signature,
-    ) -> Result<SignatureProof, BBSError> {
-        let mut revealed_messages = BTreeMap::new();
-
-        for i in &request.revealed_messages {
-            if *i > messages.len() {
-                return Err(BBSErrorKind::GeneralError {
-                    msg: format!("Index out of bounds: {} > {}", i, messages.len()),
-                }
-                .into());
-            }
-            revealed_messages.insert(*i, messages[*i].clone());
-        }
-
-        let pok = PoKOfSignature::init(
+    ) -> Result<PoKOfSignature, BBSError> {
+        PoKOfSignature::init(
             &signature,
             &request.verification_key,
-            messages,
-            blindings,
-            &request.revealed_messages,
-        )?;
-        let mut challenge_bytes = pok.to_bytes();
-        challenge_bytes.extend_from_slice(request.nonce.to_bytes().as_slice());
+            proof_messages
+        )
+    }
 
-        let challenge_hash = SignatureMessage::from_msg_hash(&challenge_bytes);
-        let proof = pok.gen_proof(&challenge_hash)?;
+    pub fn generate_signature_pok(
+        pok_sig: &PoKOfSignature,
+        challenge: &SignatureNonce
+    ) -> Result<SignatureProof, BBSError> {
+
+        let proof = pok_sig.gen_proof(&challenge)?;
 
         Ok(SignatureProof {
-            revealed_messages,
+            revealed_messages: pok_sig.revealed_messages.clone(),
             proof,
         })
     }
