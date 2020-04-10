@@ -33,4 +33,29 @@ impl Verifier {
             verification_key: verkey.clone(),
         })
     }
+
+    /// Check a signature proof of knowledge and selective disclosure proof
+    pub fn verify_signature_pok(
+        proof_request: &ProofRequest,
+        signature_proof: &SignatureProof,
+    ) -> Result<Vec<SignatureMessage>, BBSError> {
+        let mut challenge_bytes = signature_proof
+            .proof
+            .get_bytes_for_challenge(proof_request.revealed_messages.clone(), &proof_request.verification_key);
+        challenge_bytes.extend_from_slice(proof_request.nonce.to_bytes().as_slice());
+
+        let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
+        match signature_proof.proof.verify(
+            &proof_request.verification_key,
+            &signature_proof.revealed_messages,
+            &challenge_verifier,
+        )? {
+            PoKOfSignatureProofStatus::Success => Ok(signature_proof
+                .revealed_messages
+                .iter()
+                .map(|(_, m)| m.clone())
+                .collect::<Vec<SignatureMessage>>()),
+            e => Err(BBSErrorKind::InvalidProof { status: e }.into()),
+        }
+    }
 }
