@@ -1,11 +1,11 @@
 use crate::errors::prelude::*;
 use crate::keys::PublicKey;
 use crate::pok_vc::prelude::*;
+use crate::types::*;
 use crate::signature::{compute_b_const_time, Signature};
 
 use amcl_wrapper::constants::GroupG1_SIZE;
 use amcl_wrapper::extension_field_gt::GT;
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::G2;
@@ -34,11 +34,11 @@ pub struct PoKOfSignature {
     /// For proving relation a_bar / d == a_prime^{-e} * h_0^r2
     pub pok_vc_1: ProverCommittedG1,
     /// The messages
-    secrets_1: FieldElementVector,
+    secrets_1: SignatureMessageVector,
     /// For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
     pub pok_vc_2: ProverCommittedG1,
     /// The blinding factors
-    secrets_2: FieldElementVector,
+    secrets_2: SignatureMessageVector,
 }
 
 /// Indicates the status returned from `PoKOfSignatureProof`
@@ -104,8 +104,8 @@ impl PoKOfSignature {
     pub fn init(
         signature: &Signature,
         vk: &PublicKey,
-        messages: &[FieldElement],
-        blindings: Option<&[FieldElement]>,
+        messages: &[SignatureMessage],
+        blindings: Option<&[SignatureNonce]>,
         revealed_msg_indices: &BTreeSet<usize>,
     ) -> Result<Self, BBSError> {
         if messages.len() != vk.message_count() {
@@ -124,7 +124,7 @@ impl PoKOfSignature {
             }
         }
 
-        let mut blindings: Vec<Option<&FieldElement>> = match blindings {
+        let mut blindings: Vec<Option<&SignatureNonce>> = match blindings {
             Some(b) => {
                 if messages.len() - revealed_msg_indices.len() != b.len() {
                     return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
@@ -142,8 +142,8 @@ impl PoKOfSignature {
                 .collect(),
         };
 
-        let r1 = FieldElement::random();
-        let r2 = FieldElement::random();
+        let r1 = SignatureNonce::random();
+        let r2 = SignatureNonce::random();
 
         let b = compute_b_const_time(&G1::new(), vk, messages, &signature.s, 0);
         let a_prime = &signature.a * &r1;
@@ -155,7 +155,7 @@ impl PoKOfSignature {
 
         // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
         let mut committing_1 = ProverCommittingG1::new();
-        let mut secrets_1 = FieldElementVector::with_capacity(2);
+        let mut secrets_1 = SignatureMessageVector::with_capacity(2);
         // For a_prime^{-e}
         committing_1.commit(&a_prime, None);
         secrets_1.push(-(&signature.e));
@@ -173,7 +173,7 @@ impl PoKOfSignature {
         // and can be efficiently computed as (g1 * h1^m1 * h2^m2.... * h_i^m_i)^-1 and inverse in elliptic group is a point negation which is very cheap
         let mut committing_2 = ProverCommittingG1::new();
         let mut secrets_2 =
-            FieldElementVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
+            SignatureMessageVector::with_capacity(2 + vk.message_count() - revealed_msg_indices.len());
         // For d^-r3
         committing_2.commit(&d, None);
         secrets_2.push(-r3);
@@ -219,7 +219,7 @@ impl PoKOfSignature {
 
     /// Given the challenge value, compute the s values for Fiat-Shamir and return the actual
     /// proof to be sent to the verifier
-    pub fn gen_proof(self, challenge_hash: &FieldElement) -> Result<PoKOfSignatureProof, BBSError> {
+    pub fn gen_proof(self, challenge_hash: &SignatureNonce) -> Result<PoKOfSignatureProof, BBSError> {
         let proof_vc_1 = self
             .pok_vc_1
             .gen_proof(challenge_hash, self.secrets_1.as_slice())?;
@@ -267,7 +267,7 @@ impl PoKOfSignatureProof {
 
     /// Get the response from post-challenge phase of the Sigma protocol for the given message index `msg_idx`.
     /// Used when comparing message equality
-    pub fn get_resp_for_message(&self, msg_idx: usize) -> Result<FieldElement, BBSError> {
+    pub fn get_resp_for_message(&self, msg_idx: usize) -> Result<SignatureMessage, BBSError> {
         // 2 elements in self.proof_vc_2.responses are reserved for `&signature.e` and `r2`
         if msg_idx >= (self.proof_vc_2.responses.len() - 2) {
             return Err(BBSError::from_kind(BBSErrorKind::GeneralError {
@@ -286,8 +286,8 @@ impl PoKOfSignatureProof {
     pub fn verify(
         &self,
         vk: &PublicKey,
-        revealed_msgs: &BTreeMap<usize, FieldElement>,
-        challenge: &FieldElement,
+        revealed_msgs: &BTreeMap<usize, SignatureMessage>,
+        challenge: &SignatureNonce,
     ) -> Result<PoKOfSignatureProofStatus, BBSError> {
         vk.validate()?;
         for i in revealed_msgs.keys() {
@@ -322,10 +322,10 @@ impl PoKOfSignatureProof {
 
         // `bases_disclosed` and `exponents` below are used to create g1 * h1^-m1 * h2^-m2.... for all disclosed messages m_i
         let mut bases_disclosed = G1Vector::with_capacity(1 + revealed_msgs.len());
-        let mut exponents = FieldElementVector::with_capacity(1 + revealed_msgs.len());
+        let mut exponents = SignatureMessageVector::with_capacity(1 + revealed_msgs.len());
         // XXX: g1 should come from a setup param and not generator
         bases_disclosed.push(G1::generator());
-        exponents.push(FieldElement::one());
+        exponents.push(SignatureNonce::one());
         for i in 0..vk.message_count() {
             if revealed_msgs.contains_key(&i) {
                 let message = revealed_msgs.get(&i).unwrap();
@@ -438,7 +438,7 @@ mod tests {
     #[test]
     fn pok_signature_no_revealed_messages() {
         let message_count = 5;
-        let messages = FieldElementVector::random(message_count);
+        let messages = SignatureMessageVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -449,7 +449,7 @@ mod tests {
 
         let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, &revealed_msg)
             .unwrap();
-        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         // Test to_bytes
@@ -459,7 +459,7 @@ mod tests {
 
         // The verifier generates the challenge on its own.
         let challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
-        let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
+        let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
         assert!(proof
             .verify(&verkey, &revealed, &challenge_verifier)
             .unwrap().is_valid());
@@ -468,7 +468,7 @@ mod tests {
     #[test]
     fn pok_signature_revealed_message() {
         let message_count = 5;
-        let messages = FieldElementVector::random(message_count);
+        let messages = SignatureMessageVector::random(message_count);
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -487,7 +487,7 @@ mod tests {
             &revealed_indices,
         )
         .unwrap();
-        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         let mut revealed_msgs = BTreeMap::new();
@@ -496,20 +496,20 @@ mod tests {
         }
         // The verifier generates the challenge on its own.
         let chal_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
-        let challenge_verifier = FieldElement::from_msg_hash(&chal_bytes);
+        let challenge_verifier = SignatureNonce::from_msg_hash(&chal_bytes);
         assert!(proof
             .verify(&verkey, &revealed_msgs, &challenge_verifier)
             .unwrap().is_valid());
 
         // Reveal wrong message
         let mut revealed_msgs_1 = revealed_msgs.clone();
-        revealed_msgs_1.insert(2, FieldElement::random());
+        revealed_msgs_1.insert(2, SignatureMessage::random());
         assert!(!proof
             .verify(&verkey, &revealed_msgs_1, &challenge_verifier)
             .unwrap().is_valid());
 
         // PoK with supplied blindings
-        let blindings = FieldElementVector::random(message_count - revealed_indices.len());
+        let blindings = SignatureMessageVector::random(message_count - revealed_indices.len());
         let pok = PoKOfSignature::init(
             &sig,
             &verkey,
@@ -522,12 +522,12 @@ mod tests {
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
-        let challenge_prover = FieldElement::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         // The verifier generates the challenge on its own.
         let challenge_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
-        let challenge_verifier = FieldElement::from_msg_hash(&challenge_bytes);
+        let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
         assert!(proof
             .verify(&verkey, &revealed_msgs, &challenge_verifier)
             .unwrap().is_valid());
@@ -542,13 +542,13 @@ mod tests {
         let message_count = 5;
         let (vk, signkey) = generate(message_count).unwrap();
 
-        let same_msg = FieldElement::random();
-        let mut msgs_1 = FieldElementVector::random(message_count - 1);
+        let same_msg = SignatureMessage::random();
+        let mut msgs_1 = SignatureMessageVector::random(message_count - 1);
         msgs_1.insert(1, same_msg.clone());
         let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
 
-        let mut msgs_2 = FieldElementVector::random(message_count - 1);
+        let mut msgs_2 = SignatureMessageVector::random(message_count - 1);
         msgs_2.insert(4, same_msg.clone());
         let sig_2 = Signature::new(msgs_2.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
@@ -556,12 +556,12 @@ mod tests {
         // A particular message is same
         assert_eq!(msgs_1[1], msgs_2[4]);
 
-        let same_blinding = FieldElement::random();
+        let same_blinding = SignatureNonce::random();
 
-        let mut blindings_1 = FieldElementVector::random(message_count - 1);
+        let mut blindings_1 = SignatureMessageVector::random(message_count - 1);
         blindings_1.insert(1, same_blinding.clone());
 
-        let mut blindings_2 = FieldElementVector::random(message_count - 1);
+        let mut blindings_2 = SignatureMessageVector::random(message_count - 1);
         blindings_2.insert(4, same_blinding.clone());
 
         // Blinding for the same message is kept same
@@ -589,7 +589,7 @@ mod tests {
         chal_bytes.append(&mut pok_1.to_bytes());
         chal_bytes.append(&mut pok_2.to_bytes());
 
-        let chal_prover = FieldElement::from_msg_hash(&chal_bytes);
+        let chal_prover = SignatureNonce::from_msg_hash(&chal_bytes);
 
         let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
         let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
@@ -598,7 +598,7 @@ mod tests {
         let mut chal_bytes = vec![];
         chal_bytes.append(&mut proof_1.get_bytes_for_challenge(BTreeSet::new(), &vk));
         chal_bytes.append(&mut proof_2.get_bytes_for_challenge(BTreeSet::new(), &vk));
-        let chal_verifier = FieldElement::from_msg_hash(&chal_bytes);
+        let chal_verifier = SignatureNonce::from_msg_hash(&chal_bytes);
 
         // Response for the same message should be same (this check is made by the verifier)
         assert_eq!(
