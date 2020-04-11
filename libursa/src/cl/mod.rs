@@ -659,6 +659,15 @@ pub struct SignatureCorrectnessProof {
     c: BigNumber,
 }
 
+impl SignatureCorrectnessProof {
+    pub fn try_clone(&self) -> UrsaCryptoResult<SignatureCorrectnessProof> {
+        Ok(SignatureCorrectnessProof {
+            se: self.se.try_clone()?,
+            c: self.c.try_clone()?,
+        })
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct Witness {
@@ -778,6 +787,10 @@ impl MasterSecret {
     pub fn value(&self) -> UrsaCryptoResult<BigNumber> {
         Ok(self.ms.try_clone()?)
     }
+
+    pub fn try_clone(&self) -> UrsaCryptoResult<MasterSecret> {
+        Ok(Self { ms: self.value()? })
+    }
 }
 
 /// Blinded Master Secret uses by Issuer in credential creation.
@@ -790,12 +803,32 @@ pub struct BlindedCredentialSecrets {
     committed_attributes: BTreeMap<String, BigNumber>,
 }
 
+impl BlindedCredentialSecrets {
+    pub fn try_clone(&self) -> UrsaCryptoResult<Self> {
+        Ok(Self {
+            u: self.u.try_clone()?,
+            ur: self.ur.clone(),
+            hidden_attributes: self.hidden_attributes.clone(),
+            committed_attributes: clone_bignum_btreemap(&self.committed_attributes)?,
+        })
+    }
+}
+
 /// `CredentialSecretsBlindingFactors` used by Prover for post processing of credentials received from Issuer.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug)]
 pub struct CredentialSecretsBlindingFactors {
     v_prime: BigNumber,
     vr_prime: Option<GroupOrderElement>,
+}
+
+impl CredentialSecretsBlindingFactors {
+    pub fn try_clone(&self) -> UrsaCryptoResult<Self> {
+        Ok(Self {
+            v_prime: self.v_prime.try_clone()?,
+            vr_prime: self.vr_prime.clone(),
+        })
+    }
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -819,6 +852,17 @@ pub struct BlindedCredentialSecretsCorrectnessProof {
     v_dash_cap: BigNumber, // Value to prove knowledge of `u` construction in `BlindedCredentialSecrets`
     m_caps: BTreeMap<String, BigNumber>, // Values for proving knowledge of committed values
     r_caps: BTreeMap<String, BigNumber>, // Blinding values for m_caps
+}
+
+impl BlindedCredentialSecretsCorrectnessProof {
+    pub fn try_clone(&self) -> UrsaCryptoResult<Self> {
+        Ok(Self {
+            c: self.c.try_clone()?,
+            v_dash_cap: self.v_dash_cap.try_clone()?,
+            m_caps: clone_bignum_btreemap(&self.m_caps)?,
+            r_caps: clone_bignum_btreemap(&self.r_caps)?,
+        })
+    }
 }
 
 /// “Sub Proof Request” - input to create a Proof for a credential;
@@ -1307,6 +1351,15 @@ fn clone_bignum_map<K: Clone + Eq + Hash>(
         res.insert(k.clone(), v.try_clone()?);
     }
     Ok(res)
+}
+
+fn clone_bignum_btreemap<K: Clone + Eq + Hash + Ord>(
+    other: &BTreeMap<K, BigNumber>,
+) -> UrsaCryptoResult<BTreeMap<K, BigNumber>> {
+    other.iter().try_fold(BTreeMap::new(), |mut map, (k, v)| {
+        map.insert(k.clone(), v.try_clone()?);
+        UrsaCryptoResult::Ok(map)
+    })
 }
 
 fn clone_credential_value_map<K: Clone + Eq + Ord>(
