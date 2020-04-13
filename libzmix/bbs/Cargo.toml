@@ -13,3 +13,4 @@ hash2curve = { version = "0.0.4", features = ["bls"] }
 hex = "0.4.2"
 sha2 = "0.8"
 serde = { version = "1.0.106", features = ["serde_derive"] }
+serde_cbor = "0.11.1"
