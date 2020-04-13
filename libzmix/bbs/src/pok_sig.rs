@@ -129,7 +129,7 @@ impl PoKOfSignature {
                     HiddenMessage::ProofSpecificBlinding(m) => {
                         temp.push(m.clone())
                     },
-                    HiddenMessage::ExternalBlinding(m,b) => {
+                    HiddenMessage::ExternalBlinding(m,_) => {
                         temp.push(m.clone())
                     }
                 }
@@ -449,11 +449,16 @@ mod tests {
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
-        let revealed = BTreeMap::new();
-        let revealed_msg = BTreeSet::new();
+        let proof_messages = vec![
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[0].clone())),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[1].clone())),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[2].clone())),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[3].clone())),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[4].clone())),
+        ];
+        let revealed_msg: BTreeMap<usize, SignatureMessage> = BTreeMap::new();
 
-        let pok = PoKOfSignature::init(&sig, &verkey, messages.as_slice(), None, &revealed_msg)
-            .unwrap();
+        let pok = PoKOfSignature::init(&sig, &verkey, proof_messages.as_slice()).unwrap();
         let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
@@ -466,7 +471,7 @@ mod tests {
         let challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
         let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
         assert!(proof
-            .verify(&verkey, &revealed, &challenge_verifier)
+            .verify(&verkey, &revealed_msg, &challenge_verifier)
             .unwrap().is_valid());
     }
 
@@ -480,6 +485,14 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.unwrap());
 
+        let mut proof_messages = vec![
+            ProofMessage::Revealed(messages[0].clone()),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[1].clone())),
+            ProofMessage::Revealed(messages[2].clone()),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[3].clone())),
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(messages[4].clone())),
+        ];
+
         let mut revealed_indices = BTreeSet::new();
         revealed_indices.insert(0);
         revealed_indices.insert(2);
@@ -487,9 +500,7 @@ mod tests {
         let pok = PoKOfSignature::init(
             &sig,
             &verkey,
-            messages.as_slice(),
-            None,
-            &revealed_indices,
+            proof_messages.as_slice()
         )
         .unwrap();
         let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
@@ -514,13 +525,14 @@ mod tests {
             .unwrap().is_valid());
 
         // PoK with supplied blindings
-        let blindings = SignatureMessageVector::random(message_count - revealed_indices.len());
+        proof_messages[1] = ProofMessage::Hidden(HiddenMessage::ExternalBlinding(messages[1].clone(), SignatureNonce::random()));
+        proof_messages[3] = ProofMessage::Hidden(HiddenMessage::ExternalBlinding(messages[3].clone(), SignatureNonce::random()));
+        proof_messages[4] = ProofMessage::Hidden(HiddenMessage::ExternalBlinding(messages[4].clone(), SignatureNonce::random()));
+
         let pok = PoKOfSignature::init(
             &sig,
             &verkey,
-            messages.as_slice(),
-            Some(blindings.as_slice()),
-            &revealed_indices,
+            proof_messages.as_slice()
         )
         .unwrap();
         let mut revealed_msgs = BTreeMap::new();
@@ -549,44 +561,43 @@ mod tests {
 
         let same_msg = SignatureMessage::random();
         let mut msgs_1 = SignatureMessageVector::random(message_count - 1);
+        let mut proof_messages_1 = Vec::with_capacity(message_count);
+
+        for m in msgs_1.iter() {
+            proof_messages_1.push(ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m.clone())));
+        }
+
+        let same_blinding = SignatureNonce::random();
         msgs_1.insert(1, same_msg.clone());
+        proof_messages_1.insert(1, ProofMessage::Hidden(HiddenMessage::ExternalBlinding(same_msg.clone(), same_blinding.clone())));
+
         let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
 
         let mut msgs_2 = SignatureMessageVector::random(message_count - 1);
+        let mut proof_messages_2 = Vec::with_capacity(message_count);
+        for m in msgs_2.iter() {
+            proof_messages_2.push(ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m.clone())));
+        }
+
         msgs_2.insert(4, same_msg.clone());
+        proof_messages_2.insert(4, ProofMessage::Hidden(HiddenMessage::ExternalBlinding(same_msg.clone(), same_blinding.clone())));
         let sig_2 = Signature::new(msgs_2.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_2.verify(msgs_2.as_slice(), &vk).unwrap());
 
         // A particular message is same
         assert_eq!(msgs_1[1], msgs_2[4]);
 
-        let same_blinding = SignatureNonce::random();
-
-        let mut blindings_1 = SignatureMessageVector::random(message_count - 1);
-        blindings_1.insert(1, same_blinding.clone());
-
-        let mut blindings_2 = SignatureMessageVector::random(message_count - 1);
-        blindings_2.insert(4, same_blinding.clone());
-
-        // Blinding for the same message is kept same
-        assert_eq!(blindings_1[1], blindings_2[4]);
-
-        let revealed = BTreeSet::new();
         let pok_1 = PoKOfSignature::init(
             &sig_1,
             &vk,
-            msgs_1.as_slice(),
-            Some(blindings_1.as_slice()),
-            &revealed,
+            proof_messages_1.as_slice()
         )
         .unwrap();
         let pok_2 = PoKOfSignature::init(
             &sig_2,
             &vk,
-            msgs_2.as_slice(),
-            Some(blindings_2.as_slice()),
-            &revealed,
+            proof_messages_2.as_slice()
         )
         .unwrap();
 

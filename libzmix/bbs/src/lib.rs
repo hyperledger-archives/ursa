@@ -121,55 +121,13 @@ impl BlindSignatureContext {
     const MIN_LENGTH: usize = COMMITMENT_SIZE + MESSAGE_SIZE + 4;
     /// Convert to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        result.extend_from_slice(self.commitment.to_bytes().as_slice());
-        result.extend_from_slice(self.challenge_hash.to_bytes().as_slice());
-        let proof_bytes = self.proof_of_hidden_messages.to_bytes();
-        let proof_len = proof_bytes.len() as u32;
-        result.extend_from_slice(&proof_len.to_be_bytes()[..]);
-        result.extend_from_slice(proof_bytes.as_slice());
-        result
+        serde_cbor::to_vec(self).unwrap()
     }
 
     /// Convert from raw bytes
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-
-        if data.len() < Self::MIN_LENGTH {
-            return Err(BBSErrorKind::InvalidNumberOfBytes(Self::MIN_LENGTH, data.len()).into());
-        }
-
-        let mut offset = 0;
-        let mut end = COMMITMENT_SIZE;
-        let commitment =
-            BlindedSignatureCommitment::from_bytes(&data[offset..end]).map_err(|e| {
-                BBSErrorKind::GeneralError {
-                    msg: format!("{:?}", e),
-                }
-            })?;
-
-        offset = end;
-        end = offset + MESSAGE_SIZE;
-        let challenge_hash = SignatureNonce::from_bytes(&data[offset..end]).map_err(|e| {
-            BBSErrorKind::GeneralError {
-                msg: format!("{:?}", e),
-            }
-        })?;
-
-        offset = end;
-        end = offset + 4;
-        let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-        offset = end;
-        end = offset + proof_len;
-        let proof_of_hidden_messages =
-            ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError {
-                msg: format!("{:?}", e),
-            })?;
-        Ok(Self {
-            commitment,
-            challenge_hash,
-            proof_of_hidden_messages,
-        })
+        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(Self::MIN_LENGTH, data.len())))
     }
 
     /// Assumes the proof of hidden messages
@@ -223,12 +181,18 @@ pub struct ProofRequest {
     pub verification_key: PublicKey,
 }
 
-// impl ProofRequest {
-//     pub fn to_bytes(&self) -> Vec<u8> {
-//         let mut result = self.nonce.to_bytes();
-//         let num_messages =
-//     }
-// }
+impl ProofRequest {
+    /// Convert to raw bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        serde_cbor::to_vec(self).unwrap()
+    }
+
+    /// Convert from raw bytes
+    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        let data = data.as_ref();
+        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
+    }
+}
 
 /// Contains the data from a prover to a verifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,25 +201,48 @@ pub struct SignatureProof {
     proof: PoKOfSignatureProof,
 }
 
+impl SignatureProof {
+    /// Convert to raw bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        serde_cbor::to_vec(self).unwrap()
+    }
+
+    /// Convert from raw bytes
+    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        let data = data.as_ref();
+        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
+    }
+}
+
+/// A message classification by the prover
 pub enum ProofMessage {
+    /// Message will be revealed to a verifier
     Revealed(SignatureMessage),
+    /// Message will be hidden from a verifier
     Hidden(HiddenMessage)
 }
 
 impl ProofMessage{
+    /// Extract the internal message
     pub fn get_message(&self) -> SignatureMessage {
         match *self {
-            ProofMessage::Revealed(r) => r,
-            ProofMessage::Hidden(h) => match h {
-                HiddenMessage::ProofSpecificBlinding(p) => p,
-                HiddenMessage::ExternalBlinding(m,_) => m
+            ProofMessage::Revealed(ref r) => r.clone(),
+            ProofMessage::Hidden(ref h) => match h {
+                HiddenMessage::ProofSpecificBlinding(ref p) => p.clone(),
+                HiddenMessage::ExternalBlinding(ref m,_) => m.clone()
             }
         }
     }
 }
 
+/// Two types of hidden messages
 pub enum HiddenMessage {
+    /// Indicates the message is hidden and no other work is involved
+    ///     so a blinding factor will be generated specific to this proof
     ProofSpecificBlinding(SignatureMessage),
+    /// Indicates the message is hidden but it is involved with other proofs
+    ///     like boundchecks, set memberships or inequalities, so the blinding factor
+    ///     is provided from an external source.
     ExternalBlinding(SignatureMessage, SignatureNonce)
 }
 

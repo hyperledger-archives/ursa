@@ -115,15 +115,17 @@ impl Prover {
         )
     }
 
+    /// Convert the a committed proof of signature knowledge to the proof
     pub fn generate_signature_pok(
-        pok_sig: &PoKOfSignature,
+        pok_sig: PoKOfSignature,
         challenge: &SignatureNonce
     ) -> Result<SignatureProof, BBSError> {
 
+        let revealed_messages = (&pok_sig.revealed_messages).clone();
         let proof = pok_sig.gen_proof(&challenge)?;
 
         Ok(SignatureProof {
-            revealed_messages: pok_sig.revealed_messages.clone(),
+            revealed_messages,
             proof,
         })
     }
