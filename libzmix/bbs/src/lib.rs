@@ -17,7 +17,6 @@
 //! BBS+ signatures can be used for TPM DAA attestations or Verifiable Credentials.
 
 #![deny(
-    warnings,
     missing_docs,
     unsafe_code,
     unused_import_braces,
@@ -170,7 +169,7 @@ impl BlindSignatureContext {
         }
         challenge_bytes.append(&mut commitment.to_bytes());
         challenge_bytes.extend_from_slice(self.commitment.to_bytes().as_slice());
-        challenge_bytes.extend_from_slice(&mut nonce.to_bytes());
+        challenge_bytes.extend_from_slice(&nonce.to_bytes());
 
         let challenge_result =
             SignatureMessage::from_msg_hash(challenge_bytes.as_slice()) - &self.challenge_hash;

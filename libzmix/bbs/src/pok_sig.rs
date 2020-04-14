@@ -59,8 +59,8 @@ pub enum PoKOfSignatureProofStatus {
 
 impl PoKOfSignatureProofStatus {
     /// Return whether the proof succeeded or not
-    pub fn is_valid(&self) -> bool {
-        match *self {
+    pub fn is_valid(self) -> bool {
+        match self {
             PoKOfSignatureProofStatus::Success => true,
             _ => false,
         }
