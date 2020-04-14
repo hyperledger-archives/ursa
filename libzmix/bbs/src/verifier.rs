@@ -40,9 +40,10 @@ impl Verifier {
         signature_proof: &SignatureProof,
         nonce: &SignatureNonce,
     ) -> Result<Vec<SignatureMessage>, BBSError> {
-        let mut challenge_bytes = signature_proof
-            .proof
-            .get_bytes_for_challenge(proof_request.revealed_messages.clone(), &proof_request.verification_key);
+        let mut challenge_bytes = signature_proof.proof.get_bytes_for_challenge(
+            proof_request.revealed_messages.clone(),
+            &proof_request.verification_key,
+        );
         challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
 
         let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);

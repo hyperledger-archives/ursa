@@ -42,6 +42,9 @@ use amcl_wrapper::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Proof messages
+#[macro_use]
+pub mod messages;
 /// Macros and classes used for creating proofs of knowledge
 #[macro_use]
 pub mod pok_vc;
@@ -80,7 +83,7 @@ mod types {
     pub use super::{
         BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
         SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
-        SignatureProof, ProofMessage, HiddenMessage
+        SignatureProof,
     };
 }
 
@@ -89,11 +92,12 @@ pub mod prelude {
     pub use super::{
         BlindSignatureContext, BlindedSignatureCommitment, ProofRequest, SignatureBlinding,
         SignatureMessage, SignatureMessageVector, SignatureNonce, SignaturePointVector,
-        SignatureProof, ProofMessage, HiddenMessage
+        SignatureProof,
     };
     pub use crate::errors::prelude::*;
     pub use crate::issuer::Issuer;
     pub use crate::keys::prelude::*;
+    pub use crate::messages::{HiddenMessage, ProofMessage};
     pub use crate::pok_sig::prelude::*;
     pub use crate::pok_vc::prelude::*;
     pub use crate::prover::Prover;
@@ -127,7 +131,12 @@ impl BlindSignatureContext {
     /// Convert from raw bytes
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(Self::MIN_LENGTH, data.len())))
+        serde_cbor::from_slice(data).map_err(|_| {
+            BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
+                Self::MIN_LENGTH,
+                data.len(),
+            ))
+        })
     }
 
     /// Assumes the proof of hidden messages
@@ -165,7 +174,7 @@ impl BlindSignatureContext {
 
         let challenge_result =
             SignatureMessage::from_msg_hash(challenge_bytes.as_slice()) - &self.challenge_hash;
-        let commitment_result = commitment - &self.commitment;
+        let commitment_result = commitment - &self.proof_of_hidden_messages.commitment;
         Ok(commitment_result.is_identity() && challenge_result.is_zero())
     }
 }
@@ -190,7 +199,8 @@ impl ProofRequest {
     /// Convert from raw bytes
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
+        serde_cbor::from_slice(data)
+            .map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
     }
 }
 
@@ -210,40 +220,10 @@ impl SignatureProof {
     /// Convert from raw bytes
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-        serde_cbor::from_slice(data).map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
+        serde_cbor::from_slice(data)
+            .map_err(|_| BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())))
     }
 }
-
-/// A message classification by the prover
-pub enum ProofMessage {
-    /// Message will be revealed to a verifier
-    Revealed(SignatureMessage),
-    /// Message will be hidden from a verifier
-    Hidden(HiddenMessage)
-}
-
-impl ProofMessage{
-    /// Extract the internal message
-    pub fn get_message(&self) -> SignatureMessage {
-        match *self {
-            ProofMessage::Revealed(ref r) => r.clone(),
-            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(ref p)) => p.clone(),
-            ProofMessage::Hidden(HiddenMessage::ExternalBlinding(ref m,_)) => m.clone()
-        }
-    }
-}
-
-/// Two types of hidden messages
-pub enum HiddenMessage {
-    /// Indicates the message is hidden and no other work is involved
-    ///     so a blinding factor will be generated specific to this proof
-    ProofSpecificBlinding(SignatureMessage),
-    /// Indicates the message is hidden but it is involved with other proofs
-    ///     like boundchecks, set memberships or inequalities, so the blinding factor
-    ///     is provided from an external source.
-    ExternalBlinding(SignatureMessage, SignatureNonce)
-}
-
 
 #[cfg(test)]
 mod tests {
