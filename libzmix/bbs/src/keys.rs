@@ -121,10 +121,10 @@ impl DeterministicPublicKey {
     pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> PublicKey {
         let point_hasher = Bls12381G1Sswu::new(dst);
 
-        let mut data = Vec::with_capacity(message_count);
+        let mut data = Vec::with_capacity(message_count.clone());
         data.extend_from_slice(&self.w.to_bytes());
         data.push(0u8);
-        data.extend_from_slice(&(message_count.clone() as u32).to_be_bytes()[..]);
+        data.extend_from_slice(&(message_count as u32).to_be_bytes()[..]);
         let h0: G1 = point_hasher
             .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
             .unwrap()
