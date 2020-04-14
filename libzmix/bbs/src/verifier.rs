@@ -16,7 +16,8 @@ impl Verifier {
         verkey: &PublicKey,
     ) -> Result<ProofRequest, BBSError> {
         let revealed_messages = revealed_message_indices
-            .iter().copied()
+            .iter()
+            .copied()
             .collect::<BTreeSet<usize>>();
         for i in &revealed_messages {
             if *i > verkey.h.len() {

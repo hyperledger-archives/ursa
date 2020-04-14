@@ -118,7 +118,11 @@ impl DeterministicPublicKey {
     /// using the hash to curve algorithm BLS12381G1_XMD:SHA-256_SSWU_RO denoted as H2C
     /// h_0 <- H2C(w || I2OSP(0, 1) || I2OSP(message_count, 4))
     /// h_i <- H2C(h_i-1 || I2OSP(0, 1) || I2OSP(i, 4))
-    pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> Result<PublicKey, BBSError> {
+    pub fn to_public_key(
+        &self,
+        message_count: usize,
+        dst: DomainSeparationTag,
+    ) -> Result<PublicKey, BBSError> {
         if message_count == 0 {
             return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
         }
