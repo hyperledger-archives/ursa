@@ -30,7 +30,7 @@ IETF's [Hash to Curve](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-
 
 `generate(message_count: usize)` - returns a keypair used for creating BBS+ signatures
 
-`PublicKey` - *w &xlarr; &#x1D53E;<sub>2/sub>, h<sub>0</sub>, (h<sub>1</sub>, ... , h<sub>L</sub>) &xlarr; &#x1D53E;<sub>1</sub><sup>L</sup>*
+`PublicKey` - *w &xlarr; &#x1D53E;<sub>2</sub>, h<sub>0</sub>, (h<sub>1</sub>, ... , h<sub>L</sub>) &xlarr; &#x1D53E;<sub>1</sub><sup>L</sup>*
 
 `DeterministicPublicKey` - *w &xlarr; &#x1D53E;<sub>2</sub>*. This can be converted to a public key by calling the `to_public_key` method.
 
