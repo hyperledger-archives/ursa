@@ -118,7 +118,7 @@ impl DeterministicPublicKey {
     /// using the hash to curve algorithm BLS12381G1_XMD:SHA-256_SSWU_RO denoted as H2C
     /// h_0 <- H2C(w || I2OSP(0, 1) || I2OSP(message_count, 4))
     /// h_i <- H2C(h_i-1 || I2OSP(0, 1) || I2OSP(i, 4))
-    pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> PublicKey {
+    pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> Result<PublicKey, BBSError> {
         if message_count == 0 {
             return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
         }
@@ -148,11 +148,11 @@ impl DeterministicPublicKey {
             h.push(current_h.clone());
         }
 
-        PublicKey {
+        Ok(PublicKey {
             w: self.w.clone(),
             h0,
             h,
-        }
+        })
     }
 
     /// Convert the key to raw bytes
@@ -226,8 +226,11 @@ mod tests {
         let (dpk, _) = DeterministicPublicKey::new(None);
         let dst = DomainSeparationTag::new(b"TEST", None, None, None).unwrap();
 
-        let pk = dpk.to_public_key(5, dst);
+        let res = dpk.to_public_key(5, dst.clone());
 
+        assert!(res.is_ok());
+
+        let pk = res.unwrap();
         assert_eq!(pk.message_count(), 5);
 
         for i in 0..pk.h.len() {
@@ -237,5 +240,9 @@ mod tests {
                 assert_ne!(pk.h[i], pk.h[j], "h[{}] == h[{}]", i + 1, j + 1);
             }
         }
+
+        let res = dpk.to_public_key(0, dst);
+
+        assert!(res.is_err());
     }
 }
