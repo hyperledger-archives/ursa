@@ -1,16 +1,24 @@
 [package]
-name = "bbs"
-version = "0.1.0"
 authors = ["The Hyperledger Ursa Contributors"]
+description = "The BBS+ signature scheme"
+documentation = "https://docs.rs/bbs"
 edition = "2018"
+license = "Apache-2.0"
+name = "bbs"
+readme = "README.md"
+repository = "https://github.com/hyperledger/ursa"
+version = "0.2.0"
+
+[badges]
+maintenance = { status = "active" }
 
 [dependencies]
-amcl_wrapper = { version = "0.3.5", default-features = false, features = ["bls381"] }
-arrayref = "0.3.6"
-failure = "0.1.7"
+amcl_wrapper = { version = "0.3", default-features = false, features = ["bls381"] }
+arrayref = "0.3"
+failure = "0.1"
 generic-array = "0.13.2"
 hash2curve = { version = "0.0.4", features = ["bls"] }
-hex = "0.4.2"
+hex = "0.4"
 sha2 = "0.8"
-serde = { version = "1.0.106", features = ["serde_derive"] }
-serde_cbor = "0.11.1"
+serde = { version = "1.0", features = ["serde_derive"] }
+serde_cbor = "0.11"
