@@ -41,7 +41,7 @@ pub enum BBSErrorKind {
     #[fail(display = "The proof failed due to {}", status)]
     InvalidProof {
         /// The status of the invalid proof
-        status: PoKOfSignatureProofStatus
+        status: PoKOfSignatureProofStatus,
     },
     /// A Generic error
     #[fail(display = "{:?}", msg)]
