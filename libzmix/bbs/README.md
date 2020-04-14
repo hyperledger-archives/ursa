@@ -1,7 +1,9 @@
 [Short group signatures](https://crypto.stanford.edu/~xb/crypto04a/groupsigs.pdf) by Boneh, Boyen, and Shachum
 and later improved in [ASM](http://web.cs.iastate.edu/~wzhang/teach-552/ReadingList/552-14.pdf) as BBS+ and touched on again
 in section 4.3 in [CDL](https://eprint.iacr.org/2016/663.pdf).
+
 ---
+
 This crate implements the BBS+ signature scheme which allows for signing many committed messages.
 
 BBS+ signatures can be created in typical cryptographic fashion where the signer and signature holder are the same
@@ -126,4 +128,55 @@ let blind_signature = Issuer::blind_sign(&ctx, messages.as_slice(), &sk, &pk).un
 // Recipient knows all `messages` that are signed
 
 let signature = Prover::complete_signature(&pk, messages.as_slice(), &blind_signature, &signature_blinding).unwrap();
+```
+
+## Proofs
+
+Verifiers ask a Prover to reveal signed messages (zero to all, the Prover should agree to it) and the remaining
+messages are hidden. The Prover completes a signature proof of knowledge and proof of committed values.
+These messages could be combined in other zero-knowledge proofs like zkSNARKs or Bulletproofs like bound checks or 
+set memberships. If this is the case, the hidden messages will need to linked to the other proofs using a common
+blinding factor. This crate provides three message classifications for proofs to accommodate this flexibility.
+
+- *ProofMessage::Revealed*: message will become known to the verifier. Caveat: cryptography operates on integers and not directly on strings. Usually the hash of the string is signed. The verifier will learn the revealed hash and not the message content. The prover must send the preimage so the verifier can check if the hashes are equal after verifying the signature.
+- *ProofMessage::Hidden*: message is not shown to the verifier. There are two kinds of hidden messages.
+    - *HiddenMessage::ProofSpecificBlinding*: message is hidden and not used in any other proof, the blinding is specific to this signature only.
+    - *HiddenMessage::ExternalBlinding*: message is hidden but is also used in another proof. For example, to show two messages are the same across two signature or 'linked', the same blinding factor must be used for both proofs. This kind groups the blinding factor and the message.
+    
+To begin a zero-knowledge proof exchange, the verifier indicates which messages to be revealed and provides a nonce
+limit the prover's ability to cheat i.e. create a valid proof with knowing the actual messages or signature.
+
+The Verifier must trust the signer of the credential and know the message structure i.e. what message is at index 1, 2, 3, ... etc.
+
+```rust
+let nonce = Verifier::generate_proof_nonce();
+let proof_request = Verifier::new_proof_request(&[1, 3], &pk).unwrap();
+
+// Sends `proof_request` and `nonce` to the prover
+let proof_messages = vec![
+    ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(SignatureMessage::from_msg_hash(b"message_0"))),
+    ProofMessage::Revealed(SignatureMessage::from_msg_hash(b"message_1")),
+    ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(SignatureMessage::from_msg_hash(b"message_2"))),
+    ProofMessage::Revealed(SignatureMessage::from_msg_hash(b"message_3")),
+    ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(SignatureMessage::from_msg_hash(b"message_4"))),
+];
+
+let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature).unwrap();
+
+// complete other zkps as desired and compute `challenge_hash`
+let mut challenge_bytes = Vec::new();
+
+// add bytes from other proofs
+
+let challenge = SignatureNonce::from_msg_hash(&pok.to_bytes());
+
+let proof = Prover::generate_signature_pok(&pok, &challenge).unwrap();
+
+// Send `proof` and `challenge` to Verifier 
+
+match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
+    Ok(messages) => // check revealed messages
+    Err(BBSError::InvalidProof(e)) => // Why did the proof failed
+    Err(o) => //Failed due to another error
+};
 ```

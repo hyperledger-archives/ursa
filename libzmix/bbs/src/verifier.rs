@@ -59,4 +59,9 @@ impl Verifier {
             e => Err(BBSErrorKind::InvalidProof { status: e }.into()),
         }
     }
+
+    /// Create a nonce used for the proof request context
+    pub fn generate_proof_nonce() -> SignatureNonce {
+        SignatureNonce::random()
+    }
 }
