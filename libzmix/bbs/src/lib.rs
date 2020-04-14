@@ -227,10 +227,8 @@ impl ProofMessage{
     pub fn get_message(&self) -> SignatureMessage {
         match *self {
             ProofMessage::Revealed(ref r) => r.clone(),
-            ProofMessage::Hidden(ref h) => match h {
-                HiddenMessage::ProofSpecificBlinding(ref p) => p.clone(),
-                HiddenMessage::ExternalBlinding(ref m,_) => m.clone()
-            }
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(ref p)) => p.clone(),
+            ProofMessage::Hidden(HiddenMessage::ExternalBlinding(ref m,_)) => m.clone()
         }
     }
 }
