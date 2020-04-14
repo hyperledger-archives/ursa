@@ -1,17 +1,20 @@
 extern crate amcl_wrapper;
 #[macro_use]
 extern crate criterion;
+#[macro_use]
+extern crate bbs;
 extern crate zmix;
 
 use amcl_wrapper::field_elem::FieldElement;
 
 use criterion::Criterion;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use zmix::signatures::bbs::keys::generate as bbs_keys_generate;
-use zmix::signatures::bbs::pok_sig::PoKOfSignature as BBSPoKOfSignature;
-use zmix::signatures::bbs::signature::Signature as BBSSignature;
+use bbs::keys::generate as bbs_keys_generate;
+use bbs::messages::{HiddenMessage, ProofMessage};
+use bbs::pok_sig::PoKOfSignature as BBSPoKOfSignature;
+use bbs::signature::Signature as BBSSignature;
 use zmix::signatures::ps::keys::{keygen as ps_keys_generate, Params};
 use zmix::signatures::ps::pok_sig::PoKOfSignature as PSPoKOfSignature;
 use zmix::signatures::ps::signature::Signature as PSSignature;
@@ -52,23 +55,24 @@ fn bbs_prove_benchmark(c: &mut Criterion) {
         ////////////////////////// BBS+ Signatures
         let (pk, sk) = bbs_keys_generate(atts).unwrap();
         let attributes = SignatureMessageVector::random(atts);
+        let sig_atts = attributes
+            .iter()
+            .map(|m| pm_hidden_raw!(m.clone()))
+            .collect::<Vec<ProofMessage>>();
         let sig = BBSSignature::new(attributes.as_slice(), &sk, &pk).unwrap();
 
         c.bench_function(format!("bbs+ generate proof {} atts", atts).as_str(), |b| {
             b.iter(|| {
-                let pok =
-                    BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new())
-                        .unwrap();
+                let pok = BBSPoKOfSignature::init(&sig, &pk, &sig_atts).unwrap();
                 let challenge = FieldElement::from_msg_hash(&pok.to_bytes());
                 pok.gen_proof(&challenge).unwrap()
             })
         });
-        let poks = BBSPoKOfSignature::init(&sig, &pk, attributes.as_slice(), None, HashSet::new())
-            .unwrap();
+        let poks = BBSPoKOfSignature::init(&sig, &pk, &sig_atts).unwrap();
         let challenge = FieldElement::from_msg_hash(&poks.to_bytes());
         let proof = poks.gen_proof(&challenge).unwrap();
         c.bench_function(format!("bbs+ verify proof {} atts", atts).as_str(), |b| {
-            b.iter(|| proof.verify(&pk, HashMap::new(), &challenge).unwrap())
+            b.iter(|| proof.verify(&pk, &BTreeMap::new(), &challenge).unwrap())
         });
 
         ////////////////////////// PS Signatures
