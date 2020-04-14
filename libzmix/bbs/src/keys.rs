@@ -119,6 +119,9 @@ impl DeterministicPublicKey {
     /// h_0 <- H2C(w || I2OSP(0, 1) || I2OSP(message_count, 4))
     /// h_i <- H2C(h_i-1 || I2OSP(0, 1) || I2OSP(i, 4))
     pub fn to_public_key(&self, message_count: usize, dst: DomainSeparationTag) -> PublicKey {
+        if message_count == 0 {
+            return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
+        }
         let point_hasher = Bls12381G1Sswu::new(dst);
 
         let mut data = Vec::with_capacity(message_count.clone());
