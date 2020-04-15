@@ -115,9 +115,12 @@ pub mod prelude {
 /// proof of hidden messages from a prover
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlindSignatureContext {
-    commitment: BlindedSignatureCommitment,
-    challenge_hash: SignatureNonce,
-    proof_of_hidden_messages: ProofG1,
+    /// The blinded signature commitment
+    pub commitment: BlindedSignatureCommitment,
+    /// The challenge hash for the Fiat-Shamir heuristic
+    pub challenge_hash: SignatureNonce,
+    /// The proof for the hidden messages
+    pub proof_of_hidden_messages: ProofG1,
 }
 
 impl BlindSignatureContext {
@@ -206,8 +209,10 @@ impl ProofRequest {
 /// Contains the data from a prover to a verifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureProof {
-    revealed_messages: BTreeMap<usize, SignatureMessage>,
-    proof: PoKOfSignatureProof,
+    /// The revealed messages as field elements
+    pub revealed_messages: BTreeMap<usize, SignatureMessage>,
+    /// The signature proof of knowledge
+    pub proof: PoKOfSignatureProof,
 }
 
 impl SignatureProof {

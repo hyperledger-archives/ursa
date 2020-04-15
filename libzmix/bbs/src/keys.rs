@@ -35,11 +35,11 @@ pub type SecretKey = FieldElement;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PublicKey {
     /// Blinding factor generator
-    pub h0: G1, //blinding factor base
+    pub h0: G1,
     /// Base for each message to be signed
-    pub h: Vec<G1>, //base for each message to be signed
+    pub h: Vec<G1>,
     /// Commitment to the private key
-    pub w: G2, //commitment to private key
+    pub w: G2,
 }
 
 impl PublicKey {

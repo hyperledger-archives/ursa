@@ -24,8 +24,8 @@ use bbs::prelude::*;
 ## Keygen
 
 BBS+ supports two types of public keys. One that is created as described in the paper where the message specific generators
-are randomly generated as 
-and a deterministic version that looks like a BLS public key and the message specific generators are computed using
+are randomly generated
+and a deterministic version that looks like a BLS public key and whose message specific generators are computed using
 IETF's [Hash to Curve](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1) algorithm which is also constant time combined with known inputs.
 
 `generate(message_count: usize)` - returns a keypair used for creating BBS+ signatures
@@ -156,8 +156,8 @@ assert!(res.is_ok());
 
 ## Proofs
 
-Verifiers ask a Prover to reveal signed messages (zero to all, the Prover should agree to it) and the remaining
-messages are hidden. The Prover completes a signature proof of knowledge and proof of committed values.
+Verifiers ask a Prover to reveal some number of signed messages (from zero to all of them), while and the remaining
+messages are hidden. If the Prover agrees, she completes a signature proof of knowledge and proof of committed values.
 These messages could be combined in other zero-knowledge proofs like zkSNARKs or Bulletproofs like bound checks or 
 set memberships. If this is the case, the hidden messages will need to linked to the other proofs using a common
 blinding factor. This crate provides three message classifications for proofs to accommodate this flexibility.
@@ -168,7 +168,7 @@ blinding factor. This crate provides three message classifications for proofs to
     - *HiddenMessage::ExternalBlinding*: message is hidden but is also used in another proof. For example, to show two messages are the same across two signature or 'linked', the same blinding factor must be used for both proofs. This kind groups the blinding factor and the message.
     
 To begin a zero-knowledge proof exchange, the verifier indicates which messages to be revealed and provides a nonce
-limit the prover's ability to cheat i.e. create a valid proof with knowing the actual messages or signature.
+limit the prover's ability to cheat i.e. create a valid proof without knowing the actual messages or signature.
 
 The Verifier must trust the signer of the credential and know the message structure i.e. what message is at index 1, 2, 3, ... etc.
 
