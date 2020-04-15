@@ -5,7 +5,7 @@ Hyperledger Ursa is Apache 2.0 licensed and accepts contributions via
 
 # Ways to contribute to Ursa
 
-- Bugs or issues: Report problems or defects found to the ursa Rocket.Chat channel [here](https://chat.hyperledger.org/channel/ursa)
+- Bugs or issues: Report problems or defects found to the [ursa Rocket.Chat channel](https://chat.hyperledger.org/channel/ursa)
 - Features and enhancements: Provide expanded capabilities or optimizations
 - Documentation: Improve existing documentation or create new information
 - Tests for events and results:
