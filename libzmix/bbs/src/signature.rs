@@ -74,7 +74,7 @@ pub struct BlindSignature {
 
 impl BlindSignature {
     /// 1 or more messages have been hidden by the signature recipient. The remaining
-    /// known messages are in `messages`. To which generator they correspond is in `message_indices`.
+    /// known messages are in `messages`. The generator to which they correspond is in `message_indices`.
     ///
     /// `commitment`: h<sub>0</sub><sup>s</sup> * h<sub>[i]</sub><sup>m<sub>i</sub></sup>
     /// `messages`: Messages to be signed where each value is 0 < m ≤ r and the key is the index in the public.h to which is used as base
