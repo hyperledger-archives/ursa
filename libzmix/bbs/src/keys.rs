@@ -7,6 +7,7 @@ use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::prelude::*;
+use rayon::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
@@ -115,8 +116,8 @@ impl DeterministicPublicKey {
 
     /// Convert to a normal public key but deterministically derive all the generators
     /// using the hash to curve algorithm BLS12381G1_XMD:SHA-256_SSWU_RO denoted as H2C
-    /// h_0 <- H2C(w || I2OSP(0, 1) || I2OSP(message_count, 4))
-    /// h_i <- H2C(h_i-1 || I2OSP(0, 1) || I2OSP(i, 4))
+    /// h_0 <- H2C(w || I2OSP(0, 4) || I2OSP(0, 1) || I2OSP(message_count, 4))
+    /// h_i <- H2C(w || I2OSP(i, 4) || I2OSP(0, 1) || I2OSP(message_count, 4))
     pub fn to_public_key(
         &self,
         message_count: usize,
@@ -127,35 +128,27 @@ impl DeterministicPublicKey {
         }
         let point_hasher = Bls12381G1Sswu::new(dst);
 
-        let mut data = Vec::with_capacity(message_count.clone());
-        data.extend_from_slice(&self.w.to_bytes());
-        data.push(0u8);
-        data.extend_from_slice(&(message_count as u32).to_be_bytes()[..]);
-        let h0: G1 = point_hasher
-            .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
-            .unwrap()
-            .0
-            .into();
-        let mut current_h = h0.clone();
-        let mut h = Vec::new();
-        for i in 0..message_count {
-            data.clear();
-            data.extend_from_slice(&current_h.to_bytes());
-            data.push(0u8);
-            data.extend_from_slice(&(i as u32).to_be_bytes()[..]);
-            current_h = point_hasher
-                .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
-                .unwrap()
-                .0
-                .into();
-            h.push(current_h.clone());
-        }
+        let mc_bytes = (message_count as u32).to_be_bytes();
+
+        let h = (0..=message_count).collect::<Vec<usize>>().par_iter().map(|i| {
+            self.hash_to_curve(*i as u32, mc_bytes, &point_hasher)
+        }).collect::<Vec<G1>>();
 
         Ok(PublicKey {
             w: self.w.clone(),
-            h0,
-            h,
+            h0: h[0].clone(),
+            h: h[1..].to_vec(),
         })
+    }
+
+    fn hash_to_curve(&self, i: u32, mc_count: [u8; 4], hasher: &Bls12381G1Sswu) -> G1 {
+        const HASH_LEN: usize = 9 + GroupG2_SIZE;
+        let mut data = Vec::with_capacity(HASH_LEN);
+        data.extend_from_slice(self.w.to_bytes().as_slice());
+        data.extend_from_slice(&i.to_be_bytes()[..]);
+        data.push(0u8);
+        data.extend_from_slice(&mc_count[..]);
+        hasher.hash_to_curve_xmd::<sha2::Sha256>(data.as_slice()).unwrap().0.into()
     }
 
     /// Convert the key to raw bytes
@@ -187,15 +180,12 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     // Super paranoid could allow a context to generate the generator from a well known value
     // Not doing this for now since any generator in a prime field should be okay.
     let w = &G2::generator() * &secret;
-    let mut h = Vec::new();
-    for _ in 0..message_count {
-        h.push(G1::random());
-    }
+    let h = (0..=message_count).collect::<Vec<usize>>().par_iter().map(|_| G1::random()).collect::<Vec<G1>>();
     Ok((
         PublicKey {
             w,
-            h0: G1::random(),
-            h,
+            h0: h[0].clone(),
+            h: h[1..].to_vec(),
         },
         secret,
     ))

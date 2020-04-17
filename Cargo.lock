@@ -162,6 +162,7 @@ dependencies = [
  "arrayref",
  "failure",
  "hash2curve",
+ "rayon",
  "serde",
  "sha2",
 ]
