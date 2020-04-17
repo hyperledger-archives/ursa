@@ -2,7 +2,6 @@ use amcl_wrapper::{
     constants::GroupG1_SIZE, errors::SerzDeserzError, field_elem::FieldElement,
     group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2, types_g2::GroupG2_SIZE,
 };
-use generic_array::{typenum::U192, GenericArray};
 use hash2curve::DomainSeparationTag;
 use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use serde::{Deserialize, Serialize};
@@ -160,13 +159,14 @@ impl DeterministicPublicKey {
     }
 
     /// Convert the key to raw bytes
-    pub fn to_bytes(&self) -> GenericArray<u8, U192> {
-        GenericArray::clone_from_slice(self.w.to_bytes().as_slice())
+    pub fn to_bytes(&self) -> [u8; GroupG2_SIZE] {
+        let out = self.w.to_bytes();
+        *array_ref![out, 0, GroupG2_SIZE]
     }
 
     /// Convert the byte slice into a public key
-    pub fn from_bytes(data: GenericArray<u8, U192>) -> Self {
-        let w = G2::from_bytes(&data.as_slice()).unwrap();
+    pub fn from_bytes(data: [u8; GroupG2_SIZE]) -> Self {
+        let w = G2::from_bytes(&data[..]).unwrap();
         DeterministicPublicKey { w }
     }
 }

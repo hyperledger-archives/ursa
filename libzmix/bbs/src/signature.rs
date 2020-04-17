@@ -32,29 +32,23 @@ pub const SIGNATURE_SIZE: usize = GroupG1_SIZE + MODBYTES * 2;
 macro_rules! sig_byte_impl {
     () => {
         /// Convert the signature to raw bytes
-        pub fn to_bytes(&self) -> Vec<u8> {
+        pub fn to_bytes(&self) -> [u8; SIGNATURE_SIZE] {
             let mut out = Vec::with_capacity(SIGNATURE_SIZE);
             out.extend_from_slice(self.a.to_bytes().as_slice());
             out.extend_from_slice(self.e.to_bytes().as_slice());
             out.extend_from_slice(self.s.to_bytes().as_slice());
-            out
+            *array_ref![out, 0, SIGNATURE_SIZE]
         }
 
         /// Convert the byte slice into a Signature
-        pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
-            if data.len() != SIGNATURE_SIZE {
-                return Err(BBSErrorKind::SignatureIncorrectSize(data.len()).into());
-            }
+        pub fn from_bytes(data: [u8; SIGNATURE_SIZE]) -> Self {
             let mut index = 0;
-            let a = G1::from_bytes(&data[0..GroupG1_SIZE])
-                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
+            let a = G1::from_bytes(&data[0..GroupG1_SIZE]).unwrap();
             index += GroupG1_SIZE;
-            let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
-                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
+            let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)]).unwrap();
             index += MODBYTES;
-            let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)])
-                .map_err(|_| BBSError::from(BBSErrorKind::SignatureValueIncorrectSize))?;
-            Ok(Self { a, e, s })
+            let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)]).unwrap();
+            Self { a, e, s }
         }
     };
 }
@@ -263,7 +257,7 @@ mod tests {
         };
         let bytes = sig.to_bytes();
         assert_eq!(bytes.len(), SIGNATURE_SIZE);
-        let sig_2 = Signature::from_bytes(bytes.as_slice()).unwrap();
+        let sig_2 = Signature::from_bytes(bytes);
         assert_eq!(sig, sig_2);
     }
 
