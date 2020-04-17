@@ -144,23 +144,39 @@ impl BlindSignatureContext {
         let data = data.as_ref();
 
         if data.len() < COMMITMENT_SIZE + MESSAGE_SIZE + 4 {
-            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(4 + COMMITMENT_SIZE + MESSAGE_SIZE, data.len())));
+            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
+                4 + COMMITMENT_SIZE + MESSAGE_SIZE,
+                data.len(),
+            )));
         }
 
         let mut offset = COMMITMENT_SIZE + MESSAGE_SIZE;
 
-        let commitment = BlindedSignatureCommitment::from_bytes(&data[..COMMITMENT_SIZE]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e)})?;
-        let challenge_hash = SignatureNonce::from_bytes(&data[COMMITMENT_SIZE..offset]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e)})?;
+        let commitment =
+            BlindedSignatureCommitment::from_bytes(&data[..COMMITMENT_SIZE]).map_err(|e| {
+                BBSErrorKind::GeneralError {
+                    msg: format!("{:?}", e),
+                }
+            })?;
+        let challenge_hash =
+            SignatureNonce::from_bytes(&data[COMMITMENT_SIZE..offset]).map_err(|e| {
+                BBSErrorKind::GeneralError {
+                    msg: format!("{:?}", e),
+                }
+            })?;
 
         let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
         let end = offset + proof_len;
-        let proof_of_hidden_messages = ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e)})?;
+        let proof_of_hidden_messages =
+            ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError {
+                msg: format!("{:?}", e),
+            })?;
 
         Ok(Self {
             commitment,
             challenge_hash,
-            proof_of_hidden_messages
+            proof_of_hidden_messages,
         })
     }
 
@@ -234,10 +250,17 @@ impl ProofRequest {
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
         if data.len() < 4 + GroupG2_SIZE {
-            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(4 + GroupG2_SIZE, data.len())));
+            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
+                4 + GroupG2_SIZE,
+                data.len(),
+            )));
         }
 
-        let verification_key = PublicKey::from_bytes(&data[..GroupG2_SIZE]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e)})?;
+        let verification_key = PublicKey::from_bytes(&data[..GroupG2_SIZE]).map_err(|e| {
+            BBSErrorKind::GeneralError {
+                msg: format!("{:?}", e),
+            }
+        })?;
         let revealed_len = u32::from_be_bytes(*array_ref![data, GroupG2_SIZE, 4]) as usize;
         let mut revealed_messages = BTreeSet::new();
         let mut offset = GroupG2_SIZE + 4;
@@ -248,7 +271,7 @@ impl ProofRequest {
         }
         Ok(Self {
             verification_key,
-            revealed_messages
+            revealed_messages,
         })
     }
 }
@@ -268,7 +291,8 @@ impl SignatureProof {
         let proof_bytes = self.proof.to_bytes();
         let proof_len = proof_bytes.len() as u32;
 
-        let mut output = Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
+        let mut output =
+            Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
         output.extend_from_slice(&proof_len.to_be_bytes()[..]);
         output.extend_from_slice(proof_bytes.as_slice());
 
@@ -288,11 +312,18 @@ impl SignatureProof {
         let data = data.as_ref();
 
         if data.len() < 8 {
-            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(8, data.len())));
+            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
+                8,
+                data.len(),
+            )));
         }
 
         let proof_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize + 4;
-        let proof = PoKOfSignatureProof::from_bytes(&data[4..proof_len]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e) })?;
+        let proof = PoKOfSignatureProof::from_bytes(&data[4..proof_len]).map_err(|e| {
+            BBSErrorKind::GeneralError {
+                msg: format!("{:?}", e),
+            }
+        })?;
 
         let mut offset = proof_len;
         let revealed_messages_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
@@ -306,7 +337,11 @@ impl SignatureProof {
             offset = end;
             end = offset + MESSAGE_SIZE;
 
-            let m = SignatureMessage::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError { msg: format!("{:?}", e) })?;
+            let m = SignatureMessage::from_bytes(&data[offset..end]).map_err(|e| {
+                BBSErrorKind::GeneralError {
+                    msg: format!("{:?}", e),
+                }
+            })?;
 
             offset = end;
             end = offset + 4;
@@ -316,7 +351,7 @@ impl SignatureProof {
 
         Ok(Self {
             revealed_messages,
-            proof
+            proof,
         })
     }
 }
@@ -369,13 +404,13 @@ mod tests {
                 d: G1::new(),
                 proof_vc_1: ProofG1 {
                     commitment: G1::new(),
-                    responses: SignatureMessageVector::with_capacity(1)
+                    responses: SignatureMessageVector::with_capacity(1),
                 },
                 proof_vc_2: ProofG1 {
                     commitment: G1::new(),
-                    responses: SignatureMessageVector::with_capacity(1)
-                }
-            }
+                    responses: SignatureMessageVector::with_capacity(1),
+                },
+            },
         };
 
         let proof_bytes = proof.to_bytes();
@@ -390,19 +425,30 @@ mod tests {
         let pr = Verifier::new_proof_request(&[0], &pk).unwrap();
         let pm = vec![pm_revealed_raw!(messages[0].clone())];
         let pok = Prover::commit_signature_pok(&pr, pm.as_slice(), &sig).unwrap();
-        let nonce = SignatureNonce::from_msg_hash(&[0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8]);
+        let nonce =
+            SignatureNonce::from_msg_hash(&[0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8]);
         let mut challenge_bytes = pok.to_bytes();
         challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
         let challenge = SignatureNonce::from_msg_hash(challenge_bytes.as_slice());
 
         let sig_proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
-        assert!(Verifier::verify_signature_pok(&pr, &sig_proof, &nonce).unwrap().len() == 1);
+        assert!(
+            Verifier::verify_signature_pok(&pr, &sig_proof, &nonce)
+                .unwrap()
+                .len()
+                == 1
+        );
         let sig_proof_bytes = sig_proof.to_bytes();
 
         let sig_proof_dup = SignatureProof::from_bytes(&sig_proof_bytes);
         assert!(sig_proof_dup.is_ok());
         let sig_proof_dup = sig_proof_dup.unwrap();
-        assert!(Verifier::verify_signature_pok(&pr, &sig_proof_dup, &nonce).unwrap().len() == 1);
+        assert!(
+            Verifier::verify_signature_pok(&pr, &sig_proof_dup, &nonce)
+                .unwrap()
+                .len()
+                == 1
+        );
     }
 }

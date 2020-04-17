@@ -130,9 +130,11 @@ impl DeterministicPublicKey {
 
         let mc_bytes = (message_count as u32).to_be_bytes();
 
-        let h = (0..=message_count).collect::<Vec<usize>>().par_iter().map(|i| {
-            self.hash_to_curve(*i as u32, mc_bytes, &point_hasher)
-        }).collect::<Vec<G1>>();
+        let h = (0..=message_count)
+            .collect::<Vec<usize>>()
+            .par_iter()
+            .map(|i| self.hash_to_curve(*i as u32, mc_bytes, &point_hasher))
+            .collect::<Vec<G1>>();
 
         Ok(PublicKey {
             w: self.w.clone(),
@@ -148,7 +150,11 @@ impl DeterministicPublicKey {
         data.extend_from_slice(&i.to_be_bytes()[..]);
         data.push(0u8);
         data.extend_from_slice(&mc_count[..]);
-        hasher.hash_to_curve_xmd::<sha2::Sha256>(data.as_slice()).unwrap().0.into()
+        hasher
+            .hash_to_curve_xmd::<sha2::Sha256>(data.as_slice())
+            .unwrap()
+            .0
+            .into()
     }
 
     /// Convert the key to raw bytes
@@ -180,7 +186,11 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     // Super paranoid could allow a context to generate the generator from a well known value
     // Not doing this for now since any generator in a prime field should be okay.
     let w = &G2::generator() * &secret;
-    let h = (0..=message_count).collect::<Vec<usize>>().par_iter().map(|_| G1::random()).collect::<Vec<G1>>();
+    let h = (0..=message_count)
+        .collect::<Vec<usize>>()
+        .par_iter()
+        .map(|_| G1::random())
+        .collect::<Vec<G1>>();
     Ok((
         PublicKey {
             w,
