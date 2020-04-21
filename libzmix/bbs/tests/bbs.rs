@@ -141,7 +141,7 @@ fn pok_sig() {
 
     let mut challenge_bytes = Vec::new();
     challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
-    challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
+    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
 
     let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
 
