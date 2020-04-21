@@ -1,6 +1,6 @@
 use amcl_wrapper::{
-    constants::GroupG1_SIZE, errors::SerzDeserzError, field_elem::FieldElement,
-    group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2, types_g2::GroupG2_SIZE,
+    constants::{GROUP_G1_SIZE, GROUP_G2_SIZE}, errors::SerzDeserzError, curve_order_elem::CurveOrderElement,
+    group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2,
 };
 use hash2curve::DomainSeparationTag;
 use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
@@ -27,7 +27,7 @@ pub enum KeyGenOption {
 /// The secret key is field element 0 < `x` < `r`
 /// where `r` is the curve order. See Section 4.3 in
 /// <https://eprint.iacr.org/2016/663.pdf>
-pub type SecretKey = FieldElement;
+pub type SecretKey = CurveOrderElement;
 
 /// `PublicKey` consists of a blinding generator `h_0`,
 /// a commitment to the secret key `w`
@@ -50,12 +50,12 @@ impl PublicKey {
 
     /// Convert the key to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(GroupG1_SIZE * (self.h.len() + 1) + 4 + GroupG2_SIZE);
-        out.extend_from_slice(self.w.to_bytes().as_slice());
-        out.extend_from_slice(self.h0.to_bytes().as_slice());
+        let mut out = Vec::with_capacity(GROUP_G1_SIZE * (self.h.len() + 1) + 4 + GROUP_G2_SIZE);
+        out.extend_from_slice(self.w.to_vec().as_slice());
+        out.extend_from_slice(self.h0.to_vec().as_slice());
         out.extend_from_slice(&(self.h.len() as u32).to_be_bytes());
         for p in &self.h {
-            out.extend_from_slice(p.to_bytes().as_slice());
+            out.extend_from_slice(p.to_vec().as_slice());
         }
         out
     }
@@ -63,10 +63,10 @@ impl PublicKey {
     /// Convert the byte slice into a public key
     pub fn from_bytes(data: &[u8]) -> Result<Self, SerzDeserzError> {
         let mut index = 0;
-        let w = G2::from_bytes(&data[0..GroupG2_SIZE])?;
-        index += GroupG2_SIZE;
-        let h0 = G1::from_bytes(&data[index..(index + GroupG1_SIZE)])?;
-        index += GroupG1_SIZE;
+        let w = G2::from(array_ref![data, 0, GROUP_G2_SIZE]);
+        index += GROUP_G2_SIZE;
+        let h0 = G1::from(array_ref![data, index, GROUP_G1_SIZE]);
+        index += GROUP_G1_SIZE;
         let h_size = u32::from_be_bytes([
             data[index],
             data[index + 1],
@@ -76,9 +76,9 @@ impl PublicKey {
         let mut h = Vec::with_capacity(h_size);
         index += 4;
         for _ in 0..h_size {
-            let p = G1::from_bytes(&data[index..(index + GroupG1_SIZE)])?;
+            let p = G1::from(array_ref![data, index, GROUP_G1_SIZE]);
             h.push(p);
-            index += GroupG1_SIZE;
+            index += GROUP_G1_SIZE;
         }
         Ok(PublicKey { w, h0, h })
     }
@@ -105,10 +105,10 @@ impl DeterministicPublicKey {
     pub fn new(option: Option<KeyGenOption>) -> (Self, SecretKey) {
         let secret = match option {
             Some(ref o) => match o {
-                KeyGenOption::UseSeed(ref v) => FieldElement::from_msg_hash(v.as_slice()),
+                KeyGenOption::UseSeed(ref v) => CurveOrderElement::from_msg_hash(v.as_slice()),
                 KeyGenOption::FromSecretKey(ref sk) => sk.clone(),
             },
-            None => FieldElement::random(),
+            None => CurveOrderElement::random(),
         };
         let w = &G2::generator() * &secret;
         (Self { w }, secret)
@@ -144,9 +144,9 @@ impl DeterministicPublicKey {
     }
 
     fn hash_to_curve(&self, i: u32, mc_count: [u8; 4], hasher: &Bls12381G1Sswu) -> G1 {
-        const HASH_LEN: usize = 9 + GroupG2_SIZE;
+        const HASH_LEN: usize = 9 + GROUP_G2_SIZE;
         let mut data = Vec::with_capacity(HASH_LEN);
-        data.extend_from_slice(self.w.to_bytes().as_slice());
+        data.extend_from_slice(self.w.to_vec().as_slice());
         data.extend_from_slice(&i.to_be_bytes()[..]);
         data.push(0u8);
         data.extend_from_slice(&mc_count[..]);
@@ -158,14 +158,14 @@ impl DeterministicPublicKey {
     }
 
     /// Convert the key to raw bytes
-    pub fn to_bytes(&self) -> [u8; GroupG2_SIZE] {
+    pub fn to_bytes(&self) -> [u8; GROUP_G2_SIZE] {
         let out = self.w.to_bytes();
-        *array_ref![out, 0, GroupG2_SIZE]
+        *array_ref![out, 0, GROUP_G2_SIZE]
     }
 
     /// Convert the byte slice into a public key
-    pub fn from_bytes(data: [u8; GroupG2_SIZE]) -> Self {
-        let w = G2::from_bytes(&data[..]).unwrap();
+    pub fn from_bytes(data: [u8; GROUP_G2_SIZE]) -> Self {
+        let w = G2::from(data);
         DeterministicPublicKey { w }
     }
 }
@@ -181,7 +181,7 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     if message_count == 0 {
         return Err(BBSError::from_kind(BBSErrorKind::KeyGenError));
     }
-    let secret = FieldElement::random();
+    let secret = CurveOrderElement::random();
 
     // Super paranoid could allow a context to generate the generator from a well known value
     // Not doing this for now since any generator in a prime field should be okay.
@@ -212,14 +212,14 @@ mod tests {
         //Check to make sure key has correct size
         let (public_key, _) = generate(1).unwrap();
         let bytes = public_key.to_bytes();
-        assert_eq!(bytes.len(), GroupG1_SIZE * 2 + 4 + GroupG2_SIZE);
+        assert_eq!(bytes.len(), GROUP_G1_SIZE * 2 + 4 + GROUP_G2_SIZE);
 
         let (public_key, _) = generate(5).unwrap();
         assert_eq!(public_key.message_count(), 5);
         //Check key doesn't contain any invalid points
         assert!(public_key.validate().is_ok());
         let bytes = public_key.to_bytes();
-        assert_eq!(bytes.len(), GroupG1_SIZE * 6 + 4 + GroupG2_SIZE);
+        assert_eq!(bytes.len(), GROUP_G1_SIZE * 6 + 4 + GROUP_G2_SIZE);
         //Check serialization is working
         let public_key_2 = PublicKey::from_bytes(bytes.as_slice()).unwrap();
         assert_eq!(public_key_2, public_key);

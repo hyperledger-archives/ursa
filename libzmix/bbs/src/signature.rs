@@ -2,7 +2,7 @@ use super::types::*;
 use crate::errors::prelude::*;
 use crate::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
-    constants::{GroupG1_SIZE, MODBYTES},
+    constants::{GROUP_G1_SIZE, FIELD_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE},
     extension_field_gt::GT,
     group_elem::{GroupElement, GroupElementVector},
     group_elem_g1::G1,
@@ -27,28 +27,59 @@ macro_rules! check_verkey_message {
 }
 
 /// The number of bytes in a signature
-pub const SIGNATURE_SIZE: usize = GroupG1_SIZE + MODBYTES * 2;
+pub const SIGNATURE_SIZE: usize = GROUP_G1_SIZE + FIELD_ORDER_ELEMENT_SIZE * 2;
+/// The number of bytes in a compressed signature
+pub const SIGNATURE_COMPRESSED_SIZE: usize = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE * 2;
 
 macro_rules! sig_byte_impl {
     () => {
         /// Convert the signature to raw bytes
         pub fn to_bytes(&self) -> [u8; SIGNATURE_SIZE] {
             let mut out = Vec::with_capacity(SIGNATURE_SIZE);
-            out.extend_from_slice(self.a.to_bytes().as_slice());
-            out.extend_from_slice(self.e.to_bytes().as_slice());
-            out.extend_from_slice(self.s.to_bytes().as_slice());
+            out.extend_from_slice(&self.a.to_vec()[..]);
+            out.extend_from_slice(&self.e.to_bytes()[..]);
+            out.extend_from_slice(&self.s.to_bytes()[..]);
             *array_ref![out, 0, SIGNATURE_SIZE]
+        }
+
+        /// Conver the signature to a compressed form of raw bytes
+        pub fn to_compressed_bytes(&self) -> [u8; SIGNATURE_COMPRESSED_SIZE] {
+            let mut out = [0u8; SIGNATURE_COMPRESSED_SIZE];
+            out[..FIELD_ORDER_ELEMENT_SIZE].copy_from_slice(&self.a.to_compressed_bytes()[..]);
+            let end = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE;
+            out[FIELD_ORDER_ELEMENT_SIZE..end].copy_from_slice(&self.e.to_compressed_bytes()[..]);
+            out[end..].copy_from_slice(&self.s.to_compressed_bytes()[..]);
+            out
         }
 
         /// Convert the byte slice into a Signature
         pub fn from_bytes(data: [u8; SIGNATURE_SIZE]) -> Self {
             let mut index = 0;
-            let a = G1::from_bytes(&data[0..GroupG1_SIZE]).unwrap();
-            index += GroupG1_SIZE;
-            let e = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)]).unwrap();
-            index += MODBYTES;
-            let s = SignatureNonce::from_bytes(&data[index..(index + MODBYTES)]).unwrap();
+            let a = G1::from_slice(&data[..GROUP_G1_SIZE]).unwrap();
+            index += GROUP_G1_SIZE;
+            let e = SignatureNonce::from(*array_ref![data, index, FIELD_ORDER_ELEMENT_SIZE]);
+            index += FIELD_ORDER_ELEMENT_SIZE;
+            let s = SignatureNonce::from(*array_ref![data, index, FIELD_ORDER_ELEMENT_SIZE]);
             Self { a, e, s }
+        }
+    };
+}
+
+macro_rules! from_rules {
+    ($type:ident) => {
+        impl From<[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
+            fn from(data: [u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
+                Self::from(&data)
+            }
+        }
+
+        impl From<&[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
+            fn from(data: &[u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
+                let a = G1::from(*array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
+                let e = SignatureMessage::from(*array_ref![data, FIELD_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
+                let s = SignatureMessage::from(*array_ref![data, FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
+                Self { a, e, s }
+            }
         }
     };
 }
@@ -235,11 +266,11 @@ pub(crate) fn compute_b_var_time(
     offset: usize,
 ) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
-    starting_value
-        + points
-            .multi_scalar_mul_var_time(scalars.as_slice())
-            .unwrap()
+    starting_value + points.multi_scalar_mul_var_time(scalars.as_slice()).unwrap()
 }
+
+from_rules!(BlindSignature);
+from_rules!(Signature);
 
 #[cfg(test)]
 mod tests {
@@ -258,6 +289,11 @@ mod tests {
         let bytes = sig.to_bytes();
         assert_eq!(bytes.len(), SIGNATURE_SIZE);
         let sig_2 = Signature::from_bytes(bytes);
+        assert_eq!(sig, sig_2);
+
+        let bytes = sig.to_compressed_bytes();
+        assert_eq!(bytes.len(), SIGNATURE_COMPRESSED_SIZE);
+        let sig_2 = Signature::from(bytes);
         assert_eq!(sig, sig_2);
     }
 
@@ -322,7 +358,7 @@ mod tests {
 
         let nonce = vec![1u8, 1u8, 1u8, 1u8, 2u8, 2u8, 2u8, 2u8];
         let mut extra = Vec::new();
-        extra.extend_from_slice(&commitment.to_bytes());
+        extra.extend_from_slice(&commitment.to_vec());
         extra.extend_from_slice(nonce.as_slice());
         let challenge_hash = committed.gen_challenge(extra);
         let proof = committed

@@ -44,7 +44,7 @@ impl Verifier {
             proof_request.revealed_messages.clone(),
             &proof_request.verification_key,
         );
-        challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
+        challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
 
         let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
         match signature_proof.proof.verify(

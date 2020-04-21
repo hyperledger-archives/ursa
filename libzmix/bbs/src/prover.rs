@@ -60,8 +60,8 @@ impl Prover {
         let committed = committing.finish();
 
         let mut extra = Vec::new();
-        extra.extend_from_slice(commitment.to_bytes().as_slice());
-        extra.extend_from_slice(nonce.to_bytes().as_slice());
+        extra.extend_from_slice(commitment.to_vec().as_slice());
+        extra.extend_from_slice(&nonce.to_bytes()[..]);
         let challenge_hash = committed.gen_challenge(extra);
         let proof_of_hidden_messages = committed
             .gen_proof(&challenge_hash, scalars.as_slice())

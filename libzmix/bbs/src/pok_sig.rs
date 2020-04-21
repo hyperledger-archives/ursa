@@ -5,7 +5,7 @@ use crate::pok_vc::prelude::*;
 use crate::signature::{compute_b_const_time, Signature};
 use crate::types::*;
 
-use amcl_wrapper::constants::GroupG1_SIZE;
+use amcl_wrapper::constants::GROUP_G1_SIZE;
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
@@ -134,7 +134,7 @@ impl PoKOfSignature {
 
         let b = compute_b_const_time(&G1::new(), vk, temp.as_slice(), &signature.s, 0);
         let a_prime = &signature.a * &r1;
-        let a_bar = &(&b * &r1) - &(&a_prime * &signature.e);
+        let a_bar = &(&b * &r1) - (&a_prime * &signature.e);
         let d = b.binary_scalar_mul(&vk.h0, &r1, &(-&r2));
 
         let r3 = r1.inverse();
@@ -201,7 +201,7 @@ impl PoKOfSignature {
     /// Return byte representation of public elements so they can be used for challenge computation.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.a_bar.to_bytes());
+        bytes.append(&mut self.a_bar.to_vec());
 
         // For 1st PoKVC
         // self.a_prime is included as part of self.pok_vc_1
@@ -246,22 +246,22 @@ impl PoKOfSignatureProof {
         vk: &PublicKey,
     ) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.a_bar.to_bytes());
+        bytes.append(&mut self.a_bar.to_vec());
 
-        bytes.append(&mut self.a_prime.to_bytes());
-        bytes.append(&mut vk.h0.to_bytes());
-        bytes.append(&mut self.proof_vc_1.commitment.to_bytes());
+        bytes.append(&mut self.a_prime.to_vec());
+        bytes.append(&mut vk.h0.to_vec());
+        bytes.append(&mut self.proof_vc_1.commitment.to_vec());
 
-        bytes.append(&mut self.d.to_bytes());
-        bytes.append(&mut vk.h0.to_bytes());
+        bytes.append(&mut self.d.to_vec());
+        bytes.append(&mut vk.h0.to_vec());
         for i in 0..vk.message_count() {
             if revealed_msg_indices.contains(&i) {
                 continue;
             }
-            let mut b = vk.h[i].to_bytes();
+            let mut b = vk.h[i].to_vec();
             bytes.append(&mut b);
         }
-        bytes.append(&mut self.proof_vc_2.commitment.to_bytes());
+        bytes.append(&mut self.proof_vc_2.commitment.to_vec());
         bytes
     }
 
@@ -351,9 +351,9 @@ impl PoKOfSignatureProof {
     /// Convert the proof to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut output = Vec::new();
-        output.append(&mut self.a_prime.to_bytes());
-        output.append(&mut self.a_bar.to_bytes());
-        output.append(&mut self.d.to_bytes());
+        output.append(&mut self.a_prime.to_vec());
+        output.append(&mut self.a_bar.to_vec());
+        output.append(&mut self.d.to_vec());
         let mut proof1_bytes = self.proof_vc_1.to_bytes();
         let proof1_len: u32 = proof1_bytes.len() as u32;
         output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
@@ -367,31 +367,31 @@ impl PoKOfSignatureProof {
 
     /// Convert the byte slice into a proof
     pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
-        if data.len() < GroupG1_SIZE * 3 {
+        if data.len() < GROUP_G1_SIZE * 3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("Invalid proof bytes. Expected {}", GroupG1_SIZE * 3),
+                msg: format!("Invalid proof bytes. Expected {}", GROUP_G1_SIZE * 3),
             }));
         }
         let mut offset = 0;
-        let mut end = GroupG1_SIZE;
-        let a_prime = G1::from_bytes(&data[offset..end]).map_err(|e| {
+        let mut end = GROUP_G1_SIZE;
+        let a_prime = G1::from_slice(&data[offset..end]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
 
         offset = end;
-        end = offset + GroupG1_SIZE;
+        end = offset + GROUP_G1_SIZE;
 
-        let a_bar = G1::from_bytes(&data[offset..end]).map_err(|e| {
+        let a_bar = G1::from_slice(&data[offset..end]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
         offset = end;
-        end = offset + GroupG1_SIZE;
+        end = offset + GROUP_G1_SIZE;
 
-        let d = G1::from_bytes(&data[offset..end]).map_err(|e| {
+        let d = G1::from_slice(&data[offset..end]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })

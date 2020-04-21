@@ -33,11 +33,10 @@ use pok_sig::prelude::*;
 use pok_vc::prelude::*;
 
 use amcl_wrapper::{
-    constants::{FieldElement_SIZE as MESSAGE_SIZE, GroupG1_SIZE as COMMITMENT_SIZE},
-    field_elem::{FieldElement, FieldElementVector},
+    constants::{FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, GROUP_G2_SIZE},
+    curve_order_elem::{CurveOrderElement, CurveOrderElementVector},
     group_elem::GroupElement,
     group_elem_g1::{G1Vector, G1},
-    types_g2::GroupG2_SIZE,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -71,13 +70,13 @@ pub type BlindedSignatureCommitment = G1;
 /// The type for managing lists of generators
 pub type SignaturePointVector = G1Vector;
 /// The type for messages
-pub type SignatureMessage = FieldElement;
+pub type SignatureMessage = CurveOrderElement;
 /// The type for managing lists of messages
-pub type SignatureMessageVector = FieldElementVector;
+pub type SignatureMessageVector = CurveOrderElementVector;
 /// The type for nonces
-pub type SignatureNonce = FieldElement;
+pub type SignatureNonce = CurveOrderElement;
 /// The type for blinding factors
-pub type SignatureBlinding = FieldElement;
+pub type SignatureBlinding = CurveOrderElement;
 
 mod types {
     pub use super::{
@@ -103,13 +102,13 @@ pub mod prelude {
     pub use crate::prover::Prover;
     pub use crate::signature::prelude::*;
     pub use crate::verifier::Verifier;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as SECRET_KEY_SIZE;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as MESSAGE_SIZE;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as NONCE_SIZE;
-    pub use amcl_wrapper::constants::FieldElement_SIZE as BLINDING_FACTOR_SIZE;
-    pub use amcl_wrapper::constants::GroupG1_SIZE as COMMITMENT_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as SECRET_KEY_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as NONCE_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as BLINDING_FACTOR_SIZE;
+    pub use amcl_wrapper::constants::GROUP_G1_SIZE as COMMITMENT_SIZE;
     pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-    pub use amcl_wrapper::types_g2::GroupG2_SIZE as PUBLIC_KEY_SIZE;
+    pub use amcl_wrapper::types_g2::GROUP_G2_SIZE as PUBLIC_KEY_SIZE;
 }
 
 /// Contains the data used for computing a blind signature and verifying
@@ -131,8 +130,8 @@ impl BlindSignatureContext {
         let proof_len = proof_bytes.len() as u32;
 
         let mut output = Vec::with_capacity(proof_len as usize + COMMITMENT_SIZE + MESSAGE_SIZE);
-        output.extend_from_slice(self.commitment.to_bytes().as_slice());
-        output.extend_from_slice(self.challenge_hash.to_bytes().as_slice());
+        output.extend_from_slice(&self.commitment.to_vec()[..]);
+        output.extend_from_slice(&self.challenge_hash.to_bytes()[..]);
         output.extend_from_slice(&proof_len.to_be_bytes()[..]);
         output.extend_from_slice(proof_bytes.as_slice());
 
@@ -153,17 +152,13 @@ impl BlindSignatureContext {
         let mut offset = COMMITMENT_SIZE + MESSAGE_SIZE;
 
         let commitment =
-            BlindedSignatureCommitment::from_bytes(&data[..COMMITMENT_SIZE]).map_err(|e| {
+            BlindedSignatureCommitment::from_slice(&data[..COMMITMENT_SIZE]).map_err(|e| {
                 BBSErrorKind::GeneralError {
                     msg: format!("{:?}", e),
                 }
             })?;
         let challenge_hash =
-            SignatureNonce::from_bytes(&data[COMMITMENT_SIZE..offset]).map_err(|e| {
-                BBSErrorKind::GeneralError {
-                    msg: format!("{:?}", e),
-                }
-            })?;
+            SignatureNonce::from(array_ref![data, COMMITMENT_SIZE, amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE]);
 
         let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
@@ -207,10 +202,10 @@ impl BlindSignatureContext {
 
         let mut challenge_bytes = Vec::new();
         for b in bases.iter() {
-            challenge_bytes.append(&mut b.to_bytes())
+            challenge_bytes.append(&mut b.to_vec())
         }
-        challenge_bytes.append(&mut commitment.to_bytes());
-        challenge_bytes.extend_from_slice(self.commitment.to_bytes().as_slice());
+        challenge_bytes.extend_from_slice(&commitment.to_bytes()[..]);
+        challenge_bytes.extend_from_slice(self.commitment.to_vec().as_slice());
         challenge_bytes.extend_from_slice(&nonce.to_bytes());
 
         let challenge_result =
@@ -236,7 +231,7 @@ impl ProofRequest {
     pub fn to_bytes(&self) -> Vec<u8> {
         let revealed_len = self.revealed_messages.len() as u32;
 
-        let mut output = Vec::with_capacity(4 * (self.revealed_messages.len() + 1) + GroupG2_SIZE);
+        let mut output = Vec::with_capacity(4 * (self.revealed_messages.len() + 1) + GROUP_G2_SIZE);
         output.extend_from_slice(self.verification_key.to_bytes().as_slice());
         output.extend_from_slice(&revealed_len.to_be_bytes()[..]);
         for i in &self.revealed_messages {
@@ -249,21 +244,21 @@ impl ProofRequest {
     /// Convert from raw bytes
     pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-        if data.len() < 4 + GroupG2_SIZE {
+        if data.len() < 4 + GROUP_G2_SIZE {
             return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
-                4 + GroupG2_SIZE,
+                4 + GROUP_G2_SIZE,
                 data.len(),
             )));
         }
 
-        let verification_key = PublicKey::from_bytes(&data[..GroupG2_SIZE]).map_err(|e| {
+        let verification_key = PublicKey::from_bytes(&data[..GROUP_G2_SIZE]).map_err(|e| {
             BBSErrorKind::GeneralError {
                 msg: format!("{:?}", e),
             }
         })?;
-        let revealed_len = u32::from_be_bytes(*array_ref![data, GroupG2_SIZE, 4]) as usize;
+        let revealed_len = u32::from_be_bytes(*array_ref![data, GROUP_G2_SIZE, 4]) as usize;
         let mut revealed_messages = BTreeSet::new();
-        let mut offset = GroupG2_SIZE + 4;
+        let mut offset = GROUP_G2_SIZE + 4;
         for _ in 0..revealed_len {
             let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
             revealed_messages.insert(i);
@@ -301,7 +296,7 @@ impl SignatureProof {
         for (i, m) in &self.revealed_messages {
             let ii = *i as u32;
             output.extend_from_slice(&ii.to_be_bytes()[..]);
-            output.extend_from_slice(m.to_bytes().as_slice());
+            output.extend_from_slice(&m.to_bytes()[..]);
         }
 
         output
@@ -337,11 +332,7 @@ impl SignatureProof {
             offset = end;
             end = offset + MESSAGE_SIZE;
 
-            let m = SignatureMessage::from_bytes(&data[offset..end]).map_err(|e| {
-                BBSErrorKind::GeneralError {
-                    msg: format!("{:?}", e),
-                }
-            })?;
+            let m = SignatureMessage::from(array_ref![data, offset, amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE]);
 
             offset = end;
             end = offset + 4;
@@ -428,7 +419,7 @@ mod tests {
         let nonce =
             SignatureNonce::from_msg_hash(&[0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8]);
         let mut challenge_bytes = pok.to_bytes();
-        challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
+        challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
         let challenge = SignatureNonce::from_msg_hash(challenge_bytes.as_slice());
 
         let sig_proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
