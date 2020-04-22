@@ -33,7 +33,9 @@ use pok_sig::prelude::*;
 use pok_vc::prelude::*;
 
 use amcl_wrapper::{
-    constants::{FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, GROUP_G2_SIZE},
+    constants::{
+        FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, GROUP_G2_SIZE, CURVE_ORDER_ELEMENT_SIZE
+    },
     curve_order_elem::{CurveOrderElement, CurveOrderElementVector},
     group_elem::GroupElement,
     group_elem_g1::{G1Vector, G1},
@@ -157,8 +159,11 @@ impl BlindSignatureContext {
                     msg: format!("{:?}", e),
                 }
             })?;
-        let challenge_hash =
-            SignatureNonce::from(array_ref![data, COMMITMENT_SIZE, amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE]);
+        let challenge_hash = SignatureNonce::from(array_ref![
+            data,
+            COMMITMENT_SIZE,
+            MESSAGE_SIZE
+        ]);
 
         let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
@@ -204,14 +209,43 @@ impl BlindSignatureContext {
         for b in bases.iter() {
             challenge_bytes.append(&mut b.to_vec())
         }
-        challenge_bytes.extend_from_slice(&commitment.to_bytes()[..]);
+        challenge_bytes.extend_from_slice(&commitment.to_vec()[..]);
         challenge_bytes.extend_from_slice(self.commitment.to_vec().as_slice());
-        challenge_bytes.extend_from_slice(&nonce.to_bytes());
+        challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
 
         let challenge_result =
             SignatureMessage::from_msg_hash(challenge_bytes.as_slice()) - &self.challenge_hash;
         let commitment_result = commitment - &self.proof_of_hidden_messages.commitment;
         Ok(commitment_result.is_identity() && challenge_result.is_zero())
+    }
+
+    /// Convert to compressed form. Use for sending over the wire
+    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+        let mut output = Vec::new();
+
+        output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.challenge_hash.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.proof_of_hidden_messages.to_compressed_bytes()[..]);
+
+        output
+    }
+
+    /// Load from compressed bytes
+    pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, BBSError> {
+        if data.len() < MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4 {
+            return Err(BBSErrorKind::InvalidNumberOfBytes(MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4, data.len()).into());
+        }
+
+        let commitment = BlindedSignatureCommitment::from(array_ref![data, 0, MESSAGE_SIZE]);
+        let challenge_hash = SignatureNonce::from(array_ref![data, MESSAGE_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
+        let offset = MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE;
+        let proof_of_hidden_messages = ProofG1::from_compressed_bytes(&data[offset..])?;
+
+        Ok(Self {
+            commitment,
+            challenge_hash,
+            proof_of_hidden_messages
+        })
     }
 }
 
@@ -332,7 +366,11 @@ impl SignatureProof {
             offset = end;
             end = offset + MESSAGE_SIZE;
 
-            let m = SignatureMessage::from(array_ref![data, offset, amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE]);
+            let m = SignatureMessage::from(array_ref![
+                data,
+                offset,
+                MESSAGE_SIZE
+            ]);
 
             offset = end;
             end = offset + 4;
@@ -343,6 +381,56 @@ impl SignatureProof {
         Ok(Self {
             revealed_messages,
             proof,
+        })
+    }
+
+    /// Convert to compressed form. Use for sending over the wire
+    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+        let proof_bytes = self.proof.to_compressed_bytes();
+        let proof_len = proof_bytes.len() as u32;
+
+        let mut output = Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
+        output.extend_from_slice(&proof_len.to_be_bytes()[..]);
+        output.extend_from_slice(proof_bytes.as_slice());
+        let revealed_messages_len = self.revealed_messages.len() as u32;
+        output.extend_from_slice(&revealed_messages_len.to_be_bytes()[..]);
+
+        for (i, m) in &self.revealed_messages {
+            let ii = *i as u32;
+            output.extend_from_slice(&ii.to_be_bytes()[..]);
+            output.extend_from_slice(&m.to_compressed_bytes()[..]);
+        }
+
+        output
+    }
+
+    /// Convert from compressed bytes. Use when sending over the wire
+    pub fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        let data = data.as_ref();
+
+        if data.len() < 8 {
+            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
+                8,
+                data.len(),
+            )));
+        }
+        let proof_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize + 4;
+        let proof = PoKOfSignatureProof::from_compressed_bytes(&data[4..proof_len])?;
+        let revealed_messages_len = u32::from_be_bytes(*array_ref![data, proof_len, 4]);
+        let mut revealed_messages = BTreeMap::new();
+        let mut offset = proof_len + 4;
+        for _ in 0..revealed_messages_len {
+            let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+            offset += 4;
+            let m = SignatureMessage::from(array_ref![data, offset, CURVE_ORDER_ELEMENT_SIZE]);
+            offset += CURVE_ORDER_ELEMENT_SIZE;
+
+            revealed_messages.insert(i, m);
+        }
+
+        Ok(Self {
+            revealed_messages,
+            proof
         })
     }
 }
@@ -441,5 +529,10 @@ mod tests {
                 .len()
                 == 1
         );
+
+        let sig_proof_bytes = sig_proof.to_compressed_bytes();
+
+        let sig_proof_dup = SignatureProof::from_compressed_bytes(&sig_proof_bytes);
+        assert!(sig_proof_dup.is_ok());
     }
 }

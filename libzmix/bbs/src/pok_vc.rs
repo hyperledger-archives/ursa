@@ -16,7 +16,7 @@ use amcl_wrapper::curve_order_elem::CurveOrderElement;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
-use amcl_wrapper::{constants::GROUP_G1_SIZE, types_g2::GROUP_G2_SIZE};
+use amcl_wrapper::constants::{GROUP_G1_SIZE, GROUP_G2_SIZE, CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE};
 use failure::{Backtrace, Context, Fail};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -103,7 +103,7 @@ impl fmt::Display for PoKVCError {
 /// We do this as a macro because we may want abstract this for other signatures
 #[macro_export]
 macro_rules! impl_PoK_VC {
-    ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident, $group_element_size: expr ) => {
+    ( $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_vec:ident, $group_element_size:expr, $group_element_compressed_size:expr ) => {
         /// Proof of knowledge of messages in a vector commitment.
         /// Commit for each message or blinding factor used
         #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -334,7 +334,9 @@ macro_rules! impl_PoK_VC {
                 }
                 let commitment =
                     $group_element::from_slice(&data[..$group_element_size]).map_err(|_| {
-                        PoKVCErrorKind::GeneralError { msg: format!("Invalid Length") }
+                        PoKVCErrorKind::GeneralError {
+                            msg: format!("Invalid Length"),
+                        }
                     })?;
 
                 let mut offset = $group_element_size;
@@ -342,7 +344,8 @@ macro_rules! impl_PoK_VC {
                 let length = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
                 offset += 4;
 
-                if data.len() < offset + length * amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE {
+                if data.len() < offset + length * FIELD_ORDER_ELEMENT_SIZE
+                {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("Invalid length"),
                     }
@@ -352,11 +355,59 @@ macro_rules! impl_PoK_VC {
                 let mut responses = SignatureMessageVector::with_capacity(length);
 
                 for _ in 0..length {
-                    let end = offset + amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE;
-                    let r = CurveOrderElement::from(array_ref![data, offset, amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE]);
+                    let end = offset + FIELD_ORDER_ELEMENT_SIZE;
+                    let r = CurveOrderElement::from(array_ref![
+                        data,
+                        offset,
+                        FIELD_ORDER_ELEMENT_SIZE
+                    ]);
                     responses.push(r);
                     offset = end;
                 }
+                Ok(Self {
+                    commitment,
+                    responses,
+                })
+            }
+
+            /// Convert to compressed raw bytes form. Use when sending over the wire
+            pub fn to_compressed_bytes(&self) -> Vec<u8> {
+                let responses_len = self.responses.len() as u32;
+                let mut output = Vec::with_capacity(
+                    $group_element_compressed_size + self.responses.len() * CURVE_ORDER_ELEMENT_SIZE + 4,
+                );
+
+                output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
+                output.extend_from_slice(&responses_len.to_be_bytes()[..]);
+                for r in self.responses.iter() {
+                    output.extend_from_slice(&r.to_compressed_bytes()[..]);
+                }
+                output
+            }
+
+            /// Convert from compressed bytes. Use when sending over the wire
+            pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
+                if data.len() < $group_element_compressed_size + 4 {
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
+                }
+
+                let commitment =
+                    $group_element::from(array_ref![data, 0, $group_element_compressed_size]);
+                let responses_len =
+                    u32::from_be_bytes(*array_ref![data, $group_element_compressed_size, 4]) as usize;
+
+                let mut offset = $group_element_compressed_size + 4;
+                let mut responses_vec = Vec::with_capacity(responses_len);
+                for _ in 0..responses_len {
+                    let response =
+                        SignatureMessage::from(array_ref![data, offset, CURVE_ORDER_ELEMENT_SIZE]);
+                    responses_vec.push(response);
+                    offset += CURVE_ORDER_ELEMENT_SIZE;
+                }
+                let responses = responses_vec.into();
                 Ok(Self {
                     commitment,
                     responses,
@@ -409,7 +460,7 @@ macro_rules! test_PoK_VC {
             proof_bytes.len(),
             $group_element::random().to_vec().len()
                 + 4
-                + amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE * proof.responses.len()
+                + FIELD_ORDER_ELEMENT_SIZE * proof.responses.len()
         );
         let res_proof_cp = $Proof::from_bytes(&proof_bytes);
         assert!(res_proof_cp.is_ok());
@@ -448,7 +499,8 @@ impl_PoK_VC!(
     ProofG1,
     G1,
     G1Vector,
-    GROUP_G1_SIZE
+    GROUP_G1_SIZE,
+    FIELD_ORDER_ELEMENT_SIZE
 );
 
 // Proof of knowledge of committed values in a vector commitment. The commitment lies in group G2.
@@ -458,7 +510,8 @@ impl_PoK_VC!(
     ProofG2,
     G2,
     G2Vector,
-    GROUP_G2_SIZE
+    GROUP_G2_SIZE,
+    2 * FIELD_ORDER_ELEMENT_SIZE
 );
 
 #[cfg(test)]
