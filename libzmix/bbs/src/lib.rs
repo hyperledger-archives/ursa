@@ -34,7 +34,8 @@ use pok_vc::prelude::*;
 
 use amcl_wrapper::{
     constants::{
-        FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE
+        CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE,
+        GROUP_G1_SIZE as COMMITMENT_SIZE,
     },
     curve_order_elem::{CurveOrderElement, CurveOrderElementVector},
     group_elem::GroupElement,
@@ -159,11 +160,7 @@ impl BlindSignatureContext {
                     msg: format!("{:?}", e),
                 }
             })?;
-        let challenge_hash = SignatureNonce::from(array_ref![
-            data,
-            COMMITMENT_SIZE,
-            MESSAGE_SIZE
-        ]);
+        let challenge_hash = SignatureNonce::from(array_ref![data, COMMITMENT_SIZE, MESSAGE_SIZE]);
 
         let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
@@ -233,18 +230,23 @@ impl BlindSignatureContext {
     /// Load from compressed bytes
     pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, BBSError> {
         if data.len() < MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4 {
-            return Err(BBSErrorKind::InvalidNumberOfBytes(MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4, data.len()).into());
+            return Err(BBSErrorKind::InvalidNumberOfBytes(
+                MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4,
+                data.len(),
+            )
+            .into());
         }
 
         let commitment = BlindedSignatureCommitment::from(array_ref![data, 0, MESSAGE_SIZE]);
-        let challenge_hash = SignatureNonce::from(array_ref![data, MESSAGE_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
+        let challenge_hash =
+            SignatureNonce::from(array_ref![data, MESSAGE_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
         let offset = MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE;
         let proof_of_hidden_messages = ProofG1::from_compressed_bytes(&data[offset..])?;
 
         Ok(Self {
             commitment,
             challenge_hash,
-            proof_of_hidden_messages
+            proof_of_hidden_messages,
         })
     }
 }
@@ -296,7 +298,7 @@ impl ProofRequest {
         let verification_key = PublicKey::from_compressed_bytes(&data[offset..])?;
         Ok(Self {
             revealed_messages,
-            verification_key
+            verification_key,
         })
     }
 }
@@ -362,11 +364,7 @@ impl SignatureProof {
             offset = end;
             end = offset + MESSAGE_SIZE;
 
-            let m = SignatureMessage::from(array_ref![
-                data,
-                offset,
-                MESSAGE_SIZE
-            ]);
+            let m = SignatureMessage::from(array_ref![data, offset, MESSAGE_SIZE]);
 
             offset = end;
             end = offset + 4;
@@ -385,7 +383,8 @@ impl SignatureProof {
         let proof_bytes = self.proof.to_compressed_bytes();
         let proof_len = proof_bytes.len() as u32;
 
-        let mut output = Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
+        let mut output =
+            Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
         output.extend_from_slice(&proof_len.to_be_bytes()[..]);
         output.extend_from_slice(proof_bytes.as_slice());
         let revealed_messages_len = self.revealed_messages.len() as u32;
@@ -426,7 +425,7 @@ impl SignatureProof {
 
         Ok(Self {
             revealed_messages,
-            proof
+            proof,
         })
     }
 }
@@ -447,7 +446,7 @@ mod tests {
         assert!(pr_1.is_ok());
         let pr_1 = pr_1.unwrap();
         let bytes_1 = pr_1.to_compressed_bytes();
-        assert_eq!(bytes[..],  bytes_1[..]);
+        assert_eq!(bytes[..], bytes_1[..]);
     }
 
     #[test]

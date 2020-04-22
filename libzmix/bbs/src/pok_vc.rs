@@ -12,11 +12,13 @@
 
 use crate::prelude::*;
 
+use amcl_wrapper::constants::{
+    CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE, GROUP_G2_SIZE,
+};
 use amcl_wrapper::curve_order_elem::CurveOrderElement;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
 use amcl_wrapper::group_elem_g2::{G2Vector, G2};
-use amcl_wrapper::constants::{GROUP_G1_SIZE, GROUP_G2_SIZE, CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE};
 use failure::{Backtrace, Context, Fail};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -344,8 +346,7 @@ macro_rules! impl_PoK_VC {
                 let length = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
                 offset += 4;
 
-                if data.len() < offset + length * FIELD_ORDER_ELEMENT_SIZE
-                {
+                if data.len() < offset + length * FIELD_ORDER_ELEMENT_SIZE {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("Invalid length"),
                     }
@@ -356,11 +357,8 @@ macro_rules! impl_PoK_VC {
 
                 for _ in 0..length {
                     let end = offset + FIELD_ORDER_ELEMENT_SIZE;
-                    let r = CurveOrderElement::from(array_ref![
-                        data,
-                        offset,
-                        FIELD_ORDER_ELEMENT_SIZE
-                    ]);
+                    let r =
+                        CurveOrderElement::from(array_ref![data, offset, FIELD_ORDER_ELEMENT_SIZE]);
                     responses.push(r);
                     offset = end;
                 }
@@ -374,7 +372,9 @@ macro_rules! impl_PoK_VC {
             pub fn to_compressed_bytes(&self) -> Vec<u8> {
                 let responses_len = self.responses.len() as u32;
                 let mut output = Vec::with_capacity(
-                    $group_element_compressed_size + self.responses.len() * CURVE_ORDER_ELEMENT_SIZE + 4,
+                    $group_element_compressed_size
+                        + self.responses.len() * CURVE_ORDER_ELEMENT_SIZE
+                        + 4,
                 );
 
                 output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
@@ -397,7 +397,8 @@ macro_rules! impl_PoK_VC {
                 let commitment =
                     $group_element::from(array_ref![data, 0, $group_element_compressed_size]);
                 let responses_len =
-                    u32::from_be_bytes(*array_ref![data, $group_element_compressed_size, 4]) as usize;
+                    u32::from_be_bytes(*array_ref![data, $group_element_compressed_size, 4])
+                        as usize;
 
                 let mut offset = $group_element_compressed_size + 4;
                 let mut responses_vec = Vec::with_capacity(responses_len);
