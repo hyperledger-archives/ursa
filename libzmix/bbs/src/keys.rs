@@ -1,6 +1,10 @@
 use amcl_wrapper::{
-    constants::{GROUP_G1_SIZE, GROUP_G2_SIZE}, errors::SerzDeserzError, curve_order_elem::CurveOrderElement,
-    group_elem::GroupElement, group_elem_g1::G1, group_elem_g2::G2,
+    constants::{FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE, GROUP_G2_SIZE},
+    curve_order_elem::CurveOrderElement,
+    errors::SerzDeserzError,
+    group_elem::GroupElement,
+    group_elem_g1::G1,
+    group_elem_g2::G2,
 };
 use hash2curve::DomainSeparationTag;
 use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
@@ -159,8 +163,7 @@ impl DeterministicPublicKey {
 
     /// Convert the key to raw bytes
     pub fn to_bytes(&self) -> [u8; GROUP_G2_SIZE] {
-        let out = self.w.to_bytes();
-        *array_ref![out, 0, GROUP_G2_SIZE]
+        self.w.to_bytes()
     }
 
     /// Convert the byte slice into a public key
@@ -168,10 +171,28 @@ impl DeterministicPublicKey {
         let w = G2::from(data);
         DeterministicPublicKey { w }
     }
+
+    /// Conver the key to raw bytes in compressed form
+    pub fn to_compressed_bytes(&self) -> [u8; 2 * FIELD_ORDER_ELEMENT_SIZE] {
+        self.w.to_compressed_bytes()
+    }
 }
 
 impl From<G2> for DeterministicPublicKey {
     fn from(w: G2) -> Self {
+        DeterministicPublicKey { w }
+    }
+}
+
+impl From<[u8; 2 * FIELD_ORDER_ELEMENT_SIZE]> for DeterministicPublicKey {
+    fn from(data: [u8; 2 * FIELD_ORDER_ELEMENT_SIZE]) -> Self {
+        Self::from(&data)
+    }
+}
+
+impl From<&[u8; 2 * FIELD_ORDER_ELEMENT_SIZE]> for DeterministicPublicKey {
+    fn from(data: &[u8; 2 * FIELD_ORDER_ELEMENT_SIZE]) -> Self {
+        let w = G2::from(data);
         DeterministicPublicKey { w }
     }
 }

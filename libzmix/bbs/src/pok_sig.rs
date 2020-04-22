@@ -5,7 +5,7 @@ use crate::pok_vc::prelude::*;
 use crate::signature::{compute_b_const_time, Signature};
 use crate::types::*;
 
-use amcl_wrapper::constants::GROUP_G1_SIZE;
+use amcl_wrapper::constants::{GROUP_G1_SIZE, FIELD_ORDER_ELEMENT_SIZE};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
@@ -428,6 +428,69 @@ impl PoKOfSignatureProof {
             proof_vc_2,
         })
     }
+
+    /// Convert the proof to a compressed raw bytes form. Use when sending over the wire
+    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+        let mut output = Vec::new();
+        output.extend_from_slice(&self.a_prime.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.a_bar.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.d.to_compressed_bytes()[..]);
+        let proof1_bytes = self.proof_vc_1.to_compressed_bytes();
+        let proof1_len = proof1_bytes.len() as u32;
+        output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
+        output.extend_from_slice(proof1_bytes.as_slice());
+        output.extend_from_slice(self.proof_vc_2.to_compressed_bytes().as_slice());
+
+        output
+    }
+
+    /// Convert compressed byte slice into a proof
+    pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, BBSError> {
+        if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
+            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!(
+                    "Invalid proof bytes. Expected {}",
+                    FIELD_ORDER_ELEMENT_SIZE * 3
+                ),
+            }));
+        }
+
+        let a_prime = G1::from(array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
+        let a_bar = G1::from(array_ref![
+            data,
+            FIELD_ORDER_ELEMENT_SIZE,
+            FIELD_ORDER_ELEMENT_SIZE
+        ]);
+        let mut offset = 2 * FIELD_ORDER_ELEMENT_SIZE;
+        let d = G1::from(array_ref![
+            data,
+            offset,
+            FIELD_ORDER_ELEMENT_SIZE
+        ]);
+        offset += FIELD_ORDER_ELEMENT_SIZE;
+        let proof1_len =
+            u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+        offset += 4;
+        let end = offset + proof1_len;
+        let proof_vc_1 = ProofG1::from_compressed_bytes(&data[offset..end]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
+        let proof_vc_2 = ProofG1::from_compressed_bytes(&data[end..]).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
+
+        Ok(Self {
+            a_prime,
+            a_bar,
+            d,
+            proof_vc_1,
+            proof_vc_2,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -460,6 +523,10 @@ mod tests {
         // Test to_bytes
         let proof_bytes = proof.to_bytes();
         let proof_cp = PoKOfSignatureProof::from_bytes(&proof_bytes);
+        assert!(proof_cp.is_ok());
+
+        let proof_bytes = proof.to_compressed_bytes();
+        let proof_cp = PoKOfSignatureProof::from_compressed_bytes(&proof_bytes);
         assert!(proof_cp.is_ok());
 
         // The verifier generates the challenge on its own.

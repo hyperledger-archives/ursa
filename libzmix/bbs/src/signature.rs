@@ -2,7 +2,7 @@ use super::types::*;
 use crate::errors::prelude::*;
 use crate::keys::{PublicKey, SecretKey};
 use amcl_wrapper::{
-    constants::{GROUP_G1_SIZE, FIELD_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE},
+    constants::{CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE},
     extension_field_gt::GT,
     group_elem::{GroupElement, GroupElementVector},
     group_elem_g1::G1,
@@ -29,7 +29,8 @@ macro_rules! check_verkey_message {
 /// The number of bytes in a signature
 pub const SIGNATURE_SIZE: usize = GROUP_G1_SIZE + FIELD_ORDER_ELEMENT_SIZE * 2;
 /// The number of bytes in a compressed signature
-pub const SIGNATURE_COMPRESSED_SIZE: usize = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE * 2;
+pub const SIGNATURE_COMPRESSED_SIZE: usize =
+    FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE * 2;
 
 macro_rules! sig_byte_impl {
     () => {
@@ -42,7 +43,7 @@ macro_rules! sig_byte_impl {
             *array_ref![out, 0, SIGNATURE_SIZE]
         }
 
-        /// Conver the signature to a compressed form of raw bytes
+        /// Conver the signature to a compressed form of raw bytes. Use when sending over the wire.
         pub fn to_compressed_bytes(&self) -> [u8; SIGNATURE_COMPRESSED_SIZE] {
             let mut out = [0u8; SIGNATURE_COMPRESSED_SIZE];
             out[..FIELD_ORDER_ELEMENT_SIZE].copy_from_slice(&self.a.to_compressed_bytes()[..]);
@@ -76,8 +77,16 @@ macro_rules! from_rules {
         impl From<&[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
             fn from(data: &[u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
                 let a = G1::from(*array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
-                let e = SignatureMessage::from(*array_ref![data, FIELD_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
-                let s = SignatureMessage::from(*array_ref![data, FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
+                let e = SignatureMessage::from(*array_ref![
+                    data,
+                    FIELD_ORDER_ELEMENT_SIZE,
+                    CURVE_ORDER_ELEMENT_SIZE
+                ]);
+                let s = SignatureMessage::from(*array_ref![
+                    data,
+                    FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE,
+                    CURVE_ORDER_ELEMENT_SIZE
+                ]);
                 Self { a, e, s }
             }
         }
@@ -266,7 +275,10 @@ pub(crate) fn compute_b_var_time(
     offset: usize,
 ) -> G1 {
     let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
-    starting_value + points.multi_scalar_mul_var_time(scalars.as_slice()).unwrap()
+    starting_value
+        + points
+            .multi_scalar_mul_var_time(scalars.as_slice())
+            .unwrap()
 }
 
 from_rules!(BlindSignature);
