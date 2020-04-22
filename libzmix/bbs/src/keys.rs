@@ -87,6 +87,43 @@ impl PublicKey {
         Ok(PublicKey { w, h0, h })
     }
 
+    /// Convert the key to raw bytes. Use when sending over the wire
+    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+        let h_len = self.h.len() as u32;
+        let mut output = Vec::with_capacity(FIELD_ORDER_ELEMENT_SIZE * (3 + self.h.len()));
+        output.extend_from_slice(&self.w.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.h0.to_compressed_bytes()[..]);
+        output.extend_from_slice(&h_len.to_be_bytes()[..]);
+        for p in &self.h {
+            output.extend_from_slice(&p.to_compressed_bytes()[..]);
+        }
+        output
+    }
+
+    /// Convert from raw bytes. Use when sending over the wire
+    pub fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        const MIN_SIZE: usize = FIELD_ORDER_ELEMENT_SIZE * 3;
+        let data = data.as_ref();
+        let len = (data.len() - 4) % FIELD_ORDER_ELEMENT_SIZE;
+        if len != 0 {
+            return Err(BBSErrorKind::InvalidNumberOfBytes(MIN_SIZE, data.len()).into());
+        }
+        let w = G2::from(array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE * 2]);
+        let h0 = G1::from(array_ref![data, FIELD_ORDER_ELEMENT_SIZE * 2, FIELD_ORDER_ELEMENT_SIZE]);
+        let h_len = u32::from_be_bytes(*array_ref![data, MIN_SIZE, 4]) as usize;
+        let mut h = Vec::with_capacity(h_len);
+        let mut offset = MIN_SIZE + 4;
+        for _ in 0..h_len {
+            let h_i = G1::from(array_ref![data, offset, FIELD_ORDER_ELEMENT_SIZE]);
+            h.push(h_i);
+            offset += FIELD_ORDER_ELEMENT_SIZE;
+        }
+
+        Ok(Self {
+            w, h0, h
+        })
+    }
+
     /// Make sure no generator is identity
     pub fn validate(&self) -> Result<(), BBSError> {
         if self.h0.is_identity() || self.w.is_identity() || self.h.iter().any(|v| v.is_identity()) {
