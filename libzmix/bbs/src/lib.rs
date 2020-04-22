@@ -34,7 +34,7 @@ use pok_vc::prelude::*;
 
 use amcl_wrapper::{
     constants::{
-        FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, GROUP_G2_SIZE, CURVE_ORDER_ELEMENT_SIZE
+        FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE, GROUP_G1_SIZE as COMMITMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE
     },
     curve_order_elem::{CurveOrderElement, CurveOrderElementVector},
     group_elem::GroupElement,
@@ -261,46 +261,42 @@ pub struct ProofRequest {
 }
 
 impl ProofRequest {
-    /// Convert to raw bytes
-    pub fn to_bytes(&self) -> Vec<u8> {
+    /// Convert to raw bytes. Use when sending over the wire
+    pub fn to_compressed_bytes(&self) -> Vec<u8> {
         let revealed_len = self.revealed_messages.len() as u32;
 
-        let mut output = Vec::with_capacity(4 * (self.revealed_messages.len() + 1) + GROUP_G2_SIZE);
-        output.extend_from_slice(self.verification_key.to_bytes().as_slice());
+        let mut output = Vec::new();
         output.extend_from_slice(&revealed_len.to_be_bytes()[..]);
         for i in &self.revealed_messages {
             let ii = *i as u32;
             output.extend_from_slice(&ii.to_be_bytes()[..]);
         }
+        output.extend_from_slice(self.verification_key.to_compressed_bytes().as_slice());
         output
     }
 
-    /// Convert from raw bytes
-    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    /// Convert from raw bytes. Use when sending over the wire
+    pub fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
-        if data.len() < 4 + GROUP_G2_SIZE {
+        if data.len() < 4 + MESSAGE_SIZE * 2 {
             return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
-                4 + GROUP_G2_SIZE,
+                4 + MESSAGE_SIZE * 2,
                 data.len(),
             )));
         }
 
-        let verification_key = PublicKey::from_bytes(&data[..GROUP_G2_SIZE]).map_err(|e| {
-            BBSErrorKind::GeneralError {
-                msg: format!("{:?}", e),
-            }
-        })?;
-        let revealed_len = u32::from_be_bytes(*array_ref![data, GROUP_G2_SIZE, 4]) as usize;
+        let revealed_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize;
+        let mut offset = 4;
         let mut revealed_messages = BTreeSet::new();
-        let mut offset = GROUP_G2_SIZE + 4;
         for _ in 0..revealed_len {
             let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
             revealed_messages.insert(i);
             offset += 4;
         }
+        let verification_key = PublicKey::from_compressed_bytes(&data[offset..])?;
         Ok(Self {
-            verification_key,
             revealed_messages,
+            verification_key
         })
     }
 }
@@ -440,6 +436,19 @@ mod tests {
     use crate::prelude::*;
     use amcl_wrapper::{group_elem::GroupElement, group_elem_g1::G1};
     use std::collections::BTreeMap;
+
+    #[test]
+    fn proof_request_bytes_test() {
+        let (pk, _) = generate(5).unwrap();
+        let pr = Verifier::new_proof_request(&[2, 3, 4], &pk).unwrap();
+
+        let bytes = pr.to_compressed_bytes();
+        let pr_1 = ProofRequest::from_compressed_bytes(&bytes);
+        assert!(pr_1.is_ok());
+        let pr_1 = pr_1.unwrap();
+        let bytes_1 = pr_1.to_compressed_bytes();
+        assert_eq!(bytes[..],  bytes_1[..]);
+    }
 
     #[test]
     fn blind_signature_context_bytes_test() {
