@@ -109,7 +109,11 @@ impl PublicKey {
             return Err(BBSErrorKind::InvalidNumberOfBytes(MIN_SIZE, data.len()).into());
         }
         let w = G2::from(array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE * 2]);
-        let h0 = G1::from(array_ref![data, FIELD_ORDER_ELEMENT_SIZE * 2, FIELD_ORDER_ELEMENT_SIZE]);
+        let h0 = G1::from(array_ref![
+            data,
+            FIELD_ORDER_ELEMENT_SIZE * 2,
+            FIELD_ORDER_ELEMENT_SIZE
+        ]);
         let h_len = u32::from_be_bytes(*array_ref![data, MIN_SIZE, 4]) as usize;
         let mut h = Vec::with_capacity(h_len);
         let mut offset = MIN_SIZE + 4;
@@ -119,9 +123,7 @@ impl PublicKey {
             offset += FIELD_ORDER_ELEMENT_SIZE;
         }
 
-        Ok(Self {
-            w, h0, h
-        })
+        Ok(Self { w, h0, h })
     }
 
     /// Make sure no generator is identity

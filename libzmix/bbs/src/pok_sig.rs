@@ -5,7 +5,7 @@ use crate::pok_vc::prelude::*;
 use crate::signature::{compute_b_const_time, Signature};
 use crate::types::*;
 
-use amcl_wrapper::constants::{GROUP_G1_SIZE, FIELD_ORDER_ELEMENT_SIZE};
+use amcl_wrapper::constants::{FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE};
 use amcl_wrapper::extension_field_gt::GT;
 use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
 use amcl_wrapper::group_elem_g1::{G1Vector, G1};
@@ -462,14 +462,9 @@ impl PoKOfSignatureProof {
             FIELD_ORDER_ELEMENT_SIZE
         ]);
         let mut offset = 2 * FIELD_ORDER_ELEMENT_SIZE;
-        let d = G1::from(array_ref![
-            data,
-            offset,
-            FIELD_ORDER_ELEMENT_SIZE
-        ]);
+        let d = G1::from(array_ref![data, offset, FIELD_ORDER_ELEMENT_SIZE]);
         offset += FIELD_ORDER_ELEMENT_SIZE;
-        let proof1_len =
-            u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
+        let proof1_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
         let end = offset + proof1_len;
         let proof_vc_1 = ProofG1::from_compressed_bytes(&data[offset..end]).map_err(|e| {
