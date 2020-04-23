@@ -438,7 +438,8 @@ macro_rules! impl_PoK_VC {
             }
 
             /// Convert from compressed bytes. Use when sending over the wire
-            fn from_compressed_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
+            fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, PoKVCError> {
+                let data = data.as_ref();
                 if data.len() < $group_element_compressed_size + 4 {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("Invalid length"),
