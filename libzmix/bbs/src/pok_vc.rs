@@ -196,7 +196,7 @@ macro_rules! impl_PoK_VC {
         }
 
         impl $ProverCommitted {
-            /// Convert the committed values to a byte array
+            /// Convert the committed values to a byte array. Use for generating the fiat-shamir challenge
             pub fn to_bytes(&self) -> Vec<u8> {
                 let mut bytes = vec![];
                 for b in self.gens.as_slice() {
@@ -387,6 +387,58 @@ macro_rules! impl_PoK_VC {
 
             /// Convert from compressed bytes. Use when sending over the wire
             pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
+                if data.len() < $group_element_compressed_size + 4 {
+                    return Err(PoKVCErrorKind::GeneralError {
+                        msg: format!("Invalid length"),
+                    }
+                    .into());
+                }
+
+                let commitment =
+                    $group_element::from(array_ref![data, 0, $group_element_compressed_size]);
+                let responses_len =
+                    u32::from_be_bytes(*array_ref![data, $group_element_compressed_size, 4])
+                        as usize;
+
+                let mut offset = $group_element_compressed_size + 4;
+                let mut responses_vec = Vec::with_capacity(responses_len);
+                for _ in 0..responses_len {
+                    let response =
+                        SignatureMessage::from(array_ref![data, offset, CURVE_ORDER_ELEMENT_SIZE]);
+                    responses_vec.push(response);
+                    offset += CURVE_ORDER_ELEMENT_SIZE;
+                }
+                let responses = responses_vec.into();
+                Ok(Self {
+                    commitment,
+                    responses,
+                })
+            }
+        }
+
+        impl CompressedBytes for $Proof {
+            type Output = $Proof;
+            type Error = PoKVCError;
+
+            /// Convert to compressed raw bytes form. Use when sending over the wire
+            fn to_compressed_bytes(&self) -> Vec<u8> {
+                let responses_len = self.responses.len() as u32;
+                let mut output = Vec::with_capacity(
+                    $group_element_compressed_size
+                        + self.responses.len() * CURVE_ORDER_ELEMENT_SIZE
+                        + 4,
+                );
+
+                output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
+                output.extend_from_slice(&responses_len.to_be_bytes()[..]);
+                for r in self.responses.iter() {
+                    output.extend_from_slice(&r.to_compressed_bytes()[..]);
+                }
+                output
+            }
+
+            /// Convert from compressed bytes. Use when sending over the wire
+            fn from_compressed_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
                 if data.len() < $group_element_compressed_size + 4 {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("Invalid length"),
