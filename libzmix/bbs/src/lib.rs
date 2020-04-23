@@ -108,7 +108,6 @@ pub mod prelude {
     pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_BLINDING_FACTOR_SIZE;
     pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_MESSAGE_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as COMPRESSED_PUBLIC_KEY_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as NONCE_SIZE;
