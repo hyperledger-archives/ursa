@@ -111,6 +111,7 @@ pub mod prelude {
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as NONCE_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as BLINDING_FACTOR_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as COMPRESSED_COMMITMENT_SIZE;
     pub use amcl_wrapper::constants::GROUP_G1_SIZE as COMMITMENT_SIZE;
     pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
     pub use amcl_wrapper::types_g2::GROUP_G2_SIZE as PUBLIC_KEY_SIZE;
