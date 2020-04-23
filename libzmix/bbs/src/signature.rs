@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 /// Convenience module
 pub mod prelude {
-    pub use super::{BlindSignature, Signature, SIGNATURE_SIZE};
+    pub use super::{BlindSignature, Signature, SIGNATURE_COMPRESSED_SIZE, SIGNATURE_SIZE};
 }
 
 macro_rules! check_verkey_message {
@@ -77,12 +77,12 @@ macro_rules! from_rules {
         impl From<&[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
             fn from(data: &[u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
                 let a = G1::from(*array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
-                let e = SignatureMessage::from(*array_ref![
+                let e = SignatureMessage::from(array_ref![
                     data,
                     FIELD_ORDER_ELEMENT_SIZE,
                     CURVE_ORDER_ELEMENT_SIZE
                 ]);
-                let s = SignatureMessage::from(*array_ref![
+                let s = SignatureMessage::from(array_ref![
                     data,
                     FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE,
                     CURVE_ORDER_ELEMENT_SIZE

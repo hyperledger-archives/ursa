@@ -11,11 +11,15 @@ use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::prelude::*;
+use crate::CompressedBytes;
 use rayon::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::{generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey, COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE};
+    pub use super::{
+        generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey,
+        COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE,
+    };
     pub use hash2curve::DomainSeparationTag;
 }
 
@@ -87,8 +91,22 @@ impl PublicKey {
         Ok(PublicKey { w, h0, h })
     }
 
+    /// Make sure no generator is identity
+    pub fn validate(&self) -> Result<(), BBSError> {
+        if self.h0.is_identity() || self.w.is_identity() || self.h.iter().any(|v| v.is_identity()) {
+            Err(BBSError::from_kind(BBSErrorKind::MalformedPublicKey))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl CompressedBytes for PublicKey {
+    type Output = PublicKey;
+    type Error = BBSError;
+
     /// Convert the key to raw bytes. Use when sending over the wire
-    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+    fn to_compressed_bytes(&self) -> Vec<u8> {
         let h_len = self.h.len() as u32;
         let mut output = Vec::with_capacity(FIELD_ORDER_ELEMENT_SIZE * (3 + self.h.len()));
         output.extend_from_slice(&self.w.to_compressed_bytes()[..]);
@@ -101,7 +119,7 @@ impl PublicKey {
     }
 
     /// Convert from raw bytes. Use when sending over the wire
-    pub fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         const MIN_SIZE: usize = FIELD_ORDER_ELEMENT_SIZE * 3;
         let data = data.as_ref();
         let len = (data.len() - 4) % FIELD_ORDER_ELEMENT_SIZE;
@@ -125,17 +143,9 @@ impl PublicKey {
 
         Ok(Self { w, h0, h })
     }
-
-    /// Make sure no generator is identity
-    pub fn validate(&self) -> Result<(), BBSError> {
-        if self.h0.is_identity() || self.w.is_identity() || self.h.iter().any(|v| v.is_identity()) {
-            Err(BBSError::from_kind(BBSErrorKind::MalformedPublicKey))
-        } else {
-            Ok(())
-        }
-    }
 }
 
+/// Size of a compressed deterministic public key
 pub const COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE: usize = 2 * FIELD_ORDER_ELEMENT_SIZE;
 
 /// Used to deterministically generate all other generators given a commitment to a private key
