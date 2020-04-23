@@ -105,6 +105,8 @@ pub mod prelude {
     pub use crate::prover::Prover;
     pub use crate::signature::prelude::*;
     pub use crate::verifier::Verifier;
+    pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_SECRET_KEY_SIZE;
+    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as COMPRESSED_PUBLIC_KEY_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as SECRET_KEY_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE;
     pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as NONCE_SIZE;
