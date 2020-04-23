@@ -508,7 +508,8 @@ impl CompressedBytes for PoKOfSignatureProof {
     }
 
     /// Convert compressed byte slice into a proof
-    fn from_compressed_bytes(data: &[u8]) -> Result<Self, BBSError> {
+    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+        let data = data.as_ref();
         if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!(
