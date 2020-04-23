@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 /// Convenience module
 pub mod prelude {
-    pub use super::{BlindSignature, Signature, SIGNATURE_COMPRESSED_SIZE, SIGNATURE_SIZE};
+    pub use super::{BlindSignature, Signature, COMPRESSED_SIGNATURE_SIZE, SIGNATURE_SIZE};
 }
 
 macro_rules! check_verkey_message {
@@ -29,7 +29,7 @@ macro_rules! check_verkey_message {
 /// The number of bytes in a signature
 pub const SIGNATURE_SIZE: usize = GROUP_G1_SIZE + FIELD_ORDER_ELEMENT_SIZE * 2;
 /// The number of bytes in a compressed signature
-pub const SIGNATURE_COMPRESSED_SIZE: usize =
+pub const COMPRESSED_SIGNATURE_SIZE: usize =
     FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE * 2;
 
 macro_rules! sig_byte_impl {
@@ -44,8 +44,8 @@ macro_rules! sig_byte_impl {
         }
 
         /// Conver the signature to a compressed form of raw bytes. Use when sending over the wire.
-        pub fn to_compressed_bytes(&self) -> [u8; SIGNATURE_COMPRESSED_SIZE] {
-            let mut out = [0u8; SIGNATURE_COMPRESSED_SIZE];
+        pub fn to_compressed_bytes(&self) -> [u8; COMPRESSED_SIGNATURE_SIZE] {
+            let mut out = [0u8; COMPRESSED_SIGNATURE_SIZE];
             out[..FIELD_ORDER_ELEMENT_SIZE].copy_from_slice(&self.a.to_compressed_bytes()[..]);
             let end = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE;
             out[FIELD_ORDER_ELEMENT_SIZE..end].copy_from_slice(&self.e.to_compressed_bytes()[..]);
@@ -68,14 +68,14 @@ macro_rules! sig_byte_impl {
 
 macro_rules! from_rules {
     ($type:ident) => {
-        impl From<[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
-            fn from(data: [u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
+        impl From<[u8; COMPRESSED_SIGNATURE_SIZE]> for $type {
+            fn from(data: [u8; COMPRESSED_SIGNATURE_SIZE]) -> Self {
                 Self::from(&data)
             }
         }
 
-        impl From<&[u8; SIGNATURE_COMPRESSED_SIZE]> for $type {
-            fn from(data: &[u8; SIGNATURE_COMPRESSED_SIZE]) -> Self {
+        impl From<&[u8; COMPRESSED_SIGNATURE_SIZE]> for $type {
+            fn from(data: &[u8; COMPRESSED_SIGNATURE_SIZE]) -> Self {
                 let a = G1::from(*array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
                 let e = SignatureMessage::from(array_ref![
                     data,
@@ -304,7 +304,7 @@ mod tests {
         assert_eq!(sig, sig_2);
 
         let bytes = sig.to_compressed_bytes();
-        assert_eq!(bytes.len(), SIGNATURE_COMPRESSED_SIZE);
+        assert_eq!(bytes.len(), COMPRESSED_SIGNATURE_SIZE);
         let sig_2 = Signature::from(bytes);
         assert_eq!(sig, sig_2);
     }
