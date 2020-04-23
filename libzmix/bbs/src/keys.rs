@@ -15,7 +15,7 @@ use rayon::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
-    pub use super::{generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey};
+    pub use super::{generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey, COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE};
     pub use hash2curve::DomainSeparationTag;
 }
 
@@ -135,6 +135,8 @@ impl PublicKey {
         }
     }
 }
+
+pub const COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE: usize = 2 * FIELD_ORDER_ELEMENT_SIZE;
 
 /// Used to deterministically generate all other generators given a commitment to a private key
 /// This is effectively a BLS signature public key
