@@ -270,69 +270,274 @@ fn pok_sig_bad_message() {
 }
 
 #[test]
-fn test_challenge_hash_with_prover_claims() {
-    //issue credential
-    let (pk, sk) = Issuer::new_keys(5).unwrap();
-    let messages = vec![
-        SignatureMessage::from_msg_hash(b"message_1"),
-        SignatureMessage::from_msg_hash(b"message_2"),
-        SignatureMessage::from_msg_hash(b"message_3"),
-        SignatureMessage::from_msg_hash(b"message_4"),
-        SignatureMessage::from_msg_hash(b"message_5"),
+fn bbs_demo() {
+    // Prover generates link secret
+    let link_secret = Prover::new_link_secret();
+
+    // Issuer1 creates keys to sign a credential with 5 claims
+    // (one of which is the blinded link secret)
+    let (pk1, sk1) = Issuer::new_keys(5).unwrap();
+
+    let same_claim = SignatureMessage::from_msg_hash(b"same_claim");
+
+    // Prover desires a credential from Issuer1,
+    // Issuer1 constructs the credential
+    let mut credential1 = sm_map![
+        1 => b"claim1_first_name",
+        3 => b"claim3_email",
+        4 => b"claim4_address"
+    ];
+    credential1.insert(2, same_claim.clone());
+
+    // Issuer1 generates a signing nonce and sends it to the Prover
+    let signing_nonce1 = Issuer::generate_signing_nonce();
+
+    // Prover creates set of blind claims (link secret) which will be included in the credential
+    let mut blind_claims1 = BTreeMap::new();
+    blind_claims1.insert(0, link_secret.clone());
+
+    // Prover generates blind signature context and sends it to Issuer1
+    // Prover stores signature blinding
+    let (ctx1, signature_blinding1) =
+        Prover::new_blind_signature_context(
+            &pk1,
+            &blind_claims1,
+            &signing_nonce1
+        ).unwrap();
+
+    // Issuer1 signs the credential and sends it to the Prover
+    let blind_signature1 = Issuer::blind_sign(
+        &ctx1,
+        &credential1,
+        &sk1,
+        &pk1,
+        &signing_nonce1
+    ).unwrap();
+
+    // Prover adds link secret to the credential from Issuer1
+    let mut full_credential1 = credential1
+        .iter()
+        .map(|(_, m)| m.clone())
+        .collect::<Vec<SignatureMessage>>();
+    full_credential1.insert(0, link_secret.clone());
+
+    // Prover completes the signature from Issuer1
+    let complete_signature1 =
+        Prover::complete_signature(
+            &pk1,
+            full_credential1.as_slice(),
+            &blind_signature1,
+            &signature_blinding1);
+
+    // Prover verifies the signature from Issuer1
+    assert!(complete_signature1.is_ok());
+    let complete_sig1 = complete_signature1.unwrap();
+    assert!(complete_sig1
+        .verify(
+            full_credential1.as_slice(),
+            &pk1
+        ).unwrap()
+    );
+
+    // Issuer2 creates keys to sign a credential with 4 claims
+    // (one of which is the blinded link secret)
+    let (pk2, sk2) = Issuer::new_keys(4).unwrap();
+
+    // Prover desires a credential from Issuer2,
+    // Issuer2 constructs the credential
+    let mut credential2 = sm_map![
+        1 => b"claim1_loyalty_program_id",
+        2 => b"claim2_customer_id"
+    ];
+    credential2.insert(3, same_claim.clone());
+
+    assert_eq!(credential1[&2], credential2[&3]);
+
+    // Issuer2 generates a signing nonce and sends it to the Prover
+    let signing_nonce2 = Issuer::generate_signing_nonce();
+
+    // Prover creates set of blind claims (link secret) which will be included in the credential
+    let mut blind_claims2 = BTreeMap::new();
+    blind_claims2.insert(0, link_secret.clone());
+
+    // Prover generates blind signature context and sends it to Issuer2
+    // Prover stores signature blinding
+    let (ctx2, signature_blinding2) =
+        Prover::new_blind_signature_context(
+            &pk2,
+            &blind_claims2,
+            &signing_nonce2
+        ).unwrap();
+
+    // Issuer2 signs the credential and sends it to the Prover
+    let blind_signature2 = Issuer::blind_sign(
+        &ctx2,
+        &credential2,
+        &sk2,
+        &pk2,
+        &signing_nonce2
+    ).unwrap();
+
+    // Prover adds link secret to the credential from Issuer2
+    let mut full_credential2 = credential2
+        .iter()
+        .map(|(_, m)| m.clone())
+        .collect::<Vec<SignatureMessage>>();
+    full_credential2.insert(0, link_secret.clone());
+
+    assert_eq!(full_credential1[0], full_credential2[0]);
+    assert_eq!(full_credential1[2], full_credential2[3]);
+
+    // Prover completes the signature from Issuer2
+    let complete_signature2 =
+        Prover::complete_signature(
+            &pk2,
+            full_credential2.as_slice(),
+            &blind_signature2,
+            &signature_blinding2);
+
+    // Prover verifies the signature from Issuer1
+    assert!(complete_signature2.is_ok());
+    let complete_sig2 = complete_signature2.unwrap();
+    assert!(complete_sig2
+        .verify(
+            full_credential2.as_slice(),
+            &pk2
+        ).unwrap()
+    );
+
+    // Verifier wants the Prover to reveal claim1 from Issuer1,
+    // plus a proof that claim2 from Issuer1 and claim3 from Issuer2 are identical
+    // Verifier creates a nonce
+    let verifier_nonce = Verifier::generate_proof_nonce();
+
+    // Verifier creates proof request for the reveal of claim1 from credential1 from Issuer1
+    let proof_request1 =
+        Verifier::new_proof_request(
+            &[1],
+            &pk1
+        ).unwrap();
+
+    // Verifier creates proof request for credential2 from Issuer2
+    let proof_request2 =
+        Verifier::new_proof_request(
+            &[],
+            &pk2
+        ).unwrap();
+
+    // Verifier sends verifier_nonce, proof_request1, and proof_request2 to Prover
+    // and additionally communicates the request for a ZK equality proof of
+    // claim2 from credential1 and claim3 from credential2.
+
+    // Prover creates a blinding factor to use for his link secrets.
+    let link_secret_blinding = SignatureNonce::random();
+
+    // Prover creates a blinding factor to use for the ZK equality proof of
+    // claim2 from credential1 and claim3 from credential2.
+    let same_blinding = SignatureNonce::random();
+
+    // Prover constructs proof messages from credential1
+    // for selective disclosure of claim1 and ZK equality proof of claim2
+    let proof_messages1 = vec![
+        pm_hidden_raw!(link_secret.clone(), link_secret_blinding.clone()),
+        pm_revealed!(b"claim1_first_name"),
+        pm_hidden_raw!(same_claim.clone(), same_blinding.clone()),
+        pm_hidden!(b"claim3_email"),
+        pm_hidden!(b"claim4_address")
     ];
 
-    let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
+    // Prover constructs signature proof of knowledge for credential1
+    let pok1 =
+        Prover::commit_signature_pok(
+            &proof_request1,
+            proof_messages1.as_slice(),
+            &complete_sig1
+        ).unwrap();
 
-    //verifier requests credential
-    let nonce = Verifier::generate_proof_nonce();
-    let proof_request = Verifier::new_proof_request(&[1, 3], &pk).unwrap();
-
-    // Sends `proof_request` and `nonce` to the prover
-    let proof_messages = vec![
-        pm_hidden!(b"message_1"),
-        pm_revealed!(b"message_2"),
-        pm_hidden!(b"message_3"),
-        pm_revealed!(b"message_4"),
-        pm_hidden!(b"message_5"),
+    // Prover constructs proof messages from credential2
+    // for ZK equality proof of claim3
+    let proof_messages2 = vec![
+        pm_hidden_raw!(link_secret.clone(), link_secret_blinding.clone()),
+        pm_hidden!(b"claim1_loyalty_program_id"),
+        pm_hidden!(b"claim2_customer_id"),
+        pm_hidden_raw!(same_claim.clone(), same_blinding.clone())
     ];
 
-    // prover creates pok for proof request
-    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
-        .unwrap();
+    // Prover constructs signature proof of knowledge for credential2
+    let pok2 =
+        Prover::commit_signature_pok(
+            &proof_request2,
+            proof_messages2.as_slice(),
+            &complete_sig2
+        ).unwrap();
 
-    let claims = vec!["self-attested claim1", "self-attested claim2"];
 
-    // complete other zkps as desired and compute `challenge_hash`
-    let challenge =
-        Prover::create_challenge_hash(vec![pok.clone()], claims.clone(), &nonce).unwrap();
+    // Prover creates challenge_bytes and adds pok1 and pok2 to it.
+    let mut chal_bytes = Vec::new();
+    chal_bytes.extend_from_slice(pok1.to_bytes().as_slice());
+    chal_bytes.extend_from_slice(pok2.to_bytes().as_slice());
 
-    let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
+    // Prover completes challenge_bytes by adding verifier_nonce,
+    // then constructs the challenge
+    chal_bytes.extend_from_slice(&verifier_nonce.to_bytes()[..]);
+    let challenge = SignatureNonce::from_msg_hash(&chal_bytes);
 
-    // Send `proof`, `claims`, and `challenge` to Verifier
+    // Prover constructs the proofs and sends them to the Verifier
+    let proof1 = Prover::generate_signature_pok(
+        pok1,
+        &challenge
+    ).unwrap();
+    let proof2 = Prover::generate_signature_pok(
+        pok2,
+        &challenge
+    ).unwrap();
 
     // Verifier creates their own challenge bytes
-    // and adds proof and claims to it
-    let mut ver_chal_bytes = proof.proof.get_bytes_for_challenge(
-        proof_request.revealed_messages.clone(),
-        &proof_request.verification_key,
+    // and adds proof1 and proof2 to it
+    let mut ver_chal_bytes = proof1.proof.get_bytes_for_challenge(
+        proof_request1.revealed_messages.clone(),
+        &proof_request1.verification_key,
     );
-    for c in claims {
-        ver_chal_bytes.extend_from_slice(c.as_bytes());
-    }
+    ver_chal_bytes.extend_from_slice(
+        proof2.proof.get_bytes_for_challenge(
+            proof_request2.revealed_messages.clone(),
+            &proof_request2.verification_key,
+        ).as_slice()
+    );
 
     // Verifier completes ver_challenge_bytes by adding verifier_nonce,
     // then constructs the challenge
-    ver_chal_bytes.extend_from_slice(&nonce.to_bytes()[..]);
     let ver_challenge = SignatureNonce::from_msg_hash(&ver_chal_bytes);
 
     // Verifier checks proof1
-    let res = proof.proof.verify(
-        &proof_request.verification_key,
-        &proof.revealed_messages,
         &ver_challenge,
     );
-    match res {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
+
+    // Verifier checks proof1
+    let res2 = proof2.proof.verify(
+        &proof_request2.verification_key,
+        &proof2.revealed_messages,
+        &ver_challenge,
+    );
+    match res2{
+        Ok(_) => assert!(true),   // check revealed messages
+        Err(_) => assert!(false), // Why did the proof fail?
+    };
+
+    // Verifier checks equality of link secrets
+    assert_eq!(
+        proof1.proof.get_resp_for_message(0).unwrap(),
+        proof2.proof.get_resp_for_message(0).unwrap()
+    );
+
+    // Verifier checks validity of ZK equality proof of
+    // claim2 from credential1 (which is index 1 of the hidden values in proof1)
+    // and claim3 from credential2 (which is index 3 of the hidden values in proof2)
+    assert_eq!(
+        proof1.proof.get_resp_for_message(1).unwrap(),
+        proof2.proof.get_resp_for_message(3).unwrap()
+    );
 }
