@@ -51,13 +51,15 @@ impl Ed25519Sha512 {
         Ok(PrivateKey(secret.to_bytes().to_vec()))
     }
 
-    pub fn keypair_from_secret(seed: &[u8]) -> Result<(PublicKey, PrivateKey), CryptoError> {
-        if seed.len() < 32 {
-            return Err(CryptoError::ParseError(format!("Invalid secret provided")));
+    pub fn expand_keypair(ikm: &[u8]) -> Result<(PublicKey, PrivateKey), CryptoError> {
+        if ikm.len() < 32 {
+            return Err(CryptoError::ParseError(format!(
+                "Invalid key material provided"
+            )));
         }
         let mut private = vec![0u8; 64];
-        private[..32].copy_from_slice(&seed[..32]);
-        let sk = SK::from_bytes(&seed[..32]).unwrap();
+        private[..32].copy_from_slice(&ikm[..32]);
+        let sk = SK::from_bytes(&ikm[..32]).unwrap();
         let pk = PK::from(&sk).to_bytes().to_vec();
         private[32..].copy_from_slice(pk.as_ref());
         Ok((PublicKey(pk), PrivateKey(private)))
@@ -247,7 +249,6 @@ mod test {
     fn ed25519_to_x25519_verify() {
         let sk = PrivateKey(hex::decode(PRIVATE_KEY).unwrap());
         let pk = PublicKey(hex::decode(PUBLIC_KEY).unwrap());
-        let scheme = Ed25519Sha512::new();
 
         let x_pk = Ed25519Sha512::ver_key_to_key_exchange(&pk).unwrap();
         assert_eq!(hex::encode(&x_pk), PUBLIC_KEY_X25519);
@@ -263,7 +264,7 @@ mod test {
         let test_sk = hex::decode("3030303030303030303030303030303030303030303030305472757374656531e33aaf381fffa6109ad591fdc38717945f8fabf7abf02086ae401c63e9913097").unwrap();
         let test_pk = &test_sk[32..];
 
-        let (pk, sk) = Ed25519Sha512::keypair_from_secret(seed).unwrap();
+        let (pk, sk) = Ed25519Sha512::expand_keypair(seed).unwrap();
         assert_eq!(pk.0, test_pk);
         assert_eq!(sk.0, test_sk);
     }
