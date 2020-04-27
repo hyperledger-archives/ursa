@@ -43,8 +43,8 @@ macro_rules! sig_byte_impl {
             *array_ref![out, 0, SIGNATURE_SIZE]
         }
 
-        /// Conver the signature to a compressed form of raw bytes. Use when sending over the wire.
-        pub fn to_compressed_bytes(&self) -> [u8; COMPRESSED_SIGNATURE_SIZE] {
+        /// Convert the signature to bytes using compressed form.
+        pub fn to_bytes_compressed_form(&self) -> [u8; COMPRESSED_SIGNATURE_SIZE] {
             let mut out = [0u8; COMPRESSED_SIGNATURE_SIZE];
             out[..FIELD_ORDER_ELEMENT_SIZE].copy_from_slice(&self.a.to_compressed_bytes()[..]);
             let end = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE;
@@ -303,7 +303,7 @@ mod tests {
         let sig_2 = Signature::from_bytes(bytes);
         assert_eq!(sig, sig_2);
 
-        let bytes = sig.to_compressed_bytes();
+        let bytes = sig.to_bytes_compressed_form();
         assert_eq!(bytes.len(), COMPRESSED_SIGNATURE_SIZE);
         let sig_2 = Signature::from(bytes);
         assert_eq!(sig, sig_2);

@@ -83,7 +83,7 @@ pub type SignatureBlinding = CurveOrderElement;
 
 mod types {
     pub use super::{
-        BlindSignatureContext, BlindedSignatureCommitment, CompressedBytes, ProofRequest,
+        BlindSignatureContext, BlindedSignatureCommitment, CompressedForm, ProofRequest,
         SignatureBlinding, SignatureMessage, SignatureMessageVector, SignatureNonce,
         SignaturePointVector, SignatureProof,
     };
@@ -92,7 +92,7 @@ mod types {
 /// Convenience importing module
 pub mod prelude {
     pub use super::{
-        BlindSignatureContext, BlindedSignatureCommitment, CompressedBytes, ProofRequest,
+        BlindSignatureContext, BlindedSignatureCommitment, CompressedForm, ProofRequest,
         SignatureBlinding, SignatureMessage, SignatureMessageVector, SignatureNonce,
         SignaturePointVector, SignatureProof,
     };
@@ -119,17 +119,17 @@ pub mod prelude {
 }
 
 /// Trait for structs that have variable length bytes but implement a compressed form
-pub trait CompressedBytes {
+pub trait CompressedForm {
     /// The type that implements this trait
     type Output;
     /// The type of error to return
     type Error;
 
     /// Convert to raw bytes for this implementor
-    fn to_compressed_bytes(&self) -> Vec<u8>;
+    fn to_bytes_compressed_form(&self) -> Vec<u8>;
 
     /// Convert from raw bytes for this implementor
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error>;
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error>;
 }
 
 /// Contains the data used for computing a blind signature and verifying
@@ -235,23 +235,23 @@ impl BlindSignatureContext {
     }
 }
 
-impl CompressedBytes for BlindSignatureContext {
+impl CompressedForm for BlindSignatureContext {
     type Output = BlindSignatureContext;
     type Error = BBSError;
 
-    /// Convert to compressed form. Use for sending over the wire
-    fn to_compressed_bytes(&self) -> Vec<u8> {
+    /// Convert to raw bytes using compressed form for each element.
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
         let mut output = Vec::new();
 
         output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
         output.extend_from_slice(&self.challenge_hash.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.proof_of_hidden_messages.to_compressed_bytes()[..]);
+        output.extend_from_slice(&self.proof_of_hidden_messages.to_bytes_compressed_form()[..]);
 
         output
     }
 
-    /// Load from compressed bytes
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    /// Load from compressed form raw bytes
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
 
         if data.len() < MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4 {
@@ -266,7 +266,7 @@ impl CompressedBytes for BlindSignatureContext {
         let challenge_hash =
             SignatureNonce::from(array_ref![data, MESSAGE_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
         let offset = MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE;
-        let proof_of_hidden_messages = ProofG1::from_compressed_bytes(&data[offset..])?;
+        let proof_of_hidden_messages = ProofG1::from_bytes_compressed_form(&data[offset..])?;
 
         Ok(Self {
             commitment,
@@ -287,12 +287,12 @@ pub struct ProofRequest {
     pub verification_key: PublicKey,
 }
 
-impl CompressedBytes for ProofRequest {
+impl CompressedForm for ProofRequest {
     type Output = ProofRequest;
     type Error = BBSError;
 
-    /// Convert to raw bytes. Use when sending over the wire
-    fn to_compressed_bytes(&self) -> Vec<u8> {
+    /// Convert to raw bytes using compressed form for each element.
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
         let revealed_len = self.revealed_messages.len() as u32;
 
         let mut output = Vec::new();
@@ -301,12 +301,12 @@ impl CompressedBytes for ProofRequest {
             let ii = *i as u32;
             output.extend_from_slice(&ii.to_be_bytes()[..]);
         }
-        output.extend_from_slice(self.verification_key.to_compressed_bytes().as_slice());
+        output.extend_from_slice(self.verification_key.to_bytes_compressed_form().as_slice());
         output
     }
 
-    /// Convert from raw bytes. Use when sending over the wire
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    /// Convert from compressed form raw bytes.
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
         if data.len() < 4 + MESSAGE_SIZE * 2 {
             return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
@@ -323,7 +323,7 @@ impl CompressedBytes for ProofRequest {
             revealed_messages.insert(i);
             offset += 4;
         }
-        let verification_key = PublicKey::from_compressed_bytes(&data[offset..])?;
+        let verification_key = PublicKey::from_bytes_compressed_form(&data[offset..])?;
         Ok(Self {
             revealed_messages,
             verification_key,
@@ -407,13 +407,13 @@ impl SignatureProof {
     }
 }
 
-impl CompressedBytes for SignatureProof {
+impl CompressedForm for SignatureProof {
     type Output = SignatureProof;
     type Error = BBSError;
 
-    /// Convert to compressed form. Use for sending over the wire
-    fn to_compressed_bytes(&self) -> Vec<u8> {
-        let proof_bytes = self.proof.to_compressed_bytes();
+    /// Convert to raw bytes using compressed form for each element.
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
+        let proof_bytes = self.proof.to_bytes_compressed_form();
         let proof_len = proof_bytes.len() as u32;
 
         let mut output =
@@ -432,8 +432,8 @@ impl CompressedBytes for SignatureProof {
         output
     }
 
-    /// Convert from compressed bytes. Use when sending over the wire
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    /// Convert from compressed form raw bytes.
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
 
         if data.len() < 8 {
@@ -443,7 +443,7 @@ impl CompressedBytes for SignatureProof {
             )));
         }
         let proof_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize + 4;
-        let proof = PoKOfSignatureProof::from_compressed_bytes(&data[4..proof_len])?;
+        let proof = PoKOfSignatureProof::from_bytes_compressed_form(&data[4..proof_len])?;
         let revealed_messages_len = u32::from_be_bytes(*array_ref![data, proof_len, 4]);
         let mut revealed_messages = BTreeMap::new();
         let mut offset = proof_len + 4;
@@ -474,11 +474,11 @@ mod tests {
         let (pk, _) = generate(5).unwrap();
         let pr = Verifier::new_proof_request(&[2, 3, 4], &pk).unwrap();
 
-        let bytes = pr.to_compressed_bytes();
-        let pr_1 = ProofRequest::from_compressed_bytes(&bytes);
+        let bytes = pr.to_bytes_compressed_form();
+        let pr_1 = ProofRequest::from_bytes_compressed_form(&bytes);
         assert!(pr_1.is_ok());
         let pr_1 = pr_1.unwrap();
-        let bytes_1 = pr_1.to_compressed_bytes();
+        let bytes_1 = pr_1.to_bytes_compressed_form();
         assert_eq!(bytes[..], bytes_1[..]);
     }
 
@@ -571,9 +571,9 @@ mod tests {
                 == 1
         );
 
-        let sig_proof_bytes = sig_proof.to_compressed_bytes();
+        let sig_proof_bytes = sig_proof.to_bytes_compressed_form();
 
-        let sig_proof_dup = SignatureProof::from_compressed_bytes(&sig_proof_bytes);
+        let sig_proof_dup = SignatureProof::from_bytes_compressed_form(&sig_proof_bytes);
         assert!(sig_proof_dup.is_ok());
     }
 }
