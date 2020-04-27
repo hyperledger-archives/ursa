@@ -15,7 +15,7 @@ use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::prelude::*;
-use crate::CompressedBytes;
+use crate::CompressedForm;
 use rand::prelude::*;
 use rayon::prelude::*;
 
@@ -106,12 +106,12 @@ impl PublicKey {
     }
 }
 
-impl CompressedBytes for PublicKey {
+impl CompressedForm for PublicKey {
     type Output = PublicKey;
     type Error = BBSError;
 
-    /// Convert the key to raw bytes. Use when sending over the wire
-    fn to_compressed_bytes(&self) -> Vec<u8> {
+    /// Convert the key to raw bytes using the compressed form.
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
         let h_len = self.h.len() as u32;
         let mut output = Vec::with_capacity(FIELD_ORDER_ELEMENT_SIZE * (3 + self.h.len()));
         output.extend_from_slice(&self.w.to_compressed_bytes()[..]);
@@ -123,8 +123,8 @@ impl CompressedBytes for PublicKey {
         output
     }
 
-    /// Convert from raw bytes. Use when sending over the wire
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    /// Convert from compressed form raw bytes.
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         const MIN_SIZE: usize = FIELD_ORDER_ELEMENT_SIZE * 3;
         let data = data.as_ref();
         let len = (data.len() - 4) % FIELD_ORDER_ELEMENT_SIZE;
@@ -382,16 +382,16 @@ mod tests {
     fn key_compression() {
         let (pk, sk) = generate(3).unwrap();
 
-        assert_eq!(292, pk.to_compressed_bytes().len());
+        assert_eq!(292, pk.to_bytes_compressed_form().len());
         assert_eq!(CURVE_ORDER_ELEMENT_SIZE, sk.to_compressed_bytes().len());
 
         let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk)));
         assert_eq!(96, dpk.to_compressed_bytes().len());
 
-        let res = PublicKey::from_compressed_bytes(pk.to_compressed_bytes());
+        let res = PublicKey::from_bytes_compressed_form(pk.to_bytes_compressed_form());
         assert!(res.is_ok());
 
-        assert!(res.unwrap().to_compressed_bytes() == pk.to_compressed_bytes());
+        assert!(res.unwrap().to_bytes_compressed_form() == pk.to_bytes_compressed_form());
 
         let dpk1 = DeterministicPublicKey::from(dpk.to_compressed_bytes());
         assert!(&dpk1.to_compressed_bytes()[..] == &dpk.to_compressed_bytes()[..]);

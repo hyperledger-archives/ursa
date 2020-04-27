@@ -368,8 +368,8 @@ macro_rules! impl_PoK_VC {
                 })
             }
 
-            /// Convert to compressed raw bytes form. Use when sending over the wire
-            pub fn to_compressed_bytes(&self) -> Vec<u8> {
+            /// Convert to raw bytes using the compressed form.
+            pub fn to_bytes_compressed_form(&self) -> Vec<u8> {
                 let responses_len = self.responses.len() as u32;
                 let mut output = Vec::with_capacity(
                     $group_element_compressed_size
@@ -385,8 +385,8 @@ macro_rules! impl_PoK_VC {
                 output
             }
 
-            /// Convert from compressed bytes. Use when sending over the wire
-            pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, PoKVCError> {
+            /// Convert from compressed form raw bytes.
+            pub fn from_bytes_compressed_form(data: &[u8]) -> Result<Self, PoKVCError> {
                 if data.len() < $group_element_compressed_size + 4 {
                     return Err(PoKVCErrorKind::GeneralError {
                         msg: format!("Invalid length"),
@@ -416,12 +416,12 @@ macro_rules! impl_PoK_VC {
             }
         }
 
-        impl CompressedBytes for $Proof {
+        impl CompressedForm for $Proof {
             type Output = $Proof;
             type Error = PoKVCError;
 
-            /// Convert to compressed raw bytes form. Use when sending over the wire
-            fn to_compressed_bytes(&self) -> Vec<u8> {
+            /// Convert to raw bytes using compressed form.
+            fn to_bytes_compressed_form(&self) -> Vec<u8> {
                 let responses_len = self.responses.len() as u32;
                 let mut output = Vec::with_capacity(
                     $group_element_compressed_size
@@ -437,8 +437,8 @@ macro_rules! impl_PoK_VC {
                 output
             }
 
-            /// Convert from compressed bytes. Use when sending over the wire
-            fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, PoKVCError> {
+            /// Convert from compressed form raw bytes.
+            fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, PoKVCError> {
                 let data = data.as_ref();
                 if data.len() < $group_element_compressed_size + 4 {
                     return Err(PoKVCErrorKind::GeneralError {

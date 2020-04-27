@@ -445,23 +445,23 @@ impl PoKOfSignatureProof {
         })
     }
 
-    /// Convert the proof to a compressed raw bytes form. Use when sending over the wire
-    pub fn to_compressed_bytes(&self) -> Vec<u8> {
+    /// Convert the proof to raw bytes using the compressed form of each element.
+    pub fn to_bytes_compressed_form(&self) -> Vec<u8> {
         let mut output = Vec::new();
         output.extend_from_slice(&self.a_prime.to_compressed_bytes()[..]);
         output.extend_from_slice(&self.a_bar.to_compressed_bytes()[..]);
         output.extend_from_slice(&self.d.to_compressed_bytes()[..]);
-        let proof1_bytes = self.proof_vc_1.to_compressed_bytes();
+        let proof1_bytes = self.proof_vc_1.to_bytes_compressed_form();
         let proof1_len = proof1_bytes.len() as u32;
         output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
         output.extend_from_slice(proof1_bytes.as_slice());
-        output.extend_from_slice(self.proof_vc_2.to_compressed_bytes().as_slice());
+        output.extend_from_slice(self.proof_vc_2.to_bytes_compressed_form().as_slice());
 
         output
     }
 
-    /// Convert compressed byte slice into a proof
-    pub fn from_compressed_bytes(data: &[u8]) -> Result<Self, BBSError> {
+    /// Convert the compressed form byte slice into a proof
+    pub fn from_bytes_compressed_form(data: &[u8]) -> Result<Self, BBSError> {
         if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!(
@@ -483,12 +483,12 @@ impl PoKOfSignatureProof {
         let proof1_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
         let end = offset + proof1_len;
-        let proof_vc_1 = ProofG1::from_compressed_bytes(&data[offset..end]).map_err(|e| {
+        let proof_vc_1 = ProofG1::from_bytes_compressed_form(&data[offset..end]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
-        let proof_vc_2 = ProofG1::from_compressed_bytes(&data[end..]).map_err(|e| {
+        let proof_vc_2 = ProofG1::from_bytes_compressed_form(&data[end..]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
@@ -504,27 +504,27 @@ impl PoKOfSignatureProof {
     }
 }
 
-impl CompressedBytes for PoKOfSignatureProof {
+impl CompressedForm for PoKOfSignatureProof {
     type Output = PoKOfSignatureProof;
     type Error = BBSError;
 
-    /// Convert the proof to a compressed raw bytes form. Use when sending over the wire
-    fn to_compressed_bytes(&self) -> Vec<u8> {
+    /// Convert the proof to a compressed raw bytes form.
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
         let mut output = Vec::new();
         output.extend_from_slice(&self.a_prime.to_compressed_bytes()[..]);
         output.extend_from_slice(&self.a_bar.to_compressed_bytes()[..]);
         output.extend_from_slice(&self.d.to_compressed_bytes()[..]);
-        let proof1_bytes = self.proof_vc_1.to_compressed_bytes();
+        let proof1_bytes = self.proof_vc_1.to_bytes_compressed_form();
         let proof1_len = proof1_bytes.len() as u32;
         output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
         output.extend_from_slice(proof1_bytes.as_slice());
-        output.extend_from_slice(self.proof_vc_2.to_compressed_bytes().as_slice());
+        output.extend_from_slice(self.proof_vc_2.to_bytes_compressed_form().as_slice());
 
         output
     }
 
     /// Convert compressed byte slice into a proof
-    fn from_compressed_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
         let data = data.as_ref();
         if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
@@ -547,12 +547,12 @@ impl CompressedBytes for PoKOfSignatureProof {
         let proof1_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
         offset += 4;
         let end = offset + proof1_len;
-        let proof_vc_1 = ProofG1::from_compressed_bytes(&data[offset..end]).map_err(|e| {
+        let proof_vc_1 = ProofG1::from_bytes_compressed_form(&data[offset..end]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
-        let proof_vc_2 = ProofG1::from_compressed_bytes(&data[end..]).map_err(|e| {
+        let proof_vc_2 = ProofG1::from_bytes_compressed_form(&data[end..]).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
@@ -600,8 +600,8 @@ mod tests {
         let proof_cp = PoKOfSignatureProof::from_bytes(&proof_bytes);
         assert!(proof_cp.is_ok());
 
-        let proof_bytes = proof.to_compressed_bytes();
-        let proof_cp = PoKOfSignatureProof::from_compressed_bytes(&proof_bytes);
+        let proof_bytes = proof.to_bytes_compressed_form();
+        let proof_cp = PoKOfSignatureProof::from_bytes_compressed_form(&proof_bytes);
         assert!(proof_cp.is_ok());
 
         // The verifier generates the challenge on its own.
