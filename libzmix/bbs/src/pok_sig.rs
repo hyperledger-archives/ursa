@@ -117,6 +117,10 @@ impl PoKOfSignature {
                 ),
             ));
         }
+        let sig_messages = messages.iter().map(|m| m.get_message()).collect::<Vec<SignatureMessage>>();
+        if !signature.verify(sig_messages.as_slice(), &vk)? {
+            return Err(BBSErrorKind::PoKVCError { msg: "The messages and signature do not match.".to_string() }.into());
+        }
 
         let r1 = SignatureNonce::random();
         let r2 = SignatureNonce::random();
