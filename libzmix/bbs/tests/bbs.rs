@@ -250,7 +250,8 @@ fn pok_sig_bad_message() {
     let res = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature);
     assert!(res.is_err());
     proof_messages[0] = pm_hidden!(b"message_1");
-    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature).unwrap();
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
 
     let mut challenge_bytes = Vec::new();
     challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
@@ -267,7 +268,8 @@ fn pok_sig_bad_message() {
     };
 
     let proof_request = Verifier::new_proof_request(&[0, 1, 2, 3], &pk).unwrap();
-    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature).unwrap();
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
     let mut challenge_bytes = Vec::new();
     challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
     challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
@@ -275,7 +277,9 @@ fn pok_sig_bad_message() {
     let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
-    proof.revealed_messages.insert(0, SignatureMessage::from_msg_hash(b"message_1"));
+    proof
+        .revealed_messages
+        .insert(0, SignatureMessage::from_msg_hash(b"message_1"));
 
     //The proof is not what the verifier asked for
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
@@ -283,4 +287,3 @@ fn pok_sig_bad_message() {
         Err(_) => assert!(true),
     };
 }
-
