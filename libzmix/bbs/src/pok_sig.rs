@@ -341,13 +341,16 @@ impl PoKOfSignatureProof {
             .unwrap();
         match self
             .proof_vc_2
-            .verify(bases_pok_vc_2.as_slice(), &pr, challenge) {
-            Ok(b) => if b {
+            .verify(bases_pok_vc_2.as_slice(), &pr, challenge)
+        {
+            Ok(b) => {
+                if b {
                     Ok(PoKOfSignatureProofStatus::Success)
-            } else {
-                Ok(PoKOfSignatureProofStatus::BadRevealedMessage)
-            },
-            Err(_) => Ok(PoKOfSignatureProofStatus::BadRevealedMessage)
+                } else {
+                    Ok(PoKOfSignatureProofStatus::BadRevealedMessage)
+                }
+            }
+            Err(_) => Ok(PoKOfSignatureProofStatus::BadRevealedMessage),
         }
     }
 
