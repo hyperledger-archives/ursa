@@ -73,10 +73,10 @@ impl Display for PoKOfSignatureProofStatus {
             PoKOfSignatureProofStatus::Success => write!(f, "Success"),
             PoKOfSignatureProofStatus::BadHiddenMessage => write!(
                 f,
-                "A message was supplied when the proof was created that was not signed"
+                "a message was supplied when the proof was created that was not signed or a message was revealed that was initially hidden"
             ),
             PoKOfSignatureProofStatus::BadRevealedMessage => {
-                write!(f, "A revealed message was supplied that was not signed")
+                write!(f, "a revealed message was supplied that was not signed or a message was revealed that was initially hidden")
             }
             PoKOfSignatureProofStatus::BadSignature => {
                 write!(f, "An invalid signature was supplied")
@@ -339,13 +339,16 @@ impl PoKOfSignatureProof {
         let pr = -bases_disclosed
             .multi_scalar_mul_var_time(exponents.as_slice())
             .unwrap();
-        if !self
+        match self
             .proof_vc_2
-            .verify(bases_pok_vc_2.as_slice(), &pr, challenge)?
-        {
-            return Ok(PoKOfSignatureProofStatus::BadRevealedMessage);
+            .verify(bases_pok_vc_2.as_slice(), &pr, challenge) {
+            Ok(b) => if b {
+                    Ok(PoKOfSignatureProofStatus::Success)
+            } else {
+                Ok(PoKOfSignatureProofStatus::BadRevealedMessage)
+            },
+            Err(_) => Ok(PoKOfSignatureProofStatus::BadRevealedMessage)
         }
-        Ok(PoKOfSignatureProofStatus::Success)
     }
 
     /// Convert the proof to raw bytes
