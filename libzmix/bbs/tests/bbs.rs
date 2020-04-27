@@ -285,4 +285,31 @@ fn pok_sig_bad_message() {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
     };
+
+    let proof_request = Verifier::new_proof_request(&[0, 1, 2, 3], &pk).unwrap();
+
+    // Sends `proof_request` and `nonce` to the prover
+    let proof_messages = vec![
+        pm_revealed!(b"message_1"), //message that wasn't signed
+        pm_revealed!(b"message_2"),
+        pm_hidden!(b"message_3"),
+        pm_revealed!(b"message_4"),
+        pm_hidden!(b"message_5"),
+    ];
+
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
+    let mut challenge_bytes = Vec::new();
+    challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
+    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
+
+    let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+
+    let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
+
+    //The proof is not what the verifier asked for
+    match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
+        Ok(_) => assert!(false),
+        Err(_) => assert!(true),
+    };
 }
