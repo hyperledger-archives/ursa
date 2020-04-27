@@ -1,11 +1,14 @@
 use amcl_wrapper::{
-    constants::{FIELD_ORDER_ELEMENT_SIZE, CURVE_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE, GROUP_G2_SIZE, CURVE_ORDER},
+    constants::{
+        CURVE_ORDER, CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE,
+        GROUP_G2_SIZE,
+    },
     curve_order_elem::CurveOrderElement,
     errors::SerzDeserzError,
     group_elem::GroupElement,
     group_elem_g1::G1,
     group_elem_g2::G2,
-    types::{DoubleBigNum, Limb}
+    types::{DoubleBigNum, Limb},
 };
 use hash2curve::DomainSeparationTag;
 use hash2curve::{bls381g1::Bls12381G1Sswu, HashToCurveXmd};
@@ -165,9 +168,7 @@ impl DeterministicPublicKey {
                 KeyGenOption::UseSeed(ref v) => generate_secret_key(Some(v)),
                 KeyGenOption::FromSecretKey(ref sk) => sk.clone(),
             },
-            None => {
-                generate_secret_key(None)
-            }
+            None => generate_secret_key(None),
         };
         let w = &G2::generator() * &secret;
         (Self { w }, secret)
@@ -282,7 +283,7 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
 /// we generate 64 bytes and compute mod `r`
 fn generate_secret_key(ikm: Option<&[u8]>) -> SecretKey {
     let salt = b"BBS-SIG-KEYGEN-SALT-";
-    let info = [0u8, 64u8];                 // I2OSP(L, 2)
+    let info = [0u8, 64u8]; // I2OSP(L, 2)
     let ikm = match ikm {
         Some(v) => {
             let mut t = vec![0u8; v.len() + 1];
@@ -362,13 +363,19 @@ mod tests {
         let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed)));
 
         assert_eq!("0040b37f902e318f30421b6bccedd98f6e667715326b77e069a272d7adbf31584916369b53fca3118176b62d0b6d02f40cc866346280c2444388de2f1e02a9734cde9392f28484a3e5b8f04a5df011839672c4b8a189ab6b8d12ee2bd05c5f38", hex::encode(&dpk.to_compressed_bytes()[..]));
-        assert_eq!("20f7cdc7a1f940c93f721851c2babbc4de3f987dfb7ef069d30268b2d3fb0dd2", hex::encode(&sk.to_compressed_bytes()[..]));
+        assert_eq!(
+            "20f7cdc7a1f940c93f721851c2babbc4de3f987dfb7ef069d30268b2d3fb0dd2",
+            hex::encode(&sk.to_compressed_bytes()[..])
+        );
 
         let seed = vec![1u8; 24];
         let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed)));
 
         assert_eq!("93e0430bfd47e54a01a2c2828432114499369f847fdcfcfa0d517448749c280350b6a960336b4fafc25e6c9119e28176075e6b98785e27f1abcde544654e6f41265bc65514290d1e4e11d5a764188d28b413b30de622c30f5247c86b5ea4d0b3", hex::encode(&dpk.to_compressed_bytes()[..]));
-        assert_eq!("22146fbf4729251777c312132cd6e2082c08b02e058d85a94b788e687de96f4e", hex::encode(&sk.to_compressed_bytes()[..]));
+        assert_eq!(
+            "22146fbf4729251777c312132cd6e2082c08b02e058d85a94b788e687de96f4e",
+            hex::encode(&sk.to_compressed_bytes()[..])
+        );
     }
 
     #[test]

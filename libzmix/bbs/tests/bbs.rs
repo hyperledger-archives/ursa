@@ -157,7 +157,6 @@ fn pok_sig() {
 
 #[test]
 fn pok_sig_extra_message() {
-
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
         SignatureMessage::from_msg_hash(b"message_1"),
@@ -181,7 +180,8 @@ fn pok_sig_extra_message() {
         pm_hidden!(b"message_5"),
     ];
 
-    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature).unwrap();
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
     // add bytes from other proofs
@@ -205,7 +205,9 @@ fn pok_sig_extra_message() {
     };
 
     proof_request.revealed_messages.remove(&4);
-    proof.revealed_messages.insert(4, SignatureMessage::from_msg_hash(b"message_4"));
+    proof
+        .revealed_messages
+        .insert(4, SignatureMessage::from_msg_hash(b"message_4"));
 
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
         Ok(_) => assert!(false),
