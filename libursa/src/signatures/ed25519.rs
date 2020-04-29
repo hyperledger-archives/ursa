@@ -1,7 +1,9 @@
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
 use super::{KeyGenOption, SignatureScheme};
-use ed25519_dalek::{Keypair, PublicKey as PK, SecretKey as SK, Signature};
+#[cfg(any(feature = "x25519", feature = "x25519_asm"))]
+use ed25519_dalek::SecretKey as SK;
+use ed25519_dalek::{Keypair, PublicKey as PK, Signature};
 pub use ed25519_dalek::{
     EXPANDED_SECRET_KEY_LENGTH as PRIVATE_KEY_SIZE, PUBLIC_KEY_LENGTH as PUBLIC_KEY_SIZE,
     SIGNATURE_LENGTH as SIGNATURE_SIZE,
@@ -19,6 +21,19 @@ pub struct Ed25519Sha512;
 
 #[cfg(any(feature = "x25519", feature = "x25519_asm"))]
 impl Ed25519Sha512 {
+    /// Creates a curve25519 key from an ed25519 public key.
+    ///
+    /// Used to derive the public key for DH key exchange.
+    ///
+    /// # Example
+    /// ```
+    /// use ursa::signatures::ed25519::Ed25519Sha512;
+    /// use ursa::signatures::SignatureScheme;
+    ///
+    /// let (pk, sk) = Ed25519Sha512::new().keypair(None).unwrap();
+    /// let curve_pk = Ed25519Sha512::ver_key_to_key_exchange(&pk).unwrap();
+    /// let curve_sk = Ed25519Sha512::sign_key_to_key_exchange(&sk).unwrap();
+    /// ```
     pub fn ver_key_to_key_exchange(pk: &PublicKey) -> Result<PublicKey, CryptoError> {
         use curve25519_dalek::edwards::CompressedEdwardsY;
 
@@ -35,6 +50,19 @@ impl Ed25519Sha512 {
         }
     }
 
+    /// Creates a curve25519 key from an ed25519 private key.
+    ///
+    /// Used to derive the private key for DH key exchange.
+    ///
+    /// # Example
+    /// ```
+    /// use ursa::signatures::ed25519::Ed25519Sha512;
+    /// use ursa::signatures::SignatureScheme;
+    ///
+    /// let (pk, sk) = Ed25519Sha512::new().keypair(None).unwrap();
+    /// let curve_pk = Ed25519Sha512::ver_key_to_key_exchange(&pk).unwrap();
+    /// let curve_sk = Ed25519Sha512::sign_key_to_key_exchange(&sk).unwrap();
+    /// ```
     pub fn sign_key_to_key_exchange(sk: &PrivateKey) -> Result<PrivateKey, CryptoError> {
         // Length is normally 64 but we only need the secret from the first half
         if sk.len() < 32 {
@@ -51,6 +79,17 @@ impl Ed25519Sha512 {
         Ok(PrivateKey(secret.to_bytes().to_vec()))
     }
 
+    /// Expand an ed25519 keypair from the input key material.
+    ///
+    /// Used to derive a complete keypair from a predetermined secret.
+    ///
+    /// # Example
+    /// ```
+    /// use ursa::signatures::ed25519::Ed25519Sha512;
+    ///
+    /// let ikm = b"000000000000000000000000000Test1";
+    /// let (pk, sk) = Ed25519Sha512::expand_keypair(ikm).unwrap();
+    /// ```
     pub fn expand_keypair(ikm: &[u8]) -> Result<(PublicKey, PrivateKey), CryptoError> {
         if ikm.len() < 32 {
             return Err(CryptoError::ParseError(format!(
@@ -136,9 +175,11 @@ mod test {
     const MESSAGE_1: &[u8] = b"This is a dummy message for use with tests";
     const SIGNATURE_1: &str = "451b5b8e8725321541954997781de51f4142e4a56bab68d24f6a6b92615de5eefb74134138315859a32c7cf5fe5a488bc545e2e08e5eedfd1fb10188d532d808";
     const PRIVATE_KEY: &str = "1c1179a560d092b90458fe6ab8291215a427fcd6b3927cb240701778ef55201927c96646f2d4632d4fc241f84cbc427fbc3ecaa95becba55088d6c7b81fc5bbf";
+    const PUBLIC_KEY: &str = "27c96646f2d4632d4fc241f84cbc427fbc3ecaa95becba55088d6c7b81fc5bbf";
+    #[cfg(any(feature = "x25519", feature = "x25519_asm"))]
     const PRIVATE_KEY_X25519: &str =
         "08e7286c232ec71b37918533ea0229bf0c75d3db4731df1c5c03c45bc909475f";
-    const PUBLIC_KEY: &str = "27c96646f2d4632d4fc241f84cbc427fbc3ecaa95becba55088d6c7b81fc5bbf";
+    #[cfg(any(feature = "x25519", feature = "x25519_asm"))]
     const PUBLIC_KEY_X25519: &str =
         "9b4260484c889158c128796103dc8d8b883977f2ef7efb0facb12b6ca9b2ae3d";
 
