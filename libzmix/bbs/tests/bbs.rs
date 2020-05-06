@@ -512,6 +512,7 @@ fn bbs_demo() {
     // Verifier checks proof1
         &ver_challenge,
     );
+    match res1 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
@@ -522,7 +523,7 @@ fn bbs_demo() {
         &proof2.revealed_messages,
         &ver_challenge,
     );
-    match res2{
+    match res2 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
