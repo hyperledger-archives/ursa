@@ -137,13 +137,7 @@ fn pok_sig() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    // add bytes from other proofs
-
-    let mut challenge_bytes = Vec::new();
-    challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
-    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
-
-    let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+    let challenge = Prover::create_challenge_hash(vec![pok.clone()], &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -184,13 +178,7 @@ fn pok_sig_extra_message() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    // add bytes from other proofs
-
-    let mut challenge_bytes = Vec::new();
-    challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
-    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
-
-    let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+    let challenge = Prover::create_challenge_hash(vec![pok.clone()], &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -253,11 +241,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let mut challenge_bytes = Vec::new();
-    challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
-    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
-
-    let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+    let challenge = Prover::create_challenge_hash(vec![pok.clone()], &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof_request.revealed_messages.insert(0);
@@ -270,11 +254,8 @@ fn pok_sig_bad_message() {
     let proof_request = Verifier::new_proof_request(&[0, 1, 2, 3], &pk).unwrap();
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
-    let mut challenge_bytes = Vec::new();
-    challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
-    challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
 
-    let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+    let challenge = Prover::create_challenge_hash(vec![pok.clone()], &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof
