@@ -477,28 +477,22 @@ fn bbs_demo() {
     let ver_challenge = SignatureNonce::from_msg_hash(&ver_chal_bytes);
 
     // Verifier checks proof1
-    let res1 =
-        proof1
-            .proof
-            .verify(
-                &proof_request1.verification_key,
-                &proof1.revealed_messages,
-                &ver_challenge,
-            );
+    let res1 = proof1.proof.verify(
+        &proof_request1.verification_key,
+        &proof1.revealed_messages,
+        &ver_challenge,
+    );
     match res1 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
 
     // Verifier checks proof1
-    let res2 =
-        proof2
-            .proof
-            .verify(
-                &proof_request2.verification_key,
-                &proof2.revealed_messages,
-                &ver_challenge,
-            );
+    let res2 = proof2.proof.verify(
+        &proof_request2.verification_key,
+        &proof2.revealed_messages,
+        &ver_challenge,
+    );
     match res2 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
