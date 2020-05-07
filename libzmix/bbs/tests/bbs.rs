@@ -433,7 +433,6 @@ fn bbs_demo() {
         Prover::commit_signature_pok(&proof_request2, proof_messages2.as_slice(), &complete_sig2)
             .unwrap();
 
-
     // Prover creates challenge_bytes and adds pok1 and pok2 to it.
     let mut chal_bytes = Vec::new();
     chal_bytes.extend_from_slice(pok1.to_bytes().as_slice());
