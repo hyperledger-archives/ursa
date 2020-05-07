@@ -111,6 +111,27 @@ impl Prover {
         PoKOfSignature::init(&signature, &request.verification_key, proof_messages)
     }
 
+    /// Create the challenge hash for a set of proofs
+    ///
+    /// # Arguments
+    /// * `poks` - a vec of PoKOfSignature objects
+    /// * `nonce` - a SignatureNonce
+    pub fn create_challenge_hash(
+        pok_sigs: Vec<PoKOfSignature>,
+        nonce: &SignatureNonce,
+    ) -> Result<SignatureNonce, BBSError> {
+        let mut bytes = Vec::new();
+
+        for p in pok_sigs {
+            bytes.extend_from_slice(p.to_bytes().as_slice());
+        }
+        bytes.extend_from_slice(&nonce.to_bytes()[..]);
+
+        let challenge = SignatureNonce::from_msg_hash(&bytes);
+
+        Ok(challenge)
+    }
+
     /// Convert the a committed proof of signature knowledge to the proof
     pub fn generate_signature_pok(
         pok_sig: PoKOfSignature,
