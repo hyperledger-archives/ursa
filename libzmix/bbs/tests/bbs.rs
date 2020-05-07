@@ -299,20 +299,11 @@ fn bbs_demo() {
     // Prover generates blind signature context and sends it to Issuer1
     // Prover stores signature blinding
     let (ctx1, signature_blinding1) =
-        Prover::new_blind_signature_context(
-            &pk1,
-            &blind_claims1,
-            &signing_nonce1
-        ).unwrap();
+        Prover::new_blind_signature_context(&pk1, &blind_claims1, &signing_nonce1).unwrap();
 
     // Issuer1 signs the credential and sends it to the Prover
-    let blind_signature1 = Issuer::blind_sign(
-        &ctx1,
-        &credential1,
-        &sk1,
-        &pk1,
-        &signing_nonce1
-    ).unwrap();
+    let blind_signature1 =
+        Issuer::blind_sign(&ctx1, &credential1, &sk1, &pk1, &signing_nonce1).unwrap();
 
     // Prover adds link secret to the credential from Issuer1
     let mut full_credential1 = credential1
@@ -322,22 +313,19 @@ fn bbs_demo() {
     full_credential1.insert(0, link_secret.clone());
 
     // Prover completes the signature from Issuer1
-    let complete_signature1 =
-        Prover::complete_signature(
-            &pk1,
-            full_credential1.as_slice(),
-            &blind_signature1,
-            &signature_blinding1);
+    let complete_signature1 = Prover::complete_signature(
+        &pk1,
+        full_credential1.as_slice(),
+        &blind_signature1,
+        &signature_blinding1,
+    );
 
     // Prover verifies the signature from Issuer1
     assert!(complete_signature1.is_ok());
     let complete_sig1 = complete_signature1.unwrap();
     assert!(complete_sig1
-        .verify(
-            full_credential1.as_slice(),
-            &pk1
-        ).unwrap()
-    );
+        .verify(full_credential1.as_slice(), &pk1)
+        .unwrap());
 
     // Issuer2 creates keys to sign a credential with 4 claims
     // (one of which is the blinded link secret)
@@ -363,20 +351,11 @@ fn bbs_demo() {
     // Prover generates blind signature context and sends it to Issuer2
     // Prover stores signature blinding
     let (ctx2, signature_blinding2) =
-        Prover::new_blind_signature_context(
-            &pk2,
-            &blind_claims2,
-            &signing_nonce2
-        ).unwrap();
+        Prover::new_blind_signature_context(&pk2, &blind_claims2, &signing_nonce2).unwrap();
 
     // Issuer2 signs the credential and sends it to the Prover
-    let blind_signature2 = Issuer::blind_sign(
-        &ctx2,
-        &credential2,
-        &sk2,
-        &pk2,
-        &signing_nonce2
-    ).unwrap();
+    let blind_signature2 =
+        Issuer::blind_sign(&ctx2, &credential2, &sk2, &pk2, &signing_nonce2).unwrap();
 
     // Prover adds link secret to the credential from Issuer2
     let mut full_credential2 = credential2
@@ -389,22 +368,19 @@ fn bbs_demo() {
     assert_eq!(full_credential1[2], full_credential2[3]);
 
     // Prover completes the signature from Issuer2
-    let complete_signature2 =
-        Prover::complete_signature(
-            &pk2,
-            full_credential2.as_slice(),
-            &blind_signature2,
-            &signature_blinding2);
+    let complete_signature2 = Prover::complete_signature(
+        &pk2,
+        full_credential2.as_slice(),
+        &blind_signature2,
+        &signature_blinding2,
+    );
 
     // Prover verifies the signature from Issuer1
     assert!(complete_signature2.is_ok());
     let complete_sig2 = complete_signature2.unwrap();
     assert!(complete_sig2
-        .verify(
-            full_credential2.as_slice(),
-            &pk2
-        ).unwrap()
-    );
+        .verify(full_credential2.as_slice(), &pk2)
+        .unwrap());
 
     // Verifier wants the Prover to reveal claim1 from Issuer1,
     // plus a proof that claim2 from Issuer1 and claim3 from Issuer2 are identical
@@ -412,18 +388,10 @@ fn bbs_demo() {
     let verifier_nonce = Verifier::generate_proof_nonce();
 
     // Verifier creates proof request for the reveal of claim1 from credential1 from Issuer1
-    let proof_request1 =
-        Verifier::new_proof_request(
-            &[1],
-            &pk1
-        ).unwrap();
+    let proof_request1 = Verifier::new_proof_request(&[1], &pk1).unwrap();
 
     // Verifier creates proof request for credential2 from Issuer2
-    let proof_request2 =
-        Verifier::new_proof_request(
-            &[],
-            &pk2
-        ).unwrap();
+    let proof_request2 = Verifier::new_proof_request(&[], &pk2).unwrap();
 
     // Verifier sends verifier_nonce, proof_request1, and proof_request2 to Prover
     // and additionally communicates the request for a ZK equality proof of
@@ -443,16 +411,13 @@ fn bbs_demo() {
         pm_revealed!(b"claim1_first_name"),
         pm_hidden_raw!(same_claim.clone(), same_blinding.clone()),
         pm_hidden!(b"claim3_email"),
-        pm_hidden!(b"claim4_address")
+        pm_hidden!(b"claim4_address"),
     ];
 
     // Prover constructs signature proof of knowledge for credential1
     let pok1 =
-        Prover::commit_signature_pok(
-            &proof_request1,
-            proof_messages1.as_slice(),
-            &complete_sig1
-        ).unwrap();
+        Prover::commit_signature_pok(&proof_request1, proof_messages1.as_slice(), &complete_sig1)
+            .unwrap();
 
     // Prover constructs proof messages from credential2
     // for ZK equality proof of claim3
@@ -460,16 +425,13 @@ fn bbs_demo() {
         pm_hidden_raw!(link_secret.clone(), link_secret_blinding.clone()),
         pm_hidden!(b"claim1_loyalty_program_id"),
         pm_hidden!(b"claim2_customer_id"),
-        pm_hidden_raw!(same_claim.clone(), same_blinding.clone())
+        pm_hidden_raw!(same_claim.clone(), same_blinding.clone()),
     ];
 
     // Prover constructs signature proof of knowledge for credential2
     let pok2 =
-        Prover::commit_signature_pok(
-            &proof_request2,
-            proof_messages2.as_slice(),
-            &complete_sig2
-        ).unwrap();
+        Prover::commit_signature_pok(&proof_request2, proof_messages2.as_slice(), &complete_sig2)
+            .unwrap();
 
 
     // Prover creates challenge_bytes and adds pok1 and pok2 to it.
@@ -483,14 +445,8 @@ fn bbs_demo() {
     let challenge = SignatureNonce::from_msg_hash(&chal_bytes);
 
     // Prover constructs the proofs and sends them to the Verifier
-    let proof1 = Prover::generate_signature_pok(
-        pok1,
-        &challenge
-    ).unwrap();
-    let proof2 = Prover::generate_signature_pok(
-        pok2,
-        &challenge
-    ).unwrap();
+    let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
+    let proof2 = Prover::generate_signature_pok(pok2, &challenge).unwrap();
 
     // Verifier creates their own challenge bytes
     // and adds proof1 and proof2 to it
@@ -499,10 +455,13 @@ fn bbs_demo() {
         &proof_request1.verification_key,
     );
     ver_chal_bytes.extend_from_slice(
-        proof2.proof.get_bytes_for_challenge(
-            proof_request2.revealed_messages.clone(),
-            &proof_request2.verification_key,
-        ).as_slice()
+        proof2
+            .proof
+            .get_bytes_for_challenge(
+                proof_request2.revealed_messages.clone(),
+                &proof_request2.verification_key,
+            )
+            .as_slice(),
     );
 
     // Verifier completes ver_challenge_bytes by adding verifier_nonce,
@@ -510,19 +469,28 @@ fn bbs_demo() {
     let ver_challenge = SignatureNonce::from_msg_hash(&ver_chal_bytes);
 
     // Verifier checks proof1
-        &ver_challenge,
-    );
+    let res1 =
+        proof1
+            .proof
+            .verify(
+                &proof_request1.verification_key,
+                &proof1.revealed_messages,
+                &ver_challenge,
+            );
     match res1 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
 
     // Verifier checks proof1
-    let res2 = proof2.proof.verify(
-        &proof_request2.verification_key,
-        &proof2.revealed_messages,
-        &ver_challenge,
-    );
+    let res2 =
+        proof2
+            .proof
+            .verify(
+                &proof_request2.verification_key,
+                &proof2.revealed_messages,
+                &ver_challenge,
+            );
     match res2 {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
