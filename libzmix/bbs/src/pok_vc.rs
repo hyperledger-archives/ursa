@@ -10,7 +10,11 @@
 //! During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 //! `Proof` can then be verified by the verifier.
 
-use crate::{hash_to_fr, multi_scalar_mul_const_time_g1, ProofChallenge, SignatureMessage, GeneratorG1, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, Commitment};
+use crate::{
+    hash_to_fr, multi_scalar_mul_const_time_g1, Commitment, GeneratorG1, ProofChallenge,
+    SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE,
+};
 
 use failure::{Backtrace, Context, Fail};
 use ff_zeroize::Field;
@@ -20,10 +24,13 @@ use pairing_plus::{
     CurveAffine, CurveProjective,
 };
 use rand::prelude::*;
-use serde::{Deserialize, Serialize, Deserializer, Serializer, de::{Error as DError, Visitor}};
+use serde::{
+    de::{Error as DError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+use std::convert::TryFrom;
 use std::fmt::{self, Formatter};
 use std::io::{Cursor, Read};
-use std::convert::TryFrom;
 
 /// Convenience importing module
 pub mod prelude {
@@ -146,12 +153,16 @@ impl ProverCommittingG1 {
         let mut rng = thread_rng();
         let idx = self.bases.len();
         self.bases.push(base.as_ref().clone());
-        self.blinding_factors.push( Fr::random(&mut rng));
+        self.blinding_factors.push(Fr::random(&mut rng));
         idx
     }
 
     /// Commit a base point with a blinding factor.
-    pub fn commit_with<B: AsRef<G1>, S: AsRef<Fr>>(&mut self, base: B, blinding_factor: S) -> usize {
+    pub fn commit_with<B: AsRef<G1>, S: AsRef<Fr>>(
+        &mut self,
+        base: B,
+        blinding_factor: S,
+    ) -> usize {
         let idx = self.bases.len();
         self.bases.push(base.as_ref().clone());
         self.blinding_factors.push(blinding_factor.as_ref().clone());
@@ -176,7 +187,10 @@ impl ProverCommittingG1 {
             }
             .into());
         }
-        Ok((GeneratorG1(self.bases[idx].clone()), SignatureMessage(self.blinding_factors[idx].clone())))
+        Ok((
+            GeneratorG1(self.bases[idx].clone()),
+            SignatureMessage(self.blinding_factors[idx].clone()),
+        ))
     }
 }
 
@@ -258,7 +272,9 @@ impl ProofG1 {
         let mut scalars = self.responses.clone();
         points.push(commitment.0.clone());
         scalars.push(challenge.0.clone());
-        Ok(GeneratorG1(multi_scalar_mul_const_time_g1(&points, &scalars)))
+        Ok(GeneratorG1(multi_scalar_mul_const_time_g1(
+            &points, &scalars,
+        )))
     }
 
     /// Verify that bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
@@ -428,9 +444,7 @@ macro_rules! test_PoK_VC {
         let challenge = committed.gen_challenge(committed.to_bytes());
         let proof = committed.gen_proof(&challenge, secrets.as_slice()).unwrap();
 
-        assert!(proof
-            .verify(&gens, &commitment, &challenge)
-            .unwrap());
+        assert!(proof.verify(&gens, &commitment, &challenge).unwrap());
 
         let proof_bytes = proof.to_bytes_uncompressed_form();
         assert_eq!(

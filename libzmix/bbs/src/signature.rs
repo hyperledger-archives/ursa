@@ -1,6 +1,10 @@
 use crate::errors::prelude::*;
 use crate::keys::prelude::*;
-use crate::{multi_scalar_mul_const_time_g1, Commitment, RandomElem, SignatureBlinding, SignatureMessage, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, multi_scalar_mul_var_time_g1};
+use crate::{
+    multi_scalar_mul_const_time_g1, multi_scalar_mul_var_time_g1, Commitment, RandomElem,
+    SignatureBlinding, SignatureMessage, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE,
+};
 use ff_zeroize::{Field, PrimeField};
 use pairing_plus::{
     bls12_381::{Bls12, Fq12, Fr, FrRepr, G1, G2},

@@ -139,53 +139,28 @@ impl Commitment {
         Commitment(multi_scalar_mul_const_time_g1(bases, scalars))
     }
 
-    to_fixed_length_bytes_impl!(
-        Commitment,
-        G1,
-        G1_COMPRESSED_SIZE,
-        G1_UNCOMPRESSED_SIZE
-    );
+    to_fixed_length_bytes_impl!(Commitment, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 }
 
 as_ref_impl!(Commitment, G1);
-from_impl!(
-    Commitment,
-    G1,
-    G1_COMPRESSED_SIZE,
-    G1_UNCOMPRESSED_SIZE
-);
+from_impl!(Commitment, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 display_impl!(Commitment);
 serdes_impl!(Commitment);
-hash_elem_impl!(Commitment, |data| {
-    Commitment(hash_to_g1(data))
-});
+hash_elem_impl!(Commitment, |data| { Commitment(hash_to_g1(data)) });
 
 /// Wrapper for G1
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct GeneratorG1(pub(crate) G1);
 
 impl GeneratorG1 {
-
-    to_fixed_length_bytes_impl!(
-        GeneratorG1,
-        G1,
-        G1_COMPRESSED_SIZE,
-        G1_UNCOMPRESSED_SIZE
-    );
+    to_fixed_length_bytes_impl!(GeneratorG1, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 }
 
 as_ref_impl!(GeneratorG1, G1);
-from_impl!(
-    GeneratorG1,
-    G1,
-    G1_COMPRESSED_SIZE,
-    G1_UNCOMPRESSED_SIZE
-);
+from_impl!(GeneratorG1, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 display_impl!(GeneratorG1);
 serdes_impl!(GeneratorG1);
-hash_elem_impl!(GeneratorG1, |data| {
-    GeneratorG1(hash_to_g1(data))
-});
+hash_elem_impl!(GeneratorG1, |data| { GeneratorG1(hash_to_g1(data)) });
 random_elem_impl!(GeneratorG1, { Self(G1::random(&mut thread_rng())) });
 
 /// Wrapper for G2
@@ -193,33 +168,20 @@ random_elem_impl!(GeneratorG1, { Self(G1::random(&mut thread_rng())) });
 pub struct GeneratorG2(pub(crate) G2);
 
 impl GeneratorG2 {
-
-    to_fixed_length_bytes_impl!(
-        GeneratorG2,
-        G2,
-        G2_COMPRESSED_SIZE,
-        G2_UNCOMPRESSED_SIZE
-    );
+    to_fixed_length_bytes_impl!(GeneratorG2, G2, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE);
 }
 
 as_ref_impl!(GeneratorG2, G2);
-from_impl!(
-    GeneratorG2,
-    G2,
-    G2_COMPRESSED_SIZE,
-    G2_UNCOMPRESSED_SIZE
-);
+from_impl!(GeneratorG2, G2, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE);
 display_impl!(GeneratorG2);
 serdes_impl!(GeneratorG2);
-hash_elem_impl!(GeneratorG2, |data| {
-    GeneratorG2(hash_to_g2(data))
-});
+hash_elem_impl!(GeneratorG2, |data| { GeneratorG2(hash_to_g2(data)) });
 
 /// Convenience wrapper for creating commitments
 #[derive(Clone, Debug)]
 pub struct CommitmentBuilder {
     bases: Vec<G1>,
-    scalars: Vec<Fr>
+    scalars: Vec<Fr>,
 }
 
 impl CommitmentBuilder {
@@ -227,7 +189,7 @@ impl CommitmentBuilder {
     pub fn new() -> Self {
         Self {
             bases: Vec::new(),
-            scalars: Vec::new()
+            scalars: Vec::new(),
         }
     }
 
@@ -411,13 +373,11 @@ impl BlindSignatureContext {
             )));
         }
 
-        let commitment = Commitment(
-            slice_to_elem!(&mut cursor, G1, compressed).map_err(|e| {
-                BBSError::from_kind(BBSErrorKind::PoKVCError {
-                    msg: format!("{}", e),
-                })
-            })?,
-        );
+        let commitment = Commitment(slice_to_elem!(&mut cursor, G1, compressed).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?);
 
         let end = g1_size + FR_COMPRESSED_SIZE;
 
@@ -475,7 +435,9 @@ impl BlindSignatureContext {
         let mut challenge = SignatureMessage::hash(&challenge_bytes);
         challenge.0.sub_assign(&self.challenge_hash.0);
 
-        commitment.0.sub_assign(&self.proof_of_hidden_messages.commitment);
+        commitment
+            .0
+            .sub_assign(&self.proof_of_hidden_messages.commitment);
 
         Ok(commitment.0.is_zero() && challenge.0.is_zero())
     }
@@ -718,44 +680,25 @@ fn bitvector_to_revealed(data: &[u8]) -> BTreeSet<usize> {
 /// Convenience importer
 pub mod prelude {
     pub use super::{
-        errors::prelude::*,
-        keys::prelude::*,
-        messages::*,
-        signature::prelude::*,
-        pok_sig::prelude::*,
-        pok_vc::prelude::*,
-        issuer::Issuer,
-        prover::Prover,
-        verifier::Verifier,
-        Commitment,
-        CommitmentBuilder,
-        GeneratorG1,
-        GeneratorG2,
-        BlindSignatureContext,
-        ToVariableLengthBytes,
-        RandomElem,
-        HashElem,
-        SignatureMessage,
-        SignatureBlinding,
-        SignatureProof,
-        ProofChallenge,
-        ProofNonce,
-        ProofRequest,
-        FR_COMPRESSED_SIZE,
-        G1_COMPRESSED_SIZE,
-        G1_UNCOMPRESSED_SIZE,
-        G2_COMPRESSED_SIZE,
-        G2_UNCOMPRESSED_SIZE
+        errors::prelude::*, issuer::Issuer, keys::prelude::*, messages::*, pok_sig::prelude::*,
+        pok_vc::prelude::*, prover::Prover, signature::prelude::*, verifier::Verifier,
+        BlindSignatureContext, Commitment, CommitmentBuilder, GeneratorG1, GeneratorG2, HashElem,
+        ProofChallenge, ProofNonce, ProofRequest, RandomElem, SignatureBlinding, SignatureMessage,
+        SignatureProof, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE,
     };
 }
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use pairing_plus::{CurveProjective, bls12_381::{G1, Fr}};
-    use std::collections::BTreeMap;
-    use rand::thread_rng;
     use ff_zeroize::Field;
+    use pairing_plus::{
+        bls12_381::{Fr, G1},
+        CurveProjective,
+    };
+    use rand::thread_rng;
+    use std::collections::BTreeMap;
 
     #[ignore]
     #[test]
@@ -766,7 +709,7 @@ mod tests {
         let mut rng = thread_rng();
         //
         for _ in 0..count {
-        //     bases.push(G1::random(&mut rng));
+            //     bases.push(G1::random(&mut rng));
             scalars.push(Fr::random(&mut rng));
         }
         let start = std::time::Instant::now();
@@ -788,7 +731,6 @@ mod tests {
         let start = std::time::Instant::now();
         let _ = dpk.to_public_key(count);
         println!("to_public_key = {:?}", std::time::Instant::now() - start);
-
     }
 
     #[test]
@@ -825,7 +767,11 @@ mod tests {
             challenge_hash: ProofChallenge::random(),
             proof_of_hidden_messages: ProofG1 {
                 commitment: G1::one(),
-                responses: (0..10).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random().0).collect(),
+                responses: (0..10)
+                    .collect::<Vec<usize>>()
+                    .iter()
+                    .map(|_| SignatureMessage::random().0)
+                    .collect(),
             },
         };
 

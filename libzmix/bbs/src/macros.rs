@@ -234,4 +234,3 @@ macro_rules! as_ref_impl {
         }
     };
 }
-

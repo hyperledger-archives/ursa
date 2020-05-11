@@ -1,8 +1,8 @@
 use crate::errors::prelude::*;
 use crate::{
-    hash_to_g2, HashElem, RandomElem, GeneratorG1, GeneratorG2, ToVariableLengthBytes, FR_COMPRESSED_SIZE,
-    FR_UNCOMPRESSED_SIZE, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, G2_COMPRESSED_SIZE,
-    G2_UNCOMPRESSED_SIZE,
+    hash_to_g2, GeneratorG1, GeneratorG2, HashElem, RandomElem, ToVariableLengthBytes,
+    FR_COMPRESSED_SIZE, FR_UNCOMPRESSED_SIZE, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE,
+    G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE,
 };
 use blake2::{digest::generic_array::GenericArray, Blake2b};
 use pairing_plus::{
@@ -110,10 +110,14 @@ impl PublicKey {
             return Err(BBSErrorKind::MalformedPublicKey.into());
         }
         let mut c = Cursor::new(data.as_ref());
-        let w = GeneratorG2(G2::deserialize(&mut c, compressed)
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?);
-        let h0 = GeneratorG1(G1::deserialize(&mut c, compressed)
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?);
+        let w = GeneratorG2(
+            G2::deserialize(&mut c, compressed)
+                .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+        );
+        let h0 = GeneratorG1(
+            G1::deserialize(&mut c, compressed)
+                .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+        );
 
         let mut h_bytes = [0u8; 4];
         c.read_exact(&mut h_bytes).unwrap();
@@ -121,8 +125,10 @@ impl PublicKey {
         let h_size = u32::from_be_bytes(h_bytes) as usize;
         let mut h = Vec::with_capacity(h_size);
         for _ in 0..h_size {
-            let p = GeneratorG1(G1::deserialize(&mut c, compressed)
-                .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?);
+            let p = GeneratorG1(
+                G1::deserialize(&mut c, compressed)
+                    .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+            );
             h.push(p);
         }
         let pk = Self { w, h0, h };
@@ -214,10 +220,7 @@ impl DeterministicPublicKey {
     /// using the hash to curve algorithm BLS12381G1_XMD:SHA-256_SSWU_RO denoted as H2C
     /// h_0 <- H2C(w || I2OSP(0, 4) || I2OSP(0, 1) || I2OSP(message_count, 4))
     /// h_i <- H2C(w || I2OSP(i, 4) || I2OSP(0, 1) || I2OSP(message_count, 4))
-    pub fn to_public_key(
-        &self,
-        message_count: usize,
-    ) -> Result<PublicKey, BBSError> {
+    pub fn to_public_key(&self, message_count: usize) -> Result<PublicKey, BBSError> {
         if message_count == 0 {
             return Err(BBSErrorKind::KeyGenError.into());
         }

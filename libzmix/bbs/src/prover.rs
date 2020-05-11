@@ -9,9 +9,8 @@ use crate::signature::prelude::*;
 /// The prover can either have the issuer sign all messages
 /// or can have some (0 to all) messages blindly signed by the issuer.
 use crate::{
-    BlindSignatureContext, CommitmentBuilder,
-    ProofChallenge, ProofNonce, ProofRequest, RandomElem, SignatureBlinding, SignatureMessage,
-    SignatureProof,
+    BlindSignatureContext, CommitmentBuilder, ProofChallenge, ProofNonce, ProofRequest, RandomElem,
+    SignatureBlinding, SignatureMessage, SignatureProof,
 };
 use std::collections::BTreeMap;
 
