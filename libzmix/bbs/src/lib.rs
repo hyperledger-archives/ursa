@@ -741,6 +741,11 @@ pub mod prelude {
         ProofChallenge,
         ProofNonce,
         ProofRequest,
+        FR_COMPRESSED_SIZE,
+        G1_COMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE,
+        G2_COMPRESSED_SIZE,
+        G2_UNCOMPRESSED_SIZE
     };
 }
 
