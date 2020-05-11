@@ -1,3 +1,6 @@
+use crate::errors::prelude::*;
+use crate::keys::prelude::*;
+use crate::signature::prelude::*;
 /// The issuer generates keys and uses those to sign
 /// credentials. There are two types of public keys:
 /// `PublicKey` which generates all generators at random and
@@ -5,7 +8,7 @@
 /// to the secret key. `DeterministicPublicKey` can be converted to a
 /// `PublicKey` later. The latter is primarily used for storing a shorter
 /// key and looks just like a regular ECC key.
-use crate::prelude::*;
+use crate::{BlindSignatureContext, ProofNonce, RandomElem, SignatureMessage};
 use std::collections::BTreeMap;
 
 /// This struct represents an Issuer of signatures or Signer.
@@ -40,7 +43,7 @@ impl Issuer {
         messages: &BTreeMap<usize, SignatureMessage>,
         signkey: &SecretKey,
         verkey: &PublicKey,
-        nonce: &SignatureNonce,
+        nonce: &ProofNonce,
     ) -> Result<BlindSignature, BBSError> {
         if ctx.verify(messages, verkey, nonce)? {
             BlindSignature::new(&ctx.commitment, messages, signkey, verkey)
@@ -53,7 +56,7 @@ impl Issuer {
     }
 
     /// Create a nonce used for the blind signing context
-    pub fn generate_signing_nonce() -> SignatureNonce {
-        SignatureNonce::random()
+    pub fn generate_signing_nonce() -> ProofNonce {
+        ProofNonce::random()
     }
 }
