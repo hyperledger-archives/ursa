@@ -28,7 +28,7 @@ use zeroize::Zeroize;
 pub mod prelude {
     pub use super::{
         generate, DeterministicPublicKey, KeyGenOption, PublicKey, SecretKey,
-        COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE,
+        DETERMINISTIC_PUBLIC_KEY_COMPRESSED_SIZE,
     };
 }
 
@@ -166,7 +166,7 @@ display_impl!(PublicKey);
 serdes_impl!(PublicKey);
 
 /// Size of a compressed deterministic public key
-pub const COMPRESSED_DETERMINISTIC_PUBLIC_KEY_SIZE: usize = G2_COMPRESSED_SIZE;
+pub const DETERMINISTIC_PUBLIC_KEY_COMPRESSED_SIZE: usize = G2_COMPRESSED_SIZE;
 
 /// Used to deterministically generate all other generators given a commitment to a private key
 /// This is effectively a BLS signature public key
