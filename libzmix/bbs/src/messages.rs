@@ -5,7 +5,7 @@ macro_rules! sm_map {
         {
             let mut msgs = std::collections::BTreeMap::new();
             $(
-                msgs.insert($index, SignatureMessage::from_msg_hash($data));
+                msgs.insert($index, crate::SignatureMessage::hash($data));
             )*
             msgs
         }
@@ -16,7 +16,7 @@ macro_rules! sm_map {
 #[macro_export]
 macro_rules! pm_revealed {
     ($data:expr) => {
-        ProofMessage::Revealed(SignatureMessage::from_msg_hash($data))
+        ProofMessage::Revealed(crate::SignatureMessage::hash($data))
     };
 }
 
@@ -35,12 +35,12 @@ macro_rules! pm_revealed_raw {
 macro_rules! pm_hidden {
     ($data:expr) => {
         ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(
-            SignatureMessage::from_msg_hash($data),
+            crate::SignatureMessage::hash($data),
         ))
     };
     ($data:expr, $bf:expr) => {
         ProofMessage::Hidden(HiddenMessage::ExternalBlinding(
-            SignatureMessage::from_msg_hash($data),
+            crate::SignatureMessage::hash($data),
             $bf,
         ))
     };
@@ -57,7 +57,7 @@ macro_rules! pm_hidden_raw {
     };
 }
 
-use crate::types::*;
+use crate::{ProofNonce, SignatureMessage};
 
 /// A message classification by the prover
 pub enum ProofMessage {
@@ -86,5 +86,5 @@ pub enum HiddenMessage {
     /// Indicates the message is hidden but it is involved with other proofs
     ///     like boundchecks, set memberships or inequalities, so the blinding factor
     ///     is provided from an external source.
-    ExternalBlinding(SignatureMessage, SignatureNonce),
+    ExternalBlinding(SignatureMessage, ProofNonce),
 }

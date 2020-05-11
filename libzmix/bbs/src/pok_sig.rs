@@ -2,18 +2,21 @@ use crate::errors::prelude::*;
 use crate::keys::PublicKey;
 use crate::messages::*;
 use crate::pok_vc::prelude::*;
-use crate::signature::{compute_b_const_time, Signature};
-use crate::types::*;
+use crate::signature::Signature;
+use crate::{multi_scalar_mul_const_time_g1, ProofChallenge, SignatureMessage, ToVariableLengthBytes, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, GeneratorG1, Commitment, CommitmentBuilder};
 
-use amcl_wrapper::constants::{FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE};
-use amcl_wrapper::extension_field_gt::GT;
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use amcl_wrapper::group_elem_g1::{G1Vector, G1};
-use amcl_wrapper::group_elem_g2::G2;
-
-use serde::{Deserialize, Serialize};
+use ff_zeroize::{Field, PrimeField};
+use pairing_plus::{
+    bls12_381::{Bls12, Fq12, Fr, FrRepr, G1, G2},
+    CurveAffine, CurveProjective, Engine,
+};
+use serde::{Deserialize, Serialize, Deserializer, Serializer, de::{Error as DError, Visitor}};
+use pairing_plus::serdes::SerDes;
+use rand::thread_rng;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::io::Cursor;
+use std::convert::TryFrom;
 
 /// Convenience importing module
 pub mod prelude {
@@ -24,22 +27,22 @@ pub mod prelude {
 /// to construct `PoKOfSignatureProof`.
 ///
 /// XXX: An optimization would be to combine the 2 relations into one by using the same techniques as Bulletproofs
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PoKOfSignature {
     /// A' in section 4.5
-    pub a_prime: G1,
+    a_prime: G1,
     /// \overline{A} in section 4.5
-    pub a_bar: G1,
+    a_bar: G1,
     /// d in section 4.5
-    pub d: G1,
+    d: G1,
     /// For proving relation a_bar / d == a_prime^{-e} * h_0^r2
-    pub pok_vc_1: ProverCommittedG1,
+    pok_vc_1: ProverCommittedG1,
     /// The messages
-    secrets_1: SignatureMessageVector,
+    secrets_1: Vec<Fr>,
     /// For proving relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
-    pub pok_vc_2: ProverCommittedG1,
+    pok_vc_2: ProverCommittedG1,
     /// The blinding factors
-    secrets_2: SignatureMessageVector,
+    secrets_2: Vec<Fr>,
     /// revealed messages
     pub(crate) revealed_messages: BTreeMap<usize, SignatureMessage>,
 }
@@ -88,18 +91,18 @@ impl Display for PoKOfSignatureProofStatus {
 /// The actual proof that is sent from prover to verifier.
 ///
 /// Contains the proof of 2 discrete log relations.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PoKOfSignatureProof {
     /// A' in section 4.5
-    pub a_prime: G1,
+    pub(crate) a_prime: G1,
     /// \overline{A} in section 4.5
-    pub a_bar: G1,
+    pub(crate) a_bar: G1,
     /// d in section 4.5
-    pub d: G1,
+    pub(crate) d: G1,
     /// Proof of relation a_bar / d == a_prime^{-e} * h_0^r2
-    pub proof_vc_1: ProofG1,
+    pub(crate) proof_vc_1: ProofG1,
     /// Proof of relation g1 * h1^m1 * h2^m2.... for all disclosed messages m_i == d^r3 * h_0^{-s_prime} * h1^-m1 * h2^-m2.... for all undisclosed messages m_i
-    pub proof_vc_2: ProofG1,
+    pub(crate) proof_vc_2: ProofG1,
 }
 
 impl PoKOfSignature {
@@ -128,8 +131,9 @@ impl PoKOfSignature {
             .into());
         }
 
-        let r1 = SignatureNonce::random();
-        let r2 = SignatureNonce::random();
+        let mut rng = thread_rng();
+        let r1 = Fr::random(&mut rng);
+        let r2 = Fr::random(&mut rng);
 
         let mut temp: Vec<SignatureMessage> = Vec::new();
         for i in 0..messages.len() {
@@ -142,22 +146,45 @@ impl PoKOfSignature {
             }
         }
 
-        let b = compute_b_const_time(&G1::new(), vk, temp.as_slice(), &signature.s, 0);
-        let a_prime = &signature.a * &r1;
-        let a_bar = &(&b * &r1) - (&a_prime * &signature.e);
-        let d = b.binary_scalar_mul(&vk.h0, &r1, &(-&r2));
+        let b = signature.get_b(temp.as_slice(), &vk);
 
-        let r3 = r1.inverse();
-        let s_prime = &signature.s - &(&r2 * &r3);
+        let mut a_prime = signature.a;
+        a_prime.mul_assign(r1);
+
+        let mut a_bar_denom = a_prime;
+        a_bar_denom.mul_assign(signature.e.clone());
+
+        let mut a_bar = b;
+        a_bar.mul_assign(r1);
+        a_bar.sub_assign(&a_bar_denom);
+
+        let mut r2_d = r2;
+        r2_d.negate();
+        let mut builder = CommitmentBuilder::new();
+        builder.add(&GeneratorG1(b), &SignatureMessage(r1));
+        builder.add(&vk.h0, &SignatureMessage(r2_d));
+
+        // d = b^r1 h0^-r2
+        let d = builder.finalize().0;
+
+        let r3 = r1.inverse().unwrap();
+
+        // s' = s - r2 r3
+        let mut s_prime = r2;
+        s_prime.mul_assign(&r3);
+        s_prime.negate();
+        s_prime.add_assign(&signature.s);
 
         // For proving relation a_bar / d == a_prime^{-e} * h_0^r2
         let mut committing_1 = ProverCommittingG1::new();
-        let mut secrets_1 = SignatureMessageVector::with_capacity(2);
+        let mut secrets_1 = Vec::with_capacity(2);
         // For a_prime^{-e}
-        committing_1.commit(&a_prime, None);
-        secrets_1.push(-(&signature.e));
+        committing_1.commit(&GeneratorG1(a_prime));
+        let mut sig_e = signature.e.clone();
+        sig_e.negate();
+        secrets_1.push(sig_e);
         // For h_0^r2
-        committing_1.commit(&vk.h0, None);
+        committing_1.commit(&vk.h0);
         secrets_1.push(r2);
         let pok_vc_1 = committing_1.finish();
 
@@ -169,12 +196,14 @@ impl PoKOfSignature {
         // d^{-r3} * h_0^s_prime * h1^m1 * h2^m2.... * h_j^m_j = g1 * h1^-m1 * h2^-m2.... * h_i^-m_i. Moreover g1 * h1^-m1 * h2^-m2.... * h_i^-m_i is public
         // and can be efficiently computed as (g1 * h1^m1 * h2^m2.... * h_i^m_i)^-1 and inverse in elliptic group is a point negation which is very cheap
         let mut committing_2 = ProverCommittingG1::new();
-        let mut secrets_2 = SignatureMessageVector::with_capacity(2 + messages.len());
+        let mut secrets_2 = Vec::with_capacity(2 + messages.len());
         // For d^-r3
-        committing_2.commit(&d, None);
-        secrets_2.push(-r3);
+        committing_2.commit(&GeneratorG1(d));
+        let mut r3_d = r3;
+        r3_d.negate();
+        secrets_2.push(r3_d);
         // h_0^s_prime
-        committing_2.commit(&vk.h0, None);
+        committing_2.commit(&vk.h0);
         secrets_2.push(s_prime);
 
         let mut revealed_messages = BTreeMap::new();
@@ -185,12 +214,12 @@ impl PoKOfSignature {
                     revealed_messages.insert(i, r.clone());
                 }
                 ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m)) => {
-                    committing_2.commit(&vk.h[i], None);
-                    secrets_2.push(m.clone());
+                    committing_2.commit(&vk.h[i]);
+                    secrets_2.push(m.0.clone());
                 }
                 ProofMessage::Hidden(HiddenMessage::ExternalBlinding(e, b)) => {
-                    committing_2.commit(&vk.h[i], Some(b));
-                    secrets_2.push(e.clone());
+                    committing_2.commit_with(&vk.h[i], b);
+                    secrets_2.push(e.0.clone());
                 }
             }
         }
@@ -211,7 +240,7 @@ impl PoKOfSignature {
     /// Return byte representation of public elements so they can be used for challenge computation.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.a_bar.to_vec());
+        self.a_bar.serialize(&mut bytes, false).unwrap();
 
         // For 1st PoKVC
         // self.a_prime is included as part of self.pok_vc_1
@@ -228,14 +257,24 @@ impl PoKOfSignature {
     /// proof to be sent to the verifier
     pub fn gen_proof(
         self,
-        challenge_hash: &SignatureNonce,
+        challenge_hash: &ProofChallenge,
     ) -> Result<PoKOfSignatureProof, BBSError> {
+        let secrets_1: Vec<_> = self
+            .secrets_1
+            .iter()
+            .map(|s| SignatureMessage((*s).clone()))
+            .collect();
+        let secrets_2: Vec<_> = self
+            .secrets_2
+            .iter()
+            .map(|s| SignatureMessage((*s).clone()))
+            .collect();
         let proof_vc_1 = self
             .pok_vc_1
-            .gen_proof(challenge_hash, self.secrets_1.as_slice())?;
+            .gen_proof(challenge_hash, secrets_1.as_slice())?;
         let proof_vc_2 = self
             .pok_vc_2
-            .gen_proof(challenge_hash, self.secrets_2.as_slice())?;
+            .gen_proof(challenge_hash, secrets_2.as_slice())?;
 
         Ok(PoKOfSignatureProof {
             a_prime: self.a_prime,
@@ -256,22 +295,25 @@ impl PoKOfSignatureProof {
         vk: &PublicKey,
     ) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.append(&mut self.a_bar.to_vec());
-
-        bytes.append(&mut self.a_prime.to_vec());
-        bytes.append(&mut vk.h0.to_vec());
-        bytes.append(&mut self.proof_vc_1.commitment.to_vec());
-
-        bytes.append(&mut self.d.to_vec());
-        bytes.append(&mut vk.h0.to_vec());
+        self.a_bar.serialize(&mut bytes, false).unwrap();
+        self.a_prime.serialize(&mut bytes, false).unwrap();
+        vk.h0.0.serialize(&mut bytes, false).unwrap();
+        self.proof_vc_1
+            .commitment
+            .serialize(&mut bytes, false)
+            .unwrap();
+        self.d.serialize(&mut bytes, false).unwrap();
+        vk.h0.0.serialize(&mut bytes, false).unwrap();
         for i in 0..vk.message_count() {
             if revealed_msg_indices.contains(&i) {
                 continue;
             }
-            let mut b = vk.h[i].to_vec();
-            bytes.append(&mut b);
+            vk.h[i].0.serialize(&mut bytes, false).unwrap();
         }
-        bytes.append(&mut self.proof_vc_2.commitment.to_vec());
+        self.proof_vc_2
+            .commitment
+            .serialize(&mut bytes, false)
+            .unwrap();
         bytes
     }
 
@@ -289,7 +331,9 @@ impl PoKOfSignatureProof {
             }));
         }
         // 2 added to the index, since 0th and 1st index are reserved for `&signature.e` and `r2`
-        Ok(self.proof_vc_2.responses[2 + msg_idx].clone())
+        Ok(SignatureMessage(
+            self.proof_vc_2.responses[2 + msg_idx].clone(),
+        ))
     }
 
     /// Validate the proof
@@ -297,7 +341,7 @@ impl PoKOfSignatureProof {
         &self,
         vk: &PublicKey,
         revealed_msgs: &BTreeMap<usize, SignatureMessage>,
-        challenge: &SignatureNonce,
+        challenge: &ProofChallenge,
     ) -> Result<PoKOfSignatureProofStatus, BBSError> {
         vk.validate()?;
         for i in revealed_msgs.keys() {
@@ -308,47 +352,63 @@ impl PoKOfSignatureProof {
             }
         }
 
-        if self.a_prime.is_identity() {
+        if self.a_prime.is_zero() {
             return Ok(PoKOfSignatureProofStatus::BadSignature);
         }
 
-        if !GT::ate_2_pairing(&self.a_prime, &vk.w, &(-&self.a_bar), &G2::generator()).is_one() {
-            return Ok(PoKOfSignatureProofStatus::BadSignature);
-        }
+        let mut a_bar = self.a_bar;
+        a_bar.negate();
+        match Bls12::final_exponentiation(&Bls12::miller_loop(&[
+            (
+                &self.a_prime.into_affine().prepare(),
+                &vk.w.0.into_affine().prepare(),
+            ),
+            (
+                &a_bar.into_affine().prepare(),
+                &G2::one().into_affine().prepare(),
+            ),
+        ])) {
+            None => return Ok(PoKOfSignatureProofStatus::BadSignature),
+            Some(product) => {
+                if product != Fq12::one() {
+                    return Ok(PoKOfSignatureProofStatus::BadSignature);
+                }
+            }
+        };
 
         let mut bases = vec![];
-        bases.push(self.a_prime.clone());
+        bases.push(GeneratorG1(self.a_prime.clone()));
         bases.push(vk.h0.clone());
         // a_bar / d
-        let a_bar_d = &self.a_bar - &self.d;
-        if !self.proof_vc_1.verify(&bases, &a_bar_d, challenge)? {
+        let mut a_bar_d = self.a_bar;
+        a_bar_d.sub_assign(&self.d);
+        // let a_bar_d = &self.a_bar - &self.d;
+        if !self.proof_vc_1.verify(&bases, &Commitment(a_bar_d), &challenge)? {
             return Ok(PoKOfSignatureProofStatus::BadHiddenMessage);
         }
 
-        let mut bases_pok_vc_2 =
-            G1Vector::with_capacity(2 + vk.message_count() - revealed_msgs.len());
-        bases_pok_vc_2.push(self.d.clone());
+        let mut bases_pok_vc_2 = Vec::with_capacity(2 + vk.message_count() - revealed_msgs.len());
+        bases_pok_vc_2.push( GeneratorG1(self.d.clone()));
         bases_pok_vc_2.push(vk.h0.clone());
 
         // `bases_disclosed` and `exponents` below are used to create g1 * h1^-m1 * h2^-m2.... for all disclosed messages m_i
-        let mut bases_disclosed = G1Vector::with_capacity(1 + revealed_msgs.len());
-        let mut exponents = SignatureMessageVector::with_capacity(1 + revealed_msgs.len());
+        let mut bases_disclosed = Vec::with_capacity(1 + revealed_msgs.len());
+        let mut exponents = Vec::with_capacity(1 + revealed_msgs.len());
         // XXX: g1 should come from a setup param and not generator
-        bases_disclosed.push(G1::generator());
-        exponents.push(SignatureNonce::one());
+        bases_disclosed.push(G1::one());
+        exponents.push(Fr::from_repr(FrRepr::from(1u64)).unwrap());
         for i in 0..vk.message_count() {
             if revealed_msgs.contains_key(&i) {
                 let message = revealed_msgs.get(&i).unwrap();
-                bases_disclosed.push(vk.h[i].clone());
-                exponents.push(message.clone());
+                bases_disclosed.push(vk.h[i].0.clone());
+                exponents.push(message.0.clone());
             } else {
                 bases_pok_vc_2.push(vk.h[i].clone());
             }
         }
         // pr = g1 * h1^-m1 * h2^-m2.... = (g1 * h1^m1 * h2^m2....)^-1 for all disclosed messages m_i
-        let pr = -bases_disclosed
-            .multi_scalar_mul_var_time(exponents.as_slice())
-            .unwrap();
+        let mut pr = Commitment(multi_scalar_mul_const_time_g1(&bases_disclosed, &exponents));
+        pr.0.negate();
         match self
             .proof_vc_2
             .verify(bases_pok_vc_2.as_slice(), &pr, challenge)
@@ -365,49 +425,52 @@ impl PoKOfSignatureProof {
     }
 
     /// Convert the proof to raw bytes
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub(crate) fn to_bytes(&self, compressed: bool) -> Vec<u8> {
         let mut output = Vec::new();
-        output.append(&mut self.a_prime.to_vec());
-        output.append(&mut self.a_bar.to_vec());
-        output.append(&mut self.d.to_vec());
-        let mut proof1_bytes = self.proof_vc_1.to_bytes();
+        self.a_prime.serialize(&mut output, compressed).unwrap();
+        self.a_bar.serialize(&mut output, compressed).unwrap();
+        self.d.serialize(&mut output, compressed).unwrap();
+        let mut proof1_bytes = self.proof_vc_1.to_bytes(compressed);
         let proof1_len: u32 = proof1_bytes.len() as u32;
         output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
         output.append(&mut proof1_bytes);
-        let mut proof2_bytes = self.proof_vc_2.to_bytes();
-        let proof2_len: u32 = proof2_bytes.len() as u32;
-        output.extend_from_slice(&proof2_len.to_be_bytes()[..]);
+        let mut proof2_bytes = self.proof_vc_2.to_bytes(compressed);
         output.append(&mut proof2_bytes);
         output
     }
 
     /// Convert the byte slice into a proof
-    pub fn from_bytes(data: &[u8]) -> Result<Self, BBSError> {
-        if data.len() < GROUP_G1_SIZE * 3 {
+    pub(crate) fn from_bytes(
+        data: &[u8],
+        g1_size: usize,
+        compressed: bool,
+    ) -> Result<Self, BBSError> {
+        if data.len() < g1_size * 3 {
             return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("Invalid proof bytes. Expected {}", GROUP_G1_SIZE * 3),
+                msg: format!("Invalid proof bytes. Expected {}", g1_size * 3),
             }));
         }
-        let mut offset = 0;
-        let mut end = GROUP_G1_SIZE;
-        let a_prime = G1::from_slice(&data[offset..end]).map_err(|e| {
+        let mut c = Cursor::new(data.as_ref());
+        let mut offset;
+        let mut end = g1_size;
+        let a_prime = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
 
         offset = end;
-        end = offset + GROUP_G1_SIZE;
+        end = offset + g1_size;
 
-        let a_bar = G1::from_slice(&data[offset..end]).map_err(|e| {
+        let a_bar = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
         })?;
         offset = end;
-        end = offset + GROUP_G1_SIZE;
+        end = offset + g1_size;
 
-        let d = G1::from_slice(&data[offset..end]).map_err(|e| {
+        let d = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
             BBSError::from_kind(BBSErrorKind::PoKVCError {
                 msg: format!("{}", e),
             })
@@ -418,82 +481,19 @@ impl PoKOfSignatureProof {
 
         offset = end;
         end = offset + proof1_bytes;
-        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+        let proof_vc_1 =
+            ProofG1::from_bytes(&data[offset..end], g1_size, compressed).map_err(|e| {
+                BBSError::from_kind(BBSErrorKind::PoKVCError {
+                    msg: format!("{}", e),
+                })
+            })?;
 
-        offset = end;
-        end = offset + 4;
-        let proof2_bytes = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-
-        offset = end;
-        end = offset + proof2_bytes;
-
-        let proof_vc_2 = ProofG1::from_bytes(&data[offset..end]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
-        Ok(Self {
-            a_prime,
-            a_bar,
-            d,
-            proof_vc_1,
-            proof_vc_2,
-        })
-    }
-
-    /// Convert the proof to raw bytes using the compressed form of each element.
-    pub fn to_bytes_compressed_form(&self) -> Vec<u8> {
-        let mut output = Vec::new();
-        output.extend_from_slice(&self.a_prime.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.a_bar.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.d.to_compressed_bytes()[..]);
-        let proof1_bytes = self.proof_vc_1.to_bytes_compressed_form();
-        let proof1_len = proof1_bytes.len() as u32;
-        output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
-        output.extend_from_slice(proof1_bytes.as_slice());
-        output.extend_from_slice(self.proof_vc_2.to_bytes_compressed_form().as_slice());
-
-        output
-    }
-
-    /// Convert the compressed form byte slice into a proof
-    pub fn from_bytes_compressed_form(data: &[u8]) -> Result<Self, BBSError> {
-        if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
-            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!(
-                    "Invalid proof bytes. Expected {}",
-                    FIELD_ORDER_ELEMENT_SIZE * 3
-                ),
-            }));
-        }
-
-        let a_prime = G1::from(array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
-        let a_bar = G1::from(array_ref![
-            data,
-            FIELD_ORDER_ELEMENT_SIZE,
-            FIELD_ORDER_ELEMENT_SIZE
-        ]);
-        let mut offset = 2 * FIELD_ORDER_ELEMENT_SIZE;
-        let d = G1::from(array_ref![data, offset, FIELD_ORDER_ELEMENT_SIZE]);
-        offset += FIELD_ORDER_ELEMENT_SIZE;
-        let proof1_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-        offset += 4;
-        let end = offset + proof1_len;
-        let proof_vc_1 = ProofG1::from_bytes_compressed_form(&data[offset..end]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
-        let proof_vc_2 = ProofG1::from_bytes_compressed_form(&data[end..]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
-
+        let proof_vc_2 =
+            ProofG1::from_bytes(&data[end..], g1_size, compressed).map_err(|e| {
+                BBSError::from_kind(BBSErrorKind::PoKVCError {
+                    msg: format!("{}", e),
+                })
+            })?;
         Ok(Self {
             a_prime,
             a_bar,
@@ -504,79 +504,45 @@ impl PoKOfSignatureProof {
     }
 }
 
-impl CompressedForm for PoKOfSignatureProof {
+impl ToVariableLengthBytes for PoKOfSignatureProof {
     type Output = PoKOfSignatureProof;
     type Error = BBSError;
 
     /// Convert the proof to a compressed raw bytes form.
     fn to_bytes_compressed_form(&self) -> Vec<u8> {
-        let mut output = Vec::new();
-        output.extend_from_slice(&self.a_prime.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.a_bar.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.d.to_compressed_bytes()[..]);
-        let proof1_bytes = self.proof_vc_1.to_bytes_compressed_form();
-        let proof1_len = proof1_bytes.len() as u32;
-        output.extend_from_slice(&proof1_len.to_be_bytes()[..]);
-        output.extend_from_slice(proof1_bytes.as_slice());
-        output.extend_from_slice(self.proof_vc_2.to_bytes_compressed_form().as_slice());
-
-        output
+        self.to_bytes(true)
     }
 
     /// Convert compressed byte slice into a proof
     fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
-        if data.len() < FIELD_ORDER_ELEMENT_SIZE * 3 {
-            return Err(BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!(
-                    "Invalid proof bytes. Expected {}",
-                    FIELD_ORDER_ELEMENT_SIZE * 3
-                ),
-            }));
-        }
+        Self::from_bytes(data.as_ref(), G1_COMPRESSED_SIZE, true)
+    }
 
-        let a_prime = G1::from(array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
-        let a_bar = G1::from(array_ref![
-            data,
-            FIELD_ORDER_ELEMENT_SIZE,
-            FIELD_ORDER_ELEMENT_SIZE
-        ]);
-        let mut offset = 2 * FIELD_ORDER_ELEMENT_SIZE;
-        let d = G1::from(array_ref![data, offset, FIELD_ORDER_ELEMENT_SIZE]);
-        offset += FIELD_ORDER_ELEMENT_SIZE;
-        let proof1_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-        offset += 4;
-        let end = offset + proof1_len;
-        let proof_vc_1 = ProofG1::from_bytes_compressed_form(&data[offset..end]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
-        let proof_vc_2 = ProofG1::from_bytes_compressed_form(&data[end..]).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+    fn to_bytes_uncompressed_form(&self) -> Vec<u8> {
+        self.to_bytes(false)
+    }
 
-        Ok(Self {
-            a_prime,
-            a_bar,
-            d,
-            proof_vc_1,
-            proof_vc_2,
-        })
+    fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(data.as_ref(), G1_UNCOMPRESSED_SIZE, false)
     }
 }
+
+try_from_impl!(PoKOfSignatureProof, BBSError);
+serdes_impl!(PoKOfSignatureProof);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{RandomElem, HashElem, ProofNonce};
     use crate::keys::generate;
 
     #[test]
     fn pok_signature_no_revealed_messages() {
         let message_count = 5;
-        let messages = SignatureMessageVector::random(message_count);
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -592,12 +558,12 @@ mod tests {
         let revealed_msg: BTreeMap<usize, SignatureMessage> = BTreeMap::new();
 
         let pok = PoKOfSignature::init(&sig, &verkey, proof_messages.as_slice()).unwrap();
-        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = ProofChallenge::hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         // Test to_bytes
-        let proof_bytes = proof.to_bytes();
-        let proof_cp = PoKOfSignatureProof::from_bytes(&proof_bytes);
+        let proof_bytes = proof.to_bytes_uncompressed_form();
+        let proof_cp = PoKOfSignatureProof::from_bytes_uncompressed_form(&proof_bytes);
         assert!(proof_cp.is_ok());
 
         let proof_bytes = proof.to_bytes_compressed_form();
@@ -606,7 +572,7 @@ mod tests {
 
         // The verifier generates the challenge on its own.
         let challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
-        let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
+        let challenge_verifier = ProofChallenge::hash(&challenge_bytes);
         assert!(proof
             .verify(&verkey, &revealed_msg, &challenge_verifier)
             .unwrap()
@@ -616,7 +582,7 @@ mod tests {
     #[test]
     fn pok_signature_revealed_message() {
         let message_count = 5;
-        let messages = SignatureMessageVector::random(message_count);
+        let messages: Vec<SignatureMessage> = (0..message_count).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -636,7 +602,7 @@ mod tests {
         revealed_indices.insert(2);
 
         let pok = PoKOfSignature::init(&sig, &verkey, proof_messages.as_slice()).unwrap();
-        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = ProofChallenge::hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         let mut revealed_msgs = BTreeMap::new();
@@ -645,7 +611,7 @@ mod tests {
         }
         // The verifier generates the challenge on its own.
         let chal_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
-        let challenge_verifier = SignatureNonce::from_msg_hash(&chal_bytes);
+        let challenge_verifier = ProofChallenge::hash(&chal_bytes);
         assert!(proof
             .verify(&verkey, &revealed_msgs, &challenge_verifier)
             .unwrap()
@@ -660,9 +626,9 @@ mod tests {
             .is_valid());
 
         // PoK with supplied blindings
-        proof_messages[1] = pm_hidden_raw!(messages[1].clone(), SignatureNonce::random());
-        proof_messages[3] = pm_hidden_raw!(messages[3].clone(), SignatureNonce::random());
-        proof_messages[4] = pm_hidden_raw!(messages[4].clone(), SignatureNonce::random());
+        proof_messages[1] = pm_hidden_raw!(messages[1].clone(), ProofNonce::random());
+        proof_messages[3] = pm_hidden_raw!(messages[3].clone(), ProofNonce::random());
+        proof_messages[4] = pm_hidden_raw!(messages[4].clone(), ProofNonce::random());
 
         let pok = PoKOfSignature::init(&sig, &verkey, proof_messages.as_slice()).unwrap();
 
@@ -670,12 +636,12 @@ mod tests {
         for i in &revealed_indices {
             revealed_msgs.insert(i.clone(), messages[*i].clone());
         }
-        let challenge_prover = SignatureNonce::from_msg_hash(&pok.to_bytes());
+        let challenge_prover = ProofChallenge::hash(&pok.to_bytes());
         let proof = pok.gen_proof(&challenge_prover).unwrap();
 
         // The verifier generates the challenge on its own.
         let challenge_bytes = proof.get_bytes_for_challenge(revealed_indices.clone(), &verkey);
-        let challenge_verifier = SignatureNonce::from_msg_hash(&challenge_bytes);
+        let challenge_verifier = ProofChallenge::hash(&challenge_bytes);
         assert!(proof
             .verify(&verkey, &revealed_msgs, &challenge_verifier)
             .unwrap()
@@ -692,21 +658,21 @@ mod tests {
         let (vk, signkey) = generate(message_count).unwrap();
 
         let same_msg = SignatureMessage::random();
-        let mut msgs_1 = SignatureMessageVector::random(message_count - 1);
+        let mut msgs_1: Vec<SignatureMessage> = (0..message_count-1).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
         let mut proof_messages_1 = Vec::with_capacity(message_count);
 
         for m in msgs_1.iter() {
             proof_messages_1.push(pm_hidden_raw!(m.clone()));
         }
 
-        let same_blinding = SignatureNonce::random();
+        let same_blinding = ProofNonce::random();
         msgs_1.insert(1, same_msg.clone());
         proof_messages_1.insert(1, pm_hidden_raw!(same_msg.clone(), same_blinding.clone()));
 
         let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
 
-        let mut msgs_2 = SignatureMessageVector::random(message_count - 1);
+        let mut msgs_2: Vec<SignatureMessage> = (0..message_count-1).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
         let mut proof_messages_2 = Vec::with_capacity(message_count);
         for m in msgs_2.iter() {
             proof_messages_2.push(pm_hidden_raw!(m.clone()));
@@ -727,7 +693,7 @@ mod tests {
         chal_bytes.append(&mut pok_1.to_bytes());
         chal_bytes.append(&mut pok_2.to_bytes());
 
-        let chal_prover = SignatureNonce::from_msg_hash(&chal_bytes);
+        let chal_prover = ProofChallenge::hash(&chal_bytes);
 
         let proof_1 = pok_1.gen_proof(&chal_prover).unwrap();
         let proof_2 = pok_2.gen_proof(&chal_prover).unwrap();
@@ -736,7 +702,7 @@ mod tests {
         let mut chal_bytes = vec![];
         chal_bytes.append(&mut proof_1.get_bytes_for_challenge(BTreeSet::new(), &vk));
         chal_bytes.append(&mut proof_2.get_bytes_for_challenge(BTreeSet::new(), &vk));
-        let chal_verifier = SignatureNonce::from_msg_hash(&chal_bytes);
+        let chal_verifier = ProofChallenge::hash(&chal_bytes);
 
         // Response for the same message should be same (this check is made by the verifier)
         assert_eq!(

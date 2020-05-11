@@ -11,20 +11,19 @@ fn keygen() {
     assert!(res.is_ok());
 
     let (dpk, _) = Issuer::new_short_keys(None);
-    let dst = DomainSeparationTag::new(b"testgen", None, None, None).unwrap();
-    let _ = dpk.to_public_key(5, dst.clone());
-    let _ = dpk.to_public_key(7, dst);
+    let _ = dpk.to_public_key(5);
+    let _ = dpk.to_public_key(7);
 }
 
 #[test]
 fn sign() {
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
-        SignatureMessage::from_msg_hash(b"message 1"),
-        SignatureMessage::from_msg_hash(b"message 2"),
-        SignatureMessage::from_msg_hash(b"message 3"),
-        SignatureMessage::from_msg_hash(b"message 4"),
-        SignatureMessage::from_msg_hash(b"message 5"),
+        SignatureMessage::hash(b"message 1"),
+        SignatureMessage::hash(b"message 2"),
+        SignatureMessage::hash(b"message 3"),
+        SignatureMessage::hash(b"message 4"),
+        SignatureMessage::hash(b"message 5"),
     ];
 
     let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -35,11 +34,15 @@ fn sign() {
 #[test]
 fn blind_sign() {
     let (pk, sk) = Issuer::new_keys(5).unwrap();
-    let message = SignatureMessage::from_msg_hash(b"message_0");
+    let message = SignatureMessage::hash(b"message_0");
 
     let signature_blinding = Signature::generate_blinding();
 
-    let commitment = &pk.h[0] * &message + &pk.h0 * &signature_blinding;
+    let mut builder = CommitmentBuilder::new();
+    builder.add(&pk.h0, &signature_blinding);
+    builder.add(&pk.h[0], &message);
+
+    let commitment = builder.finalize();
 
     // Completed by the signer
     // `commitment` is received from the recipient
@@ -112,11 +115,11 @@ fn blind_sign_simple() {
 fn pok_sig() {
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
-        SignatureMessage::from_msg_hash(b"message_1"),
-        SignatureMessage::from_msg_hash(b"message_2"),
-        SignatureMessage::from_msg_hash(b"message_3"),
-        SignatureMessage::from_msg_hash(b"message_4"),
-        SignatureMessage::from_msg_hash(b"message_5"),
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
     ];
 
     let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -153,11 +156,11 @@ fn pok_sig() {
 fn pok_sig_extra_message() {
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
-        SignatureMessage::from_msg_hash(b"message_1"),
-        SignatureMessage::from_msg_hash(b"message_2"),
-        SignatureMessage::from_msg_hash(b"message_3"),
-        SignatureMessage::from_msg_hash(b"message_4"),
-        SignatureMessage::from_msg_hash(b"message_5"),
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
     ];
 
     let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -195,7 +198,7 @@ fn pok_sig_extra_message() {
     proof_request.revealed_messages.remove(&4);
     proof
         .revealed_messages
-        .insert(4, SignatureMessage::from_msg_hash(b"message_4"));
+        .insert(4, SignatureMessage::hash(b"message_4"));
 
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
         Ok(_) => assert!(false),
@@ -203,7 +206,7 @@ fn pok_sig_extra_message() {
     };
 
     proof.revealed_messages.remove(&4);
-    proof.revealed_messages.insert(3, SignatureMessage::new());
+    proof.revealed_messages.insert(3, SignatureMessage::random());
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
@@ -214,11 +217,11 @@ fn pok_sig_extra_message() {
 fn pok_sig_bad_message() {
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
-        SignatureMessage::from_msg_hash(b"message_1"),
-        SignatureMessage::from_msg_hash(b"message_2"),
-        SignatureMessage::from_msg_hash(b"message_3"),
-        SignatureMessage::from_msg_hash(b"message_4"),
-        SignatureMessage::from_msg_hash(b"message_5"),
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
     ];
 
     let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -260,7 +263,7 @@ fn pok_sig_bad_message() {
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof
         .revealed_messages
-        .insert(0, SignatureMessage::from_msg_hash(b"message_1"));
+        .insert(0, SignatureMessage::hash(b"message_1"));
 
     //The proof is not what the verifier asked for
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {

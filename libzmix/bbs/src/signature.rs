@@ -1,19 +1,27 @@
-use super::types::*;
 use crate::errors::prelude::*;
-use crate::keys::{PublicKey, SecretKey};
-use amcl_wrapper::{
-    constants::{CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE, GROUP_G1_SIZE},
-    extension_field_gt::GT,
-    group_elem::{GroupElement, GroupElementVector},
-    group_elem_g1::G1,
-    group_elem_g2::G2,
+use crate::keys::prelude::*;
+use crate::{multi_scalar_mul_const_time_g1, Commitment, RandomElem, SignatureBlinding, SignatureMessage, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, multi_scalar_mul_var_time_g1};
+use ff_zeroize::{Field, PrimeField};
+use pairing_plus::{
+    bls12_381::{Bls12, Fq12, Fr, FrRepr, G1, G2},
+    serdes::SerDes,
+    CurveAffine, CurveProjective, Engine,
 };
-use serde::{Deserialize, Serialize};
+use rand::prelude::*;
+use serde::{
+    de::{Error as DError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
+use std::io::Cursor;
 
 /// Convenience module
 pub mod prelude {
-    pub use super::{BlindSignature, Signature, COMPRESSED_SIGNATURE_SIZE, SIGNATURE_SIZE};
+    pub use super::{
+        BlindSignature, Signature, SIGNATURE_COMPRESSED_SIZE, SIGNATURE_UNCOMPRESSED_SIZE,
+    };
 }
 
 macro_rules! check_verkey_message {
@@ -27,67 +35,67 @@ macro_rules! check_verkey_message {
 }
 
 /// The number of bytes in a signature
-pub const SIGNATURE_SIZE: usize = GROUP_G1_SIZE + FIELD_ORDER_ELEMENT_SIZE * 2;
+pub const SIGNATURE_UNCOMPRESSED_SIZE: usize = G1_UNCOMPRESSED_SIZE + FR_COMPRESSED_SIZE * 2;
 /// The number of bytes in a compressed signature
-pub const COMPRESSED_SIGNATURE_SIZE: usize =
-    FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE * 2;
+pub const SIGNATURE_COMPRESSED_SIZE: usize = G1_COMPRESSED_SIZE + FR_COMPRESSED_SIZE * 2;
 
-macro_rules! sig_byte_impl {
-    () => {
-        /// Convert the signature to raw bytes
-        pub fn to_bytes(&self) -> [u8; SIGNATURE_SIZE] {
-            let mut out = Vec::with_capacity(SIGNATURE_SIZE);
-            out.extend_from_slice(&self.a.to_vec()[..]);
-            out.extend_from_slice(&self.e.to_bytes()[..]);
-            out.extend_from_slice(&self.s.to_bytes()[..]);
-            *array_ref![out, 0, SIGNATURE_SIZE]
-        }
-
-        /// Convert the signature to bytes using compressed form.
-        pub fn to_bytes_compressed_form(&self) -> [u8; COMPRESSED_SIGNATURE_SIZE] {
-            let mut out = [0u8; COMPRESSED_SIGNATURE_SIZE];
-            out[..FIELD_ORDER_ELEMENT_SIZE].copy_from_slice(&self.a.to_compressed_bytes()[..]);
-            let end = FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE;
-            out[FIELD_ORDER_ELEMENT_SIZE..end].copy_from_slice(&self.e.to_compressed_bytes()[..]);
-            out[end..].copy_from_slice(&self.s.to_compressed_bytes()[..]);
-            out
-        }
-
-        /// Convert the byte slice into a Signature
-        pub fn from_bytes(data: [u8; SIGNATURE_SIZE]) -> Self {
-            let mut index = 0;
-            let a = G1::from_slice(&data[..GROUP_G1_SIZE]).unwrap();
-            index += GROUP_G1_SIZE;
-            let e = SignatureNonce::from(*array_ref![data, index, FIELD_ORDER_ELEMENT_SIZE]);
-            index += FIELD_ORDER_ELEMENT_SIZE;
-            let s = SignatureNonce::from(*array_ref![data, index, FIELD_ORDER_ELEMENT_SIZE]);
-            Self { a, e, s }
+macro_rules! to_bytes_impl {
+    ($name:ident, $sigsize:expr, $g1size:expr, $compressed:expr) => {
+        /// Convert to raw bytes form
+        pub fn $name(&self) -> [u8; $sigsize] {
+            let mut out = Vec::with_capacity($sigsize);
+            self.a.serialize(&mut out, $compressed).unwrap();
+            self.e.serialize(&mut out, $compressed).unwrap();
+            self.s.serialize(&mut out, $compressed).unwrap();
+            *array_ref![out, 0, $sigsize]
         }
     };
 }
 
-macro_rules! from_rules {
-    ($type:ident) => {
-        impl From<[u8; COMPRESSED_SIGNATURE_SIZE]> for $type {
-            fn from(data: [u8; COMPRESSED_SIGNATURE_SIZE]) -> Self {
+macro_rules! from_bytes_impl {
+    ($name:ident, $sigsize:expr, $g1size:expr, $compressed:expr) => {
+        impl From<[u8; $sigsize]> for $name {
+            fn from(data: [u8; $sigsize]) -> Self {
                 Self::from(&data)
             }
         }
 
-        impl From<&[u8; COMPRESSED_SIGNATURE_SIZE]> for $type {
-            fn from(data: &[u8; COMPRESSED_SIGNATURE_SIZE]) -> Self {
-                let a = G1::from(*array_ref![data, 0, FIELD_ORDER_ELEMENT_SIZE]);
-                let e = SignatureMessage::from(array_ref![
-                    data,
-                    FIELD_ORDER_ELEMENT_SIZE,
-                    CURVE_ORDER_ELEMENT_SIZE
-                ]);
-                let s = SignatureMessage::from(array_ref![
-                    data,
-                    FIELD_ORDER_ELEMENT_SIZE + CURVE_ORDER_ELEMENT_SIZE,
-                    CURVE_ORDER_ELEMENT_SIZE
-                ]);
+        impl From<&[u8; $sigsize]> for $name {
+            fn from(data: &[u8; $sigsize]) -> Self {
+                let mut c = Cursor::new(data.as_ref());
+                let a = G1::deserialize(&mut c, $compressed).unwrap();
+                let e = Fr::deserialize(&mut c, $compressed).unwrap();
+                let s = Fr::deserialize(&mut c, $compressed).unwrap();
                 Self { a, e, s }
+            }
+        }
+    };
+}
+
+macro_rules! try_from_impl {
+    ($name:ident) => {
+        impl TryFrom<&[u8]> for $name {
+            type Error = BBSError;
+
+            fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+                let mut value = value;
+                let compressed = value.len() == SIGNATURE_COMPRESSED_SIZE;
+                let a = G1::deserialize(&mut value, compressed).map_err(|_| {
+                    BBSErrorKind::GeneralError {
+                        msg: "Invalid bytes".to_string(),
+                    }
+                })?;
+                let e = Fr::deserialize(&mut value, compressed).map_err(|_| {
+                    BBSErrorKind::GeneralError {
+                        msg: "Invalid bytes".to_string(),
+                    }
+                })?;
+                let s = Fr::deserialize(&mut value, compressed).map_err(|_| {
+                    BBSErrorKind::GeneralError {
+                        msg: "Invalid bytes".to_string(),
+                    }
+                })?;
+                Ok(Self { a, e, s })
             }
         }
     };
@@ -96,14 +104,14 @@ macro_rules! from_rules {
 /// A BBS+ blind signature
 /// structurally identical to `Signature` but is used to help
 /// with misuse and confusion.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlindSignature {
     /// A
-    pub a: G1,
+    pub(crate) a: G1,
     /// e
-    pub e: SignatureNonce,
+    pub(crate) e: Fr,
     /// s
-    pub s: SignatureNonce,
+    pub(crate) s: Fr,
 }
 
 impl BlindSignature {
@@ -115,7 +123,7 @@ impl BlindSignature {
     /// `signkey`: The secret key for signing
     /// `verkey`: The corresponding public key to secret key
     pub fn new(
-        commitment: &BlindedSignatureCommitment,
+        commitment: &Commitment,
         messages: &BTreeMap<usize, SignatureMessage>,
         signkey: &SecretKey,
         verkey: &PublicKey,
@@ -125,55 +133,84 @@ impl BlindSignature {
             verkey.message_count(),
             messages.len()
         );
-        let e = SignatureNonce::random();
-        let s = SignatureNonce::random();
+        let mut rng = thread_rng();
+        let e = Fr::random(&mut rng);
+        let s = Fr::random(&mut rng);
 
-        let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
-        let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
+        let mut points = Vec::with_capacity(messages.len() + 2);
+        let mut scalars = Vec::with_capacity(messages.len() + 2);
         // g1*h0^blinding_factor*hi^mi.....
-        points.push(G1::generator());
-        scalars.push(SignatureNonce::one());
-        points.push(verkey.h0.clone());
+        points.push(commitment.0);
+        scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
+        points.push(G1::one());
+        scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
+        points.push(verkey.h0.0.clone());
         scalars.push(s.clone());
 
         for (i, m) in messages.iter() {
-            points.push(verkey.h[*i].clone());
-            scalars.push(m.clone());
+            points.push(verkey.h[*i].0.clone());
+            scalars.push(m.0.clone());
         }
-        let b = commitment
-            + points
-                .multi_scalar_mul_const_time(scalars.as_slice())
-                .unwrap();
 
-        let mut exp = signkey.clone();
-        exp += &e;
-        exp.inverse_mut();
-        let a = b * exp;
-        Ok(Self { a, e, s })
+        let mut b = multi_scalar_mul_const_time_g1(&points, &scalars);
+
+        let mut exp = signkey.0.clone();
+        exp.add_assign(&e);
+        b.mul_assign(exp.inverse().unwrap());
+        Ok(Self { a: b, e, s })
     }
 
     /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
     /// Takes the blinding factor used in the commitment.
     pub fn to_unblinded(&self, blinding: &SignatureBlinding) -> Signature {
+        let mut s = self.s.clone();
+        s.add_assign(&blinding.0);
         Signature {
             a: self.a.clone(),
-            s: self.s.clone() + blinding,
+            s,
             e: self.e.clone(),
         }
     }
 
-    sig_byte_impl!();
+    to_bytes_impl!(
+        to_bytes_compressed_form,
+        SIGNATURE_COMPRESSED_SIZE,
+        G1_COMPRESSED_SIZE,
+        true
+    );
+    to_bytes_impl!(
+        to_bytes_uncompressed_form,
+        SIGNATURE_UNCOMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE,
+        false
+    );
 }
 
+from_bytes_impl!(
+    BlindSignature,
+    SIGNATURE_COMPRESSED_SIZE,
+    G1_COMPRESSED_SIZE,
+    true
+);
+from_bytes_impl!(
+    BlindSignature,
+    SIGNATURE_UNCOMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE,
+    false
+);
+try_from_impl!(BlindSignature);
+serdes_impl!(BlindSignature);
+display_impl!(BlindSignature);
+
 /// A BBS+ signature.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Signature {
     /// A
-    pub a: G1,
+    pub(crate) a: G1,
     /// e
-    pub e: SignatureNonce,
+    pub(crate) e: Fr,
     /// s
-    pub s: SignatureNonce,
+    pub(crate) s: Fr,
 }
 
 // https://eprint.iacr.org/2016/663.pdf Section 4.3
@@ -185,24 +222,18 @@ impl Signature {
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
         check_verkey_message!(
-            messages.len() > verkey.message_count(),
+            messages.len() != verkey.message_count(),
             verkey.message_count(),
             messages.len()
         );
-        let e = SignatureNonce::random();
-        let s = SignatureNonce::random();
-        let b = compute_b_const_time(
-            &G1::new(),
-            verkey,
-            messages,
-            &s,
-            verkey.message_count() - messages.len(),
-        );
-        let mut exp = signkey.clone();
-        exp += &e;
-        exp.inverse_mut();
-        let a = b * exp;
-        Ok(Self { a, e, s })
+        let mut rng = thread_rng();
+        let e = Fr::random(&mut rng);
+        let s = Fr::random(&mut rng);
+        let mut b = Self::compute_b(&s, messages, verkey);
+        let mut exp = signkey.0.clone();
+        exp.add_assign(&e);
+        b.mul_assign(exp.inverse().unwrap());
+        Ok(Self { a: b, e, s })
     }
 
     /// Generate the signature blinding factor that will be used to unblind the signature
@@ -221,90 +252,117 @@ impl Signature {
             verkey.message_count(),
             messages.len()
         );
-        let b = compute_b_var_time(&G1::new(), verkey, messages, &self.s, 0);
-        let a = (&G2::generator() * &self.e) + &verkey.w;
-        Ok(GT::ate_2_pairing(&self.a, &a, &(-&b), &G2::generator()).is_one())
+
+        let mut pqz = Vec::new();
+        let mut a = G2::one();
+        a.mul_assign(self.e.clone());
+        a.add_assign(&verkey.w.0);
+
+        let mut b = self.get_b(messages, verkey);
+        b.negate();
+        let b = b.into_affine().prepare();
+        let g2 = G2::one().into_affine().prepare();
+
+        let a1 = self.a.into_affine().prepare();
+        let a2 = a.into_affine().prepare();
+
+        pqz.push((&a1, &a2));
+        pqz.push((&b, &g2));
+        Ok(
+            //pair(a^(1/x+e), g2^(x+e), 1/b, g2)
+            match Bls12::final_exponentiation(&Bls12::miller_loop(&pqz[..])) {
+                None => false,
+                Some(product) => product == Fq12::one(),
+            },
+        )
     }
 
-    sig_byte_impl!();
-}
+    /// Helper function for computing the `b` value. Internal helper function
+    pub(crate) fn get_b(&self, messages: &[SignatureMessage], verkey: &PublicKey) -> G1 {
+        // Self::compute_b(&self.s, messages, verkey)
+        let mut bases = Vec::with_capacity(messages.len() + 2);
+        let mut scalars = Vec::with_capacity(messages.len() + 2);
+        // g1*h0^blinding_factor*hi^mi.....
+        bases.push(G1::one());
+        scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
+        bases.push(verkey.h0.0.clone());
+        scalars.push(self.s.clone());
 
-fn prep_vec_for_b(
-    public_key: &PublicKey,
-    messages: &[SignatureMessage],
-    blinding_factor: &SignatureBlinding,
-    offset: usize,
-) -> (SignaturePointVector, SignatureMessageVector) {
-    let mut points = SignaturePointVector::with_capacity(messages.len() + 2);
-    let mut scalars = SignatureMessageVector::with_capacity(messages.len() + 2);
-    // XXX: g1 should not be a generator but a setup param
-    // prep for g1*h0^blinding_factor*hi^mi.....
-    points.push(G1::generator());
-    scalars.push(SignatureNonce::one());
-    points.push(public_key.h0.clone());
-    scalars.push(blinding_factor.clone());
-
-    for i in 0..messages.len() {
-        points.push(public_key.h[offset + i].clone());
-        scalars.push(messages[i].clone());
+        for i in 0..verkey.message_count() {
+            bases.push(verkey.h[i].0.clone());
+            scalars.push(messages[i].0.clone());
+        }
+        multi_scalar_mul_var_time_g1(&bases, &scalars)
     }
-    (points, scalars)
+
+    fn compute_b(s: &Fr, messages: &[SignatureMessage], verkey: &PublicKey) -> G1 {
+        let mut bases = Vec::with_capacity(messages.len() + 2);
+        let mut scalars = Vec::with_capacity(messages.len() + 2);
+        // g1*h0^blinding_factor*hi^mi.....
+        bases.push(G1::one());
+        scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
+        bases.push(verkey.h0.0.clone());
+        scalars.push((*s).clone());
+
+        for i in 0..verkey.message_count() {
+            bases.push(verkey.h[i].0.clone());
+            scalars.push(messages[i].0.clone());
+        }
+        multi_scalar_mul_const_time_g1(&bases, &scalars)
+    }
+
+    to_bytes_impl!(
+        to_bytes_compressed_form,
+        SIGNATURE_COMPRESSED_SIZE,
+        G1_COMPRESSED_SIZE,
+        true
+    );
+    to_bytes_impl!(
+        to_bytes_uncompressed_form,
+        SIGNATURE_UNCOMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE,
+        false
+    );
 }
 
-/// Helper function for computing the `b` value. Internal helper function
-pub(crate) fn compute_b_const_time(
-    starting_value: &BlindedSignatureCommitment,
-    public_key: &PublicKey,
-    messages: &[SignatureMessage],
-    blinding_factor: &SignatureBlinding,
-    offset: usize,
-) -> G1 {
-    let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
-    starting_value
-        + points
-            .multi_scalar_mul_const_time(scalars.as_slice())
-            .unwrap()
-}
-
-/// Helper function for computing the `b` value. Internal helper function
-pub(crate) fn compute_b_var_time(
-    starting_value: &BlindedSignatureCommitment,
-    public_key: &PublicKey,
-    messages: &[SignatureMessage],
-    blinding_factor: &SignatureBlinding,
-    offset: usize,
-) -> G1 {
-    let (points, scalars) = prep_vec_for_b(public_key, messages, blinding_factor, offset);
-    starting_value
-        + points
-            .multi_scalar_mul_var_time(scalars.as_slice())
-            .unwrap()
-}
-
-from_rules!(BlindSignature);
-from_rules!(Signature);
+from_bytes_impl!(
+    Signature,
+    SIGNATURE_COMPRESSED_SIZE,
+    G1_COMPRESSED_SIZE,
+    true
+);
+from_bytes_impl!(
+    Signature,
+    SIGNATURE_UNCOMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE,
+    false
+);
+try_from_impl!(Signature);
+serdes_impl!(Signature);
+display_impl!(Signature);
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::keys::generate;
     use crate::pok_vc::ProverCommittingG1;
-    use crate::SignatureMessageVector;
+    use crate::CommitmentBuilder;
 
     #[test]
     fn signature_serialization() {
+        let mut rng = thread_rng();
         let sig = Signature {
-            a: G1::random(),
-            e: SignatureNonce::random(),
-            s: SignatureNonce::random(),
+            a: G1::random(&mut rng),
+            e: Fr::random(&mut rng),
+            s: Fr::random(&mut rng),
         };
-        let bytes = sig.to_bytes();
-        assert_eq!(bytes.len(), SIGNATURE_SIZE);
-        let sig_2 = Signature::from_bytes(bytes);
+        let bytes = sig.to_bytes_uncompressed_form();
+        assert_eq!(bytes.len(), SIGNATURE_UNCOMPRESSED_SIZE);
+        let sig_2 = Signature::from(bytes);
         assert_eq!(sig, sig_2);
 
         let bytes = sig.to_bytes_compressed_form();
-        assert_eq!(bytes.len(), COMPRESSED_SIGNATURE_SIZE);
+        assert_eq!(bytes.len(), SIGNATURE_COMPRESSED_SIZE);
         let sig_2 = Signature::from(bytes);
         assert_eq!(sig, sig_2);
     }
@@ -312,20 +370,26 @@ mod tests {
     #[test]
     fn gen_signature() {
         let message_count = 5;
-        let messages = SignatureMessageVector::random(message_count);
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
         assert!(res.is_ok());
         let messages = Vec::new();
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
-        assert!(res.is_ok());
+        assert!(res.is_err());
     }
 
     #[test]
     fn signature_validation() {
         let message_count = 5;
-        let messages = SignatureMessageVector::random(message_count);
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -345,7 +409,10 @@ mod tests {
     #[test]
     fn signature_committed_messages() {
         let message_count = 4;
-        let messages = SignatureMessageVector::random(message_count);
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
         let (verkey, signkey) = generate(message_count).unwrap();
 
         //User blinds first attribute
@@ -353,15 +420,18 @@ mod tests {
 
         //User creates a random commitment, computes challenges and response. The proof of knowledge consists of a commitment and responses
         //User and signer engage in a proof of knowledge for `commitment`
-        let commitment = &verkey.h0 * &blinding + &verkey.h[0] * &messages[0];
+        let mut builder = CommitmentBuilder::new();
+        builder.add(verkey.h0.clone(), &blinding);
+        builder.add(verkey.h[0].clone(), &messages[0]);
+        let commitment = builder.finalize();
 
         let mut committing = ProverCommittingG1::new();
-        committing.commit(&verkey.h0, None);
-        committing.commit(&verkey.h[0], None);
+        committing.commit(verkey.h0.clone());
+        committing.commit(verkey.h[0].clone());
         let committed = committing.finish();
 
         let mut hidden_msgs = Vec::new();
-        hidden_msgs.push(blinding.clone());
+        hidden_msgs.push(SignatureMessage(blinding.0.clone()));
         hidden_msgs.push(messages[0].clone());
 
         let mut bases = Vec::new();
@@ -370,7 +440,7 @@ mod tests {
 
         let nonce = vec![1u8, 1u8, 1u8, 1u8, 2u8, 2u8, 2u8, 2u8];
         let mut extra = Vec::new();
-        extra.extend_from_slice(&commitment.to_vec());
+        extra.extend_from_slice(&commitment.to_bytes_uncompressed_form());
         extra.extend_from_slice(nonce.as_slice());
         let challenge_hash = committed.gen_challenge(extra);
         let proof = committed

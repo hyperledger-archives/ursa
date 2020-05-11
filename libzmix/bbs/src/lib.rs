@@ -27,23 +27,46 @@
 #[macro_use]
 extern crate arrayref;
 
+use blake2::digest::{generic_array::GenericArray, Input, VariableOutput};
 use errors::prelude::*;
+use ff_zeroize::{Field, PrimeField};
 use keys::prelude::*;
+use pairing_plus::{
+    bls12_381::{Fr, G1Affine, G1, G2},
+    hash_to_curve::HashToCurve,
+    hash_to_field::{BaseFromRO, ExpandMsgXmd},
+    serdes::SerDes,
+    CurveAffine, CurveProjective,
+};
 use pok_sig::prelude::*;
 use pok_vc::prelude::*;
+use rand::prelude::*;
+use rayon::prelude::*;
+use std::fmt::{Display, Formatter};
 
-use amcl_wrapper::{
-    constants::{
-        CURVE_ORDER_ELEMENT_SIZE, FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE,
-        GROUP_G1_SIZE as COMMITMENT_SIZE,
-    },
-    curve_order_elem::{CurveOrderElement, CurveOrderElementVector},
-    group_elem::GroupElement,
-    group_elem_g1::{G1Vector, G1},
+use serde::{
+    de::{Error as DError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
 };
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryFrom;
+use std::io::Cursor;
 
+/// Number of bytes in scalar compressed form
+pub const FR_COMPRESSED_SIZE: usize = 32;
+/// Number of bytes in scalar uncompressed form
+pub const FR_UNCOMPRESSED_SIZE: usize = 48;
+/// Number of bytes in G1 X coordinate
+pub const G1_COMPRESSED_SIZE: usize = 48;
+/// Number of bytes in G1 X and Y coordinates
+pub const G1_UNCOMPRESSED_SIZE: usize = 96;
+/// Number of bytes in G2 X (a, b) coordinate
+pub const G2_COMPRESSED_SIZE: usize = 96;
+/// Number of bytes in G2 X(a, b) and Y(a, b) coordinates
+pub const G2_UNCOMPRESSED_SIZE: usize = 192;
+
+#[macro_use]
+mod macros;
 /// Proof messages
 #[macro_use]
 pub mod messages;
@@ -68,126 +91,344 @@ pub mod signature;
 /// and selective disclosure proofs
 pub mod verifier;
 
-/// The type for creating commitments to messages that are hidden during issuance.
-pub type BlindedSignatureCommitment = G1;
-/// The type for managing lists of generators
-pub type SignaturePointVector = G1Vector;
-/// The type for messages
-pub type SignatureMessage = CurveOrderElement;
-/// The type for managing lists of messages
-pub type SignatureMessageVector = CurveOrderElementVector;
-/// The type for nonces
-pub type SignatureNonce = CurveOrderElement;
-/// The type for blinding factors
-pub type SignatureBlinding = CurveOrderElement;
-
-mod types {
-    pub use super::{
-        BlindSignatureContext, BlindedSignatureCommitment, CompressedForm, ProofRequest,
-        SignatureBlinding, SignatureMessage, SignatureMessageVector, SignatureNonce,
-        SignaturePointVector, SignatureProof,
-    };
-}
-
-/// Convenience importing module
-pub mod prelude {
-    pub use super::{
-        BlindSignatureContext, BlindedSignatureCommitment, CompressedForm, ProofRequest,
-        SignatureBlinding, SignatureMessage, SignatureMessageVector, SignatureNonce,
-        SignaturePointVector, SignatureProof,
-    };
-    pub use crate::errors::prelude::*;
-    pub use crate::issuer::Issuer;
-    pub use crate::keys::prelude::*;
-    pub use crate::messages::{HiddenMessage, ProofMessage};
-    pub use crate::pok_sig::prelude::*;
-    pub use crate::pok_vc::prelude::*;
-    pub use crate::prover::Prover;
-    pub use crate::signature::prelude::*;
-    pub use crate::verifier::Verifier;
-    pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_SECRET_KEY_SIZE;
-    pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_BLINDING_FACTOR_SIZE;
-    pub use amcl_wrapper::constants::CURVE_ORDER_ELEMENT_SIZE as COMPRESSED_MESSAGE_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as SECRET_KEY_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as MESSAGE_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as NONCE_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as BLINDING_FACTOR_SIZE;
-    pub use amcl_wrapper::constants::FIELD_ORDER_ELEMENT_SIZE as COMPRESSED_COMMITMENT_SIZE;
-    pub use amcl_wrapper::constants::GROUP_G1_SIZE as COMMITMENT_SIZE;
-    pub use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-    pub use amcl_wrapper::types_g2::GROUP_G2_SIZE as PUBLIC_KEY_SIZE;
-}
-
-/// Trait for structs that have variable length bytes but implement a compressed form
-pub trait CompressedForm {
+/// Trait for structs that have variable length bytes but use compressed Bls12 elements
+pub trait ToVariableLengthBytes {
     /// The type that implements this trait
     type Output;
     /// The type of error to return
     type Error;
 
-    /// Convert to raw bytes for this implementor
+    /// Convert to raw compressed bytes
     fn to_bytes_compressed_form(&self) -> Vec<u8>;
 
-    /// Convert from raw bytes for this implementor
+    /// Convert from raw compressed bytes
     fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error>;
+
+    /// Convert to raw bytes
+    fn to_bytes_uncompressed_form(&self) -> Vec<u8>;
+
+    /// Convert from raw bytes
+    fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error>;
+}
+
+/// Struct can be generated randomly
+pub trait RandomElem {
+    /// The type that implements this trait
+    type Output;
+
+    /// Return a randomly generated type
+    fn random() -> Self::Output;
+}
+
+/// Struct can be generated from hashing
+pub trait HashElem {
+    /// The type that implements this trait
+    type Output;
+
+    /// Return a type from hashing `data`
+    fn hash<I: AsRef<[u8]>>(data: I) -> Self;
+}
+
+/// The type for creating commitments to messages that are hidden during issuance.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Commitment(pub(crate) G1);
+
+impl Commitment {
+    /// Compute a new commitment from multiple points and scalars
+    pub fn new<B: AsRef<[G1]>, S: AsRef<[Fr]>>(bases: B, scalars: S) -> Self {
+        Commitment(multi_scalar_mul_const_time_g1(bases, scalars))
+    }
+
+    to_fixed_length_bytes_impl!(
+        Commitment,
+        G1,
+        G1_COMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE
+    );
+}
+
+as_ref_impl!(Commitment, G1);
+from_impl!(
+    Commitment,
+    G1,
+    G1_COMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE
+);
+display_impl!(Commitment);
+serdes_impl!(Commitment);
+hash_elem_impl!(Commitment, |data| {
+    Commitment(hash_to_g1(data))
+});
+
+/// Wrapper for G1
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct GeneratorG1(pub(crate) G1);
+
+impl GeneratorG1 {
+
+    to_fixed_length_bytes_impl!(
+        GeneratorG1,
+        G1,
+        G1_COMPRESSED_SIZE,
+        G1_UNCOMPRESSED_SIZE
+    );
+}
+
+as_ref_impl!(GeneratorG1, G1);
+from_impl!(
+    GeneratorG1,
+    G1,
+    G1_COMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE
+);
+display_impl!(GeneratorG1);
+serdes_impl!(GeneratorG1);
+hash_elem_impl!(GeneratorG1, |data| {
+    GeneratorG1(hash_to_g1(data))
+});
+random_elem_impl!(GeneratorG1, { Self(G1::random(&mut thread_rng())) });
+
+/// Wrapper for G2
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct GeneratorG2(pub(crate) G2);
+
+impl GeneratorG2 {
+
+    to_fixed_length_bytes_impl!(
+        GeneratorG2,
+        G2,
+        G2_COMPRESSED_SIZE,
+        G2_UNCOMPRESSED_SIZE
+    );
+}
+
+as_ref_impl!(GeneratorG2, G2);
+from_impl!(
+    GeneratorG2,
+    G2,
+    G2_COMPRESSED_SIZE,
+    G2_UNCOMPRESSED_SIZE
+);
+display_impl!(GeneratorG2);
+serdes_impl!(GeneratorG2);
+hash_elem_impl!(GeneratorG2, |data| {
+    GeneratorG2(hash_to_g2(data))
+});
+
+/// Convenience wrapper for creating commitments
+#[derive(Clone, Debug)]
+pub struct CommitmentBuilder {
+    bases: Vec<G1>,
+    scalars: Vec<Fr>
+}
+
+impl CommitmentBuilder {
+    /// Initialize a new builder
+    pub fn new() -> Self {
+        Self {
+            bases: Vec::new(),
+            scalars: Vec::new()
+        }
+    }
+
+    /// Add a new base and scalar to the commitment
+    pub fn add<B: AsRef<G1>, S: AsRef<Fr>>(&mut self, base: B, scalar: S) {
+        self.bases.push(base.as_ref().clone());
+        self.scalars.push(scalar.as_ref().clone().into());
+    }
+
+    /// Convert to commitment
+    pub fn finalize(self) -> Commitment {
+        Commitment(multi_scalar_mul_const_time_g1(&self.bases, &self.scalars))
+    }
+}
+
+/// The type for messages
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct SignatureMessage(pub(crate) Fr);
+
+impl SignatureMessage {
+    to_fixed_length_bytes_impl!(SignatureMessage, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
+}
+
+as_ref_impl!(SignatureMessage, Fr);
+from_impl!(SignatureMessage, Fr, FR_COMPRESSED_SIZE);
+display_impl!(SignatureMessage);
+serdes_impl!(SignatureMessage);
+hash_elem_impl!(SignatureMessage, |data| {
+    SignatureMessage(hash_to_fr(data))
+});
+random_elem_impl!(SignatureMessage, { Self(Fr::random(&mut thread_rng())) });
+
+/// The type for nonces
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct ProofNonce(pub(crate) Fr);
+
+impl ProofNonce {
+    to_fixed_length_bytes_impl!(ProofNonce, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
+}
+
+as_ref_impl!(ProofNonce, Fr);
+from_impl!(ProofNonce, Fr, FR_COMPRESSED_SIZE);
+display_impl!(ProofNonce);
+serdes_impl!(ProofNonce);
+hash_elem_impl!(ProofNonce, |data| { ProofNonce(hash_to_fr(data)) });
+random_elem_impl!(ProofNonce, { Self(Fr::random(&mut thread_rng())) });
+
+/// The Fiat-Shamir Challenge in proofs
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct ProofChallenge(pub(crate) Fr);
+
+impl ProofChallenge {
+    to_fixed_length_bytes_impl!(ProofChallenge, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
+}
+
+as_ref_impl!(ProofChallenge, Fr);
+from_impl!(ProofChallenge, Fr, FR_COMPRESSED_SIZE);
+display_impl!(ProofChallenge);
+serdes_impl!(ProofChallenge);
+hash_elem_impl!(ProofChallenge, |data| { ProofChallenge(hash_to_fr(data)) });
+random_elem_impl!(ProofChallenge, { Self(Fr::random(&mut thread_rng())) });
+
+/// The type for blinding factors
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct SignatureBlinding(pub(crate) Fr);
+
+impl SignatureBlinding {
+    to_fixed_length_bytes_impl!(
+        SignatureBlinding,
+        Fr,
+        FR_COMPRESSED_SIZE,
+        FR_COMPRESSED_SIZE
+    );
+}
+
+as_ref_impl!(SignatureBlinding, Fr);
+from_impl!(SignatureBlinding, Fr, FR_COMPRESSED_SIZE);
+display_impl!(SignatureBlinding);
+serdes_impl!(SignatureBlinding);
+hash_elem_impl!(SignatureBlinding, |data| {
+    SignatureBlinding(hash_to_fr(data))
+});
+random_elem_impl!(SignatureBlinding, { Self(Fr::random(&mut thread_rng())) });
+
+pub(crate) fn hash_to_g1<I: AsRef<[u8]>>(data: I) -> G1 {
+    const DST: &[u8] = b"BLS12381G1_XMD:BLAKE2B_SSWU_RO_BBS+_SIGNATURES:1_0_0";
+    <G1 as HashToCurve<ExpandMsgXmd<blake2::Blake2b>>>::hash_to_curve(data.as_ref(), DST)
+}
+
+pub(crate) fn hash_to_g2<I: AsRef<[u8]>>(data: I) -> G2 {
+    const DST: &[u8] = b"BLS12381G2_XMD:BLAKE2B_SSWU_RO_BBS+_SIGNATURES:1_0_0";
+    <G2 as HashToCurve<ExpandMsgXmd<blake2::Blake2b>>>::hash_to_curve(data.as_ref(), DST)
+}
+
+pub(crate) fn hash_to_fr<I: AsRef<[u8]>>(data: I) -> Fr {
+    let mut res = GenericArray::default();
+    let mut hasher = blake2::VarBlake2b::new(FR_UNCOMPRESSED_SIZE).unwrap();
+    hasher.input(data.as_ref());
+    hasher.variable_result(|out| {
+        res.copy_from_slice(out);
+    });
+    Fr::from_okm(&res)
+}
+
+pub(crate) fn multi_scalar_mul_const_time_g1<G: AsRef<[G1]>, S: AsRef<[Fr]>>(
+    bases: G,
+    scalars: S,
+) -> G1 {
+    let bases: Vec<_> = bases.as_ref().iter().map(|b| b.into_affine()).collect();
+    let scalars: Vec<[u64; 4]> = scalars
+        .as_ref()
+        .iter()
+        .map(|s| {
+            let mut t = [0u64; 4];
+            t.clone_from_slice(s.into_repr().as_ref());
+            t
+        })
+        .collect();
+    // Annoying step to keep the borrow checker happy
+    let s: Vec<&[u64; 4]> = scalars.iter().map(|u| u).collect();
+    G1Affine::sum_of_products(bases.as_slice(), s.as_slice())
+}
+
+pub(crate) fn multi_scalar_mul_var_time_g1<G: AsRef<[G1]>, S: AsRef<[Fr]>>(
+    bases: G,
+    scalars: S,
+) -> G1 {
+    let bases = bases.as_ref();
+    let scalars = scalars.as_ref();
+    bases
+        .par_iter()
+        .zip(scalars.par_iter())
+        .map(|(b, s)| {
+            let mut t = b.clone();
+            t.mul_assign(*s);
+            t
+        })
+        .reduce(
+            || G1::zero(),
+            |mut acc, b| {
+                acc.add_assign(&b);
+                acc
+            },
+        )
 }
 
 /// Contains the data used for computing a blind signature and verifying
 /// proof of hidden messages from a prover
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct BlindSignatureContext {
     /// The blinded signature commitment
-    pub commitment: BlindedSignatureCommitment,
+    pub commitment: Commitment,
     /// The challenge hash for the Fiat-Shamir heuristic
-    pub challenge_hash: SignatureNonce,
+    pub challenge_hash: ProofChallenge,
     /// The proof for the hidden messages
     pub proof_of_hidden_messages: ProofG1,
 }
 
 impl BlindSignatureContext {
-    /// Convert to raw bytes
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let proof_bytes = self.proof_of_hidden_messages.to_bytes();
-        let proof_len = proof_bytes.len() as u32;
-
-        let mut output = Vec::with_capacity(proof_len as usize + COMMITMENT_SIZE + MESSAGE_SIZE);
-        output.extend_from_slice(&self.commitment.to_vec()[..]);
-        output.extend_from_slice(&self.challenge_hash.to_bytes()[..]);
-        output.extend_from_slice(&proof_len.to_be_bytes()[..]);
-        output.extend_from_slice(proof_bytes.as_slice());
-
+    fn to_bytes(&self, compressed: bool) -> Vec<u8> {
+        let mut output = Vec::new();
+        self.commitment
+            .0
+            .serialize(&mut output, compressed)
+            .unwrap();
+        self.challenge_hash
+            .0
+            .serialize(&mut output, compressed)
+            .unwrap();
+        output.append(&mut self.proof_of_hidden_messages.to_bytes(compressed));
         output
     }
 
-    /// Convert from raw bytes
-    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
-
-        if data.len() < COMMITMENT_SIZE + MESSAGE_SIZE + 4 {
+    fn from_bytes(data: &[u8], g1_size: usize, compressed: bool) -> Result<Self, BBSError> {
+        let min_size = g1_size * 2 + FR_COMPRESSED_SIZE + 4;
+        let mut cursor = Cursor::new(data);
+        if data.len() < min_size {
             return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
-                4 + COMMITMENT_SIZE + MESSAGE_SIZE,
+                min_size,
                 data.len(),
             )));
         }
 
-        let mut offset = COMMITMENT_SIZE + MESSAGE_SIZE;
+        let commitment = Commitment(
+            slice_to_elem!(&mut cursor, G1, compressed).map_err(|e| {
+                BBSError::from_kind(BBSErrorKind::PoKVCError {
+                    msg: format!("{}", e),
+                })
+            })?,
+        );
 
-        let commitment =
-            BlindedSignatureCommitment::from_slice(&data[..COMMITMENT_SIZE]).map_err(|e| {
-                BBSErrorKind::GeneralError {
-                    msg: format!("{:?}", e),
-                }
-            })?;
-        let challenge_hash = SignatureNonce::from(array_ref![data, COMMITMENT_SIZE, MESSAGE_SIZE]);
+        let end = g1_size + FR_COMPRESSED_SIZE;
 
-        let proof_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-        offset += 4;
-        let end = offset + proof_len;
-        let proof_of_hidden_messages =
-            ProofG1::from_bytes(&data[offset..end]).map_err(|e| BBSErrorKind::GeneralError {
-                msg: format!("{:?}", e),
-            })?;
+        let challenge_hash =
+            ProofChallenge(slice_to_elem!(&mut cursor, Fr, compressed).map_err(|e| {
+                BBSError::from_kind(BBSErrorKind::PoKVCError {
+                    msg: format!("{}", e),
+                })
+            })?);
 
+        let proof_of_hidden_messages = ProofG1::from_bytes(&data[end..], g1_size, compressed)?;
         Ok(Self {
             commitment,
             challenge_hash,
@@ -202,7 +443,7 @@ impl BlindSignatureContext {
         &self,
         messages: &BTreeMap<usize, SignatureMessage>,
         verkey: &PublicKey,
-        nonce: &SignatureNonce,
+        nonce: &ProofNonce,
     ) -> Result<bool, BBSError> {
         // Verify the proof
         // First get the generators used to create the commitment
@@ -214,7 +455,7 @@ impl BlindSignatureContext {
             }
         }
 
-        let commitment = self.proof_of_hidden_messages.get_challenge_contribution(
+        let mut commitment = self.proof_of_hidden_messages.get_challenge_contribution(
             bases.as_slice(),
             &self.commitment,
             &self.challenge_hash,
@@ -222,59 +463,47 @@ impl BlindSignatureContext {
 
         let mut challenge_bytes = Vec::new();
         for b in bases.iter() {
-            challenge_bytes.append(&mut b.to_vec())
+            b.0.serialize(&mut challenge_bytes, false).unwrap();
         }
-        challenge_bytes.extend_from_slice(&commitment.to_vec()[..]);
-        challenge_bytes.extend_from_slice(self.commitment.to_vec().as_slice());
-        challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
+        commitment.0.serialize(&mut challenge_bytes, false).unwrap();
+        self.commitment
+            .0
+            .serialize(&mut challenge_bytes, false)
+            .unwrap();
+        challenge_bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
 
-        let challenge_result =
-            SignatureMessage::from_msg_hash(challenge_bytes.as_slice()) - &self.challenge_hash;
-        let commitment_result = commitment - &self.proof_of_hidden_messages.commitment;
-        Ok(commitment_result.is_identity() && challenge_result.is_zero())
+        let mut challenge = SignatureMessage::hash(&challenge_bytes);
+        challenge.0.sub_assign(&self.challenge_hash.0);
+
+        commitment.0.sub_assign(&self.proof_of_hidden_messages.commitment);
+
+        Ok(commitment.0.is_zero() && challenge.0.is_zero())
     }
 }
 
-impl CompressedForm for BlindSignatureContext {
-    type Output = BlindSignatureContext;
+impl ToVariableLengthBytes for BlindSignatureContext {
+    type Output = Self;
     type Error = BBSError;
 
-    /// Convert to raw bytes using compressed form for each element.
     fn to_bytes_compressed_form(&self) -> Vec<u8> {
-        let mut output = Vec::new();
-
-        output.extend_from_slice(&self.commitment.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.challenge_hash.to_compressed_bytes()[..]);
-        output.extend_from_slice(&self.proof_of_hidden_messages.to_bytes_compressed_form()[..]);
-
-        output
+        self.to_bytes(true)
     }
 
-    /// Load from compressed form raw bytes
-    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(data.as_ref(), G1_COMPRESSED_SIZE, true)
+    }
 
-        if data.len() < MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4 {
-            return Err(BBSErrorKind::InvalidNumberOfBytes(
-                MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE + 4,
-                data.len(),
-            )
-            .into());
-        }
+    fn to_bytes_uncompressed_form(&self) -> Vec<u8> {
+        self.to_bytes(false)
+    }
 
-        let commitment = BlindedSignatureCommitment::from(array_ref![data, 0, MESSAGE_SIZE]);
-        let challenge_hash =
-            SignatureNonce::from(array_ref![data, MESSAGE_SIZE, CURVE_ORDER_ELEMENT_SIZE]);
-        let offset = MESSAGE_SIZE + CURVE_ORDER_ELEMENT_SIZE;
-        let proof_of_hidden_messages = ProofG1::from_bytes_compressed_form(&data[offset..])?;
-
-        Ok(Self {
-            commitment,
-            challenge_hash,
-            proof_of_hidden_messages,
-        })
+    fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(data.as_ref(), G1_UNCOMPRESSED_SIZE, false)
     }
 }
+
+try_from_impl!(BlindSignatureContext, BBSError);
+serdes_impl!(BlindSignatureContext);
 
 /// Contains the data from a verifier to a prover
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,43 +516,32 @@ pub struct ProofRequest {
     pub verification_key: PublicKey,
 }
 
-impl CompressedForm for ProofRequest {
-    type Output = ProofRequest;
-    type Error = BBSError;
-
-    /// Convert to raw bytes using compressed form for each element.
-    fn to_bytes_compressed_form(&self) -> Vec<u8> {
-        let revealed_len = self.revealed_messages.len() as u32;
-
-        let mut output = Vec::new();
-        output.extend_from_slice(&revealed_len.to_be_bytes()[..]);
-        for i in &self.revealed_messages {
-            let ii = *i as u32;
-            output.extend_from_slice(&ii.to_be_bytes()[..]);
-        }
-        output.extend_from_slice(self.verification_key.to_bytes_compressed_form().as_slice());
+impl ProofRequest {
+    pub(crate) fn to_bytes(&self, compressed: bool) -> Vec<u8> {
+        let revealed: Vec<usize> = (&self.revealed_messages).iter().map(|i| *i).collect();
+        let mut temp =
+            revealed_to_bitvector(self.verification_key.message_count(), revealed.as_slice());
+        let mut key = self.verification_key.to_bytes(compressed);
+        let mut output = (temp.len() as u32).to_be_bytes().to_vec();
+        output.append(&mut temp);
+        output.append(&mut key);
         output
     }
 
-    /// Convert from compressed form raw bytes.
-    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
-        if data.len() < 4 + MESSAGE_SIZE * 2 {
-            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
-                4 + MESSAGE_SIZE * 2,
-                data.len(),
-            )));
+    pub(crate) fn from_bytes(
+        data: &[u8],
+        g1_size: usize,
+        g2_size: usize,
+        compressed: bool,
+    ) -> Result<Self, BBSError> {
+        let min_len = 8 + g1_size + g2_size;
+        if data.len() < min_len {
+            return Err(BBSErrorKind::InvalidNumberOfBytes(min_len, data.len()).into());
         }
-
-        let revealed_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize;
-        let mut offset = 4;
-        let mut revealed_messages = BTreeSet::new();
-        for _ in 0..revealed_len {
-            let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-            revealed_messages.insert(i);
-            offset += 4;
-        }
-        let verification_key = PublicKey::from_bytes_compressed_form(&data[offset..])?;
+        let bitvector_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize;
+        let offset = 4 + bitvector_len;
+        let revealed_messages = bitvector_to_revealed(&data[4..offset]);
+        let verification_key = PublicKey::from_bytes(&data[offset..], g1_size, compressed)?;
         Ok(Self {
             revealed_messages,
             verification_key,
@@ -331,8 +549,34 @@ impl CompressedForm for ProofRequest {
     }
 }
 
+impl ToVariableLengthBytes for ProofRequest {
+    type Output = ProofRequest;
+    type Error = BBSError;
+
+    fn to_bytes_compressed_form(&self) -> Vec<u8> {
+        self.to_bytes(true)
+    }
+
+    fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(data.as_ref(), G1_COMPRESSED_SIZE, G2_COMPRESSED_SIZE, true)
+    }
+
+    fn to_bytes_uncompressed_form(&self) -> Vec<u8> {
+        self.to_bytes(false)
+    }
+
+    fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(
+            data.as_ref(),
+            G1_UNCOMPRESSED_SIZE,
+            G2_UNCOMPRESSED_SIZE,
+            false,
+        )
+    }
+}
+
 /// Contains the data from a prover to a verifier
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct SignatureProof {
     /// The revealed messages as field elements
     pub revealed_messages: BTreeMap<usize, SignatureMessage>,
@@ -342,8 +586,8 @@ pub struct SignatureProof {
 
 impl SignatureProof {
     /// Convert to raw bytes
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let proof_bytes = self.proof.to_bytes();
+    pub(crate) fn to_bytes(&self, compressed: bool) -> Vec<u8> {
+        let proof_bytes = self.proof.to_bytes(compressed);
         let proof_len = proof_bytes.len() as u32;
 
         let mut output =
@@ -356,16 +600,18 @@ impl SignatureProof {
         for (i, m) in &self.revealed_messages {
             let ii = *i as u32;
             output.extend_from_slice(&ii.to_be_bytes()[..]);
-            output.extend_from_slice(&m.to_bytes()[..]);
+            m.0.serialize(&mut output, compressed).unwrap();
         }
 
         output
     }
 
     /// Convert from raw bytes
-    pub fn from_bytes<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
-
+    pub(crate) fn from_bytes(
+        data: &[u8],
+        g1_size: usize,
+        compressed: bool,
+    ) -> Result<Self, BBSError> {
         if data.len() < 8 {
             return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
                 8,
@@ -374,11 +620,10 @@ impl SignatureProof {
         }
 
         let proof_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize + 4;
-        let proof = PoKOfSignatureProof::from_bytes(&data[4..proof_len]).map_err(|e| {
-            BBSErrorKind::GeneralError {
+        let proof = PoKOfSignatureProof::from_bytes(&data[4..proof_len], g1_size, compressed)
+            .map_err(|e| BBSErrorKind::GeneralError {
                 msg: format!("{:?}", e),
-            }
-        })?;
+            })?;
 
         let mut offset = proof_len;
         let revealed_messages_len = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
@@ -390,9 +635,9 @@ impl SignatureProof {
             let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
 
             offset = end;
-            end = offset + MESSAGE_SIZE;
+            end = offset + FR_COMPRESSED_SIZE;
 
-            let m = SignatureMessage::from(array_ref![data, offset, MESSAGE_SIZE]);
+            let m = SignatureMessage::from(array_ref![data, offset, FR_COMPRESSED_SIZE]);
 
             offset = end;
             end = offset + 4;
@@ -407,67 +652,139 @@ impl SignatureProof {
     }
 }
 
-impl CompressedForm for SignatureProof {
+impl ToVariableLengthBytes for SignatureProof {
     type Output = SignatureProof;
     type Error = BBSError;
 
     /// Convert to raw bytes using compressed form for each element.
     fn to_bytes_compressed_form(&self) -> Vec<u8> {
-        let proof_bytes = self.proof.to_bytes_compressed_form();
-        let proof_len = proof_bytes.len() as u32;
-
-        let mut output =
-            Vec::with_capacity(proof_len as usize + 4 * (self.revealed_messages.len() + 1));
-        output.extend_from_slice(&proof_len.to_be_bytes()[..]);
-        output.extend_from_slice(proof_bytes.as_slice());
-        let revealed_messages_len = self.revealed_messages.len() as u32;
-        output.extend_from_slice(&revealed_messages_len.to_be_bytes()[..]);
-
-        for (i, m) in &self.revealed_messages {
-            let ii = *i as u32;
-            output.extend_from_slice(&ii.to_be_bytes()[..]);
-            output.extend_from_slice(&m.to_compressed_bytes()[..]);
-        }
-
-        output
+        self.to_bytes(true)
     }
 
     /// Convert from compressed form raw bytes.
     fn from_bytes_compressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self, BBSError> {
-        let data = data.as_ref();
-
-        if data.len() < 8 {
-            return Err(BBSError::from(BBSErrorKind::InvalidNumberOfBytes(
-                8,
-                data.len(),
-            )));
-        }
-        let proof_len = u32::from_be_bytes(*array_ref![data, 0, 4]) as usize + 4;
-        let proof = PoKOfSignatureProof::from_bytes_compressed_form(&data[4..proof_len])?;
-        let revealed_messages_len = u32::from_be_bytes(*array_ref![data, proof_len, 4]);
-        let mut revealed_messages = BTreeMap::new();
-        let mut offset = proof_len + 4;
-        for _ in 0..revealed_messages_len {
-            let i = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
-            offset += 4;
-            let m = SignatureMessage::from(array_ref![data, offset, CURVE_ORDER_ELEMENT_SIZE]);
-            offset += CURVE_ORDER_ELEMENT_SIZE;
-
-            revealed_messages.insert(i, m);
-        }
-
-        Ok(Self {
-            revealed_messages,
-            proof,
-        })
+        Self::from_bytes(data.as_ref(), G1_COMPRESSED_SIZE, true)
     }
+
+    fn to_bytes_uncompressed_form(&self) -> Vec<u8> {
+        self.to_bytes(false)
+    }
+
+    fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
+        Self::from_bytes(data.as_ref(), G1_UNCOMPRESSED_SIZE, false)
+    }
+}
+
+try_from_impl!(SignatureProof, BBSError);
+serdes_impl!(SignatureProof);
+
+/// Expects `revealed` to be sorted
+fn revealed_to_bitvector(total: usize, revealed: &[usize]) -> Vec<u8> {
+    let mut bytes = vec![0u8; (total / 8) + 1];
+
+    for r in revealed {
+        let idx = *r / 8;
+        let bit = (*r % 8) as u8;
+        bytes[idx] |= 1u8 << bit;
+    }
+
+    // Convert to big endian
+    bytes.reverse();
+    bytes
+}
+
+/// Convert big-endian vector to u32
+fn bitvector_to_revealed(data: &[u8]) -> BTreeSet<usize> {
+    let mut revealed_messages = BTreeSet::new();
+    let mut scalar = 0;
+
+    for b in data.iter().rev() {
+        let mut v = *b;
+        let mut remaining = 8;
+        while v > 0 {
+            let revealed = v & 1u8;
+            if revealed == 1 {
+                revealed_messages.insert(scalar);
+            }
+            v >>= 1;
+            scalar += 1;
+            remaining -= 1;
+        }
+        scalar += remaining;
+    }
+    revealed_messages
+}
+
+/// Convenience importer
+pub mod prelude {
+    pub use super::{
+        errors::prelude::*,
+        keys::prelude::*,
+        messages::*,
+        signature::prelude::*,
+        pok_sig::prelude::*,
+        pok_vc::prelude::*,
+        issuer::Issuer,
+        prover::Prover,
+        verifier::Verifier,
+        Commitment,
+        CommitmentBuilder,
+        GeneratorG1,
+        GeneratorG2,
+        BlindSignatureContext,
+        ToVariableLengthBytes,
+        RandomElem,
+        HashElem,
+        SignatureMessage,
+        SignatureBlinding,
+        SignatureProof,
+        ProofChallenge,
+        ProofNonce,
+        ProofRequest,
+    };
 }
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use amcl_wrapper::{group_elem::GroupElement, group_elem_g1::G1};
+    use pairing_plus::{CurveProjective, bls12_381::{G1, Fr}};
     use std::collections::BTreeMap;
+    use rand::thread_rng;
+    use ff_zeroize::Field;
+
+    #[ignore]
+    #[test]
+    fn speed_multi_scalar_test() {
+        let count = 5;
+        // let mut bases = Vec::new();
+        let mut scalars = Vec::new();
+        let mut rng = thread_rng();
+        //
+        for _ in 0..count {
+        //     bases.push(G1::random(&mut rng));
+            scalars.push(Fr::random(&mut rng));
+        }
+        let start = std::time::Instant::now();
+        let (pk, sk) = generate(count).unwrap();
+        println!("keygen = {:?}", std::time::Instant::now() - start);
+
+        let msgs: Vec<SignatureMessage> = scalars.iter().map(|e| SignatureMessage(*e)).collect();
+        let start = std::time::Instant::now();
+        let sig = Signature::new(msgs.as_slice(), &sk, &pk).unwrap();
+        println!("sig gen = {:?}", std::time::Instant::now() - start);
+        let start = std::time::Instant::now();
+        let temp = sig.verify(msgs.as_slice(), &pk);
+        println!("sig verify = {:?}", std::time::Instant::now() - start);
+        println!("temp = {:?}", temp);
+
+        let start = std::time::Instant::now();
+        let (dpk, _) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk)));
+        println!("dpkgen = {:?}", std::time::Instant::now() - start);
+        let start = std::time::Instant::now();
+        let _ = dpk.to_public_key(count);
+        println!("to_public_key = {:?}", std::time::Instant::now() - start);
+
+    }
 
     #[test]
     fn proof_request_bytes_test() {
@@ -485,32 +802,32 @@ mod tests {
     #[test]
     fn blind_signature_context_bytes_test() {
         let b = BlindSignatureContext {
-            commitment: G1::generator(),
-            challenge_hash: SignatureMessage::random(),
+            commitment: Commitment(G1::one()),
+            challenge_hash: ProofChallenge::random(),
             proof_of_hidden_messages: ProofG1 {
-                commitment: G1::generator(),
-                responses: SignatureMessageVector::new(0),
+                commitment: G1::one(),
+                responses: Vec::new(),
             },
         };
 
-        let bytes = b.to_bytes();
-        let res = BlindSignatureContext::from_bytes(&bytes);
+        let bytes = b.to_bytes_uncompressed_form();
+        let res = BlindSignatureContext::from_bytes_uncompressed_form(&bytes);
         assert!(res.is_ok());
-        assert_eq!(res.unwrap().to_bytes(), bytes);
+        assert_eq!(res.unwrap().to_bytes_uncompressed_form(), bytes);
 
         let b = BlindSignatureContext {
-            commitment: G1::generator(),
-            challenge_hash: SignatureMessage::random(),
+            commitment: Commitment(G1::one()),
+            challenge_hash: ProofChallenge::random(),
             proof_of_hidden_messages: ProofG1 {
-                commitment: G1::generator(),
-                responses: SignatureMessageVector::new(10),
+                commitment: G1::one(),
+                responses: (0..10).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random().0).collect(),
             },
         };
 
-        let bytes = b.to_bytes();
-        let res = BlindSignatureContext::from_bytes(&bytes);
+        let bytes = b.to_bytes_compressed_form();
+        let res = BlindSignatureContext::from_bytes_compressed_form(&bytes);
         assert!(res.is_ok());
-        assert_eq!(res.unwrap().to_bytes(), bytes);
+        assert_eq!(res.unwrap().to_bytes_compressed_form(), bytes);
     }
 
     #[test]
@@ -519,23 +836,23 @@ mod tests {
         let proof = SignatureProof {
             revealed_messages: BTreeMap::new(),
             proof: PoKOfSignatureProof {
-                a_prime: G1::new(),
-                a_bar: G1::new(),
-                d: G1::new(),
+                a_prime: G1::zero(),
+                a_bar: G1::zero(),
+                d: G1::zero(),
                 proof_vc_1: ProofG1 {
-                    commitment: G1::new(),
-                    responses: SignatureMessageVector::with_capacity(1),
+                    commitment: G1::zero(),
+                    responses: Vec::with_capacity(1),
                 },
                 proof_vc_2: ProofG1 {
-                    commitment: G1::new(),
-                    responses: SignatureMessageVector::with_capacity(1),
+                    commitment: G1::zero(),
+                    responses: Vec::with_capacity(1),
                 },
             },
         };
 
-        let proof_bytes = proof.to_bytes();
+        let proof_bytes = proof.to_bytes_uncompressed_form();
 
-        let proof_dup = SignatureProof::from_bytes(&proof_bytes);
+        let proof_dup = SignatureProof::from_bytes_uncompressed_form(&proof_bytes);
         assert!(proof_dup.is_ok());
 
         let (pk, sk) = Issuer::new_keys(1).unwrap();
@@ -545,11 +862,10 @@ mod tests {
         let pr = Verifier::new_proof_request(&[0], &pk).unwrap();
         let pm = vec![pm_revealed_raw!(messages[0].clone())];
         let pok = Prover::commit_signature_pok(&pr, pm.as_slice(), &sig).unwrap();
-        let nonce =
-            SignatureNonce::from_msg_hash(&[0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8]);
+        let nonce = ProofNonce::hash(&[0u8, 1u8, 2u8, 3u8, 4u8, 5u8, 6u8, 7u8, 8u8, 9u8]);
         let mut challenge_bytes = pok.to_bytes();
-        challenge_bytes.extend_from_slice(&nonce.to_bytes()[..]);
-        let challenge = SignatureNonce::from_msg_hash(challenge_bytes.as_slice());
+        challenge_bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
+        let challenge = ProofChallenge::hash(challenge_bytes.as_slice());
 
         let sig_proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -559,9 +875,9 @@ mod tests {
                 .len()
                 == 1
         );
-        let sig_proof_bytes = sig_proof.to_bytes();
+        let sig_proof_bytes = sig_proof.to_bytes_uncompressed_form();
 
-        let sig_proof_dup = SignatureProof::from_bytes(&sig_proof_bytes);
+        let sig_proof_dup = SignatureProof::from_bytes_uncompressed_form(&sig_proof_bytes);
         assert!(sig_proof_dup.is_ok());
         let sig_proof_dup = sig_proof_dup.unwrap();
         assert!(

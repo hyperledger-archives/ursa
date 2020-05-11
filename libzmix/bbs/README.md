@@ -12,7 +12,7 @@ and selective disclosure zero-knowledge proofs. To start, all that is needed is 
 
 ```toml
 [dependencies]
-bbs = "0.2"
+bbs = "0.4"
 ```
 
 Add in the main section of code to get all the traits, structs, and functions needed.
@@ -44,8 +44,7 @@ or
 
 ```rust
 let (dpk, sk) = Issuer::new_short_keys(None);
-let dst = DomainSeparationTag::new("testgen", None, None, None).unwrap();
-let pk = dpk.to_public_key(5, dst).unwrap();
+let pk = dpk.to_public_key(5).unwrap();
 ```
 
 ## Signing
@@ -58,11 +57,11 @@ To create a signature:
 ```rust
 let (pk, sk) = Issuer::new_keys(5).unwrap();
 let messages = vec![
-    SignatureMessage::from_msg_hash(b"message 1"),
-    SignatureMessage::from_msg_hash(b"message 2"),
-    SignatureMessage::from_msg_hash(b"message 3"),
-    SignatureMessage::from_msg_hash(b"message 4"),
-    SignatureMessage::from_msg_hash(b"message 5"),
+    SignatureMessage::hash(b"message 1"),
+    SignatureMessage::hash(b"message 2"),
+    SignatureMessage::hash(b"message 3"),
+    SignatureMessage::hash(b"message 4"),
+    SignatureMessage::hash(b"message 5"),
 ];
 
 let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -78,7 +77,7 @@ let (pk, sk) = Issuer::new_keys(5).unwrap();
 
 // Done by the signature recipient
 
-let message = SignatureMessage::from_msg_hash(b"message_0");
+let message = SignatureMessage::hash(b"message_0");
 
 let signature_blinding = Signature::generate_blinding();
 
@@ -175,11 +174,11 @@ The Verifier must trust the signer of the credential and know the message struct
 ```rust
 let (pk, sk) = Issuer::new_keys(5).unwrap();
 let messages = vec![
-    SignatureMessage::from_msg_hash(b"message_1"),
-    SignatureMessage::from_msg_hash(b"message_2"),
-    SignatureMessage::from_msg_hash(b"message_3"),
-    SignatureMessage::from_msg_hash(b"message_4"),
-    SignatureMessage::from_msg_hash(b"message_5"),
+    SignatureMessage::hash(b"message_1"),
+    SignatureMessage::hash(b"message_2"),
+    SignatureMessage::hash(b"message_3"),
+    SignatureMessage::hash(b"message_4"),
+    SignatureMessage::hash(b"message_5"),
 ];
 
 let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -206,7 +205,7 @@ let mut challenge_bytes = Vec::new();
 challenge_bytes.extend_from_slice(pok.to_bytes().as_slice());
 challenge_bytes.extend_from_slice(nonce.to_bytes().as_slice());
 
-let challenge = SignatureNonce::from_msg_hash(&challenge_bytes);
+let challenge = ProofNonce::hash(&challenge_bytes);
 
 let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
