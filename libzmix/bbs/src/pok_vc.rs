@@ -485,16 +485,6 @@ macro_rules! test_PoK_VC {
     };
 }
 
-// Proof of knowledge of committed values in a vector commitment. The commitment lies in group G1.
-// pok_vc_impl!(
-//     ProverCommittingG1,
-//     ProverCommittedG1,
-//     ProofG1,
-//     G1,
-//     G1_UNCOMPRESSED_SIZE,
-//     G1_COMPRESSED_SIZE
-// );
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -512,17 +502,4 @@ mod tests {
             G1_UNCOMPRESSED_SIZE
         );
     }
-
-    // #[test]
-    // fn test_pok_vc_g2() {
-    //     let n = 5;
-    //     test_PoK_VC!(
-    //         n,
-    //         ProverCommittingG2,
-    //         ProverCommittedG2,
-    //         ProofG2,
-    //         G2,
-    //         G2_UNCOMPRESSED_SIZE
-    //     );
-    // }
 }
