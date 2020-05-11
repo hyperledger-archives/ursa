@@ -226,7 +226,7 @@ impl Signature {
         verkey: &PublicKey,
     ) -> Result<Self, BBSError> {
         check_verkey_message!(
-            messages.len() != verkey.message_count(),
+            messages.len() > verkey.message_count(),
             verkey.message_count(),
             messages.len()
         );
@@ -308,7 +308,8 @@ impl Signature {
         bases.push(verkey.h0.0.clone());
         scalars.push((*s).clone());
 
-        for i in 0..verkey.message_count() {
+        let min = std::cmp::min(verkey.message_count(), messages.len());
+        for i in 0..min {
             bases.push(verkey.h[i].0.clone());
             scalars.push(messages[i].0.clone());
         }
@@ -384,7 +385,7 @@ mod tests {
         assert!(res.is_ok());
         let messages = Vec::new();
         let res = Signature::new(messages.as_slice(), &signkey, &verkey);
-        assert!(res.is_err());
+        assert!(res.is_ok());
     }
 
     #[test]
