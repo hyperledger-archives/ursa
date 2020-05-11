@@ -3,20 +3,26 @@ use crate::keys::PublicKey;
 use crate::messages::*;
 use crate::pok_vc::prelude::*;
 use crate::signature::Signature;
-use crate::{multi_scalar_mul_const_time_g1, ProofChallenge, SignatureMessage, ToVariableLengthBytes, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE, GeneratorG1, Commitment, CommitmentBuilder};
+use crate::{
+    multi_scalar_mul_const_time_g1, Commitment, CommitmentBuilder, GeneratorG1, ProofChallenge,
+    SignatureMessage, ToVariableLengthBytes, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE,
+};
 
 use ff_zeroize::{Field, PrimeField};
+use pairing_plus::serdes::SerDes;
 use pairing_plus::{
     bls12_381::{Bls12, Fq12, Fr, FrRepr, G1, G2},
     CurveAffine, CurveProjective, Engine,
 };
-use serde::{Deserialize, Serialize, Deserializer, Serializer, de::{Error as DError, Visitor}};
-use pairing_plus::serdes::SerDes;
 use rand::thread_rng;
+use serde::{
+    de::{Error as DError, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryFrom;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::io::Cursor;
-use std::convert::TryFrom;
 
 /// Convenience importing module
 pub mod prelude {
@@ -383,12 +389,15 @@ impl PoKOfSignatureProof {
         let mut a_bar_d = self.a_bar;
         a_bar_d.sub_assign(&self.d);
         // let a_bar_d = &self.a_bar - &self.d;
-        if !self.proof_vc_1.verify(&bases, &Commitment(a_bar_d), &challenge)? {
+        if !self
+            .proof_vc_1
+            .verify(&bases, &Commitment(a_bar_d), &challenge)?
+        {
             return Ok(PoKOfSignatureProofStatus::BadHiddenMessage);
         }
 
         let mut bases_pok_vc_2 = Vec::with_capacity(2 + vk.message_count() - revealed_msgs.len());
-        bases_pok_vc_2.push( GeneratorG1(self.d.clone()));
+        bases_pok_vc_2.push(GeneratorG1(self.d.clone()));
         bases_pok_vc_2.push(vk.h0.clone());
 
         // `bases_disclosed` and `exponents` below are used to create g1 * h1^-m1 * h2^-m2.... for all disclosed messages m_i
@@ -488,12 +497,11 @@ impl PoKOfSignatureProof {
                 })
             })?;
 
-        let proof_vc_2 =
-            ProofG1::from_bytes(&data[end..], g1_size, compressed).map_err(|e| {
-                BBSError::from_kind(BBSErrorKind::PoKVCError {
-                    msg: format!("{}", e),
-                })
-            })?;
+        let proof_vc_2 = ProofG1::from_bytes(&data[end..], g1_size, compressed).map_err(|e| {
+            BBSError::from_kind(BBSErrorKind::PoKVCError {
+                msg: format!("{}", e),
+            })
+        })?;
         Ok(Self {
             a_prime,
             a_bar,
@@ -533,8 +541,8 @@ serdes_impl!(PoKOfSignatureProof);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RandomElem, HashElem, ProofNonce};
     use crate::keys::generate;
+    use crate::{HashElem, ProofNonce, RandomElem};
 
     #[test]
     fn pok_signature_no_revealed_messages() {
@@ -582,7 +590,11 @@ mod tests {
     #[test]
     fn pok_signature_revealed_message() {
         let message_count = 5;
-        let messages: Vec<SignatureMessage> = (0..message_count).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
+        let messages: Vec<SignatureMessage> = (0..message_count)
+            .collect::<Vec<usize>>()
+            .iter()
+            .map(|_| SignatureMessage::random())
+            .collect();
         let (verkey, signkey) = generate(message_count).unwrap();
 
         let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
@@ -658,7 +670,11 @@ mod tests {
         let (vk, signkey) = generate(message_count).unwrap();
 
         let same_msg = SignatureMessage::random();
-        let mut msgs_1: Vec<SignatureMessage> = (0..message_count-1).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
+        let mut msgs_1: Vec<SignatureMessage> = (0..message_count - 1)
+            .collect::<Vec<usize>>()
+            .iter()
+            .map(|_| SignatureMessage::random())
+            .collect();
         let mut proof_messages_1 = Vec::with_capacity(message_count);
 
         for m in msgs_1.iter() {
@@ -672,7 +688,11 @@ mod tests {
         let sig_1 = Signature::new(msgs_1.as_slice(), &signkey, &vk).unwrap();
         assert!(sig_1.verify(msgs_1.as_slice(), &vk).unwrap());
 
-        let mut msgs_2: Vec<SignatureMessage> = (0..message_count-1).collect::<Vec<usize>>().iter().map(|_| SignatureMessage::random()).collect();
+        let mut msgs_2: Vec<SignatureMessage> = (0..message_count - 1)
+            .collect::<Vec<usize>>()
+            .iter()
+            .map(|_| SignatureMessage::random())
+            .collect();
         let mut proof_messages_2 = Vec::with_capacity(message_count);
         for m in msgs_2.iter() {
             proof_messages_2.push(pm_hidden_raw!(m.clone()));

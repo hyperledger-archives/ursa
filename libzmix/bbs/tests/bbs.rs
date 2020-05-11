@@ -206,7 +206,9 @@ fn pok_sig_extra_message() {
     };
 
     proof.revealed_messages.remove(&4);
-    proof.revealed_messages.insert(3, SignatureMessage::random());
+    proof
+        .revealed_messages
+        .insert(3, SignatureMessage::random());
     match Verifier::verify_signature_pok(&proof_request, &proof, &nonce) {
         Ok(_) => assert!(false),
         Err(_) => assert!(true),
