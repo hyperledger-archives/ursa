@@ -116,8 +116,10 @@ impl Prover {
     /// # Arguments
     /// * `poks` - a vec of PoKOfSignature objects
     /// * `nonce` - a SignatureNonce
+    /// * `claims` - a vec of strings the prover wishes to include in the challenge (may be empty)
     pub fn create_challenge_hash(
         pok_sigs: Vec<PoKOfSignature>,
+        claims: Vec<&str>,
         nonce: &SignatureNonce,
     ) -> Result<SignatureNonce, BBSError> {
         let mut bytes = Vec::new();
@@ -126,6 +128,9 @@ impl Prover {
             bytes.extend_from_slice(p.to_bytes().as_slice());
         }
         bytes.extend_from_slice(&nonce.to_bytes()[..]);
+        for c in claims{
+            bytes.extend_from_slice(c.as_bytes());
+        }
 
         let challenge = SignatureNonce::from_msg_hash(&bytes);
 
