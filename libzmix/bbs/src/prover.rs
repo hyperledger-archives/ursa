@@ -128,7 +128,7 @@ impl Prover {
             bytes.extend_from_slice(p.to_bytes().as_slice());
         }
         bytes.extend_from_slice(&nonce.to_bytes()[..]);
-        for c in claims{
+        for c in claims {
             bytes.extend_from_slice(c.as_bytes());
         }
 

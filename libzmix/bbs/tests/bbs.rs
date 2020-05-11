@@ -241,7 +241,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![],&nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![], &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof_request.revealed_messages.insert(0);
@@ -270,7 +270,7 @@ fn pok_sig_bad_message() {
 }
 
 #[test]
-fn test_challenge_hash_with_prover_claims(){
+fn test_challenge_hash_with_prover_claims() {
     //issue credential
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
@@ -316,7 +316,7 @@ fn test_challenge_hash_with_prover_claims(){
         proof_request.revealed_messages.clone(),
         &proof_request.verification_key,
     );
-    for c in claims{
+    for c in claims {
         ver_chal_bytes.extend_from_slice(c.as_bytes());
     }
 
