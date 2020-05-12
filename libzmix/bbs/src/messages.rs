@@ -16,7 +16,7 @@ macro_rules! sm_map {
 #[macro_export]
 macro_rules! pm_revealed {
     ($data:expr) => {
-        ProofMessage::Revealed(crate::SignatureMessage::hash($data))
+        ProofMessage::Revealed(SignatureMessage::hash($data))
     };
 }
 
@@ -35,12 +35,12 @@ macro_rules! pm_revealed_raw {
 macro_rules! pm_hidden {
     ($data:expr) => {
         ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(
-            crate::SignatureMessage::hash($data),
+            SignatureMessage::hash($data),
         ))
     };
     ($data:expr, $bf:expr) => {
         ProofMessage::Hidden(HiddenMessage::ExternalBlinding(
-            crate::SignatureMessage::hash($data),
+            SignatureMessage::hash($data),
             $bf,
         ))
     };
