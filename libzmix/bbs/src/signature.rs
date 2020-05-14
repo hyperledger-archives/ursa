@@ -102,6 +102,14 @@ macro_rules! try_from_impl {
                 Ok(Self { a, e, s })
             }
         }
+
+         impl TryFrom<Vec<u8>> for $name {
+            type Error = BBSError;
+
+            fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+                Self::try_from(value.as_slice())
+            }
+         }
     };
 }
 
