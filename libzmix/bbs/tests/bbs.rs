@@ -397,13 +397,6 @@ fn bbs_demo() {
     // and additionally communicates the request for a ZK equality proof of
     // claim2 from credential1 and claim3 from credential2.
 
-    // Verifier creates proof request for credential2 from Issuer2
-    let proof_request2 = Verifier::new_proof_request(&[], &pk2).unwrap();
-
-    // Verifier sends verifier_nonce, proof_request1, and proof_request2 to Prover
-    // and additionally communicates the request for a ZK equality proof of
-    // claim2 from credential1 and claim3 from credential2.
-
     // Prover creates a blinding factor to use for his link secrets.
     let link_secret_blinding = SignatureNonce::random();
 
