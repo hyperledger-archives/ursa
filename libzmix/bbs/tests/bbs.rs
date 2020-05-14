@@ -279,11 +279,11 @@ fn test_challenge_hash_with_prover_claims() {
     //issue credential
     let (pk, sk) = Issuer::new_keys(5).unwrap();
     let messages = vec![
-        SignatureMessage::from_msg_hash(b"message_1"),
-        SignatureMessage::from_msg_hash(b"message_2"),
-        SignatureMessage::from_msg_hash(b"message_3"),
-        SignatureMessage::from_msg_hash(b"message_4"),
-        SignatureMessage::from_msg_hash(b"message_5"),
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
     ];
 
     let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
@@ -327,8 +327,8 @@ fn test_challenge_hash_with_prover_claims() {
 
     // Verifier completes ver_challenge_bytes by adding verifier_nonce,
     // then constructs the challenge
-    ver_chal_bytes.extend_from_slice(&nonce.to_bytes()[..]);
-    let ver_challenge = SignatureNonce::from_msg_hash(&ver_chal_bytes);
+    ver_chal_bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
+    let ver_challenge = ProofChallenge::hash(&ver_chal_bytes);
 
     // Verifier checks proof1
     let res = proof.proof.verify(

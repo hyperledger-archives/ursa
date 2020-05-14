@@ -10,7 +10,7 @@ use crate::signature::prelude::*;
 /// or can have some (0 to all) messages blindly signed by the issuer.
 use crate::{
     BlindSignatureContext, CommitmentBuilder, ProofChallenge, ProofNonce, ProofRequest, RandomElem,
-    SignatureBlinding, SignatureMessage, SignatureProof,
+    SignatureBlinding, SignatureMessage, SignatureProof, HashElem
 };
 use std::collections::BTreeMap;
 
@@ -125,19 +125,19 @@ impl Prover {
     pub fn create_challenge_hash(
         pok_sigs: Vec<PoKOfSignature>,
         claims: Vec<&str>,
-        nonce: &SignatureNonce,
-    ) -> Result<SignatureNonce, BBSError> {
+        nonce: &ProofNonce,
+    ) -> Result<ProofChallenge, BBSError> {
         let mut bytes = Vec::new();
 
         for p in pok_sigs {
             bytes.extend_from_slice(p.to_bytes().as_slice());
         }
-        bytes.extend_from_slice(&nonce.to_bytes()[..]);
+        bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
         for c in claims {
             bytes.extend_from_slice(c.as_bytes());
         }
 
-        let challenge = SignatureNonce::from_msg_hash(&bytes);
+        let challenge = ProofChallenge::hash(&bytes);
 
         Ok(challenge)
     }
