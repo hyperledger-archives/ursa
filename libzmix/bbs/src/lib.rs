@@ -41,6 +41,7 @@ use pairing_plus::{
 use pok_sig::prelude::*;
 use pok_vc::prelude::*;
 use rand::prelude::*;
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
 
@@ -319,21 +320,39 @@ pub(crate) fn multi_scalar_mul_var_time_g1<G: AsRef<[G1]>, S: AsRef<[Fr]>>(
 ) -> G1 {
     let bases = bases.as_ref();
     let scalars = scalars.as_ref();
-    bases
-        .par_iter()
-        .zip(scalars.par_iter())
-        .map(|(b, s)| {
-            let mut t = b.clone();
-            t.mul_assign(*s);
-            t
-        })
-        .reduce(
-            || G1::zero(),
-            |mut acc, b| {
+    #[cfg(feature = "rayon")]
+    {
+        bases
+            .par_iter()
+            .zip(scalars.par_iter())
+            .map(|(b, s)| {
+                let mut t = b.clone();
+                t.mul_assign(*s);
+                t
+            })
+            .reduce(
+                || G1::zero(),
+                |mut acc, b| {
+                    acc.add_assign(&b);
+                    acc
+                },
+            )
+    }
+    #[cfg(not(feature = "rayon"))]
+    {
+        bases
+            .iter()
+            .zip(scalars.iter())
+            .map(|(b, s)| {
+                let mut t = b.clone();
+                t.mul_assign(*s);
+                t
+            })
+            .fold(G1::zero(), |mut acc, b| {
                 acc.add_assign(&b);
                 acc
-            },
-        )
+            })
+    }
 }
 
 /// Contains the data used for computing a blind signature and verifying
