@@ -12,6 +12,7 @@ use pairing_plus::{
     CurveProjective,
 };
 use rand::prelude::*;
+#[cfg(feature = "rayon")]
 use rayon::prelude::*;
 use serde::{
     de::{Error as DError, Visitor},
@@ -243,9 +244,14 @@ impl DeterministicPublicKey {
         // message_count
         data.extend_from_slice(&mc_bytes[..]);
 
-        let h = (0..=message_count)
-            .collect::<Vec<usize>>()
-            .par_iter()
+        let gen_count: Vec<usize> = (0..=message_count).collect();
+
+        #[cfg(feature = "rayon")]
+        let temp_iter = gen_count.par_iter();
+        #[cfg(not(feature = "rayon"))]
+        let temp_iter = gen_count.iter();
+
+        let h = temp_iter
             .map(|i| {
                 let mut temp = data.clone();
                 let ii = *i as u32;
@@ -271,9 +277,14 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
 
     let mut w = G2::one();
     w.mul_assign(secret.0.clone());
-    let h = (0..=message_count)
-        .collect::<Vec<usize>>()
-        .par_iter()
+    let gen_count: Vec<usize> = (0..=message_count).collect();
+
+    #[cfg(feature = "rayon")]
+    let temp_iter = gen_count.par_iter();
+    #[cfg(not(feature = "rayon"))]
+    let temp_iter = gen_count.iter();
+
+    let h = temp_iter
         .map(|_| {
             let mut rng = thread_rng();
             let mut seed = [0u8; 32];
