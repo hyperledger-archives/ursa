@@ -9,7 +9,7 @@ use crate::signature::prelude::*;
 /// `PublicKey` later. The latter is primarily used for storing a shorter
 /// key and looks just like a regular ECC key.
 use crate::{BlindSignatureContext, ProofNonce, RandomElem, SignatureMessage};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// This struct represents an Issuer of signatures or Signer.
 /// Provided are methods for signing regularly where all messages are known
@@ -45,7 +45,8 @@ impl Issuer {
         verkey: &PublicKey,
         nonce: &ProofNonce,
     ) -> Result<BlindSignature, BBSError> {
-        if ctx.verify(messages, verkey, nonce)? {
+        let revealed_messages: BTreeSet<usize> = messages.keys().map(|i| *i).collect();
+        if ctx.verify(&revealed_messages, verkey, nonce)? {
             BlindSignature::new(&ctx.commitment, messages, signkey, verkey)
         } else {
             Err(BBSErrorKind::GeneralError {
