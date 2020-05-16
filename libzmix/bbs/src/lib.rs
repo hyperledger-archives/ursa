@@ -420,7 +420,7 @@ impl BlindSignatureContext {
     /// way
     pub fn verify(
         &self,
-        messages: &BTreeMap<usize, SignatureMessage>,
+        revealed_messages: &BTreeSet<usize>,
         verkey: &PublicKey,
         nonce: &ProofNonce,
     ) -> Result<bool, BBSError> {
@@ -429,7 +429,7 @@ impl BlindSignatureContext {
         let mut bases = Vec::new();
         bases.push(verkey.h0.clone());
         for i in 0..verkey.message_count() {
-            if !messages.contains_key(&i) {
+            if !revealed_messages.contains(&i) {
                 bases.push(verkey.h[i].clone());
             }
         }
