@@ -461,7 +461,6 @@ fn bbs_demo() {
     // Verifier creates proof request for credential2 from Issuer2
     let proof_request2 = Verifier::new_proof_request(&[], &pk2).unwrap();
 
-    let proof_request = Verifier::new_proof_request(&[1, 3], &pk).unwrap();
     // and additionally communicates the request for a ZK equality proof of
     // claim2 from credential1 and claim3 from credential2.
 
