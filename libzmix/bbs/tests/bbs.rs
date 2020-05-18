@@ -351,7 +351,7 @@ fn bbs_demo() {
     // (one of which is the blinded link secret)
     let (pk1, sk1) = Issuer::new_keys(5).unwrap();
 
-    let same_claim = SignatureMessage::from_msg_hash(b"same_claim");
+    let same_claim = SignatureMessage::hash(b"same_claim");
 
     // Prover desires a credential from Issuer1,
     // Issuer1 constructs the credential
@@ -470,11 +470,11 @@ fn bbs_demo() {
     // claim2 from credential1 and claim3 from credential2.
 
     // Prover creates a blinding factor to use for his link secrets.
-    let link_secret_blinding = SignatureNonce::random();
+    let link_secret_blinding = ProofNonce::random();
 
     // Prover creates a blinding factor to use for the ZK equality proof of
     // claim2 from credential1 and claim3 from credential2.
-    let same_blinding = SignatureNonce::random();
+    let same_blinding = ProofNonce::random();
 
     // Prover constructs proof messages from credential1
     // for selective disclosure of claim1 and ZK equality proof of claim2
@@ -512,8 +512,8 @@ fn bbs_demo() {
 
     // Prover completes challenge_bytes by adding verifier_nonce,
     // then constructs the challenge
-    chal_bytes.extend_from_slice(&verifier_nonce.to_bytes()[..]);
-    let challenge = SignatureNonce::from_msg_hash(&chal_bytes);
+    chal_bytes.extend_from_slice(&verifier_nonce.to_bytes_uncompressed_form()[..]);
+    let challenge = ProofChallenge::hash(&chal_bytes);
 
     // Prover constructs the proofs and sends them to the Verifier
     let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
@@ -537,8 +537,8 @@ fn bbs_demo() {
 
     // Verifier completes ver_challenge_bytes by adding verifier_nonce,
     // then constructs the challenge
-    ver_chal_bytes.extend_from_slice(&verifier_nonce.to_bytes()[..]);
-    let ver_challenge = SignatureNonce::from_msg_hash(&ver_chal_bytes);
+    ver_chal_bytes.extend_from_slice(&verifier_nonce.to_bytes_uncompressed_form()[..]);
+    let ver_challenge = ProofChallenge::hash(&ver_chal_bytes);
 
     // Verifier checks proof1
     let res1 = proof1.proof.verify(
