@@ -630,8 +630,8 @@ fn bbs_demo() {
     let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
     let proof2 = Prover::generate_signature_pok(pok2, &challenge).unwrap();
 
-    // Verifier creates their own challenge bytes with proof1, proo
-    // and adds proof1 and proof2 to it
+    // Verifier creates their own challenge bytes with proof1, proof2,
+    // proof_request1, proof_request2, and nonce
     let ver_challenge = Verifier::create_challenge_hash(
         &[proof1.clone(), proof2.clone()],
         &[proof_request1.clone(), proof_request2.clone()],
