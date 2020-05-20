@@ -505,15 +505,10 @@ fn bbs_demo() {
         Prover::commit_signature_pok(&proof_request2, proof_messages2.as_slice(), &complete_sig2)
             .unwrap();
 
-    // Prover creates challenge_bytes and adds pok1 and pok2 to it.
-    let mut chal_bytes = Vec::new();
-    chal_bytes.extend_from_slice(pok1.to_bytes().as_slice());
-    chal_bytes.extend_from_slice(pok2.to_bytes().as_slice());
-
-    // Prover completes challenge_bytes by adding verifier_nonce,
-    // then constructs the challenge
-    chal_bytes.extend_from_slice(&verifier_nonce.to_bytes_uncompressed_form()[..]);
-    let challenge = ProofChallenge::hash(&chal_bytes);
+    // Prover creates challenge hash from pok1, pok2, and nonce
+    let challenge =
+        Prover::create_challenge_hash(vec![pok1.clone(), pok2.clone()], vec![], &verifier_nonce)
+            .unwrap();
 
     // Prover constructs the proofs and sends them to the Verifier
     let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
