@@ -140,7 +140,7 @@ fn pok_sig() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -181,7 +181,7 @@ fn pok_sig_extra_message() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -246,7 +246,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof_request.revealed_messages.insert(0);
@@ -260,7 +260,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let challenge = Prover::create_challenge_hash(vec![pok.clone()], vec![], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof
@@ -305,30 +305,29 @@ fn test_challenge_hash_with_prover_claims() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let claims = vec!["self-attested claim1", "self-attested claim2"];
+    let claims = vec![
+        "self-attested claim1".as_bytes(),
+        "self-attested claim2".as_bytes(),
+    ];
 
     // complete other zkps as desired and compute `challenge_hash`
     let challenge =
-        Prover::create_challenge_hash(vec![pok.clone()], claims.clone(), &nonce).unwrap();
+        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
     // Send `proof`, `claims`, and `challenge` to Verifier
 
-    // Verifier creates their own challenge bytes
-    // and adds proof and claims to it
-    let mut ver_chal_bytes = proof.proof.get_bytes_for_challenge(
-        proof_request.revealed_messages.clone(),
-        &proof_request.verification_key,
-    );
-    for c in claims {
-        ver_chal_bytes.extend_from_slice(c.as_bytes());
-    }
+    // Verifier creates their own challenge bytes using proof, proof_request, claims, and nonce
+    let ver_challenge = Verifier::create_challenge_hash(
+        &[proof.clone()],
+        &[proof_request.clone()],
+        claims.as_slice(),
+        &nonce,
+    )
+    .unwrap();
 
-    // Verifier completes ver_challenge_bytes by adding verifier_nonce,
-    // then constructs the challenge
-    ver_chal_bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
-    let ver_challenge = ProofChallenge::hash(&ver_chal_bytes);
+    assert_eq!(challenge, ver_challenge);
 
     // Verifier checks proof1
     let res = proof.proof.verify(
@@ -340,6 +339,124 @@ fn test_challenge_hash_with_prover_claims() {
         Ok(_) => assert!(true),   // check revealed messages
         Err(_) => assert!(false), // Why did the proof fail?
     };
+}
+
+#[test]
+fn test_challenge_hash_with_false_prover_claims_fails() {
+    //issue credential
+    let (pk, sk) = Issuer::new_keys(5).unwrap();
+    let messages = vec![
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
+    ];
+
+    let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
+
+    //verifier requests credential
+    let nonce = Verifier::generate_proof_nonce();
+    let proof_request = Verifier::new_proof_request(&[1, 3], &pk).unwrap();
+
+    // Sends `proof_request` and `nonce` to the prover
+    let proof_messages = vec![
+        pm_hidden!(b"message_1"),
+        pm_revealed!(b"message_2"),
+        pm_hidden!(b"message_3"),
+        pm_revealed!(b"message_4"),
+        pm_hidden!(b"message_5"),
+    ];
+
+    // prover creates pok for proof request
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
+
+    let claims = vec![
+        "self-attested claim1".as_bytes(),
+        "self-attested claim2".as_bytes(),
+    ];
+
+    // complete other zkps as desired and compute `challenge_hash`
+    let challenge =
+        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
+
+    let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
+
+    // Send `proof`, `claims`, and `challenge` to Verifier
+
+    // Verifier creates their own challenge bytes using proof, proof_request, and nonce,
+    // but tries to falsify claims
+    let ver_challenge = Verifier::create_challenge_hash(
+        &[proof.clone()],
+        &[proof_request.clone()],
+        &["false_claim".as_bytes()],
+        &nonce,
+    )
+    .unwrap();
+
+    assert_ne!(challenge, ver_challenge);
+
+    // Verifier checks proof
+    let res = proof.proof.verify(
+        &proof_request.verification_key,
+        &proof.revealed_messages,
+        &ver_challenge,
+    );
+    match res {
+        Ok(b) => assert!(!b.is_valid()), // check revealed messages
+        Err(_) => assert!(false),        // Why did the proof fail?
+    };
+}
+
+#[test]
+fn test_challenge_hash_with_false_prover_claims() {
+    //create credential
+    let (pk, sk) = Issuer::new_keys(5).unwrap();
+    let messages = vec![
+        SignatureMessage::hash(b"message_1"),
+        SignatureMessage::hash(b"message_2"),
+        SignatureMessage::hash(b"message_3"),
+        SignatureMessage::hash(b"message_4"),
+        SignatureMessage::hash(b"message_5"),
+    ];
+    let signature = Signature::new(messages.as_slice(), &sk, &pk).unwrap();
+
+    // create nonce and proof request
+    let nonce = Verifier::generate_proof_nonce();
+    let proof_request = Verifier::new_proof_request(&[1, 3], &pk).unwrap();
+
+    // create proof
+    let proof_messages = vec![
+        pm_hidden!(b"message_1"),
+        pm_revealed!(b"message_2"),
+        pm_hidden!(b"message_3"),
+        pm_revealed!(b"message_4"),
+        pm_hidden!(b"message_5"),
+    ];
+    let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
+        .unwrap();
+    // add claims for challenge hash
+    let claims = vec![
+        "self-attested claim1".as_bytes(),
+        "self-attested claim2".as_bytes(),
+    ];
+    let challenge =
+        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
+    let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
+
+    // Create verifier challenge hash
+    // but falsify claims
+    let ver_challenge = Verifier::create_challenge_hash(
+        &[proof.clone()],
+        &[proof_request.clone()],
+        &["false_claim".as_bytes()],
+        &nonce,
+    )
+    .unwrap();
+
+    // hashes are not the same
+    assert_ne!(challenge, ver_challenge);
 }
 
 #[test]
@@ -507,33 +624,21 @@ fn bbs_demo() {
 
     // Prover creates challenge hash from pok1, pok2, and nonce
     let challenge =
-        Prover::create_challenge_hash(vec![pok1.clone(), pok2.clone()], vec![], &verifier_nonce)
-            .unwrap();
+        Prover::create_challenge_hash(&[pok1.clone(), pok2.clone()], &[], &verifier_nonce).unwrap();
 
     // Prover constructs the proofs and sends them to the Verifier
     let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
     let proof2 = Prover::generate_signature_pok(pok2, &challenge).unwrap();
 
-    // Verifier creates their own challenge bytes
+    // Verifier creates their own challenge bytes with proof1, proo
     // and adds proof1 and proof2 to it
-    let mut ver_chal_bytes = proof1.proof.get_bytes_for_challenge(
-        proof_request1.revealed_messages.clone(),
-        &proof_request1.verification_key,
-    );
-    ver_chal_bytes.extend_from_slice(
-        proof2
-            .proof
-            .get_bytes_for_challenge(
-                proof_request2.revealed_messages.clone(),
-                &proof_request2.verification_key,
-            )
-            .as_slice(),
-    );
-
-    // Verifier completes ver_challenge_bytes by adding verifier_nonce,
-    // then constructs the challenge
-    ver_chal_bytes.extend_from_slice(&verifier_nonce.to_bytes_uncompressed_form()[..]);
-    let ver_challenge = ProofChallenge::hash(&ver_chal_bytes);
+    let ver_challenge = Verifier::create_challenge_hash(
+        &[proof1.clone(), proof2.clone()],
+        &[proof_request1.clone(), proof_request2.clone()],
+        &[],
+        &verifier_nonce,
+    )
+    .unwrap();
 
     // Verifier checks proof1
     let res1 = proof1.proof.verify(
@@ -546,7 +651,7 @@ fn bbs_demo() {
         Err(_) => assert!(false), // Why did the proof fail?
     };
 
-    // Verifier checks proof1
+    // Verifier checks proof2
     let res2 = proof2.proof.verify(
         &proof_request2.verification_key,
         &proof2.revealed_messages,

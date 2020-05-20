@@ -71,4 +71,35 @@ impl Verifier {
     pub fn generate_proof_nonce() -> ProofNonce {
         ProofNonce::random()
     }
+
+    /// create the challenge hash for a set of proofs
+    ///
+    /// # Arguments
+    /// * `proofs` - a vec of SignatureProof objects
+    /// * `proof_requests` - a corresponding vec of ProofRequest objects
+    /// * `nonce` - a SignatureNonce
+    /// * `claims` - a vec of strings the prover wishes to include in the challenge (may be empty)
+    pub fn create_challenge_hash(
+        proofs: &[SignatureProof],
+        proof_requests: &[ProofRequest],
+        claims: &[&[u8]],
+        nonce: &ProofNonce,
+    ) -> Result<ProofChallenge, BBSError> {
+        let mut bytes = Vec::new();
+
+        for pr in proofs.iter().zip(proof_requests.iter()) {
+            let (p, r) = pr;
+            bytes.extend_from_slice(
+                p.proof
+                    .get_bytes_for_challenge(r.revealed_messages.clone(), &r.verification_key)
+                    .as_slice(),
+            );
+        }
+        bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
+        for c in claims {
+            bytes.extend_from_slice(c);
+        }
+        let challenge = ProofChallenge::hash(&bytes);
+        Ok(challenge)
+    }
 }

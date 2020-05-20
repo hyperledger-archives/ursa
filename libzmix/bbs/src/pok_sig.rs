@@ -588,6 +588,50 @@ mod tests {
     }
 
     #[test]
+    fn pok_signature_no_revealed_messages_wrong_hash() {
+        let message_count = 5;
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
+        let (verkey, signkey) = generate(message_count).unwrap();
+
+        let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
+        let res = sig.verify(messages.as_slice(), &verkey);
+        assert!(res.unwrap());
+        let proof_messages = vec![
+            pm_hidden_raw!(messages[0].clone()),
+            pm_hidden_raw!(messages[1].clone()),
+            pm_hidden_raw!(messages[2].clone()),
+            pm_hidden_raw!(messages[3].clone()),
+            pm_hidden_raw!(messages[4].clone()),
+        ];
+        let revealed_msg: BTreeMap<usize, SignatureMessage> = BTreeMap::new();
+
+        let pok = PoKOfSignature::init(&sig, &verkey, proof_messages.as_slice()).unwrap();
+        let challenge_prover = ProofChallenge::hash(&pok.to_bytes());
+        let proof = pok.gen_proof(&challenge_prover).unwrap();
+
+        // Test to_bytes
+        let proof_bytes = proof.to_bytes_uncompressed_form();
+        let proof_cp = PoKOfSignatureProof::from_bytes_uncompressed_form(&proof_bytes);
+        assert!(proof_cp.is_ok());
+
+        let proof_bytes = proof.to_bytes_compressed_form();
+        let proof_cp = PoKOfSignatureProof::from_bytes_compressed_form(&proof_bytes);
+        assert!(proof_cp.is_ok());
+
+        // The verifier generates the challenge on its own.
+        let mut challenge_bytes = proof.get_bytes_for_challenge(BTreeSet::new(), &verkey);
+        challenge_bytes.extend_from_slice("extra".as_bytes());
+        let challenge_verifier = ProofChallenge::hash(&challenge_bytes);
+        assert!(!proof
+            .verify(&verkey, &revealed_msg, &challenge_verifier)
+            .unwrap()
+            .is_valid());
+    }
+
+    #[test]
     fn pok_signature_revealed_message() {
         let message_count = 5;
         let messages: Vec<SignatureMessage> = (0..message_count)

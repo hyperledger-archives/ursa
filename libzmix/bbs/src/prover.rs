@@ -123,8 +123,8 @@ impl Prover {
     /// * `nonce` - a SignatureNonce
     /// * `claims` - a vec of strings the prover wishes to include in the challenge (may be empty)
     pub fn create_challenge_hash(
-        pok_sigs: Vec<PoKOfSignature>,
-        claims: Vec<&str>,
+        pok_sigs: &[PoKOfSignature],
+        claims: &[&[u8]],
         nonce: &ProofNonce,
     ) -> Result<ProofChallenge, BBSError> {
         let mut bytes = Vec::new();
@@ -134,11 +134,10 @@ impl Prover {
         }
         bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
         for c in claims {
-            bytes.extend_from_slice(c.as_bytes());
+            bytes.extend_from_slice(c);
         }
 
         let challenge = ProofChallenge::hash(&bytes);
-
         Ok(challenge)
     }
 
