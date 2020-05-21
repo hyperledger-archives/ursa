@@ -387,6 +387,15 @@ impl ProofG1 {
     }
 }
 
+impl Default for ProofG1 {
+    fn default() -> Self {
+        Self {
+            commitment: G1::zero(),
+            responses: Vec::new()
+        }
+    }
+}
+
 impl ToVariableLengthBytes for ProofG1 {
     type Output = ProofG1;
     type Error = PoKVCError;

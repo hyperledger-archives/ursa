@@ -98,6 +98,27 @@ macro_rules! try_from_impl {
                 Self::try_from(value.as_slice())
             }
         }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    a: G1::zero(),
+                    e: Fr::zero(),
+                    s: Fr::zero()
+                }
+            }
+        }
+
+        #[cfg(feature = "wasm")]
+        impl From<Box<[u8]>> for $name {
+            fn from(data: Box<[u8]>) -> $name {
+                let data = Vec::from(data);
+                match $name::try_from(data) {
+                    Ok(t) => t,
+                    Err(_) => $name::default()
+                }
+            }
+        }
     };
 }
 

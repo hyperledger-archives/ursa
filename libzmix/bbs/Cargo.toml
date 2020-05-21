@@ -14,6 +14,7 @@ maintenance = { status = "active" }
 
 [features]
 default = ["rayon"]
+wasm = []
 
 [dependencies]
 arrayref = "0.3"
