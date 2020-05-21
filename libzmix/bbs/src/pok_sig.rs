@@ -478,8 +478,7 @@ impl PoKOfSignatureProof {
 
         offset = end;
         end = offset + proof1_bytes;
-        let proof_vc_1 =
-            ProofG1::from_bytes(&data[offset..end], g1_size, compressed)?;
+        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end], g1_size, compressed)?;
 
         let proof_vc_2 = ProofG1::from_bytes(&data[end..], g1_size, compressed)?;
         Ok(Self {

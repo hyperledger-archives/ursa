@@ -99,7 +99,9 @@ impl From<BBSErrorKind> for BBSError {
 
 impl From<std::io::Error> for BBSError {
     fn from(err: std::io::Error) -> BBSError {
-        BBSError::from_kind(BBSErrorKind::GeneralError { msg: format!("{:?}", err)})
+        BBSError::from_kind(BBSErrorKind::GeneralError {
+            msg: format!("{:?}", err),
+        })
     }
 }
 
