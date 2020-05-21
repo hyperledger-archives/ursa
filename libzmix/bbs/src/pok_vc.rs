@@ -90,7 +90,9 @@ impl From<PoKVCErrorKind> for PoKVCError {
 
 impl From<std::io::Error> for PoKVCError {
     fn from(err: std::io::Error) -> Self {
-        PoKVCError::from_kind(PoKVCErrorKind::GeneralError { msg: format!("{:?}", err) })
+        PoKVCError::from_kind(PoKVCErrorKind::GeneralError {
+            msg: format!("{:?}", err),
+        })
     }
 }
 
@@ -359,8 +361,7 @@ impl ProofG1 {
         }
         let mut c = Cursor::new(data);
 
-        let commitment =
-            slice_to_elem!(&mut c, G1, compressed)?;
+        let commitment = slice_to_elem!(&mut c, G1, compressed)?;
 
         let mut length_bytes = [0u8; 4];
         c.read_exact(&mut length_bytes).unwrap();

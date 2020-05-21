@@ -396,8 +396,7 @@ impl BlindSignatureContext {
 
         let end = g1_size + FR_COMPRESSED_SIZE;
 
-        let challenge_hash =
-            ProofChallenge(slice_to_elem!(&mut cursor, Fr, compressed)?);
+        let challenge_hash = ProofChallenge(slice_to_elem!(&mut cursor, Fr, compressed)?);
 
         let proof_of_hidden_messages = ProofG1::from_bytes(&data[end..], g1_size, compressed)?;
         Ok(Self {
