@@ -104,7 +104,7 @@ macro_rules! try_from_impl {
                 Self {
                     a: G1::zero(),
                     e: Fr::zero(),
-                    s: Fr::zero()
+                    s: Fr::zero(),
                 }
             }
         }
@@ -115,7 +115,7 @@ macro_rules! try_from_impl {
                 let data = Vec::from(data);
                 match $name::try_from(data) {
                     Ok(t) => t,
-                    Err(_) => $name::default()
+                    Err(_) => $name::default(),
                 }
             }
         }
