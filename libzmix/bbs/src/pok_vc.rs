@@ -420,6 +420,9 @@ impl ToVariableLengthBytes for ProofG1 {
 try_from_impl!(ProofG1, PoKVCError);
 serdes_impl!(ProofG1);
 
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(ProofG1);
+
 #[cfg(test)]
 macro_rules! test_PoK_VC {
     ( $n:ident, $ProverCommitting:ident, $ProverCommitted:ident, $Proof:ident, $group_element:ident, $group_element_size:ident ) => {

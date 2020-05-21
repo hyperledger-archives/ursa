@@ -109,7 +109,6 @@ macro_rules! try_from_impl {
             }
         }
 
-        #[cfg(feature = "wasm")]
         impl From<Box<[u8]>> for $name {
             fn from(data: Box<[u8]>) -> $name {
                 let data = Vec::from(data);
@@ -117,6 +116,12 @@ macro_rules! try_from_impl {
                     Ok(t) => t,
                     Err(_) => $name::default(),
                 }
+            }
+        }
+
+        impl Into<Box<[u8]>> for $name {
+            fn into(self) -> Box<[u8]> {
+                self.to_bytes_compressed_form().to_vec().into()
             }
         }
     };
@@ -222,6 +227,9 @@ from_bytes_impl!(
 try_from_impl!(BlindSignature);
 serdes_impl!(BlindSignature);
 display_impl!(BlindSignature);
+
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(BlindSignature);
 
 /// A BBS+ signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -362,6 +370,8 @@ from_bytes_impl!(
 try_from_impl!(Signature);
 serdes_impl!(Signature);
 display_impl!(Signature);
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(Signature);
 
 #[cfg(test)]
 mod tests {
