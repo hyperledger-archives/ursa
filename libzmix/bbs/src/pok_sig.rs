@@ -24,6 +24,9 @@ use std::convert::TryFrom;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::io::Cursor;
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
 /// Convenience importing module
 pub mod prelude {
     pub use super::{PoKOfSignature, PoKOfSignatureProof, PoKOfSignatureProofStatus};
@@ -54,6 +57,7 @@ pub struct PoKOfSignature {
 }
 
 /// Indicates the status returned from `PoKOfSignatureProof`
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PoKOfSignatureProofStatus {
     /// The proof verified
@@ -528,6 +532,8 @@ impl Default for PoKOfSignatureProof {
 
 try_from_impl!(PoKOfSignatureProof, BBSError);
 serdes_impl!(PoKOfSignatureProof);
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(PoKOfSignatureProof);
 
 #[cfg(test)]
 mod tests {

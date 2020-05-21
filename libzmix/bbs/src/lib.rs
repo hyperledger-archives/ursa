@@ -159,6 +159,9 @@ display_impl!(Commitment);
 serdes_impl!(Commitment);
 hash_elem_impl!(Commitment, |data| { Commitment(hash_to_g1(data)) });
 
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(Commitment);
+
 /// Wrapper for G1
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct GeneratorG1(pub(crate) G1);
@@ -174,6 +177,8 @@ display_impl!(GeneratorG1);
 serdes_impl!(GeneratorG1);
 hash_elem_impl!(GeneratorG1, |data| { GeneratorG1(hash_to_g1(data)) });
 random_elem_impl!(GeneratorG1, { Self(G1::random(&mut thread_rng())) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(GeneratorG1);
 
 /// Wrapper for G2
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -189,6 +194,8 @@ from_impl!(GeneratorG2, G2, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE);
 display_impl!(GeneratorG2);
 serdes_impl!(GeneratorG2);
 hash_elem_impl!(GeneratorG2, |data| { GeneratorG2(hash_to_g2(data)) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(GeneratorG2);
 
 /// Convenience wrapper for creating commitments
 #[derive(Clone, Debug)]
@@ -235,6 +242,8 @@ hash_elem_impl!(SignatureMessage, |data| {
     SignatureMessage(hash_to_fr(data))
 });
 random_elem_impl!(SignatureMessage, { Self(Fr::random(&mut thread_rng())) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(SignatureMessage);
 
 /// The type for nonces
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -251,6 +260,8 @@ display_impl!(ProofNonce);
 serdes_impl!(ProofNonce);
 hash_elem_impl!(ProofNonce, |data| { ProofNonce(hash_to_fr(data)) });
 random_elem_impl!(ProofNonce, { Self(Fr::random(&mut thread_rng())) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(ProofNonce);
 
 /// The Fiat-Shamir Challenge in proofs
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -267,6 +278,8 @@ display_impl!(ProofChallenge);
 serdes_impl!(ProofChallenge);
 hash_elem_impl!(ProofChallenge, |data| { ProofChallenge(hash_to_fr(data)) });
 random_elem_impl!(ProofChallenge, { Self(Fr::random(&mut thread_rng())) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(ProofChallenge);
 
 /// The type for blinding factors
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -290,6 +303,8 @@ hash_elem_impl!(SignatureBlinding, |data| {
     SignatureBlinding(hash_to_fr(data))
 });
 random_elem_impl!(SignatureBlinding, { Self(Fr::random(&mut thread_rng())) });
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(SignatureBlinding);
 
 pub(crate) fn hash_to_g1<I: AsRef<[u8]>>(data: I) -> G1 {
     const DST: &[u8] = b"BLS12381G1_XMD:BLAKE2B_SSWU_RO_BBS+_SIGNATURES:1_0_0";
@@ -502,6 +517,8 @@ impl Default for BlindSignatureContext {
 
 try_from_impl!(BlindSignatureContext, BBSError);
 serdes_impl!(BlindSignatureContext);
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(BlindSignatureContext);
 
 /// Contains the data from a verifier to a prover
 #[derive(Debug, Clone)]
@@ -558,6 +575,8 @@ impl Default for ProofRequest {
 
 try_from_impl!(ProofRequest, BBSError);
 serdes_impl!(ProofRequest);
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(ProofRequest);
 
 impl ToVariableLengthBytes for ProofRequest {
     type Output = ProofRequest;
@@ -693,6 +712,8 @@ impl Default for SignatureProof {
 
 try_from_impl!(SignatureProof, BBSError);
 serdes_impl!(SignatureProof);
+#[cfg(feature = "wasm")]
+wasm_slice_impl!(SignatureProof);
 
 /// Expects `revealed` to be sorted
 fn revealed_to_bitvector(total: usize, revealed: &[usize]) -> Vec<u8> {
