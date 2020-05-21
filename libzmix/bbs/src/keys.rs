@@ -112,12 +112,10 @@ impl PublicKey {
         }
         let mut c = Cursor::new(data.as_ref());
         let w = GeneratorG2(
-            G2::deserialize(&mut c, compressed)
-                .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+            G2::deserialize(&mut c, compressed)?,
         );
         let h0 = GeneratorG1(
-            G1::deserialize(&mut c, compressed)
-                .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+            G1::deserialize(&mut c, compressed)?,
         );
 
         let mut h_bytes = [0u8; 4];
@@ -127,8 +125,7 @@ impl PublicKey {
         let mut h = Vec::with_capacity(h_size);
         for _ in 0..h_size {
             let p = GeneratorG1(
-                G1::deserialize(&mut c, compressed)
-                    .map_err(|_| BBSError::from_kind(BBSErrorKind::MalformedPublicKey))?,
+                G1::deserialize(&mut c, compressed)?,
             );
             h.push(p);
         }
@@ -228,8 +225,7 @@ impl DeterministicPublicKey {
         let mc_bytes = (message_count as u32).to_be_bytes();
         let mut data = Vec::with_capacity(9 + G2_UNCOMPRESSED_SIZE);
         self.0
-            .serialize(&mut data, false)
-            .map_err(|_| BBSError::from_kind(BBSErrorKind::KeyGenError))?;
+            .serialize(&mut data, false)?;
         // Spacer
         data.push(0u8);
         let offset = data.len();

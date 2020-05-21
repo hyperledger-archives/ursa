@@ -20,11 +20,7 @@ macro_rules! from_impl {
 
             fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
                 let mut value = value;
-                let inner = $type::deserialize(&mut value, true).map_err(|e| {
-                    BBSErrorKind::GeneralError {
-                        msg: format!("{:?}", e),
-                    }
-                })?;
+                let inner = $type::deserialize(&mut value, true)?;
                 Ok(Self(inner))
             }
         }
@@ -67,10 +63,7 @@ macro_rules! from_impl {
             type Error = BBSError;
 
             fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-                let inner = $type::deserialize(&mut value.as_ref(), value.len() == $comp_size)
-                    .map_err(|_| BBSErrorKind::GeneralError {
-                        msg: "Invalid bytes".to_string(),
-                    })?;
+                let inner = $type::deserialize(&mut value.as_ref(), value.len() == $comp_size)?;
                 Ok(Self(inner))
             }
         }
