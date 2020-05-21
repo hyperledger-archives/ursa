@@ -18,10 +18,16 @@
 
 #![deny(
     missing_docs,
-    unsafe_code,
+    trivial_casts,
+    trivial_numeric_casts,
+    unconditional_recursion,
     unused_import_braces,
     unused_lifetimes,
-    unused_qualifications
+    unused_qualifications,
+    unused_extern_crates,
+    unused_parens,
+    warnings,
+    while_true
 )]
 
 #[cfg(all(feature = "wasm", feature = "rayon"))]

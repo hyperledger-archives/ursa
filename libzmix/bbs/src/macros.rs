@@ -103,6 +103,22 @@ macro_rules! from_impl {
                 Self(src.clone())
             }
         }
+
+        impl From<Box<[u8]>> for $name {
+            fn from(data: Box<[u8]>) -> $name {
+                let data = Vec::from(data);
+                match $name::try_from(data) {
+                    Ok(t) => t,
+                    Err(_) => $name::default(),
+                }
+            }
+        }
+
+        impl Into<Box<[u8]>> for $name {
+            fn into(self) -> Box<[u8]> {
+                self.to_bytes_compressed_form().to_vec().into()
+            }
+        }
     };
 }
 
@@ -124,7 +140,6 @@ macro_rules! try_from_impl {
             }
         }
 
-        #[cfg(feature = "wasm")]
         impl From<Box<[u8]>> for $name {
             fn from(data: Box<[u8]>) -> $name {
                 let data = Vec::from(data);
@@ -135,7 +150,6 @@ macro_rules! try_from_impl {
             }
         }
 
-        #[cfg(feature = "wasm")]
         impl Into<Box<[u8]>> for $name {
             fn into(self) -> Box<[u8]> {
                 self.to_bytes_compressed_form().into()
@@ -251,6 +265,53 @@ macro_rules! default_zero_impl {
         impl Default for $name {
             fn default() -> Self {
                 Self($type::zero())
+            }
+        }
+    };
+}
+
+#[cfg(feature = "wasm-bindgen")]
+macro_rules! wasm_slice_impl {
+    ($name:ident) => {
+        impl wasm_bindgen::convert::IntoWasmAbi for $name {
+            type Abi = wasm_bindgen::convert::WasmSlice;
+
+            fn into_abi(self) -> Self::Abi {
+                let r: Box<[u8]> = self.to_bytes_compressed_form().to_vec().into();
+                r.into_abi()
+            }
+        }
+
+        impl wasm_bindgen::convert::FromWasmAbi for $name {
+            type Abi = wasm_bindgen::convert::WasmSlice;
+
+            #[inline]
+            unsafe fn from_abi(js: wasm_bindgen::convert::WasmSlice) -> Self {
+                let ptr = <*mut u8>::from_abi(js.ptr);
+                let len = js.len as usize;
+                let r = Vec::from_raw_parts(ptr, len, len).into_boxed_slice();
+                match Self::try_from(r.clone()) {
+                    Ok(d) => d,
+                    Err(_) => Self::hash(r),
+                }
+            }
+        }
+
+        impl wasm_bindgen::convert::OptionIntoWasmAbi for $name {
+            fn none() -> wasm_bindgen::convert::WasmSlice {
+                wasm_bindgen::convert::WasmSlice { ptr: 0, len: 0 }
+            }
+        }
+
+        impl wasm_bindgen::convert::OptionFromWasmAbi for $name {
+            fn is_none(slice: &wasm_bindgen::convert::WasmSlice) -> bool {
+                slice.ptr == 0
+            }
+        }
+
+        impl wasm_bindgen::describe::WasmDescribe for $name {
+            fn describe() {
+                wasm_bindgen::describe::inform(wasm_bindgen::describe::SLICE)
             }
         }
     };
