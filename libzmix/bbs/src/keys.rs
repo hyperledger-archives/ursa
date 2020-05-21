@@ -60,6 +60,9 @@ serdes_impl!(SecretKey);
 hash_elem_impl!(SecretKey, |data| { generate_secret_key(Some(data)) });
 random_elem_impl!(SecretKey, { generate_secret_key(None) });
 
+#[cfg(feature = "wasm-bindgen")]
+wasm_slice_impl!(SecretKey);
+
 impl Zeroize for SecretKey {
     fn zeroize(&mut self) {
         self.0.zeroize();
@@ -174,6 +177,8 @@ impl Default for PublicKey {
 try_from_impl!(PublicKey, BBSError);
 display_impl!(PublicKey);
 serdes_impl!(PublicKey);
+#[cfg(feature = "wasm-bindgen")]
+wasm_slice_impl!(PublicKey);
 
 /// Size of a compressed deterministic public key
 pub const DETERMINISTIC_PUBLIC_KEY_COMPRESSED_SIZE: usize = G2_COMPRESSED_SIZE;

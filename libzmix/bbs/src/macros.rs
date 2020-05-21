@@ -48,6 +48,22 @@ macro_rules! from_impl {
                 Self(src.clone())
             }
         }
+
+        impl From<Box<[u8]>> for $name {
+            fn from(data: Box<[u8]>) -> $name {
+                let data = Vec::from(data);
+                match $name::try_from(data) {
+                    Ok(t) => t,
+                    Err(_) => $name::default(),
+                }
+            }
+        }
+
+        impl Into<Box<[u8]>> for $name {
+            fn into(self) -> Box<[u8]> {
+                self.to_bytes_compressed_form().to_vec().into()
+            }
+        }
     };
 
     ($name:ident, $type:ident, $comp_size:expr,$uncomp_size:expr) => {
@@ -290,9 +306,9 @@ macro_rules! wasm_slice_impl {
                 let ptr = <*mut u8>::from_abi(js.ptr);
                 let len = js.len as usize;
                 let r = Vec::from_raw_parts(ptr, len, len).into_boxed_slice();
-                match Self::try_from(r.clone()) {
+                match Self::try_from(r) {
                     Ok(d) => d,
-                    Err(_) => Self::hash(r),
+                    Err(_) => Self::default(),
                 }
             }
         }
