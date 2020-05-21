@@ -270,6 +270,23 @@ impl DeterministicPublicKey {
     }
 }
 
+#[cfg(feature = "wasm-bindgen")]
+impl wasm_bindgen::convert::IntoWasmAbi for DeterministicPublicKey {
+    type Abi = wasm_bindgen::convert::WasmSlice;
+
+    fn into_abi(self) -> Self::Abi {
+        let r: Box<[u8]> = self.to_bytes_compressed_form().to_vec().into();
+        r.into_abi()
+    }
+}
+
+#[cfg(feature = "wasm-bindgen")]
+impl wasm_bindgen::describe::WasmDescribe for DeterministicPublicKey {
+    fn describe() {
+        wasm_bindgen::describe::inform(wasm_bindgen::describe::SLICE)
+    }
+}
+
 /// Create a new BBS+ keypair. The generators of the public key are generated at random
 pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError> {
     if message_count == 0 {
