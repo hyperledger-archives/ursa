@@ -391,7 +391,7 @@ impl Default for ProofG1 {
     fn default() -> Self {
         Self {
             commitment: G1::zero(),
-            responses: Vec::new()
+            responses: Vec::new(),
         }
     }
 }

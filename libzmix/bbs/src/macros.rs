@@ -130,8 +130,15 @@ macro_rules! try_from_impl {
                 let data = Vec::from(data);
                 match $name::try_from(data) {
                     Ok(t) => t,
-                    Err(_) => $name::default()
+                    Err(_) => $name::default(),
                 }
+            }
+        }
+
+        #[cfg(feature = "wasm")]
+        impl Into<Box<[u8]>> for $name {
+            fn into(self) -> Box<[u8]> {
+                self.to_bytes_compressed_form().into()
             }
         }
     };

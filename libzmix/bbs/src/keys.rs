@@ -166,7 +166,7 @@ impl Default for PublicKey {
         Self {
             h0: GeneratorG1::default(),
             h: Vec::new(),
-            w: GeneratorG2::default()
+            w: GeneratorG2::default(),
         }
     }
 }

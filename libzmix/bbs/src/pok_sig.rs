@@ -521,7 +521,7 @@ impl Default for PoKOfSignatureProof {
             a_bar: G1::zero(),
             d: G1::zero(),
             proof_vc_1: ProofG1::default(),
-            proof_vc_2: ProofG1::default()
+            proof_vc_2: ProofG1::default(),
         }
     }
 }

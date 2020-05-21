@@ -489,7 +489,7 @@ impl Default for BlindSignatureContext {
         Self {
             commitment: Commitment::default(),
             challenge_hash: ProofChallenge::default(),
-            proof_of_hidden_messages: ProofG1::default()
+            proof_of_hidden_messages: ProofG1::default(),
         }
     }
 }
@@ -545,7 +545,7 @@ impl Default for ProofRequest {
     fn default() -> Self {
         Self {
             revealed_messages: BTreeSet::new(),
-            verification_key: PublicKey::default()
+            verification_key: PublicKey::default(),
         }
     }
 }
@@ -680,7 +680,7 @@ impl Default for SignatureProof {
     fn default() -> Self {
         Self {
             revealed_messages: BTreeMap::new(),
-            proof: PoKOfSignatureProof::default()
+            proof: PoKOfSignatureProof::default(),
         }
     }
 }
