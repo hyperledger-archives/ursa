@@ -514,6 +514,18 @@ impl ToVariableLengthBytes for PoKOfSignatureProof {
     }
 }
 
+impl Default for PoKOfSignatureProof {
+    fn default() -> Self {
+        Self {
+            a_prime: G1::zero(),
+            a_bar: G1::zero(),
+            d: G1::zero(),
+            proof_vc_1: ProofG1::default(),
+            proof_vc_2: ProofG1::default()
+        }
+    }
+}
+
 try_from_impl!(PoKOfSignatureProof, BBSError);
 serdes_impl!(PoKOfSignatureProof);
 

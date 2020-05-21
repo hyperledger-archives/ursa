@@ -5,6 +5,7 @@ use crate::{
     G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE,
 };
 use blake2::{digest::generic_array::GenericArray, Blake2b};
+use ff_zeroize::Field;
 use pairing_plus::{
     bls12_381::{Fr, G1, G2},
     hash_to_field::BaseFromRO,
@@ -52,6 +53,7 @@ impl SecretKey {
     to_fixed_length_bytes_impl!(SecretKey, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
 }
 
+default_zero_impl!(SecretKey, Fr);
 from_impl!(SecretKey, Fr, FR_COMPRESSED_SIZE);
 display_impl!(SecretKey);
 serdes_impl!(SecretKey);
@@ -159,6 +161,16 @@ impl ToVariableLengthBytes for PublicKey {
     }
 }
 
+impl Default for PublicKey {
+    fn default() -> Self {
+        Self {
+            h0: GeneratorG1::default(),
+            h: Vec::new(),
+            w: GeneratorG2::default()
+        }
+    }
+}
+
 try_from_impl!(PublicKey, BBSError);
 display_impl!(PublicKey);
 serdes_impl!(PublicKey);
@@ -180,6 +192,7 @@ impl DeterministicPublicKey {
     );
 }
 
+default_zero_impl!(DeterministicPublicKey, G2);
 as_ref_impl!(DeterministicPublicKey, G2);
 from_impl!(
     DeterministicPublicKey,

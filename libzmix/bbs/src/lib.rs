@@ -24,6 +24,9 @@
     unused_qualifications
 )]
 
+#[cfg(all(feature = "wasm", feature = "rayon"))]
+compile_error!("wasm does not support rayon. Remove the dependency on rayon.");
+
 #[macro_use]
 extern crate arrayref;
 
@@ -143,6 +146,7 @@ impl Commitment {
     to_fixed_length_bytes_impl!(Commitment, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 }
 
+default_zero_impl!(Commitment, G1);
 as_ref_impl!(Commitment, G1);
 from_impl!(Commitment, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 display_impl!(Commitment);
@@ -157,6 +161,7 @@ impl GeneratorG1 {
     to_fixed_length_bytes_impl!(GeneratorG1, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 }
 
+default_zero_impl!(GeneratorG1, G1);
 as_ref_impl!(GeneratorG1, G1);
 from_impl!(GeneratorG1, G1, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE);
 display_impl!(GeneratorG1);
@@ -172,6 +177,7 @@ impl GeneratorG2 {
     to_fixed_length_bytes_impl!(GeneratorG2, G2, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE);
 }
 
+default_zero_impl!(GeneratorG2, G2);
 as_ref_impl!(GeneratorG2, G2);
 from_impl!(GeneratorG2, G2, G2_COMPRESSED_SIZE, G2_UNCOMPRESSED_SIZE);
 display_impl!(GeneratorG2);
@@ -214,6 +220,7 @@ impl SignatureMessage {
     to_fixed_length_bytes_impl!(SignatureMessage, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
 }
 
+default_zero_impl!(SignatureMessage, Fr);
 as_ref_impl!(SignatureMessage, Fr);
 from_impl!(SignatureMessage, Fr, FR_COMPRESSED_SIZE);
 display_impl!(SignatureMessage);
@@ -231,6 +238,7 @@ impl ProofNonce {
     to_fixed_length_bytes_impl!(ProofNonce, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
 }
 
+default_zero_impl!(ProofNonce, Fr);
 as_ref_impl!(ProofNonce, Fr);
 from_impl!(ProofNonce, Fr, FR_COMPRESSED_SIZE);
 display_impl!(ProofNonce);
@@ -246,6 +254,7 @@ impl ProofChallenge {
     to_fixed_length_bytes_impl!(ProofChallenge, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
 }
 
+default_zero_impl!(ProofChallenge, Fr);
 as_ref_impl!(ProofChallenge, Fr);
 from_impl!(ProofChallenge, Fr, FR_COMPRESSED_SIZE);
 display_impl!(ProofChallenge);
@@ -266,6 +275,7 @@ impl SignatureBlinding {
     );
 }
 
+default_zero_impl!(SignatureBlinding, Fr);
 as_ref_impl!(SignatureBlinding, Fr);
 from_impl!(SignatureBlinding, Fr, FR_COMPRESSED_SIZE);
 display_impl!(SignatureBlinding);
@@ -474,11 +484,21 @@ impl ToVariableLengthBytes for BlindSignatureContext {
     }
 }
 
+impl Default for BlindSignatureContext {
+    fn default() -> Self {
+        Self {
+            commitment: Commitment::default(),
+            challenge_hash: ProofChallenge::default(),
+            proof_of_hidden_messages: ProofG1::default()
+        }
+    }
+}
+
 try_from_impl!(BlindSignatureContext, BBSError);
 serdes_impl!(BlindSignatureContext);
 
 /// Contains the data from a verifier to a prover
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct ProofRequest {
     /// Allow the prover to retrieve which messages should be revealed.
     /// Might be prompted in a GUI or CLI
@@ -520,6 +540,18 @@ impl ProofRequest {
         })
     }
 }
+
+impl Default for ProofRequest {
+    fn default() -> Self {
+        Self {
+            revealed_messages: BTreeSet::new(),
+            verification_key: PublicKey::default()
+        }
+    }
+}
+
+try_from_impl!(ProofRequest, BBSError);
+serdes_impl!(ProofRequest);
 
 impl ToVariableLengthBytes for ProofRequest {
     type Output = ProofRequest;
@@ -641,6 +673,15 @@ impl ToVariableLengthBytes for SignatureProof {
 
     fn from_bytes_uncompressed_form<I: AsRef<[u8]>>(data: I) -> Result<Self::Output, Self::Error> {
         Self::from_bytes(data.as_ref(), G1_UNCOMPRESSED_SIZE, false)
+    }
+}
+
+impl Default for SignatureProof {
+    fn default() -> Self {
+        Self {
+            revealed_messages: BTreeMap::new(),
+            proof: PoKOfSignatureProof::default()
+        }
     }
 }
 

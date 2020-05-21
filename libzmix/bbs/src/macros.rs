@@ -123,6 +123,17 @@ macro_rules! try_from_impl {
                 Self::from_bytes_compressed_form(value)
             }
         }
+
+        #[cfg(feature = "wasm")]
+        impl From<Box<[u8]>> for $name {
+            fn from(data: Box<[u8]>) -> $name {
+                let data = Vec::from(data);
+                match $name::try_from(data) {
+                    Ok(t) => t,
+                    Err(_) => $name::default()
+                }
+            }
+        }
     };
 }
 
@@ -223,6 +234,16 @@ macro_rules! as_ref_impl {
         impl AsRef<$inner> for $name {
             fn as_ref(&self) -> &$inner {
                 &self.0
+            }
+        }
+    };
+}
+
+macro_rules! default_zero_impl {
+    ($name:ident, $type:ident) => {
+        impl Default for $name {
+            fn default() -> Self {
+                Self($type::zero())
             }
         }
     };
