@@ -168,6 +168,7 @@ dependencies = [
  "rand 0.7.3",
  "rayon",
  "serde",
+ "wasm-bindgen",
  "zeroize",
 ]
 
