@@ -335,7 +335,11 @@ macro_rules! wasm_slice_impl {
             type Error = BBSError;
 
             fn try_from(value: JsValue) -> Result<Self, Self::Error> {
-                serde_wasm_bindgen::from_value(value).map_err(|e| BBSError::from(BBSErrorKind::GeneralError { msg: format!("{:?}", e)}))
+                serde_wasm_bindgen::from_value(value).map_err(|e| {
+                    BBSError::from(BBSErrorKind::GeneralError {
+                        msg: format!("{:?}", e),
+                    })
+                })
             }
         }
     };
