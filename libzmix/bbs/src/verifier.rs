@@ -75,15 +75,15 @@ impl Verifier {
     /// create the challenge hash for a set of proofs
     ///
     /// # Arguments
-    /// * `proofs` - a vec of SignatureProof objects
-    /// * `proof_requests` - a corresponding vec of ProofRequest objects
+    /// * `proofs` - a slice of SignatureProof objects
+    /// * `proof_requests` - a corresponding slice of ProofRequest objects
     /// * `nonce` - a SignatureNonce
-    /// * `claims` - a vec of strings the prover wishes to include in the challenge (may be empty)
+    /// * `claims` - an optional slice of bytes the prover wishes to include in the challenge
     pub fn create_challenge_hash(
         proofs: &[SignatureProof],
         proof_requests: &[ProofRequest],
-        claims: &[&[u8]],
         nonce: &ProofNonce,
+        claims: Option<&[&[u8]]>,
     ) -> Result<ProofChallenge, BBSError> {
         let mut bytes = Vec::new();
 
@@ -96,8 +96,13 @@ impl Verifier {
             );
         }
         bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
-        for c in claims {
-            bytes.extend_from_slice(c);
+        match claims {
+            Some(claim) => {
+                for c in claim {
+                    bytes.extend_from_slice(c);
+                }
+            }
+            None => (),
         }
         let challenge = ProofChallenge::hash(&bytes);
         Ok(challenge)

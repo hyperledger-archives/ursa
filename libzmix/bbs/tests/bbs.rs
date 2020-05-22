@@ -322,8 +322,8 @@ fn test_challenge_hash_with_prover_claims() {
     let ver_challenge = Verifier::create_challenge_hash(
         &[proof.clone()],
         &[proof_request.clone()],
-        claims.as_slice(),
         &nonce,
+        Some(claims.as_slice()),
     )
     .unwrap();
 
@@ -390,8 +390,8 @@ fn test_challenge_hash_with_false_prover_claims_fails() {
     let ver_challenge = Verifier::create_challenge_hash(
         &[proof.clone()],
         &[proof_request.clone()],
-        &["false_claim".as_bytes()],
         &nonce,
+        Some(&["false_claim".as_bytes()]),
     )
     .unwrap();
 
@@ -450,8 +450,8 @@ fn test_challenge_hash_with_false_prover_claims() {
     let ver_challenge = Verifier::create_challenge_hash(
         &[proof.clone()],
         &[proof_request.clone()],
-        &["false_claim".as_bytes()],
         &nonce,
+        Some(&["false_claim".as_bytes()]),
     )
     .unwrap();
 
@@ -635,8 +635,8 @@ fn bbs_demo() {
     let ver_challenge = Verifier::create_challenge_hash(
         &[proof1.clone(), proof2.clone()],
         &[proof_request1.clone(), proof_request2.clone()],
-        &[],
         &verifier_nonce,
+        None,
     )
     .unwrap();
 
