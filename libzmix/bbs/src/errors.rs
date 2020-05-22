@@ -135,9 +135,13 @@ impl From<BBSError> for JsValue {
 impl From<JsValue> for BBSError {
     fn from(js: JsValue) -> Self {
         if js.is_string() {
-            BBSError::from(BBSErrorKind::GeneralError { msg: js.as_string().unwrap() })
+            BBSError::from(BBSErrorKind::GeneralError {
+                msg: js.as_string().unwrap(),
+            })
         } else {
-            BBSError::from(BBSErrorKind::GeneralError { msg: "".to_string() })
+            BBSError::from(BBSErrorKind::GeneralError {
+                msg: "".to_string(),
+            })
         }
     }
 }
@@ -145,7 +149,9 @@ impl From<JsValue> for BBSError {
 #[cfg(feature = "wasm")]
 impl From<serde_wasm_bindgen::Error> for BBSError {
     fn from(err: serde_wasm_bindgen::Error) -> Self {
-        BBSError::from(BBSErrorKind::GeneralError { msg: format!("{:?}", err) })
+        BBSError::from(BBSErrorKind::GeneralError {
+            msg: format!("{:?}", err),
+        })
     }
 }
 

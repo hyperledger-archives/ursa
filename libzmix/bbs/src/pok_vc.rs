@@ -10,12 +10,12 @@
 //! During response generation `ProverCommitted` is consumed to create `Proof` object containing the commitments and responses.
 //! `Proof` can then be verified by the verifier.
 
+use crate::errors::prelude::*;
 use crate::{
     hash_to_fr, multi_scalar_mul_const_time_g1, Commitment, GeneratorG1, ProofChallenge,
     SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
     G1_UNCOMPRESSED_SIZE,
 };
-use crate::errors::prelude::*;
 
 use failure::{Backtrace, Context, Fail};
 use ff_zeroize::Field;
@@ -110,9 +110,13 @@ impl From<PoKVCError> for JsValue {
 impl From<JsValue> for PoKVCError {
     fn from(js: JsValue) -> Self {
         if js.is_string() {
-            PoKVCError::from(PoKVCErrorKind::GeneralError { msg: js.as_string().unwrap() })
+            PoKVCError::from(PoKVCErrorKind::GeneralError {
+                msg: js.as_string().unwrap(),
+            })
         } else {
-            PoKVCError::from(PoKVCErrorKind::GeneralError { msg: "".to_string() })
+            PoKVCError::from(PoKVCErrorKind::GeneralError {
+                msg: "".to_string(),
+            })
         }
     }
 }
