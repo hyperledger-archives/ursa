@@ -140,7 +140,7 @@ fn pok_sig() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], None, &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -181,7 +181,7 @@ fn pok_sig_extra_message() {
         .unwrap();
 
     // complete other zkps as desired and compute `challenge_hash`
-    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], None, &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -246,7 +246,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], None, &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof_request.revealed_messages.insert(0);
@@ -260,7 +260,7 @@ fn pok_sig_bad_message() {
     let pok = Prover::commit_signature_pok(&proof_request, proof_messages.as_slice(), &signature)
         .unwrap();
 
-    let challenge = Prover::create_challenge_hash(&[pok.clone()], &[], &nonce).unwrap();
+    let challenge = Prover::create_challenge_hash(&[pok.clone()], None, &nonce).unwrap();
 
     let mut proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
     proof
@@ -312,7 +312,7 @@ fn test_challenge_hash_with_prover_claims() {
 
     // complete other zkps as desired and compute `challenge_hash`
     let challenge =
-        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
+        Prover::create_challenge_hash(&[pok.clone()], Some(claims.as_slice()), &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -379,7 +379,7 @@ fn test_challenge_hash_with_false_prover_claims_fails() {
 
     // complete other zkps as desired and compute `challenge_hash`
     let challenge =
-        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
+        Prover::create_challenge_hash(&[pok.clone()], Some(claims.as_slice()), &nonce).unwrap();
 
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
@@ -442,7 +442,7 @@ fn test_challenge_hash_with_false_prover_claims() {
         "self-attested claim2".as_bytes(),
     ];
     let challenge =
-        Prover::create_challenge_hash(&[pok.clone()], claims.as_slice(), &nonce).unwrap();
+        Prover::create_challenge_hash(&[pok.clone()], Some(claims.as_slice()), &nonce).unwrap();
     let proof = Prover::generate_signature_pok(pok, &challenge).unwrap();
 
     // Create verifier challenge hash
@@ -624,7 +624,8 @@ fn bbs_demo() {
 
     // Prover creates challenge hash from pok1, pok2, and nonce
     let challenge =
-        Prover::create_challenge_hash(&[pok1.clone(), pok2.clone()], &[], &verifier_nonce).unwrap();
+        Prover::create_challenge_hash(&[pok1.clone(), pok2.clone()], None, &verifier_nonce)
+            .unwrap();
 
     // Prover constructs the proofs and sends them to the Verifier
     let proof1 = Prover::generate_signature_pok(pok1, &challenge).unwrap();
