@@ -119,9 +119,10 @@ cd libsodium-1.0.18
 make
 sudo make install
 ```
-7. Add the libsodium environment variable
+7. Add the libsodium environment variables
 ```bash
 export SODIUM_LIB_DIR=/usr/local/lib
+export SODIUM_INCLUDE_DIR=/usr/local/include
 ```
 
 ## Windows 10
