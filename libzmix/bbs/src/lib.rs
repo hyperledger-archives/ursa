@@ -61,6 +61,8 @@ use serde::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 use std::io::Cursor;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 
 /// Number of bytes in scalar compressed form
 pub const FR_COMPRESSED_SIZE: usize = 32;

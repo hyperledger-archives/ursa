@@ -15,6 +15,7 @@ use crate::{
     SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
     G1_UNCOMPRESSED_SIZE,
 };
+use crate::errors::prelude::*;
 
 use failure::{Backtrace, Context, Fail};
 use ff_zeroize::Field;

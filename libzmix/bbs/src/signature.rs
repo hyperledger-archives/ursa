@@ -20,6 +20,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::io::Cursor;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 
 /// Convenience module
 pub mod prelude {
