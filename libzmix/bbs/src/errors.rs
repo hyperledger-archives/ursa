@@ -1,6 +1,8 @@
 use crate::pok_sig::PoKOfSignatureProofStatus;
 use crate::pok_vc::PoKVCError;
 use failure::{Backtrace, Context, Fail};
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
@@ -119,6 +121,24 @@ impl std::fmt::Display for BBSError {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<BBSError> for JsValue {
+    fn from(error: BBSError) -> Self {
+        JsValue::from_str(&format!("{}", error))
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<JsValue> for BBSError {
+    fn from(js: JsValue) -> Self {
+        if js.is_string() {
+            BBSError::from(BBSErrorKind::GeneralError { msg: js.as_string().unwrap() })
+        } else {
+            BBSError::from(BBSErrorKind::GeneralError { msg: "".to_string() })
+        }
     }
 }
 

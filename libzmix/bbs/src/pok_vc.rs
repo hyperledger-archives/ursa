@@ -31,6 +31,8 @@ use serde::{
 use std::convert::TryFrom;
 use std::fmt::{self, Formatter};
 use std::io::{Cursor, Read};
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
 
 /// Convenience importing module
 pub mod prelude {
@@ -93,6 +95,24 @@ impl From<std::io::Error> for PoKVCError {
         PoKVCError::from_kind(PoKVCErrorKind::GeneralError {
             msg: format!("{:?}", err),
         })
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<PoKVCError> for JsValue {
+    fn from(error: PoKVCError) -> Self {
+        JsValue::from_str(&format!("{}", error))
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<JsValue> for PoKVCError {
+    fn from(js: JsValue) -> Self {
+        if js.is_string() {
+            PoKVCError::from(PoKVCErrorKind::GeneralError { msg: js.as_string().unwrap() })
+        } else {
+            PoKVCError::from(PoKVCErrorKind::GeneralError { msg: "".to_string() })
+        }
     }
 }
 
