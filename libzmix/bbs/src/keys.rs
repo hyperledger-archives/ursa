@@ -24,6 +24,8 @@ use std::{
     convert::TryFrom,
     fmt::{Display, Formatter},
 };
+#[cfg(feature = "wasm")]
+use wasm_bindgen::JsValue;
 use zeroize::Zeroize;
 
 /// Convenience importing module
@@ -60,7 +62,7 @@ serdes_impl!(SecretKey);
 hash_elem_impl!(SecretKey, |data| { generate_secret_key(Some(data)) });
 random_elem_impl!(SecretKey, { generate_secret_key(None) });
 
-#[cfg(feature = "wasm-bindgen")]
+#[cfg(feature = "wasm")]
 wasm_slice_impl!(SecretKey);
 
 impl Zeroize for SecretKey {
@@ -177,7 +179,7 @@ impl Default for PublicKey {
 try_from_impl!(PublicKey, BBSError);
 display_impl!(PublicKey);
 serdes_impl!(PublicKey);
-#[cfg(feature = "wasm-bindgen")]
+#[cfg(feature = "wasm")]
 wasm_slice_impl!(PublicKey);
 
 /// Size of a compressed deterministic public key
@@ -275,7 +277,7 @@ impl DeterministicPublicKey {
     }
 }
 
-#[cfg(feature = "wasm-bindgen")]
+#[cfg(feature = "wasm")]
 wasm_slice_impl!(DeterministicPublicKey);
 
 /// Create a new BBS+ keypair. The generators of the public key are generated at random

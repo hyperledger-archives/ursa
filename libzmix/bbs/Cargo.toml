@@ -14,7 +14,7 @@ maintenance = { status = "active" }
 
 [features]
 default = ["rayon"]
-wasm = ["wasm-bindgen"]
+wasm = ["serde-wasm-bindgen", "wasm-bindgen"]
 
 [dependencies]
 arrayref = "0.3"
@@ -27,6 +27,7 @@ rayon = { version = "1.3", optional = true }
 rand = "0.7"
 pairing-plus = "0.19"
 serde = { version = "1.0", features = ["serde_derive"] }
+serde-wasm-bindgen = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 zeroize = "1.1"
 

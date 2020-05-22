@@ -286,7 +286,7 @@ macro_rules! default_zero_impl {
     };
 }
 
-#[cfg(feature = "wasm-bindgen")]
+#[cfg(feature = "wasm")]
 macro_rules! wasm_slice_impl {
     ($name:ident) => {
         impl wasm_bindgen::convert::IntoWasmAbi for $name {
@@ -328,6 +328,14 @@ macro_rules! wasm_slice_impl {
         impl wasm_bindgen::describe::WasmDescribe for $name {
             fn describe() {
                 wasm_bindgen::describe::inform(wasm_bindgen::describe::SLICE)
+            }
+        }
+
+        impl TryFrom<JsValue> for $name {
+            type Error = BBSError;
+
+            fn try_from(value: JsValue) -> Result<Self, Self::Error> {
+                serde_wasm_bindgen::from_value(value).map_err(|e| BBSError::from(BBSErrorKind::GeneralError { msg: format!("{:?}", e)}))
             }
         }
     };

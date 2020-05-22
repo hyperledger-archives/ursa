@@ -142,6 +142,20 @@ impl From<JsValue> for BBSError {
     }
 }
 
+#[cfg(feature = "wasm")]
+impl From<serde_wasm_bindgen::Error> for BBSError {
+    fn from(err: serde_wasm_bindgen::Error) -> Self {
+        BBSError::from(BBSErrorKind::GeneralError { msg: format!("{:?}", err) })
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<BBSError> for serde_wasm_bindgen::Error {
+    fn from(err: BBSError) -> Self {
+        serde_wasm_bindgen::Error::new(err)
+    }
+}
+
 /// Generate an error from a kind and static string
 pub fn err_msg<D>(kind: BBSErrorKind, msg: D) -> BBSError
 where
