@@ -121,7 +121,7 @@ impl Prover {
     /// # Arguments
     /// * `poks` - a vec of PoKOfSignature objects
     /// * `nonce` - a SignatureNonce
-    /// * `claims` - a vec of strings the prover wishes to include in the challenge (may be empty)
+    /// * `claims` - an optional slice of bytes the prover wishes to include in the challenge
     pub fn create_challenge_hash(
         pok_sigs: &[PoKOfSignature],
         claims: Option<&[&[u8]]>,
