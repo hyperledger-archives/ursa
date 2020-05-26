@@ -462,46 +462,25 @@ impl PoKOfSignatureProof {
         let mut c = Cursor::new(data.as_ref());
         let mut offset;
         let mut end = g1_size;
-        let a_prime = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+        let a_prime = slice_to_elem!(&mut c, G1, compressed)?;
 
         offset = end;
         end = offset + g1_size;
 
-        let a_bar = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+        let a_bar = slice_to_elem!(&mut c, G1, compressed)?;
         offset = end;
         end = offset + g1_size;
 
-        let d = slice_to_elem!(&mut c, G1, compressed).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+        let d = slice_to_elem!(&mut c, G1, compressed)?;
         offset = end;
         end = offset + 4;
         let proof1_bytes = u32::from_be_bytes(*array_ref![data, offset, 4]) as usize;
 
         offset = end;
         end = offset + proof1_bytes;
-        let proof_vc_1 =
-            ProofG1::from_bytes(&data[offset..end], g1_size, compressed).map_err(|e| {
-                BBSError::from_kind(BBSErrorKind::PoKVCError {
-                    msg: format!("{}", e),
-                })
-            })?;
+        let proof_vc_1 = ProofG1::from_bytes(&data[offset..end], g1_size, compressed)?;
 
-        let proof_vc_2 = ProofG1::from_bytes(&data[end..], g1_size, compressed).map_err(|e| {
-            BBSError::from_kind(BBSErrorKind::PoKVCError {
-                msg: format!("{}", e),
-            })
-        })?;
+        let proof_vc_2 = ProofG1::from_bytes(&data[end..], g1_size, compressed)?;
         Ok(Self {
             a_prime,
             a_bar,

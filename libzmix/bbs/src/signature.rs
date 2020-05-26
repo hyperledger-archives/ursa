@@ -84,21 +84,9 @@ macro_rules! try_from_impl {
             fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
                 let mut value = value;
                 let compressed = value.len() == SIGNATURE_COMPRESSED_SIZE;
-                let a = G1::deserialize(&mut value, compressed).map_err(|_| {
-                    BBSErrorKind::GeneralError {
-                        msg: "Invalid bytes".to_string(),
-                    }
-                })?;
-                let e = Fr::deserialize(&mut value, compressed).map_err(|_| {
-                    BBSErrorKind::GeneralError {
-                        msg: "Invalid bytes".to_string(),
-                    }
-                })?;
-                let s = Fr::deserialize(&mut value, compressed).map_err(|_| {
-                    BBSErrorKind::GeneralError {
-                        msg: "Invalid bytes".to_string(),
-                    }
-                })?;
+                let a = G1::deserialize(&mut value, compressed)?;
+                let e = Fr::deserialize(&mut value, compressed)?;
+                let s = Fr::deserialize(&mut value, compressed)?;
                 Ok(Self { a, e, s })
             }
         }

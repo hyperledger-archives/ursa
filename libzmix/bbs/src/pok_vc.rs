@@ -88,6 +88,14 @@ impl From<PoKVCErrorKind> for PoKVCError {
     }
 }
 
+impl From<std::io::Error> for PoKVCError {
+    fn from(err: std::io::Error) -> Self {
+        PoKVCError::from_kind(PoKVCErrorKind::GeneralError {
+            msg: format!("{:?}", err),
+        })
+    }
+}
+
 impl From<Context<PoKVCErrorKind>> for PoKVCError {
     fn from(inner: Context<PoKVCErrorKind>) -> Self {
         Self { inner }
@@ -353,10 +361,7 @@ impl ProofG1 {
         }
         let mut c = Cursor::new(data);
 
-        let commitment =
-            slice_to_elem!(&mut c, G1, compressed).map_err(|_| PoKVCErrorKind::GeneralError {
-                msg: format!("Invalid Length"),
-            })?;
+        let commitment = slice_to_elem!(&mut c, G1, compressed)?;
 
         let mut length_bytes = [0u8; 4];
         c.read_exact(&mut length_bytes).unwrap();
@@ -372,11 +377,7 @@ impl ProofG1 {
         let mut responses = Vec::with_capacity(length);
 
         for _ in 0..length {
-            let r = slice_to_elem!(&mut c, Fr, compressed).map_err(|_| {
-                PoKVCErrorKind::GeneralError {
-                    msg: format!("Invalid length"),
-                }
-            })?;
+            let r = slice_to_elem!(&mut c, Fr, compressed)?;
             responses.push(r);
         }
         Ok(Self {
