@@ -117,7 +117,7 @@ impl PublicKey {
         if (data.len() - 4) % g1_size != 0 {
             return Err(BBSErrorKind::MalformedPublicKey.into());
         }
-        let mut c = Cursor::new(data.as_ref());
+        let mut c = Cursor::new(data);
         let w = GeneratorG2(G2::deserialize(&mut c, compressed)?);
         let h0 = GeneratorG1(G1::deserialize(&mut c, compressed)?);
 
@@ -270,8 +270,8 @@ impl DeterministicPublicKey {
             .collect::<Vec<GeneratorG1>>();
 
         Ok(PublicKey {
-            w: GeneratorG2(self.0.clone()),
-            h0: h[0].clone(),
+            w: GeneratorG2(self.0),
+            h0: h[0],
             h: h[1..].to_vec(),
         })
     }
@@ -307,7 +307,7 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     Ok((
         PublicKey {
             w: GeneratorG2(w),
-            h0: h[0].clone(),
+            h0: h[0],
             h: h[1..].to_vec(),
         },
         secret,

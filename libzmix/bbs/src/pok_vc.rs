@@ -220,8 +220,8 @@ impl ProverCommittingG1 {
             .into());
         }
         Ok((
-            GeneratorG1(self.bases[idx].clone()),
-            SignatureMessage(self.blinding_factors[idx].clone()),
+            GeneratorG1(self.bases[idx]),
+            SignatureMessage(self.blinding_factors[idx]),
         ))
     }
 }
@@ -265,9 +265,9 @@ impl ProverCommittedG1 {
         }
         let mut responses = Vec::with_capacity(self.bases.len());
         for i in 0..self.bases.len() {
-            let mut c = challenge.0.clone();
+            let mut c = challenge.0;
             c.mul_assign(&secrets[i].0);
-            let mut s = self.blinding_factors[i].clone();
+            let mut s = self.blinding_factors[i];
             s.sub_assign(&c);
             responses.push(s);
         }
@@ -292,7 +292,6 @@ impl ProofG1 {
         // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge == random_commitment
         // =>
         // bases[0]^responses[0] * bases[0]^responses[0] * ... bases[i]^responses[i] * commitment^challenge * random_commitment^-1 == 1
-        let bases = bases.as_ref();
         if bases.len() != self.responses.len() {
             return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                 bases: bases.len(),
@@ -300,7 +299,7 @@ impl ProofG1 {
             }
             .into());
         }
-        let mut points: Vec<G1> = bases.iter().map(|g| g.0.clone()).collect();
+        let mut points: Vec<G1> = bases.iter().map(|g| g.0).collect();
         let mut scalars = self.responses.clone();
         points.push(commitment.0.clone());
         scalars.push(challenge.0.clone());
@@ -330,7 +329,6 @@ impl ProofG1 {
         challenge: &ProofChallenge,
         nonce: &[u8],
     ) -> Result<bool, PoKVCError> {
-        let bases = bases.as_ref();
         if bases.len() != self.responses.len() {
             return Err(PoKVCErrorKind::UnequalNoOfBasesExponents {
                 bases: bases.len(),
@@ -338,7 +336,7 @@ impl ProofG1 {
             }
             .into());
         }
-        let mut points: Vec<G1> = bases.iter().map(|b| b.0.clone()).collect();
+        let mut points: Vec<G1> = bases.iter().map(|b| b.0).collect();
         let bases = points.clone();
         let mut scalars = self.responses.clone();
         points.push(commitment.0.clone());
@@ -379,7 +377,7 @@ impl ProofG1 {
     ) -> Result<Self, PoKVCError> {
         if data.len() < g_size + 4 {
             return Err(PoKVCErrorKind::GeneralError {
-                msg: format!("Invalid length"),
+                msg: "Invalid length".to_string(),
             }
             .into());
         }
@@ -393,7 +391,7 @@ impl ProofG1 {
 
         if data.len() < g_size + 4 + length * FR_COMPRESSED_SIZE {
             return Err(PoKVCErrorKind::GeneralError {
-                msg: format!("Invalid length"),
+                msg: "Invalid length".to_string(),
             }
             .into());
         }

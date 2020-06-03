@@ -26,7 +26,6 @@
     unused_qualifications,
     unused_extern_crates,
     unused_parens,
-    warnings,
     while_true
 )]
 
@@ -200,7 +199,7 @@ hash_elem_impl!(GeneratorG2, |data| { GeneratorG2(hash_to_g2(data)) });
 wasm_slice_impl!(GeneratorG2);
 
 /// Convenience wrapper for creating commitments
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CommitmentBuilder {
     bases: Vec<G1>,
     scalars: Vec<Fr>,
@@ -218,7 +217,7 @@ impl CommitmentBuilder {
     /// Add a new base and scalar to the commitment
     pub fn add<B: AsRef<G1>, S: AsRef<Fr>>(&mut self, base: B, scalar: S) {
         self.bases.push(base.as_ref().clone());
-        self.scalars.push(scalar.as_ref().clone().into());
+        self.scalars.push(scalar.as_ref().clone());
     }
 
     /// Convert to commitment
@@ -359,17 +358,14 @@ pub(crate) fn multi_scalar_mul_var_time_g1<G: AsRef<[G1]>, S: AsRef<[Fr]>>(
             .par_iter()
             .zip(scalars.par_iter())
             .map(|(b, s)| {
-                let mut t = b.clone();
+                let mut t = *b;
                 t.mul_assign(*s);
                 t
             })
-            .reduce(
-                || G1::zero(),
-                |mut acc, b| {
-                    acc.add_assign(&b);
-                    acc
-                },
-            )
+            .reduce(G1::zero, |mut acc, b| {
+                acc.add_assign(&b);
+                acc
+            })
     }
     #[cfg(not(feature = "rayon"))]
     {
@@ -535,7 +531,7 @@ pub struct ProofRequest {
 
 impl ProofRequest {
     pub(crate) fn to_bytes(&self, compressed: bool) -> Vec<u8> {
-        let revealed: Vec<usize> = (&self.revealed_messages).iter().map(|i| *i).collect();
+        let revealed: Vec<usize> = (&self.revealed_messages).iter().copied().collect();
         let mut temp =
             revealed_to_bitvector(self.verification_key.message_count(), revealed.as_slice());
         let mut key = self.verification_key.to_bytes(compressed);

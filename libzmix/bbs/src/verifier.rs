@@ -61,7 +61,7 @@ impl Verifier {
             PoKOfSignatureProofStatus::Success => Ok(signature_proof
                 .revealed_messages
                 .iter()
-                .map(|(_, m)| m.clone())
+                .map(|(_, m)| *m)
                 .collect::<Vec<SignatureMessage>>()),
             e => Err(BBSErrorKind::InvalidProof { status: e }.into()),
         }
@@ -96,13 +96,10 @@ impl Verifier {
             );
         }
         bytes.extend_from_slice(&nonce.to_bytes_uncompressed_form()[..]);
-        match claims {
-            Some(claim) => {
-                for c in claim {
-                    bytes.extend_from_slice(c);
-                }
+        if let Some(claim) = claims {
+            for c in claim {
+                bytes.extend_from_slice(c);
             }
-            None => (),
         }
         let challenge = ProofChallenge::hash(&bytes);
         Ok(challenge)

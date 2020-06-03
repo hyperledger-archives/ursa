@@ -45,12 +45,12 @@ impl Issuer {
         verkey: &PublicKey,
         nonce: &ProofNonce,
     ) -> Result<BlindSignature, BBSError> {
-        let revealed_messages: BTreeSet<usize> = messages.keys().map(|i| *i).collect();
+        let revealed_messages: BTreeSet<usize> = messages.keys().copied().collect();
         if ctx.verify(&revealed_messages, verkey, nonce)? {
             BlindSignature::new(&ctx.commitment, messages, signkey, verkey)
         } else {
             Err(BBSErrorKind::GeneralError {
-                msg: format!("Invalid proof of committed messages"),
+                msg: "Invalid proof of committed messages".to_string(),
             }
             .into())
         }

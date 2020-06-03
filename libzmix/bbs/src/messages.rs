@@ -71,9 +71,9 @@ impl ProofMessage {
     /// Extract the internal message
     pub fn get_message(&self) -> SignatureMessage {
         match *self {
-            ProofMessage::Revealed(ref r) => r.clone(),
-            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(ref p)) => p.clone(),
-            ProofMessage::Hidden(HiddenMessage::ExternalBlinding(ref m, _)) => m.clone(),
+            ProofMessage::Revealed(ref r) => *r,
+            ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(ref p)) => *p,
+            ProofMessage::Hidden(HiddenMessage::ExternalBlinding(ref m, _)) => *m,
         }
     }
 }

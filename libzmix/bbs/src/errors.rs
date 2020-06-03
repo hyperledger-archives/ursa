@@ -205,8 +205,6 @@ impl From<PoKVCError> for BBSError {
                 .collect::<String>()
         );
 
-        match err.kind() {
-            _ => BBSError::from_kind(BBSErrorKind::PoKVCError { msg: message }),
-        }
+        BBSError::from_kind(BBSErrorKind::PoKVCError { msg: message })
     }
 }

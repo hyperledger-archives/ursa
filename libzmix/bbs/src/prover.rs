@@ -94,7 +94,7 @@ impl Prover {
             Ok(signature)
         } else {
             Err(BBSErrorKind::GeneralError {
-                msg: format!("Invalid signature."),
+                msg: "Invalid signature.".to_string(),
             }
             .into())
         }

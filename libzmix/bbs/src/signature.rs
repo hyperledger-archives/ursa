@@ -182,7 +182,7 @@ impl BlindSignature {
 
         let mut b = multi_scalar_mul_const_time_g1(&points, &scalars);
 
-        let mut exp = signkey.0.clone();
+        let mut exp = signkey.0;
         exp.add_assign(&e);
         b.mul_assign(exp.inverse().unwrap());
         Ok(Self { a: b, e, s })
@@ -191,12 +191,12 @@ impl BlindSignature {
     /// Once signature on committed attributes (blind signature) is received, the signature needs to be unblinded.
     /// Takes the blinding factor used in the commitment.
     pub fn to_unblinded(&self, blinding: &SignatureBlinding) -> Signature {
-        let mut s = self.s.clone();
+        let mut s = self.s;
         s.add_assign(&blinding.0);
         Signature {
-            a: self.a.clone(),
+            a: self.a,
             s,
-            e: self.e.clone(),
+            e: self.e,
         }
     }
 
@@ -261,7 +261,7 @@ impl Signature {
         let e = Fr::random(&mut rng);
         let s = Fr::random(&mut rng);
         let mut b = Self::compute_b(&s, messages, verkey);
-        let mut exp = signkey.0.clone();
+        let mut exp = signkey.0;
         exp.add_assign(&e);
         b.mul_assign(exp.inverse().unwrap());
         Ok(Self { a: b, e, s })
