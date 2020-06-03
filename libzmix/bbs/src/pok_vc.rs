@@ -13,7 +13,7 @@
 use crate::{
     hash_to_fr, multi_scalar_mul_const_time_g1, Commitment, GeneratorG1, ProofChallenge,
     SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
-    G1_UNCOMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE, errors::{BBSError, BBSErrorKind}
 };
 
 use failure::{Backtrace, Context, Fail};

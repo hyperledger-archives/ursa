@@ -71,7 +71,7 @@ jobs:
       vmImage: 'Ubuntu 18.04'
     steps:
       - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --version 1.44 --default-toolchain nightly
           rustc --version
           rustup toolchain install nightly
           rustup default nightly
