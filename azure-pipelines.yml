@@ -73,9 +73,6 @@ jobs:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2020-04-13
           rustc --version
-          rustup toolchain install nightly
-          rustup default nightly
-          rustc --version
         displayName: 'Install rust, select nightly'
       - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
         displayName: 'build asm'
@@ -114,5 +111,7 @@ jobs:
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         displayName: 'Install rust'
-      - script: $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=portable_wasm
+      - script: |
+          $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=portable_wasm
+          $HOME/.cargo/bin/wasm-pack build libzmix/bbs -- --no-default-features --features=wasm
         displayName: 'wasm pack'

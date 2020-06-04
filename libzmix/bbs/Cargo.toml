@@ -12,6 +12,9 @@ version = "0.4.1"
 [badges]
 maintenance = { status = "active" }
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [features]
 default = ["rayon"]
 wasm = ["serde-wasm-bindgen", "wasm-bindgen"]
