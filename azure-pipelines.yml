@@ -72,9 +72,10 @@ jobs:
     steps:
       - script: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2020-04-13
+          rustup toolchain install nightly-2020-04-13
           rustc --version
         displayName: 'Install rust, select nightly'
-      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
+      - script: $HOME/.cargo/bin/cargo +nightly-2020-04-13 build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
         displayName: 'build asm'
   - job: secp256k1
     pool:
