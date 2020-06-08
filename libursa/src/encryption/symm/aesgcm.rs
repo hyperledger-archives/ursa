@@ -25,8 +25,8 @@ macro_rules! aes_gcm_impl {
         impl NewAead for $name {
             type KeySize = $keysize;
 
-            fn new(key: GenericArray<u8, Self::KeySize>) -> Self {
-                Self { key }
+            fn new(key: &GenericArray<u8, Self::KeySize>) -> Self {
+                Self { key: *key }
             }
         }
 
@@ -41,7 +41,7 @@ macro_rules! aes_gcm_impl {
                 plaintext: impl Into<Payload<'msg, 'aad>>,
             ) -> Result<Vec<u8>, Error> {
                 let payload = plaintext.into();
-                let aes = $algoname::new(self.key);
+                let aes = $algoname::new(&self.key);
                 aes.encrypt(nonce, payload)
             }
 
@@ -56,29 +56,8 @@ macro_rules! aes_gcm_impl {
                     return Err(Error);
                 }
 
-                let aes = $algoname::new(self.key);
+                let aes = $algoname::new(&self.key);
                 aes.decrypt(nonce, payload)
-            }
-
-            // TODO
-            fn encrypt_in_place_detached(
-                &self,
-                _nonce: &GenericArray<u8, Self::NonceSize>,
-                _associated_data: &[u8],
-                _buffer: &mut [u8],
-            ) -> Result<GenericArray<u8, Self::TagSize>, Error> {
-                unimplemented!();
-            }
-
-            // TODO
-            fn decrypt_in_place_detached(
-                &self,
-                _nonce: &GenericArray<u8, Self::NonceSize>,
-                _associated_data: &[u8],
-                _buffer: &mut [u8],
-                _tag: &GenericArray<u8, Self::TagSize>,
-            ) -> Result<(), Error> {
-                unimplemented!();
             }
         }
 

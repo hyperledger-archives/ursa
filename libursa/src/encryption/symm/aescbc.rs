@@ -35,8 +35,8 @@ macro_rules! aes_cbc_hmac_impl {
         impl NewAead for $name {
             type KeySize = $keysize;
 
-            fn new(key: GenericArray<u8, $keysize>) -> Self {
-                Self { key }
+            fn new(key: &GenericArray<u8, $keysize>) -> Self {
+                Self { key: *key }
             }
         }
 
@@ -98,27 +98,6 @@ macro_rules! aes_cbc_hmac_impl {
                 } else {
                     Err(Error)
                 }
-            }
-
-            // TODO
-            fn encrypt_in_place_detached(
-                &self,
-                _nonce: &GenericArray<u8, Self::NonceSize>,
-                _associated_data: &[u8],
-                _buffer: &mut [u8],
-            ) -> Result<GenericArray<u8, Self::TagSize>, Error> {
-                unimplemented!();
-            }
-
-            // TODO
-            fn decrypt_in_place_detached(
-                &self,
-                _nonce: &GenericArray<u8, Self::NonceSize>,
-                _associated_data: &[u8],
-                _buffer: &mut [u8],
-                _tag: &GenericArray<u8, Self::TagSize>,
-            ) -> Result<(), Error> {
-                unimplemented!();
             }
         }
 

@@ -81,7 +81,7 @@ macro_rules! serialize_impl {
                         E: serde::de::Error,
                     {
                         let key = hex::decode(value).map_err(E::custom)?;
-                        Ok($name::new(GenericArray::clone_from_slice(key.as_slice())))
+                        Ok($name::new(GenericArray::from_slice(key.as_slice())))
                     }
                 }
 
@@ -111,7 +111,7 @@ macro_rules! default_impl {
     ($name:ident) => {
         impl Default for $name {
             fn default() -> Self {
-                $name::new($name::key_gen().unwrap())
+                $name::new(&$name::key_gen().unwrap())
             }
         }
     };
@@ -148,7 +148,7 @@ impl<E: Encryptor> SymmetricEncryptor<E> {
 
     pub fn new_with_key<A: AsRef<[u8]>>(key: A) -> Result<Self, Error> {
         Ok(Self {
-            encryptor: <E as NewAead>::new(GenericArray::clone_from_slice(key.as_ref())),
+            encryptor: <E as NewAead>::new(GenericArray::from_slice(key.as_ref())),
         })
     }
 
@@ -397,26 +397,24 @@ impl EncryptorType {
         match self {
             #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes128CbcHmac256 => Box::new(aescbc::Aes128CbcHmac256::new(
-                GenericArray::clone_from_slice(key.as_ref()),
+                GenericArray::from_slice(key.as_ref()),
             )),
             #[cfg(any(feature = "aescbc", feature = "aescbc_native"))]
             EncryptorType::Aes256CbcHmac512 => Box::new(aescbc::Aes256CbcHmac512::new(
-                GenericArray::clone_from_slice(key.as_ref()),
+                GenericArray::from_slice(key.as_ref()),
             )),
             #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
-            EncryptorType::Aes128Gcm => Box::new(aesgcm::Aes128Gcm::new(
-                GenericArray::clone_from_slice(key.as_ref()),
-            )),
+            EncryptorType::Aes128Gcm => Box::new(aesgcm::Aes128Gcm::new(GenericArray::from_slice(
+                key.as_ref(),
+            ))),
             #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
-            EncryptorType::Aes256Gcm => Box::new(aesgcm::Aes256Gcm::new(
-                GenericArray::clone_from_slice(key.as_ref()),
-            )),
+            EncryptorType::Aes256Gcm => Box::new(aesgcm::Aes256Gcm::new(GenericArray::from_slice(
+                key.as_ref(),
+            ))),
             #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
-            EncryptorType::XChaCha20Poly1305 => {
-                Box::new(xchacha20poly1305::XChaCha20Poly1305::new(
-                    GenericArray::clone_from_slice(key.as_ref()),
-                ))
-            }
+            EncryptorType::XChaCha20Poly1305 => Box::new(
+                xchacha20poly1305::XChaCha20Poly1305::new(GenericArray::from_slice(key.as_ref())),
+            ),
         }
     }
 }
@@ -547,7 +545,7 @@ macro_rules! tests_impl {
 
         #[test]
         fn zeroed_on_drop() {
-            let mut aes = $name::new($name::key_gen().unwrap());
+            let mut aes = $name::new(&$name::key_gen().unwrap());
             aes.zeroize();
 
             fn as_bytes<T>(x: &T) -> &[u8] {
