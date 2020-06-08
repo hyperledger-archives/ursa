@@ -106,14 +106,14 @@ x25519 = ["arrayref", "curve25519-dalek/std", "curve25519-dalek/u64_backend", "h
 x25519_asm = ["arrayref", "curve25519-dalek/nightly", "curve25519-dalek/avx2_backend", "hex", "rand", "rand_chacha", "sha2/asm", "x25519-dalek/nightly", "x25519-dalek/u64_backend", "zeroize"]
 
 [dependencies]
-aead = { version = "0.2", optional = true }
-aes = { version = "0.3", optional = true }
-aes-gcm = { version = "0.3.0", optional = true }
+aead = { version = "0.3", optional = true }
+aes = { version = "0.4", optional = true }
+aes-gcm = { version = "0.6.0", optional = true }
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
 amcl_wrapper = {version = "0.3.5", features = ["bls381"], optional = true }
 arrayref = { version = "0.3.5", optional = true }
 blake2 = { version = "0.8", default-features = false, optional = true }
-block-modes = { version = "0.3", optional = true }
+block-modes = { version = "0.4", optional = true }
 block-padding = { version = "0.1", optional = true }
 clear_on_drop = { version = "0.2.3", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
@@ -137,7 +137,7 @@ openssl = { version = "0.10", optional = true }
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "=0.6.5", features = ["wasm-bindgen"], optional = true }
 rand_chacha = { version = "=0.1.1", optional = true }
-rustchacha20poly1305 = { version = "0.4.1", package = "chacha20poly1305", optional = true }
+rustchacha20poly1305 = { version = "0.5.0", package = "chacha20poly1305", optional = true }
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1", optional = true }
 secp256k1 = { version = "0.17", optional = true, features = ["rand", "serde"]}
 serde = { version = "1.0", features = ["derive"],  optional = true}

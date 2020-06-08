@@ -31,14 +31,14 @@ impl Encryptor for XChaCha20Poly1305 {
 impl NewAead for XChaCha20Poly1305 {
     type KeySize = U32;
 
-    fn new(key: GenericArray<u8, Self::KeySize>) -> Self {
+    fn new(key: &GenericArray<u8, Self::KeySize>) -> Self {
         if !INIT.load(Ordering::Relaxed) {
             INIT.store(true, Ordering::Release);
             unsafe {
                 libsodium_ffi::sodium_init();
             }
         }
-        Self { key }
+        Self { key: *key }
     }
 }
 
@@ -103,27 +103,6 @@ impl Aead for XChaCha20Poly1305 {
             plaintext.set_len(plen as usize);
         }
         Ok(plaintext)
-    }
-
-    // TODO
-    fn encrypt_in_place_detached(
-        &self,
-        _nonce: &GenericArray<u8, Self::NonceSize>,
-        _associated_data: &[u8],
-        _buffer: &mut [u8],
-    ) -> Result<GenericArray<u8, Self::TagSize>, Error> {
-        unimplemented!();
-    }
-
-    // TODO
-    fn decrypt_in_place_detached(
-        &self,
-        _nonce: &GenericArray<u8, Self::NonceSize>,
-        _associated_data: &[u8],
-        _buffer: &mut [u8],
-        _tag: &GenericArray<u8, Self::TagSize>,
-    ) -> Result<(), Error> {
-        unimplemented!();
     }
 }
 
