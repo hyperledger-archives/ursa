@@ -43,7 +43,7 @@ schemes, and key exchange.
   - Secp256k1
 - EdDSA
   - Ed25519 (Curve25519 in Twisted Edwards Form)
-- Boneh Lynn Shachum (BLS) Signature
+- Boneh Lynn Shacham (BLS) Signature
   - Any Pairing friendly curves
 - Camenisch Lysyanskaya
   - RSA based
@@ -75,7 +75,7 @@ found in Libursa.
 
 ### Supported Signatures
 
-- Boneh Boyen Shachum (BBS+)
+- Boneh Boyen Shacham (BBS+)
   - Any Pairing friendly curves
 - Pointcheval Saunders
   - Any pairing friendly curves
