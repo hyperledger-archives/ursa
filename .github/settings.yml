@@ -1,0 +1,18 @@
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repository:
+  name: ursa
+  description: Hyperledger Ursa is a shared cryptography library
+  homepage: https://wiki.hyperledger.org/display/ursa
+  default_branch: master
+  has_downloads: true
+  has_issues: false
+  has_projects: false
+  has_wiki: false
+  archived: false
+  private: false
+  allow_squash_merge: false
+  allow_merge_commit: false
+  allow_rebase_merge: true
