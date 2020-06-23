@@ -4,6 +4,7 @@ LABEL maintainer="Cam Parra <caeparra@gmail.com>"
 
 ENV PATH /root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV SODIUM_LIB_DIR /usr/local/lib
+ENV SODIUM_INCLUDE_DIR /usr/local/include
 ENV LD_LIBRARY_PATH /usr/local/lib
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -41,5 +42,5 @@ RUN cd /usr/lib/x86_64-linux-gnu \
     && make install \
     && cd .. \
     && rm -rf libsodium-1.0.18 \
-    && curl https://sh.rustup.rs -sSf | sh -s -- -y
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2020-04-12
 
