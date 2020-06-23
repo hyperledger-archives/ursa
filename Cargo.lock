@@ -46,7 +46,6 @@ dependencies = [
  "block-cipher",
  "ghash",
  "subtle 2.2.3",
- "zeroize",
 ]
 
 [[package]]
@@ -836,7 +835,7 @@ dependencies = [
  "num-bigint 0.3.0",
  "num-integer",
  "num-traits",
- "rand 0.7.0",
+ "rand 0.7.3",
 ]
 
 [[package]]
@@ -1096,6 +1095,18 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rand 0.7.0",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f3fc75e3697059fb1bc465e3d8cca6cf92f56854f201158b3f9c77d5a3cfa0"
+dependencies = [
+ "autocfg 1.0.0",
+ "num-integer",
+ "num-traits",
+ "rand 0.7.3",
 ]
 
 [[package]]
@@ -1828,7 +1839,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8326b2c654932e3e4f9196e69d08fdf7cfd718e1dc6f66b347e6024a0c961402"
 dependencies = [
- "generic-array",
+ "generic-array 0.14.1",
  "subtle 2.2.3",
 ]
 
