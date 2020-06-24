@@ -42,5 +42,5 @@ RUN cd /usr/lib/x86_64-linux-gnu \
     && make install \
     && cd .. \
     && rm -rf libsodium-1.0.18 \
-    && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly-2020-04-12
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y 
 
