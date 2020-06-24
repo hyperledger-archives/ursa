@@ -8,7 +8,7 @@ repository:
   homepage: https://wiki.hyperledger.org/display/ursa
   default_branch: master
   has_downloads: true
-  has_issues: false
+  has_issues: true
   has_projects: false
   has_wiki: false
   archived: false
