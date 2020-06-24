@@ -66,18 +66,18 @@ jobs:
         displayName: 'Install rust'
       - script: SODIUM_BUILD_STATIC=1 $HOME/.cargo/bin/cargo test --release
         displayName: 'test release static sodium'
-#  - job: asm
-#    pool:
-#      vmImage: 'Ubuntu 18.04'
-#    steps:
-#      - script: |
-#          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
-#          rustup toolchain install nightly
-#          rustup default nightly
-#          rustc --version
-#        displayName: 'Install rust, select nightly'
-#      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
-#        displayName: 'build asm'
+  - job: asm
+    pool:
+      vmImage: 'Ubuntu 18.04'
+    steps:
+      - script: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+          rustup toolchain install nightly
+          rustup default nightly
+          rustc --version
+        displayName: 'Install rust, select nightly'
+      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
+        displayName: 'build asm'
   - job: secp256k1
     pool:
       vmImage: 'Ubuntu 18.04'
