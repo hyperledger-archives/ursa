@@ -10,7 +10,7 @@ repository = "https://github.com/hyperledger/ursa"
 version = "0.4.1"
 
 [badges]
-maintenance = { status = "active" }
+maintenance = { status = "actively-developed" }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
