@@ -361,6 +361,17 @@ macro_rules! bls_impl {
                 let ate_pairs = pairs.iter().map($set_pairs).collect();
                 GT::ate_multi_pairing(ate_pairs).is_one()
             }
+
+            pub fn to_bytes(&self) -> Vec<u8> {
+                self.0.to_bytes()
+            }
+
+            pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
+                Ok(AggregatedSignature(
+                    SignatureGroup::from_bytes(bytes)
+                        .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?,
+                ))
+            }
         }
     };
 }
