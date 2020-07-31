@@ -331,7 +331,11 @@ impl BigNumber {
                 "Cannot have modulus==0".to_string(),
             ));
         }
-        let res = &self.bn % &BigNumber::_get_modulus(&a.bn);
+        let n = BigNumber::_get_modulus(&a.bn);
+        let mut res = &self.bn % &n;
+        if res < BigInt::zero() {
+            res += n;
+        }
         Ok(BigNumber { bn: res })
     }
 

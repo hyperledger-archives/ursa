@@ -64,7 +64,16 @@ extern crate glass_pumpkin;
 #[cfg(feature = "int_traits")]
 extern crate int_traits;
 #[cfg(feature = "log")]
-#[cfg_attr(any(feature = "cl", feature = "cl_native", feature = "ffi"), macro_use)]
+#[cfg_attr(
+    any(
+        feature = "cl",
+        feature = "cl_native",
+        feature = "shamir",
+        feature = "shamir_native",
+        feature = "ffi"
+    ),
+    macro_use
+)]
 extern crate log;
 #[cfg(feature = "num-bigint")]
 extern crate num_bigint;
@@ -127,10 +136,10 @@ pub mod utils;
 
 #[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 pub mod bls;
-#[cfg(feature = "cl_native")]
+#[cfg(any(feature = "cl_native", feature = "shamir_native"))]
 #[path = "bn/openssl.rs"]
 pub mod bn;
-#[cfg(feature = "cl")]
+#[cfg(any(feature = "cl", feature = "shamir"))]
 #[path = "bn/rust.rs"]
 pub mod bn;
 #[cfg(any(feature = "cl", feature = "cl_native"))]
@@ -151,6 +160,8 @@ pub mod encryption;
     feature = "ecdsa_secp256k1_asm",
     feature = "cl",
     feature = "cl_native",
+    feature = "shamir",
+    feature = "shamir_native",
     feature = "ffi",
     feature = "wasm"
 ))]
@@ -190,6 +201,8 @@ pub mod keys;
 ))]
 #[path = "pair/amcl.rs"]
 pub mod pair;
+#[cfg(any(feature = "shamir", feature = "shamir_native"))]
+pub mod shamir;
 #[cfg(any(
     feature = "ed25519",
     feature = "ed25519_asm",
@@ -201,6 +214,8 @@ pub mod pair;
 pub mod signatures;
 #[cfg(feature = "wasm")]
 pub mod wasm;
+
+pub type CryptoResult<T> = Result<T, CryptoError>;
 
 #[derive(Debug)]
 pub enum CryptoError {
@@ -215,6 +230,8 @@ pub enum CryptoError {
     KeyGenError(String),
     /// Returned when an error occurs during digest generation
     DigestGenError(String),
+    /// A General purpose error message that doesn't fit in any category
+    GeneralError(String),
 }
 
 impl std::fmt::Display for CryptoError {
@@ -225,6 +242,7 @@ impl std::fmt::Display for CryptoError {
             CryptoError::SigningError(s) => write!(f, "SigningError({})", s),
             CryptoError::KeyGenError(s) => write!(f, "KeyGenError({})", s),
             CryptoError::DigestGenError(s) => write!(f, "DigestGenError({})", s),
+            CryptoError::GeneralError(m) => write!(f, "GeneralError({})", m),
         }
     }
 }
@@ -261,5 +279,24 @@ impl From<libsecp256k1::Error> for CryptoError {
                 CryptoError::ParseError("Callback panicked".to_string())
             }
         }
+    }
+}
+
+#[cfg(any(
+    feature = "bls_bn254",
+    feature = "bls_bn254_asm",
+    feature = "ecdsa_secp256k1_native",
+    feature = "ecdsa_secp256k1_asm",
+    feature = "cl",
+    feature = "cl_native",
+    feature = "shamir",
+    feature = "shamir_native",
+    feature = "ffi",
+    feature = "wasm"
+))]
+impl From<errors::UrsaCryptoError> for CryptoError {
+    fn from(err: errors::UrsaCryptoError) -> Self {
+        let kind = err.kind();
+        CryptoError::GeneralError(format!("{}", kind))
     }
 }
