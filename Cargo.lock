@@ -104,6 +104,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "amcl_wrapper"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c7c7c7627444413f6a488bf9e6d352aea6fcfa281123cd92ecac0b3c9ef5ef2"
+dependencies = [
+ "byteorder",
+ "lazy_static",
+ "miracl_core",
+ "rand 0.7.3",
+ "rayon",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha3",
+ "subtle-encoding",
+ "zeroize",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -272,7 +291,7 @@ dependencies = [
 name = "bulletproofs_amcl"
 version = "0.2.0"
 dependencies = [
- "amcl_wrapper",
+ "amcl_wrapper 0.3.5",
  "byteorder",
  "criterion",
  "failure",
@@ -1061,6 +1080,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89d10a1ea3ffe41d318ccd9f21a1f2366c8103b95e1deaa9449793f4b10cefe8"
 
 [[package]]
+name = "miracl_core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4330eca86d39f2b52d0481aa1e90fe21bfa61f11b0bf9b48ab95595013cefe48"
+
+[[package]]
 name = "nom"
 version = "4.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1607,6 +1632,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_bytes"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_cbor"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1851,7 +1885,7 @@ dependencies = [
  "aes",
  "aes-gcm",
  "amcl",
- "amcl_wrapper",
+ "amcl_wrapper 0.4.0",
  "arrayref",
  "blake2",
  "block-modes",
@@ -1868,6 +1902,7 @@ dependencies = [
  "ffi-support",
  "glass_pumpkin",
  "hex",
+ "hkdf",
  "hmac",
  "int_traits",
  "js-sys",
@@ -2098,7 +2133,7 @@ dependencies = [
 name = "zmix"
 version = "0.3.1"
 dependencies = [
- "amcl_wrapper",
+ "amcl_wrapper 0.3.5",
  "arrayref",
  "bbs",
  "bulletproofs_amcl",

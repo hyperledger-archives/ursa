@@ -1,3 +1,4 @@
+use super::SignatureScheme;
 /// Implements
 /// https://eprint.iacr.org/2018/483 and
 /// https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
@@ -10,8 +11,10 @@ use amcl_wrapper::{
     group_elem_g2::G2,
     types_g2::GroupG2_SIZE,
 };
+use keys::{KeyGenOption, PrivateKey as UrsaPrivateKey, PublicKey as UrsaPublicKey};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
 use CryptoError;
 
@@ -55,6 +58,102 @@ macro_rules! bls_impl {
             SignatureGroup::from_msg_hash(value.as_slice())
         }
 
+        pub struct Bls;
+
+        impl SignatureScheme for Bls {
+            fn new() -> Self {
+                Bls
+            }
+
+            fn keypair(
+                &self,
+                options: Option<KeyGenOption>,
+            ) -> Result<(UrsaPublicKey, UrsaPrivateKey), CryptoError> {
+                let (public_key, private_key) = match options {
+                    Some(option) => match option {
+                        // Follows https://datatracker.ietf.org/doc/draft-irtf-cfrg-bls-signature/?include_text=1
+                        KeyGenOption::UseSeed(ref seed) => {
+                            let salt = b"BLS-SIG-KEYGEN-SALT-";
+                            let info = [0u8, PRIVATE_KEY_SIZE as u8]; // key_info || I2OSP(L, 2)
+                            let mut ikm = vec![0u8; seed.len() + 1];
+                            ikm[..seed.len()].copy_from_slice(seed); // IKM || I2OSP(0, 1)
+                            let mut okm = [0u8; PRIVATE_KEY_SIZE];
+                            let h = hkdf::Hkdf::<Sha256>::new(Some(&salt[..]), &ikm);
+                            h.expand(&info[..], &mut okm).map_err(|err| {
+                                CryptoError::KeyGenError(format!(
+                                    "Failed to generate keypair: {}",
+                                    err
+                                ))
+                            })?;
+                            let private_key: PrivateKey = PrivateKey::from(&okm);
+                            (
+                                PublicKey::new(&private_key, &Generator::generator()),
+                                private_key,
+                            )
+                        }
+                        KeyGenOption::FromSecretKey(ref key) => {
+                            let private_key =
+                                PrivateKey::from_bytes(key.as_ref()).map_err(|_| {
+                                    CryptoError::ParseError(
+                                        "Failed to parse private key.".to_string(),
+                                    )
+                                })?;
+                            (
+                                PublicKey::new(&private_key, &Generator::generator()),
+                                private_key,
+                            )
+                        }
+                    },
+                    None => generate(&Generator::generator()),
+                };
+                Ok((
+                    UrsaPublicKey(public_key.to_bytes()),
+                    UrsaPrivateKey(private_key.to_bytes()),
+                ))
+            }
+
+            fn sign(&self, message: &[u8], sk: &UrsaPrivateKey) -> Result<Vec<u8>, CryptoError> {
+                Ok(Signature::new(
+                    message,
+                    None,
+                    &PrivateKey::from_bytes(sk.as_ref()).map_err(|_| {
+                        CryptoError::ParseError("Failed to parse private key.".to_string())
+                    })?,
+                )
+                .to_bytes())
+            }
+
+            fn verify(
+                &self,
+                message: &[u8],
+                signature: &[u8],
+                pk: &UrsaPublicKey,
+            ) -> Result<bool, CryptoError> {
+                Ok(Signature::from_bytes(signature)
+                    .map_err(|_| CryptoError::ParseError("Failed to parse signature.".to_string()))?
+                    .verify(
+                        message,
+                        None,
+                        &PublicKey::from_bytes(pk.as_ref()).map_err(|_| {
+                            CryptoError::ParseError("Failed to parse public key.".to_string())
+                        })?,
+                        &Generator::generator(),
+                    ))
+            }
+
+            fn signature_size() -> usize {
+                SIGNATURE_SIZE
+            }
+
+            fn private_key_size() -> usize {
+                PRIVATE_KEY_SIZE
+            }
+
+            fn public_key_size() -> usize {
+                PUBLIC_KEY_SIZE
+            }
+        }
+
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         #[derive(Debug, Clone)]
         pub struct PublicKey(Generator);
@@ -72,7 +171,7 @@ macro_rules! bls_impl {
             }
 
             pub fn to_bytes(&self) -> Vec<u8> {
-                self.0.to_bytes()
+                self.0.to_bytes(false)
             }
 
             pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
@@ -103,7 +202,7 @@ macro_rules! bls_impl {
                     // of the hash doesn't matter as much as its included twice.
                     // For convenience, its appended to the end
                     let mut h = bytes.clone();
-                    h.extend_from_slice(k.0.to_bytes().as_slice());
+                    h.extend_from_slice(k.0.to_bytes(false).as_slice());
                     apk + &k.0 * &FieldElement::from_msg_hash(h.as_slice())
                 }))
             }
@@ -115,7 +214,7 @@ macro_rules! bls_impl {
             }
 
             pub fn to_bytes(&self) -> Vec<u8> {
-                self.0.to_bytes()
+                self.0.to_bytes(false)
             }
 
             pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
@@ -244,7 +343,7 @@ macro_rules! bls_impl {
             }
 
             pub fn to_bytes(&self) -> Vec<u8> {
-                self.0.to_bytes()
+                self.0.to_bytes(false)
             }
 
             pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
@@ -269,7 +368,7 @@ macro_rules! bls_impl {
             }
 
             pub fn to_bytes(&self) -> Vec<u8> {
-                self.0.to_bytes()
+                self.0.to_bytes(false)
             }
 
             pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
@@ -363,7 +462,7 @@ macro_rules! bls_impl {
             }
 
             pub fn to_bytes(&self) -> Vec<u8> {
-                self.0.to_bytes()
+                self.0.to_bytes(false)
             }
 
             pub fn from_bytes(bytes: &[u8]) -> Result<Self, CryptoError> {
@@ -384,6 +483,18 @@ macro_rules! bls_tests_impl {
 
             const MESSAGE_1: &[u8; 22] = b"This is a test message";
             const MESSAGE_2: &[u8; 20] = b"Another test message";
+            const SEED: &[u8; 10] = &[1u8; 10];
+
+            #[test]
+            fn signature_generation_from_seed() {
+                let keypair_1 = Bls
+                    .keypair(Some(KeyGenOption::UseSeed(SEED.to_vec())))
+                    .unwrap();
+                let keypair_2 = Bls
+                    .keypair(Some(KeyGenOption::UseSeed(SEED.to_vec())))
+                    .unwrap();
+                assert_eq!(keypair_1, keypair_2);
+            }
 
             #[test]
             fn signature_verification() {
