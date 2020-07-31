@@ -47,6 +47,7 @@ schemes, and key exchange.
   - Any Pairing friendly curves
 - Camenisch Lysyanskaya
   - RSA based
+- Shamir Secret Sharing
 
 ### Supported Key Agreement
 
