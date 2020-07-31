@@ -68,8 +68,8 @@ extern crate int_traits;
     any(
         feature = "cl",
         feature = "cl_native",
-        feature = "shamir",
-        feature = "shamir_native",
+        feature = "sharing",
+        feature = "sharing_native",
         feature = "ffi"
     ),
     macro_use
@@ -136,10 +136,10 @@ pub mod utils;
 
 #[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 pub mod bls;
-#[cfg(any(feature = "cl_native", feature = "shamir_native"))]
+#[cfg(any(feature = "cl_native", feature = "sharing_native"))]
 #[path = "bn/openssl.rs"]
 pub mod bn;
-#[cfg(any(feature = "cl", feature = "shamir"))]
+#[cfg(any(feature = "cl", feature = "sharing"))]
 #[path = "bn/rust.rs"]
 pub mod bn;
 #[cfg(any(feature = "cl", feature = "cl_native"))]
@@ -160,8 +160,8 @@ pub mod encryption;
     feature = "ecdsa_secp256k1_asm",
     feature = "cl",
     feature = "cl_native",
-    feature = "shamir",
-    feature = "shamir_native",
+    feature = "sharing",
+    feature = "sharing_native",
     feature = "ffi",
     feature = "wasm"
 ))]
@@ -201,8 +201,8 @@ pub mod keys;
 ))]
 #[path = "pair/amcl.rs"]
 pub mod pair;
-#[cfg(any(feature = "shamir", feature = "shamir_native"))]
-pub mod shamir;
+#[cfg(any(feature = "sharing", feature = "sharing_native"))]
+pub mod sharing;
 #[cfg(any(
     feature = "ed25519",
     feature = "ed25519_asm",
@@ -289,8 +289,8 @@ impl From<libsecp256k1::Error> for CryptoError {
     feature = "ecdsa_secp256k1_asm",
     feature = "cl",
     feature = "cl_native",
-    feature = "shamir",
-    feature = "shamir_native",
+    feature = "sharing",
+    feature = "sharing_native",
     feature = "ffi",
     feature = "wasm"
 ))]
