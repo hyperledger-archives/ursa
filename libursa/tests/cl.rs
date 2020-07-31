@@ -1,9 +1,9 @@
 #[cfg(feature = "serde")]
 extern crate serde;
-#[cfg(any(feature = "cl", feature = "cl_native"))]
+#[cfg(any(feature = "cl_native"))]
 extern crate ursa;
 
-#[cfg(any(feature = "cl", feature = "cl_native"))]
+#[cfg(any(feature = "cl_native"))]
 mod cl_tests {
     use serde::{Deserialize, Serialize};
     use std::collections::{BTreeSet, HashSet};
