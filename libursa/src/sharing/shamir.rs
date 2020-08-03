@@ -1,8 +1,13 @@
 //! Implements Shamir's simple secret sharing scheme.
 //! Not an implementation of verifiable secret sharing as described by Feldman
 //! (see <https://www.cs.umd.edu/~gasarch/TOPICS/secretsharing/feldmanVSS.pdf>
+//! or Pedersen
+//! (see <https://www.cs.cornell.edu/courses/cs754/2001fa/129.PDF>)
 //! or adept secret sharing as described by Phillip Rogaway
 //! (see <https://eprint.iacr.org/2020/800>
+//!
+//! Future work would be to use pedersen commitments or reed-solomon
+//! codes to check for corrupted shares.
 
 use bn::BigNumber;
 use std::{cmp::Ordering, collections::BTreeSet};
