@@ -9,10 +9,10 @@ use std::{cmp::Ordering, collections::BTreeSet};
 
 use {CryptoError, CryptoResult};
 
-/// Represents an element in a finite field
+/// Represents an element in a finite field as [0, n)
 #[derive(Debug)]
 struct Element {
-    /// Either a prime of co-prime (as in RSA)
+    /// A prime number
     modulus: BigNumber,
     /// The current element value
     value: BigNumber,
@@ -157,11 +157,6 @@ impl Polynomial {
 
     /// Compute the value of the polynomial for the given `x`
     pub fn evaluate(&self, x: &Element) -> CryptoResult<Element> {
-        // Is x the origin?
-        if x.value == BigNumber::new()? {
-            return Ok(self.coefficients[0].try_clone()?);
-        }
-
         // Compute the polynomial value using Horner's Method
         let degree = self.coefficients.len() - 1;
         // b_n = a_n
@@ -253,6 +248,9 @@ impl Clone for Share {
 /// The `threshold` and `total` must be at least 2. Doesn't support more than 255
 /// (not sure why so many would be needed). The returned shares attach
 /// attach a one byte tag used to reconstruct the secret.
+///
+/// Make sure `field` is either prime or prime power, i.e. is actually a field
+/// otherwise this method is insecure
 pub fn split_secret<B: AsRef<[u8]>>(
     secret: B,
     threshold: u8,
@@ -273,6 +271,11 @@ pub fn split_secret<B: AsRef<[u8]>>(
     if secret.len() == 0 {
         return Err(CryptoError::GeneralError(
             "secret cannot be empty".to_string(),
+        ));
+    }
+    if field < &BigNumber::from_u32(2)? {
+        return Err(CryptoError::GeneralError(
+            "field must be greater than 1".to_string(),
         ));
     }
     let element = Element {
@@ -306,6 +309,11 @@ pub fn combine_shares<B: AsRef<[Share]>>(shares: B, field: &BigNumber) -> Crypto
     if shares.len() < 2 {
         return Err(CryptoError::GeneralError(
             "Less than two shares cannot be used to reconstruct the secret".to_string(),
+        ));
+    }
+    if field < &BigNumber::from_u32(2)? {
+        return Err(CryptoError::GeneralError(
+            "field must be greater than 1".to_string(),
         ));
     }
 
