@@ -19,6 +19,7 @@ include = [
     "src/hash/**/*.rs",
     "src/kex/**/*.rs",
     "src/pair/**/*.rs",
+    "src/sharing/**/*.rs",
     "src/signatures/**/*.rs",
     "src/utils/**/*.rs",
     "src/wasm/**/*.rs",
