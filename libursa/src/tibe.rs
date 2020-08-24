@@ -15,16 +15,11 @@ impl_bytearray!(PrivateKeyShare);
 
 
 
-// Run the group generator GG(Λ) to obtain a bilinear group G of
-// prime order p > n. Select random generators g, g2, h1 in G, and a random
-// degree k − 1 polynomial f ∈ Zp[X]. Set α = f(0) ∈ Zp and g1 = g^α.
-// The system parameters PK consist of PK = (G, g, g1, g2, h1). For i = 1, . . . , n
-// the master key share (i, SKi) of server i is defined as SKi = g2^f(i)
-// The public verification key VK consists of the n-tuple (gf(1), . . . , gf(n)).
+
 pub fn setup(n: i32, k: i32, a: i32) -> (PublicKey, VerificationKey, Vec::<ShareKey>) {
-    p1 = PointG1::new().unwrap();
-    p2 = PointG2::new().unwrap();
-    pair = Pair::pair(&p1, &q1).unwrap();
+    g1 = PointG1::new().unwrap();
+    g2 = PointG2::new().unwrap();
+    h = PointG2::new().unwrap();
 }
 
 
