@@ -9,10 +9,10 @@
 //! Future work would be to use pedersen commitments or reed-solomon
 //! codes to check for corrupted shares.
 
-use bn::BigNumber;
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use {CryptoError, CryptoResult};
+use bn::BigNumber;
 
 /// Represents an element in a finite field as [0, n)
 #[derive(Debug)]
@@ -136,7 +136,7 @@ impl Ord for Element {
 }
 
 #[derive(Debug)]
-struct Polynomial {
+pub struct Polynomial {
     coefficients: Vec<Element>,
 }
 
@@ -360,7 +360,6 @@ pub fn combine_shares<B: AsRef<[Share]>>(shares: B, field: &BigNumber) -> Crypto
 
 #[cfg(test)]
 mod tests {
-
     const ED25519_SUBGROUP_ORDER: &str =
         "1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED";
     const BLS12_381_SUBGROUP_ORDER: &str =

@@ -1,5 +1,9 @@
+use rand::Rng;
+
+use CryptoResult;
 use keys::{PrivateKey, PublicKey};
 use pair::{Pair, PointG1, PointG2};
+use sharing::shamir::Polynomial;
 
 pub struct ID(pub Vec<u8>);
 impl_bytearray!(ID);
@@ -14,12 +18,27 @@ pub struct PrivateKeyShare(pub Vec<u8>);
 impl_bytearray!(PrivateKeyShare);
 
 
-
-
 pub fn setup(n: i32, k: i32, a: i32) -> (PublicKey, VerificationKey, Vec::<ShareKey>) {
-    g1 = PointG1::new().unwrap();
-    g2 = PointG2::new().unwrap();
-    h = PointG2::new().unwrap();
+    let g = PointG1::new().unwrap();
+    let g2 = PointG2::new().unwrap();
+    let h1 = PointG2::new().unwrap();
+    let mut rng = rand::thread_rng();
+
+
+
+    let element = Element {
+        modulus: rand::thread_rng(), //random value
+        value: rand::thread_rng(), //random value
+    };
+
+    //calc polynomial variables
+    let polynomial = Polynomial::new(element, (threshold - 1) as usize)?;
+
+    //find value at x==0 (g1)
+    let g1 = polynomial.evaluate(&x)?;
+
+
+    return (nil, nli, nil);
 }
 
 
