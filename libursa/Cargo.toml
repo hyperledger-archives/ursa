@@ -122,7 +122,7 @@ block-padding = { version = "0.1", optional = true }
 clear_on_drop = { version = "0.2.4", optional = true }
 console_error_panic_hook = { version = "0.1.5", optional = true }
 curve25519-dalek = { version = "2.0.0", default-features = false, optional = true }
-ed25519-dalek = { version = "=1.0.0-pre.3", default-features = false, optional = true }
+ed25519-dalek = { version = "=1.0.0-pre.3", default-features = false, optional = true, features = ["legacy_compatibility"]}
 env_logger = { version = "0.7.0", optional = true }
 failure = { version = "0.1.6", optional = true }
 ffi-support = { version = "0.4", optional = true }
