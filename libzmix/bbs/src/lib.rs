@@ -216,8 +216,8 @@ impl CommitmentBuilder {
 
     /// Add a new base and scalar to the commitment
     pub fn add<B: AsRef<G1>, S: AsRef<Fr>>(&mut self, base: B, scalar: S) {
-        self.bases.push(base.as_ref().clone());
-        self.scalars.push(scalar.as_ref().clone());
+        self.bases.push(*base.as_ref());
+        self.scalars.push(*scalar.as_ref());
     }
 
     /// Convert to commitment
@@ -447,10 +447,10 @@ impl BlindSignatureContext {
         // Verify the proof
         // First get the generators used to create the commitment
         let mut bases = Vec::new();
-        bases.push(verkey.h0.clone());
+        bases.push(verkey.h0);
         for i in 0..verkey.message_count() {
             if !revealed_messages.contains(&i) {
-                bases.push(verkey.h[i].clone());
+                bases.push(verkey.h[i]);
             }
         }
 
@@ -750,6 +750,17 @@ fn bitvector_to_revealed(data: &[u8]) -> BTreeSet<usize> {
     revealed_messages
 }
 
+fn rand_non_zero_fr() -> Fr {
+    let mut rng = thread_rng();
+    let mut r = Fr::random(&mut rng);
+    loop {
+        if !r.is_zero() {
+            return r;
+        }
+        r = Fr::random(&mut rng);
+    }
+}
+
 /// Convenience importer
 pub mod prelude {
     pub use super::{
@@ -799,7 +810,7 @@ mod tests {
         println!("temp = {:?}", temp);
 
         let start = std::time::Instant::now();
-        let (dpk, _) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk)));
+        let (dpk, _) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk))).unwrap();
         println!("dpkgen = {:?}", std::time::Instant::now() - start);
         let start = std::time::Instant::now();
         let _ = dpk.to_public_key(count);

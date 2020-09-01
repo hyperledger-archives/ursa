@@ -24,7 +24,9 @@ impl Issuer {
     }
 
     /// Create a keypair that uses the short public key
-    pub fn new_short_keys(option: Option<KeyGenOption>) -> (DeterministicPublicKey, SecretKey) {
+    pub fn new_short_keys(
+        option: Option<KeyGenOption>,
+    ) -> Result<(DeterministicPublicKey, SecretKey), BBSError> {
         DeterministicPublicKey::new(option)
     }
 

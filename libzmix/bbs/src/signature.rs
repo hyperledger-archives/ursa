@@ -1,8 +1,8 @@
 use crate::errors::prelude::*;
 use crate::keys::prelude::*;
 use crate::{
-    multi_scalar_mul_const_time_g1, multi_scalar_mul_var_time_g1, Commitment, RandomElem,
-    SignatureBlinding, SignatureMessage, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
+    multi_scalar_mul_const_time_g1, multi_scalar_mul_var_time_g1, rand_non_zero_fr, Commitment,
+    RandomElem, SignatureBlinding, SignatureMessage, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
     G1_UNCOMPRESSED_SIZE,
 };
 use ff_zeroize::{Field, PrimeField};
@@ -11,7 +11,6 @@ use pairing_plus::{
     serdes::SerDes,
     CurveAffine, CurveProjective, Engine,
 };
-use rand::prelude::*;
 use serde::{
     de::{Error as DError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -161,9 +160,10 @@ impl BlindSignature {
             verkey.message_count(),
             messages.len()
         );
-        let mut rng = thread_rng();
-        let e = Fr::random(&mut rng);
-        let s = Fr::random(&mut rng);
+        signkey.validate()?;
+        verkey.validate()?;
+        let e = rand_non_zero_fr();
+        let s = rand_non_zero_fr();
 
         let mut points = Vec::with_capacity(messages.len() + 2);
         let mut scalars = Vec::with_capacity(messages.len() + 2);
@@ -172,12 +172,12 @@ impl BlindSignature {
         scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
         points.push(G1::one());
         scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
-        points.push(verkey.h0.0.clone());
-        scalars.push(s.clone());
+        points.push(verkey.h0.0);
+        scalars.push(s);
 
         for (i, m) in messages.iter() {
-            points.push(verkey.h[*i].0.clone());
-            scalars.push(m.0.clone());
+            points.push(verkey.h[*i].0);
+            scalars.push(m.0);
         }
 
         let mut b = multi_scalar_mul_const_time_g1(&points, &scalars);
@@ -257,9 +257,10 @@ impl Signature {
             verkey.message_count(),
             messages.len()
         );
-        let mut rng = thread_rng();
-        let e = Fr::random(&mut rng);
-        let s = Fr::random(&mut rng);
+        signkey.validate()?;
+        verkey.validate()?;
+        let e = rand_non_zero_fr();
+        let s = rand_non_zero_fr();
         let mut b = Self::compute_b(&s, messages, verkey);
         let mut exp = signkey.0;
         exp.add_assign(&e);
@@ -283,10 +284,12 @@ impl Signature {
             verkey.message_count(),
             messages.len()
         );
+        verkey.validate()?;
+        self.validate()?;
 
         let mut pqz = Vec::new();
         let mut a = G2::one();
-        a.mul_assign(self.e.clone());
+        a.mul_assign(self.e);
         a.add_assign(&verkey.w.0);
 
         let mut b = self.get_b(messages, verkey);
@@ -308,6 +311,15 @@ impl Signature {
         )
     }
 
+    /// Check if the signature is a valid form i.e. not infinity since it will always validate
+    /// if that is the case
+    pub fn validate(&self) -> Result<(), BBSError> {
+        if self.a.is_zero() || self.e.is_zero() || self.s.is_zero() {
+            return Err(BBSErrorKind::MalformedSignature.into());
+        }
+        Ok(())
+    }
+
     /// Helper function for computing the `b` value. Internal helper function
     pub(crate) fn get_b(&self, messages: &[SignatureMessage], verkey: &PublicKey) -> G1 {
         // Self::compute_b(&self.s, messages, verkey)
@@ -316,12 +328,12 @@ impl Signature {
         // g1*h0^blinding_factor*hi^mi.....
         bases.push(G1::one());
         scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
-        bases.push(verkey.h0.0.clone());
-        scalars.push(self.s.clone());
+        bases.push(verkey.h0.0);
+        scalars.push(self.s);
 
         for i in 0..verkey.message_count() {
-            bases.push(verkey.h[i].0.clone());
-            scalars.push(messages[i].0.clone());
+            bases.push(verkey.h[i].0);
+            scalars.push(messages[i].0);
         }
         multi_scalar_mul_var_time_g1(&bases, &scalars)
     }
@@ -332,13 +344,13 @@ impl Signature {
         // g1*h0^blinding_factor*hi^mi.....
         bases.push(G1::one());
         scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
-        bases.push(verkey.h0.0.clone());
-        scalars.push((*s).clone());
+        bases.push(verkey.h0.0);
+        scalars.push(*s);
 
         let min = std::cmp::min(verkey.message_count(), messages.len());
         for i in 0..min {
-            bases.push(verkey.h[i].0.clone());
-            scalars.push(messages[i].0.clone());
+            bases.push(verkey.h[i].0);
+            scalars.push(messages[i].0);
         }
         multi_scalar_mul_const_time_g1(&bases, &scalars)
     }
@@ -381,6 +393,7 @@ mod tests {
     use crate::keys::generate;
     use crate::pok_vc::ProverCommittingG1;
     use crate::CommitmentBuilder;
+    use rand::prelude::*;
 
     #[test]
     fn signature_serialization() {
@@ -505,5 +518,26 @@ mod tests {
         let res = sig.verify(messages.as_slice(), &verkey);
         assert!(res.is_ok());
         assert!(res.unwrap());
+    }
+
+    #[test]
+    fn signature_zero() {
+        let message_count = 5;
+        let mut messages = Vec::new();
+        for _ in 0..message_count {
+            messages.push(SignatureMessage::random());
+        }
+        let (verkey, signkey) = generate(message_count).unwrap();
+
+        let sig = Signature::new(messages.as_slice(), &signkey, &verkey).unwrap();
+        let mut badsig1 = sig.clone();
+        badsig1.a = G1::zero();
+        assert!(badsig1.validate().is_err());
+        let mut badsig2 = sig.clone();
+        badsig2.e = Fr::zero();
+        assert!(badsig2.validate().is_err());
+        let mut badsig3 = sig.clone();
+        badsig3.s = Fr::zero();
+        assert!(badsig3.validate().is_err());
     }
 }

@@ -4,8 +4,9 @@ use crate::messages::*;
 use crate::pok_vc::prelude::*;
 use crate::signature::Signature;
 use crate::{
-    multi_scalar_mul_const_time_g1, Commitment, CommitmentBuilder, GeneratorG1, ProofChallenge,
-    SignatureMessage, ToVariableLengthBytes, G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE,
+    multi_scalar_mul_const_time_g1, rand_non_zero_fr, Commitment, CommitmentBuilder, GeneratorG1,
+    ProofChallenge, SignatureMessage, ToVariableLengthBytes, G1_COMPRESSED_SIZE,
+    G1_UNCOMPRESSED_SIZE,
 };
 
 use ff_zeroize::{Field, PrimeField};
@@ -14,7 +15,6 @@ use pairing_plus::{
     bls12_381::{Bls12, Fq12, Fr, FrRepr, G1, G2},
     CurveAffine, CurveProjective, Engine,
 };
-use rand::thread_rng;
 use serde::{
     de::{Error as DError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -73,10 +73,7 @@ pub enum PoKOfSignatureProofStatus {
 impl PoKOfSignatureProofStatus {
     /// Return whether the proof succeeded or not
     pub fn is_valid(self) -> bool {
-        match self {
-            PoKOfSignatureProofStatus::Success => true,
-            _ => false,
-        }
+        matches!(self, PoKOfSignatureProofStatus::Success)
     }
 }
 
@@ -141,18 +138,15 @@ impl PoKOfSignature {
             .into());
         }
 
-        let mut rng = thread_rng();
-        let r1 = Fr::random(&mut rng);
-        let r2 = Fr::random(&mut rng);
+        let r1 = rand_non_zero_fr();
+        let r2 = rand_non_zero_fr();
 
         let mut temp: Vec<SignatureMessage> = Vec::new();
         for i in 0..messages.len() {
             match &messages[i] {
-                ProofMessage::Revealed(r) => temp.push(r.clone()),
-                ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m)) => {
-                    temp.push(m.clone())
-                }
-                ProofMessage::Hidden(HiddenMessage::ExternalBlinding(m, _)) => temp.push(m.clone()),
+                ProofMessage::Revealed(r) => temp.push(*r),
+                ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m)) => temp.push(*m),
+                ProofMessage::Hidden(HiddenMessage::ExternalBlinding(m, _)) => temp.push(*m),
             }
         }
 
@@ -162,7 +156,7 @@ impl PoKOfSignature {
         a_prime.mul_assign(r1);
 
         let mut a_bar_denom = a_prime;
-        a_bar_denom.mul_assign(signature.e.clone());
+        a_bar_denom.mul_assign(signature.e);
 
         let mut a_bar = b;
         a_bar.mul_assign(r1);
@@ -221,15 +215,15 @@ impl PoKOfSignature {
         for i in 0..vk.message_count() {
             match &messages[i] {
                 ProofMessage::Revealed(r) => {
-                    revealed_messages.insert(i, r.clone());
+                    revealed_messages.insert(i, *r);
                 }
                 ProofMessage::Hidden(HiddenMessage::ProofSpecificBlinding(m)) => {
                     committing_2.commit(&vk.h[i]);
-                    secrets_2.push(m.0.clone());
+                    secrets_2.push(m.0);
                 }
                 ProofMessage::Hidden(HiddenMessage::ExternalBlinding(e, b)) => {
                     committing_2.commit_with(&vk.h[i], b);
-                    secrets_2.push(e.0.clone());
+                    secrets_2.push(e.0);
                 }
             }
         }
@@ -386,7 +380,7 @@ impl PoKOfSignatureProof {
 
         let mut bases = vec![];
         bases.push(GeneratorG1(self.a_prime));
-        bases.push(vk.h0.clone());
+        bases.push(vk.h0);
         // a_bar / d
         let mut a_bar_d = self.a_bar;
         a_bar_d.sub_assign(&self.d);
@@ -400,7 +394,7 @@ impl PoKOfSignatureProof {
 
         let mut bases_pok_vc_2 = Vec::with_capacity(2 + vk.message_count() - revealed_msgs.len());
         bases_pok_vc_2.push(GeneratorG1(self.d));
-        bases_pok_vc_2.push(vk.h0.clone());
+        bases_pok_vc_2.push(vk.h0);
 
         // `bases_disclosed` and `exponents` below are used to create g1 * h1^-m1 * h2^-m2.... for all disclosed messages m_i
         let mut bases_disclosed = Vec::with_capacity(1 + revealed_msgs.len());
@@ -411,10 +405,10 @@ impl PoKOfSignatureProof {
         for i in 0..vk.message_count() {
             if revealed_msgs.contains_key(&i) {
                 let message = revealed_msgs.get(&i).unwrap();
-                bases_disclosed.push(vk.h[i].0.clone());
-                exponents.push(message.0.clone());
+                bases_disclosed.push(vk.h[i].0);
+                exponents.push(message.0);
             } else {
-                bases_pok_vc_2.push(vk.h[i].clone());
+                bases_pok_vc_2.push(vk.h[i]);
             }
         }
         // pr = g1 * h1^-m1 * h2^-m2.... = (g1 * h1^m1 * h2^m2....)^-1 for all disclosed messages m_i

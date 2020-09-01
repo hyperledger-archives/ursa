@@ -10,9 +10,27 @@ fn keygen() {
 
     assert!(res.is_ok());
 
-    let (dpk, _) = Issuer::new_short_keys(None);
+    let (dpk, _) = Issuer::new_short_keys(None).unwrap();
     let _ = dpk.to_public_key(5);
     let _ = dpk.to_public_key(7);
+}
+
+#[test]
+fn sign_zero_key() {
+    let (pk, _) = Issuer::new_keys(5).unwrap();
+    let messages = vec![
+        SignatureMessage::hash(b"message 1"),
+        SignatureMessage::hash(b"message 2"),
+        SignatureMessage::hash(b"message 3"),
+        SignatureMessage::hash(b"message 4"),
+        SignatureMessage::hash(b"message 5"),
+    ];
+    let sk = SecretKey::from([0u8; 32]);
+    assert!(sk.validate().is_err());
+    assert!(Signature::new(messages.as_slice(), &sk, &pk).is_err());
+    let (mut pk, sk) = Issuer::new_keys(5).unwrap();
+    pk.w = GeneratorG2::default();
+    assert!(Signature::new(messages.as_slice(), &sk, &pk).is_err());
 }
 
 #[test]

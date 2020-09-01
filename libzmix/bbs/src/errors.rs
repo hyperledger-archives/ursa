@@ -27,6 +27,12 @@ pub enum BBSErrorKind {
     /// When the signature bytes are not a valid curve point
     #[fail(display = "Signature cannot be loaded due to a bad value")]
     SignatureValueIncorrectSize,
+    /// When a signature contains a zero or a point at infinity
+    #[fail(display = "Malformed signature")]
+    MalformedSignature,
+    /// When a secret key is all zeros
+    #[fail(display = "Malformed secret key")]
+    MalformedSecretKey,
     /// When the public key bytes are not valid curve points
     #[fail(display = "Malformed public key")]
     MalformedPublicKey,

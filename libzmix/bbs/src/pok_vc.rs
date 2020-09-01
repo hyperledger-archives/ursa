@@ -13,9 +13,9 @@
 #[cfg(feature = "wasm")]
 use crate::errors::{BBSError, BBSErrorKind};
 use crate::{
-    hash_to_fr, multi_scalar_mul_const_time_g1, Commitment, GeneratorG1, ProofChallenge,
-    SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE, G1_COMPRESSED_SIZE,
-    G1_UNCOMPRESSED_SIZE,
+    hash_to_fr, multi_scalar_mul_const_time_g1, rand_non_zero_fr, Commitment, GeneratorG1,
+    ProofChallenge, SignatureMessage, ToVariableLengthBytes, FR_COMPRESSED_SIZE,
+    G1_COMPRESSED_SIZE, G1_UNCOMPRESSED_SIZE,
 };
 
 use failure::{Backtrace, Context, Fail};
@@ -25,7 +25,6 @@ use pairing_plus::{
     serdes::SerDes,
     CurveAffine, CurveProjective,
 };
-use rand::prelude::*;
 use serde::{
     de::{Error as DError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -184,10 +183,10 @@ impl ProverCommittingG1 {
     /// Commit a base point with a blinding factor.
     /// The blinding factor is generated randomly
     pub fn commit<B: AsRef<G1>>(&mut self, base: B) -> usize {
-        let mut rng = thread_rng();
         let idx = self.bases.len();
         self.bases.push(base.as_ref().clone());
-        self.blinding_factors.push(Fr::random(&mut rng));
+        let r = rand_non_zero_fr();
+        self.blinding_factors.push(r);
         idx
     }
 
@@ -303,8 +302,8 @@ impl ProofG1 {
         }
         let mut points: Vec<G1> = bases.iter().map(|g| g.0).collect();
         let mut scalars = self.responses.clone();
-        points.push(commitment.0.clone());
-        scalars.push(challenge.0.clone());
+        points.push(commitment.0);
+        scalars.push(challenge.0);
         Ok(GeneratorG1(multi_scalar_mul_const_time_g1(
             &points, &scalars,
         )))
@@ -341,8 +340,8 @@ impl ProofG1 {
         let mut points: Vec<G1> = bases.iter().map(|b| b.0).collect();
         let bases = points.clone();
         let mut scalars = self.responses.clone();
-        points.push(commitment.0.clone());
-        scalars.push(challenge.0.clone());
+        points.push(commitment.0);
+        scalars.push(challenge.0);
         let mut pr = multi_scalar_mul_const_time_g1(&points, &scalars);
         let mut pr_bytes = Vec::new();
 
