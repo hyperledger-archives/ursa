@@ -7,7 +7,7 @@ license = "Apache-2.0"
 name = "bbs"
 readme = "README.md"
 repository = "https://github.com/hyperledger/ursa"
-version = "0.4.1"
+version = "0.4.2"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -31,6 +31,7 @@ rand = "0.7"
 pairing-plus = "0.19"
 serde = { version = "1.0", features = ["serde_derive"] }
 serde-wasm-bindgen = { version = "0.1", optional = true }
+subtle = "2.2"
 wasm-bindgen = { version = "0.2", optional = true }
 zeroize = "1.1"
 

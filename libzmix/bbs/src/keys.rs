@@ -53,6 +53,16 @@ pub struct SecretKey(pub(crate) Fr);
 
 impl SecretKey {
     to_fixed_length_bytes_impl!(SecretKey, Fr, FR_COMPRESSED_SIZE, FR_COMPRESSED_SIZE);
+
+    /// Check to make sure this is not an all zero key
+    pub fn validate(&self) -> Result<(), BBSError> {
+        // This would result in a public key at infinity which would validate
+        // every signature
+        if self.0.is_zero() {
+            return Err(BBSErrorKind::MalformedSecretKey.into());
+        }
+        Ok(())
+    }
 }
 
 default_zero_impl!(SecretKey, Fr);
@@ -215,7 +225,7 @@ hash_elem_impl!(DeterministicPublicKey, |data| {
 
 impl DeterministicPublicKey {
     /// Generates a random `Secretkey` and only creates the commitment to it
-    pub fn new(option: Option<KeyGenOption>) -> (Self, SecretKey) {
+    pub fn new(option: Option<KeyGenOption>) -> Result<(Self, SecretKey), BBSError> {
         let secret = match option {
             Some(ref o) => match o {
                 KeyGenOption::UseSeed(ref v) => generate_secret_key(Some(v)),
@@ -223,9 +233,11 @@ impl DeterministicPublicKey {
             },
             None => generate_secret_key(None),
         };
+
+        secret.validate()?;
         let mut w = G2::one();
-        w.mul_assign(secret.0.clone());
-        (Self(w), secret)
+        w.mul_assign(secret.0);
+        Ok((Self(w), secret))
     }
 
     /// Convert to a normal public key but deterministically derive all the generators
@@ -288,7 +300,7 @@ pub fn generate(message_count: usize) -> Result<(PublicKey, SecretKey), BBSError
     let secret = generate_secret_key(None);
 
     let mut w = G2::one();
-    w.mul_assign(secret.0.clone());
+    w.mul_assign(secret.0);
     let gen_count: Vec<usize> = (0..=message_count).collect();
 
     #[cfg(feature = "rayon")]
@@ -376,7 +388,7 @@ mod tests {
 
     #[test]
     fn key_conversion() {
-        let (dpk, _) = DeterministicPublicKey::new(None);
+        let (dpk, _) = DeterministicPublicKey::new(None).unwrap();
         let res = dpk.to_public_key(5);
 
         assert!(res.is_ok());
@@ -400,7 +412,7 @@ mod tests {
     #[test]
     fn key_from_seed() {
         let seed = vec![0u8; 32];
-        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed)));
+        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed))).unwrap();
 
         assert_eq!("a171467362a8fbbc444889efc39e53a5e683ec85fbed19aa1fd89edb5cdb9751871b4db568d8476892f0b6444ca854b50a1c354388c17055a6b8a9d8d5a647b25d41055ce73fb57e158394aea51a9c824b726f258f3e97a90723cc753a459eec", hex::encode(&dpk.to_bytes_compressed_form()[..]));
         assert_eq!(
@@ -409,7 +421,7 @@ mod tests {
         );
 
         let seed = vec![1u8; 24];
-        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed)));
+        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::UseSeed(seed))).unwrap();
 
         assert_eq!("8dae8c4d40a8ec909e0d5c8541fc0edcfd46d302078edd246ea626853d5376d0a789481abd39ddba5e5145b950a580781802f6c7e70b24f492a1bd4d8edd596e0413fb88c9664bcca65e77460b8cf46680b4f689f28a2731f39891cdb96229c4", hex::encode(&dpk.to_bytes_compressed_form()[..]));
         assert_eq!(
@@ -425,7 +437,7 @@ mod tests {
         assert_eq!(292, pk.to_bytes_compressed_form().len());
         assert_eq!(FR_COMPRESSED_SIZE, sk.to_bytes_compressed_form().len());
 
-        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk)));
+        let (dpk, sk) = DeterministicPublicKey::new(Some(KeyGenOption::FromSecretKey(sk))).unwrap();
         assert_eq!(96, dpk.to_bytes_compressed_form().len());
 
         let res = PublicKey::from_bytes_compressed_form(pk.to_bytes_compressed_form());

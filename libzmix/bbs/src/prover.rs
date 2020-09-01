@@ -53,7 +53,7 @@ impl Prover {
                 )
                 .into());
             }
-            secrets.push(m.clone());
+            secrets.push(*m);
             builder.add(&verkey.h[*i], &m);
             committing.commit(&verkey.h[*i]);
         }
