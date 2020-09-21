@@ -107,6 +107,8 @@ extern crate console_error_panic_hook;
 extern crate curve25519_dalek;
 #[cfg(feature = "hex")]
 extern crate hex;
+#[cfg(feature = "hkdf")]
+extern crate hkdf;
 #[cfg(feature = "js-sys")]
 extern crate js_sys;
 #[cfg(feature = "wasm-bindgen")]
@@ -274,9 +276,6 @@ impl From<libsecp256k1::Error> for CryptoError {
             }
             libsecp256k1::Error::NotEnoughMemory => {
                 CryptoError::ParseError("Not Enough Memory".to_string())
-            }
-            libsecp256k1::Error::CallbackPanicked => {
-                CryptoError::ParseError("Callback panicked".to_string())
             }
         }
     }

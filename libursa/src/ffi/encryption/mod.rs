@@ -154,7 +154,7 @@ macro_rules! ffi_encryption_test {
             );
             println!("ursa_decrypt = {:?}", error);
             assert_eq!(1, res);
-            assert_eq!(plaintext.into_vec(), msg.to_vec());
+            assert_eq!(plaintext.destroy_into_vec(), msg.to_vec());
 
             //Correctly handles no nonce
             let nonce = ByteArray::default();
@@ -181,7 +181,7 @@ macro_rules! ffi_encryption_test {
                 &mut error,
             );
             assert_eq!(1, res);
-            assert_eq!(plaintext.into_vec(), msg.to_vec());
+            assert_eq!(plaintext.destroy_into_vec(), msg.to_vec());
         }
     };
 }
