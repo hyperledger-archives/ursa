@@ -340,8 +340,8 @@ mod tests {
 
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
-        let pk = public_key.into_vec();
-        let sk = private_key.into_vec();
+        let pk = public_key.destroy_into_vec();
+        let sk = private_key.destroy_into_vec();
 
         assert_eq!(pk.len(), ed25519::PUBLIC_KEY_SIZE);
         assert_eq!(sk.len(), ed25519::PRIVATE_KEY_SIZE);
@@ -361,8 +361,8 @@ mod tests {
         );
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
-        let pk = public_key.into_vec();
-        let sk = private_key.into_vec();
+        let pk = public_key.destroy_into_vec();
+        let sk = private_key.destroy_into_vec();
         assert_eq!(
             "3b77a042f1de02f6d5f418f36a20fd68c8329fe3bbfbecd26a2d72878cd827f8".to_string(),
             hex::encode(pk.as_slice())
@@ -374,7 +374,7 @@ mod tests {
         let res = ursa_ed25519_get_public_key(&sk_wrapper, &mut public_key, &mut error);
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
-        assert_eq!(pk, public_key.into_vec());
+        assert_eq!(pk, public_key.destroy_into_vec());
 
         let mut public_key = ByteBuffer::new_with_size(ursa_ed25519_get_public_key_size() as usize);
         let mut private_key =
@@ -384,7 +384,7 @@ mod tests {
         assert_eq!(res, 0);
         assert_eq!(
             error.get_message().into_string(),
-            "KeyGenError(Keypair must be 64 bytes in length)".to_string()
+            "KeyGenError(signature error)".to_string()
         );
         let seed = ByteArray::default();
         let res =
@@ -410,8 +410,8 @@ mod tests {
         );
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
-        let pk = public_key.into_vec();
-        let sk = private_key.into_vec();
+        let pk = public_key.destroy_into_vec();
+        let sk = private_key.destroy_into_vec();
 
         let mut signature = ByteBuffer::new_with_size(ursa_ed25519_get_signature_size() as usize);
         let message = b"Wepa! This is a message that should be signed.";
@@ -422,7 +422,7 @@ mod tests {
         assert_eq!(res, 1);
         assert!(error.get_code().is_success());
 
-        let sig = signature.into_vec();
+        let sig = signature.destroy_into_vec();
         let sig_wrapper = ByteArray::from(&sig);
         let pk_wrapper = ByteArray::from(&pk);
         assert_eq!("f61dc466c3094522987cf9bdbadf8a455bc9401d0e56e1a7696483de85c646216648eb9f7f8003822d4c8702016ffe3b4a218ed776776ae5b53d5394bbadb509".to_string(), hex::encode(sig.as_slice()));
