@@ -34,9 +34,6 @@ name = "ursa"
 path = "src/lib.rs"
 crate-type = ["staticlib", "rlib", "cdylib"]
 
-[profile.release]
-lto = true
-
 [[bin]]
 name = "test_aescbc"
 path = "bin/test_aescbc.rs"
