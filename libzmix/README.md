@@ -32,21 +32,20 @@ z_mix = { version = "0.1", git = "https://github.com/hyperledger-labs/z-mix.git"
 An example how to use in your rust project
 
 ```rust
-extern crate z_mix;
+extern crate zmix;
 
-use z_mix::zkl::{Parser, ProofSpecBuilder, WitnessBuilder};
+use zmix::zkl::{Parser, Witness};
+use zmix::zkl::spec::ProofSpecBuilder;
 
 fn main() {
     let mut proof_spec_builder = ProofSpecBuilder::new();
 
     // Add proof spec data
 
-    let mut witness_builder = WitnessBuilder::new();
-
     // Add witness data
 
-    let proof_spec = proof_spec_builder.finish();
-    let witness = witness_builder.finish();
+    let proof_spec = proof_spec_builder.finalize();
+    let witness = Witness {};
 
     match Parser::parse(&proof_spec, &witness) {
         Ok(proof) => {
