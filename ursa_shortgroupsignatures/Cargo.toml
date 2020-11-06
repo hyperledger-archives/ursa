@@ -1,0 +1,10 @@
+[package]
+authors = ["The Hyperledger Ursa Contributors"]
+name = "ursa_shortgroupsignatures"
+description = "Cryptography for computing short group signatures that support zero-knowledge proofs"
+edition = "2018"
+license = "Apache-2.0"
+readme = "../README.md"
+version = "0.5.0"
+
+[dependencies]

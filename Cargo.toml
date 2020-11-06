@@ -1,10 +1,31 @@
+[package]
+authors = ["The Hyperledger Ursa Contributors"]
+description = "A collection of cryptography primitives for implementing blockchain transactions and secure communication"
+documentation = "https://doc.rs/ursa"
+edition = "2018"
+homepage = "https://crates.io/crates/ursa"
+keywords = ["cryptography", "zero-knowledge"]
+license = "Apache-2.0"
+name = "ursa"
+readme = "README.md"
+repository = "https://github.com/hyperledger/ursa"
+version = "0.5.0"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
 [profile.release]
 lto = true
 
 [workspace]
 members = [
-  "libursa",
-  "libzmix",
-  "libzmix/bulletproofs_amcl",
-  "libzmix/bbs",
+    "ursa_accumulators",
+    "ursa_core",
+    "ursa_encryption",
+    "ursa_sharing",
+    "ursa_shortgroupsignatures",
+    "ursa_signatures"
 ]
