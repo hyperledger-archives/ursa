@@ -48,15 +48,15 @@ jobs:
         displayName: 'Install rust'
       - script: $HOME/.cargo/bin/cargo build
         displayName: 'cargo build'
-  - job: portable
-    pool:
-      vmImage: 'Ubuntu 18.04'
-    steps:
-      - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-        displayName: 'Install rust'
-      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
-        displayName: 'cargo build portable'
+#  - job: portable
+#    pool:
+#      vmImage: 'Ubuntu 18.04'
+#    steps:
+#      - script: |
+#          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+#        displayName: 'Install rust'
+#      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
+#        displayName: 'cargo build portable'
   - job: test
     pool:
       vmImage: 'Ubuntu 18.04'
@@ -78,24 +78,24 @@ jobs:
 #        displayName: 'Install rust, select nightly'
 #      - script: $HOME/.cargo/bin/cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm
 #        displayName: 'build asm'
-  - job: secp256k1
-    pool:
-      vmImage: 'Ubuntu 18.04'
-    steps:
-      - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-        displayName: 'Install rust'
-      - script: $HOME/.cargo/bin/cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
-        displayName: 'test secp256k1'
-  - job: ed25519
-    pool:
-      vmImage: 'Ubuntu 18.04'
-    steps:
-      - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-        displayName: 'Install rust'
-      - script: SODIUM_BUILD_STATIC=1 $HOME/.cargo/bin/cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
-        displayName: 'test ed25519'
+#  - job: secp256k1
+#    pool:
+#      vmImage: 'Ubuntu 18.04'
+#    steps:
+#      - script: |
+#          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+#        displayName: 'Install rust'
+#      - script: $HOME/.cargo/bin/cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+#        displayName: 'test secp256k1'
+#  - job: ed25519
+#    pool:
+#      vmImage: 'Ubuntu 18.04'
+#    steps:
+#      - script: |
+#          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+#        displayName: 'Install rust'
+#      - script: SODIUM_BUILD_STATIC=1 $HOME/.cargo/bin/cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+#        displayName: 'test ed25519'
   - job: docs
     pool:
       vmImage: 'Ubuntu 18.04'
@@ -105,15 +105,15 @@ jobs:
         displayName: 'Install rust'
       - script: $HOME/.cargo/bin/cargo doc --no-deps
         displayName: 'cargo doc'
-  - job: wasm
-    pool:
-      vmImage: 'Ubuntu 18.04'
-    steps:
-      - script: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-        displayName: 'Install rust'
-      - script: |
-          $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=portable_wasm
-          $HOME/.cargo/bin/wasm-pack build libzmix/bbs -- --no-default-features --features=wasm
-        displayName: 'wasm pack'
+#  - job: wasm
+#    pool:
+#      vmImage: 'Ubuntu 18.04'
+#    steps:
+#      - script: |
+#          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+#          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+#        displayName: 'Install rust'
+#      - script: |
+#          $HOME/.cargo/bin/wasm-pack build libursa -- --no-default-features --features=portable_wasm
+#          $HOME/.cargo/bin/wasm-pack build libzmix/bbs -- --no-default-features --features=wasm
+#        displayName: 'wasm pack'
