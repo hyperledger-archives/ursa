@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! Hyperledger Ursa is a library that supports
-//! cryptography used by blockchains. There is nothing
-//! specific to any blockchain in Ursa and can be used
-//! outside of that context.
-pub mod prelude;
+//! Convenience re-export of common members
+#[cfg(feature = "sharing")]
+pub use ursa_sharing as sharing;
