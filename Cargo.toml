@@ -29,3 +29,10 @@ members = [
     "ursa_shortgroupsignatures",
     "ursa_signatures"
 ]
+
+[features]
+default = ["sharing"]
+sharing = ["ursa_sharing"]
+
+[dependencies]
+ursa_sharing = { version = "0.1", path = "ursa_sharing", optional = true }

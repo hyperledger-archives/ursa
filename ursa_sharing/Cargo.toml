@@ -1,10 +1,39 @@
 [package]
 authors = ["The Hyperledger Ursa Contributors"]
-description = "Cryptography for secret sharing"
+categories = ["cryptography", "threshold", "algorithms"]
+keywords = ["cryptography", "shamir", "secret", "sharing", "threshold"]
+description = """
+A secret sharing library providing schemes like
+Shamir, Feldman, and Pedersen
+"""
 edition = "2018"
 license = "Apache-2.0"
 name = "ursa_sharing"
-readme = "../README.md"
-version = "0.5.0"
+readme = "README.md"
+repository = "https://github.com/hyperledger/ursa"
+version = "0.1.0"
+
+[features]
+impl_tests = []
 
 [dependencies]
+generic-array = "0.12"
+rand = "0.7"
+zeroize = { version = "1.1", features = ["zeroize_derive"] }
+
+[dev-dependencies]
+curve25519-dalek = "3.0"
+digest = { version = "0.8", features = ["std"] }
+ff = "0.8"
+ff-zeroize = "0.6"
+k256 = "0.5"
+openssl = "0.10"
+p256 = "0.5"
+pairing-plus = "0.19"
+sha2 = "0.8"
+subtle = "2.3"
+x25519-dalek = "1.1"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
