@@ -1,0 +1,10 @@
+[package]
+authors = ["The Hyperledger Ursa Contributors"]
+description = "Cryptographic accumulators that support membership and non-membership zero-knowledge proofs"
+edition = "2018"
+license = "Apache-2.0"
+name = "ursa_accumulators"
+readme = "../README.md"
+version = "0.5.0"
+
+[dependencies]

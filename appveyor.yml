@@ -31,5 +31,5 @@ for:
       only:
         - APPVEYOR_RUST_CHANNEL: stable
     test_script:
-      - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
+#      - cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
       - cargo test --release
