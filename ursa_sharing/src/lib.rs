@@ -47,21 +47,18 @@ pub use generic_array::{self, typenum};
 
 use error::{SharingError, SharingResult};
 use generic_array::{ArrayLength, GenericArray};
-use rand::prelude::*;
+use rand::{CryptoRng, RngCore};
 use std::{convert::TryFrom, marker::PhantomData};
 
-/// Represents the finite field methods used by Sharing Schemes
-pub trait Field<Exp, Ops = Self> {
-    /// The field size in bytes
-    type FieldSize: ArrayLength<u8>;
-    /// Return the zero element of the field, the additive identity
+/// Represents a prime-order cyclic group where the exponent is a finite field.
+/// `Exp` is the type used for the finite field operations
+pub trait Group<Exp: ?Sized = Self> {
+    /// The group size in bytes
+    type Size: ArrayLength<u8>;
+
+    /// Return the zero element of the group, the additive identity
     fn zero() -> Self;
-    /// Return the one element of the field, the multiplicative identity
-    fn one() -> Self;
-    /// Return the element from the given number
-    fn from_usize(value: usize) -> Self;
-    /// Return the element from the specified bytes, length's less than `SIZE` should be
-    /// supported
+    /// Return the group element from the specified bytes
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self>
     where
         Self: Sized;
@@ -74,24 +71,32 @@ pub trait Field<Exp, Ops = Self> {
     /// Field negation
     fn negate(&mut self);
     /// Add another element to this element
-    fn add_assign(&mut self, rhs: &Ops);
+    fn add_assign(&mut self, rhs: &Self);
     /// Subtract another element from this element
-    fn sub_assign(&mut self, rhs: &Ops);
-    /// Multiply another element with this element
-    fn mul_assign(&mut self, rhs: &Exp);
-    /// Multiply the inverse of another element with this element
-    fn div_assign(&mut self, rhs: &Exp);
+    fn sub_assign(&mut self, rhs: &Self);
+    /// Perform a scalar multiplication (exponentiation if the group is in multiplicative form)
+    fn scalar_mul_assign(&mut self, rhs: &Exp);
     /// Serialize this element to bytes
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize>;
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
+}
+
+/// Represents the finite field methods used by Sharing Schemes
+pub trait Field: Group {
+    /// Return the one element of the field, the multiplicative identity
+    fn one() -> Self;
+    /// Return the element from the given number
+    fn from_usize(value: usize) -> Self;
+    /// Multiply the inverse of another element with this element
+    fn scalar_div_assign(&mut self, rhs: &Self);
 }
 
 /// The polynomial used for generating the shares
 #[derive(Debug)]
-pub(crate) struct Polynomial<S: Field<S>> {
+pub(crate) struct Polynomial<S: Field> {
     pub(crate) coefficients: Vec<S>,
 }
 
-impl<S: Field<S>> Polynomial<S> {
+impl<S: Field> Polynomial<S> {
     /// Construct a random polynomial of the specified degree using a specified intercept
     pub fn new(rng: &mut (impl RngCore + CryptoRng), intercept: &S, degree: usize) -> Self {
         let mut coefficients = Vec::with_capacity(degree);
@@ -119,7 +124,7 @@ impl<S: Field<S>> Polynomial<S> {
 
         for i in (0..degree).rev() {
             // b_{n-1} = a_{n-1} + b_n*x
-            out.mul_assign(x);
+            out.scalar_mul_assign(x);
             out.add_assign(&self.coefficients[i]);
         }
         out
@@ -128,20 +133,19 @@ impl<S: Field<S>> Polynomial<S> {
 
 /// A share verifier is used to provide integrity checking of shamir shares
 #[derive(Debug)]
-pub struct ShareVerifier<S: Field<S>, R: Field<S>> {
+pub struct ShareVerifier<S: Field, R: Group<S>> {
     pub(crate) value: R,
     pub(crate) phantom: PhantomData<S>,
 }
 
-impl<S: Field<S>, R: Field<S>> ShareVerifier<S, R> {
-    /// Output the share value and the identifier.
-    /// The identifier is the first 4 bytes
-    pub fn to_bytes(&self) -> GenericArray<u8, R::FieldSize> {
+impl<S: Field, R: Group<S>> ShareVerifier<S, R> {
+    /// Serialize the share verifier commitment to a byte array
+    pub fn to_bytes(&self) -> GenericArray<u8, R::Size> {
         self.value.to_bytes()
     }
 }
 
-impl<S: Field<S>, R: Field<S>> TryFrom<&[u8]> for ShareVerifier<S, R> {
+impl<S: Field, R: Group<S>> TryFrom<&[u8]> for ShareVerifier<S, R> {
     type Error = SharingError;
 
     fn try_from(value: &[u8]) -> SharingResult<Self> {
@@ -152,7 +156,7 @@ impl<S: Field<S>, R: Field<S>> TryFrom<&[u8]> for ShareVerifier<S, R> {
     }
 }
 
-impl<S: Field<S>, R: Field<S>> Clone for ShareVerifier<S, R> {
+impl<S: Field, R: Group<S>> Clone for ShareVerifier<S, R> {
     fn clone(&self) -> Self {
         Self {
             value: R::from_bytes(&self.value.to_bytes()).unwrap(),

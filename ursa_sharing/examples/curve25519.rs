@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use rand::{CryptoRng, RngCore};
-use ursa_sharing::{error::*, tests::*, Field};
+use ursa_sharing::{error::*, tests::*, Field, Group};
 
 use curve25519_dalek::{
-    constants::{ED25519_BASEPOINT_COMPRESSED, ED25519_BASEPOINT_POINT},
+    constants::ED25519_BASEPOINT_POINT,
     edwards::CompressedEdwardsY,
     scalar::Scalar,
     traits::{Identity, IsIdentity},
@@ -26,19 +26,25 @@ use subtle::ConstantTimeEq;
 
 struct C25519Scalar(Scalar);
 
-impl Field<C25519Scalar> for C25519Scalar {
-    type FieldSize = U32;
-
-    fn zero() -> Self {
-        Self(Scalar::zero())
-    }
-
+impl Field for C25519Scalar {
     fn one() -> Self {
         Self(Scalar::one())
     }
 
     fn from_usize(value: usize) -> Self {
         Self(Scalar::from(value as u64))
+    }
+
+    fn scalar_div_assign(&mut self, rhs: &Self) {
+        self.0 *= rhs.0.invert()
+    }
+}
+
+impl Group for C25519Scalar {
+    type Size = U32;
+
+    fn zero() -> Self {
+        Self(Scalar::zero())
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -90,34 +96,22 @@ impl Field<C25519Scalar> for C25519Scalar {
         self.0 -= rhs.0;
     }
 
-    fn mul_assign(&mut self, rhs: &C25519Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &C25519Scalar) {
         self.0 *= rhs.0
     }
 
-    fn div_assign(&mut self, rhs: &C25519Scalar) {
-        self.0 *= rhs.0.invert()
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         self.0.to_bytes().into()
     }
 }
 
 struct C25519Point(CompressedEdwardsY);
 
-impl Field<C25519Scalar, C25519Point> for C25519Point {
-    type FieldSize = U32;
+impl Group<C25519Scalar> for C25519Point {
+    type Size = U32;
 
     fn zero() -> Self {
         Self(CompressedEdwardsY::identity())
-    }
-
-    fn one() -> Self {
-        Self(ED25519_BASEPOINT_COMPRESSED.clone())
-    }
-
-    fn from_usize(_: usize) -> Self {
-        unimplemented!()
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -149,15 +143,11 @@ impl Field<C25519Scalar, C25519Point> for C25519Point {
         self.0 = (self.0.decompress().unwrap() - rhs.0.decompress().unwrap()).compress()
     }
 
-    fn mul_assign(&mut self, rhs: &C25519Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &C25519Scalar) {
         self.0 = (self.0.decompress().unwrap() * rhs.0).compress()
     }
 
-    fn div_assign(&mut self, rhs: &C25519Scalar) {
-        self.0 = (self.0.decompress().unwrap() * rhs.0.invert()).compress()
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         self.0.to_bytes().into()
     }
 }

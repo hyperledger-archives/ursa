@@ -14,10 +14,10 @@
 use super::{
     error::{SharingError, SharingResult},
     shamir::{Scheme as ShamirScheme, Share as ShamirShare},
-    Field, ShareVerifier,
+    Field, Group, ShareVerifier,
 };
 use generic_array::typenum::Unsigned;
-use rand::prelude::*;
+use rand::{CryptoRng, RngCore};
 use std::{convert::TryFrom, marker::PhantomData};
 
 /// Implements Pedersen's Verifiable secret sharing scheme.
@@ -45,7 +45,7 @@ impl Scheme {
     /// when computing share verifiers.
     /// If [`None`] is passed as the parameter then `R::random()` is used for `g` and `R::random()` for `h`.
     /// A random blinding factor is generated and split as well
-    pub fn split_secret<S: Field<S>, R: Field<S>>(
+    pub fn split_secret<S: Field, R: Group<S>>(
         &self,
         rng: &mut (impl RngCore + CryptoRng),
         secret: &S,
@@ -66,11 +66,11 @@ impl Scheme {
         for i in 0..self.threshold {
             let mut g_i = R::zero();
             g_i.add_assign(&g);
-            g_i.mul_assign(&secret_polynomial.coefficients[i]);
+            g_i.scalar_mul_assign(&secret_polynomial.coefficients[i]);
 
             let mut h_i = R::zero();
             h_i.add_assign(&h);
-            h_i.mul_assign(&blinding_polynomial.coefficients[i]);
+            h_i.scalar_mul_assign(&blinding_polynomial.coefficients[i]);
 
             g_i.add_assign(&h_i);
 
@@ -89,7 +89,7 @@ impl Scheme {
     }
 
     /// Checks if the share is valid according to verifier
-    pub fn verify_share<S: Field<S>, R: Field<S>>(
+    pub fn verify_share<S: Field, R: Group<S>>(
         &self,
         share: &ShamirShare,
         blind_share: &ShamirShare,
@@ -119,24 +119,24 @@ impl Scheme {
         rhs.add_assign(&verifier.commitments[0].value);
         for v in &verifier.commitments[1..] {
             // i *= x
-            i.mul_assign(&x);
+            i.scalar_mul_assign(&x);
             // c_0 * c_1^i * c_2^{i^2} ... c_t^{i^t}
             let mut c = R::zero();
             c.add_assign(&v.value);
-            c.mul_assign(&i);
+            c.scalar_mul_assign(&i);
             rhs.add_assign(&c);
         }
 
         let mut g = R::zero();
         g.add_assign(&verifier.g);
         g.negate();
-        g.mul_assign(&s);
+        g.scalar_mul_assign(&s);
         rhs.add_assign(&g);
 
         let mut h = R::zero();
         h.add_assign(&verifier.h);
         h.negate();
-        h.mul_assign(&t);
+        h.scalar_mul_assign(&t);
         rhs.add_assign(&h);
 
         if rhs.is_zero() {
@@ -150,7 +150,7 @@ impl Scheme {
     /// The shares should be verified first by calling `verify_share`.
     /// This method assumes all the shares have been verified.
     /// Usually `verify_share` is called when the share is received.
-    pub fn combine_shares<S: Field<S>, R: Field<S>>(
+    pub fn combine_shares<S: Field, R: Group<S>>(
         &self,
         shares: &[ShamirShare],
     ) -> SharingResult<R> {
@@ -160,7 +160,7 @@ impl Scheme {
 
 /// A Pedersen verifier is used to provide integrity checking of shamir shares
 #[derive(Debug, Clone)]
-pub struct PedersenVerifier<S: Field<S>, R: Field<S>> {
+pub struct PedersenVerifier<S: Field, R: Group<S>> {
     /// The generator for the share scalar
     pub g: R,
     /// The generator for the blinding factor
@@ -169,7 +169,7 @@ pub struct PedersenVerifier<S: Field<S>, R: Field<S>> {
     pub commitments: Vec<ShareVerifier<S, R>>,
 }
 
-impl<S: Field<S>, R: Field<S>> PedersenVerifier<S, R> {
+impl<S: Field, R: Group<S>> PedersenVerifier<S, R> {
     /// Convert this verifier to a byte array
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut o = self.g.to_bytes().to_vec();
@@ -182,22 +182,22 @@ impl<S: Field<S>, R: Field<S>> PedersenVerifier<S, R> {
     }
 }
 
-impl<S: Field<S>, R: Field<S>> TryFrom<&[u8]> for PedersenVerifier<S, R> {
+impl<S: Field, R: Group<S>> TryFrom<&[u8]> for PedersenVerifier<S, R> {
     type Error = SharingError;
 
     fn try_from(value: &[u8]) -> SharingResult<Self> {
-        if value.len() < R::FieldSize::to_usize() * 2 + 4 {
+        if value.len() < R::Size::to_usize() * 2 + 4 {
             return Err(SharingError::PedersenVerifierMinSize(
-                R::FieldSize::to_usize() * 2 + 4,
+                R::Size::to_usize() * 2 + 4,
                 value.len(),
             ));
         }
         let mut offset = 0;
-        let mut end = R::FieldSize::to_usize();
+        let mut end = R::Size::to_usize();
         let g = R::from_bytes(&value[offset..end])?;
 
         offset = end;
-        end += R::FieldSize::to_usize();
+        end += R::Size::to_usize();
 
         let h = R::from_bytes(&value[offset..end])?;
 
@@ -209,7 +209,7 @@ impl<S: Field<S>, R: Field<S>> TryFrom<&[u8]> for PedersenVerifier<S, R> {
         let cs = u32::from_be_bytes(c_size) as usize;
         let mut commitments = Vec::with_capacity(cs);
         offset = end;
-        end += R::FieldSize::to_usize();
+        end += R::Size::to_usize();
         for _ in 0..cs {
             let c = R::from_bytes(&value[offset..end])?;
             commitments.push(ShareVerifier {
@@ -223,7 +223,7 @@ impl<S: Field<S>, R: Field<S>> TryFrom<&[u8]> for PedersenVerifier<S, R> {
 
 /// A Pedersen result returned when calling `split_secret`
 #[derive(Debug, Clone)]
-pub struct PedersenVssResult<S: Field<S>, R: Field<S>> {
+pub struct PedersenVssResult<S: Field, R: Group<S>> {
     /// The blinding factor randomly generated
     pub blinding: S,
     /// The blinding factor shares

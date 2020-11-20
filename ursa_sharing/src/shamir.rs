@@ -13,9 +13,9 @@
 // limitations under the License.
 use super::{
     error::{SharingError, SharingResult},
-    Field, Polynomial,
+    Field, Group, Polynomial,
 };
-use rand::prelude::*;
+use rand::{CryptoRng, RngCore};
 use std::{collections::BTreeSet, convert::TryFrom};
 use zeroize::Zeroize;
 
@@ -101,7 +101,7 @@ impl Scheme {
     }
 
     /// Create Shares from a secret
-    pub fn split_secret<S: Field<S>>(
+    pub fn split_secret<S: Field>(
         &self,
         rng: &mut (impl RngCore + CryptoRng),
         secret: &S,
@@ -110,7 +110,7 @@ impl Scheme {
         Ok(shares)
     }
 
-    pub(crate) fn get_shares_and_polynomial<S: Field<S>>(
+    pub(crate) fn get_shares_and_polynomial<S: Field>(
         &self,
         rng: &mut (impl RngCore + CryptoRng),
         secret: &S,
@@ -137,7 +137,7 @@ impl Scheme {
     }
 
     /// Reconstruct a secret from shares created from `split_secret`
-    pub fn combine_shares<S: Field<S>, R: Field<S>>(&self, shares: &[Share]) -> SharingResult<R> {
+    pub fn combine_shares<S: Field, R: Group<S>>(&self, shares: &[Share]) -> SharingResult<R> {
         // Verify minimum shares
         if shares.len() < self.threshold {
             return Err(SharingError::ShareMinThreshold);
@@ -170,7 +170,7 @@ impl Scheme {
     }
 
     /// Calculate lagrange interpolation
-    fn interpolate<S: Field<S>, R: Field<S>>(x_coordinates: &[S], y_coordinates: &[R]) -> R {
+    fn interpolate<S: Field, R: Group<S>>(x_coordinates: &[S], y_coordinates: &[R]) -> R {
         debug_assert_eq!(x_coordinates.len(), y_coordinates.len());
 
         let limit = x_coordinates.len();
@@ -192,12 +192,12 @@ impl Scheme {
                 denom.add_assign(&x_coordinates[j]);
                 denom.sub_assign(&x_coordinates[i]);
                 // x_m / (x_m - x_j) * ...
-                x_m.div_assign(&denom);
-                basis.mul_assign(&x_m);
+                x_m.scalar_div_assign(&denom);
+                basis.scalar_mul_assign(&x_m);
             }
             let mut group = R::zero();
             group.add_assign(&y_coordinates[i]);
-            group.mul_assign(&basis);
+            group.scalar_mul_assign(&basis);
             result.add_assign(&group);
         }
         result

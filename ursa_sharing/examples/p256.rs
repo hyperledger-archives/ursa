@@ -13,39 +13,25 @@
 // limitations under the License.
 use generic_array::{typenum::U32, GenericArray};
 use rand::{CryptoRng, RngCore};
-use ursa_sharing::{error::*, tests::*, Field};
+use ursa_sharing::{error::*, tests::*, Field, Group};
 
 use ff::Field as FFField;
 use p256::elliptic_curve::ops::Neg;
 use p256::{
     elliptic_curve::{
         sec1::{FromEncodedPoint, ToEncodedPoint},
-        Group,
+        Group as ECCGroup,
     },
     AffinePoint, EncodedPoint, FieldBytes, ProjectivePoint, Scalar,
 };
 
 struct P256Scalar(Scalar);
 
-impl Clone for P256Scalar {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl Field<P256Scalar> for P256Scalar {
-    type FieldSize = U32;
+impl Group for P256Scalar {
+    type Size = U32;
 
     fn zero() -> Self {
         Self(Scalar::zero())
-    }
-
-    fn one() -> Self {
-        Self(Scalar::one())
-    }
-
-    fn from_usize(value: usize) -> Self {
-        Self(Scalar::from(value as u64))
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -83,42 +69,38 @@ impl Field<P256Scalar> for P256Scalar {
         self.0 -= rhs.0
     }
 
-    fn mul_assign(&mut self, rhs: &P256Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &P256Scalar) {
         self.0 *= rhs.0
     }
 
-    fn div_assign(&mut self, rhs: &P256Scalar) {
-        self.0 *= rhs.0.invert().unwrap()
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut c = [0u8; 32];
         c.copy_from_slice(self.0.to_bytes().as_slice());
         c.into()
     }
 }
 
-struct P256Point(ProjectivePoint);
+impl Field for P256Scalar {
+    fn one() -> Self {
+        Self(Scalar::one())
+    }
 
-impl Clone for P256Point {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+    fn from_usize(value: usize) -> Self {
+        Self(Scalar::from(value as u64))
+    }
+
+    fn scalar_div_assign(&mut self, rhs: &Self) {
+        self.0 *= rhs.0.invert().unwrap()
     }
 }
 
-impl Field<P256Scalar, P256Point> for P256Point {
-    type FieldSize = U32;
+struct P256Point(ProjectivePoint);
+
+impl Group<P256Scalar> for P256Point {
+    type Size = U32;
 
     fn zero() -> Self {
         Self(ProjectivePoint::identity())
-    }
-
-    fn one() -> Self {
-        Self(ProjectivePoint::generator())
-    }
-
-    fn from_usize(_: usize) -> Self {
-        unimplemented!()
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -152,20 +134,16 @@ impl Field<P256Scalar, P256Point> for P256Point {
         self.0 = -self.0
     }
 
-    fn add_assign(&mut self, rhs: &P256Point) {
+    fn add_assign(&mut self, rhs: &Self) {
         self.0 += rhs.0;
     }
 
-    fn sub_assign(&mut self, rhs: &P256Point) {
+    fn sub_assign(&mut self, rhs: &Self) {
         self.0 -= rhs.0;
     }
 
-    fn mul_assign(&mut self, rhs: &P256Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &P256Scalar) {
         self.0 *= rhs.0;
-    }
-
-    fn div_assign(&mut self, rhs: &P256Scalar) {
-        self.0 *= rhs.0.invert().unwrap()
     }
 
     fn to_bytes(&self) -> GenericArray<u8, U32> {
