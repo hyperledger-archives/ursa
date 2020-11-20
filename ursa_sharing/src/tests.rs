@@ -14,15 +14,14 @@
 use super::{
     error::SharingResult,
     feldman::{FeldmanVerifier, Scheme as FeldmanVss},
-    pedersen::Scheme as PedersenVss,
+    pedersen::{PedersenVssResult, Scheme as PedersenVss},
     shamir::{Scheme, Share},
-    Field,
+    Field, Group,
 };
-use crate::pedersen::PedersenVssResult;
 use rand::prelude::*;
 
 /// Test invalid split arguments
-pub fn split_invalid_args<S: Field<S>>() {
+pub fn split_invalid_args<S: Field>() {
     assert!(Scheme::new(0, 0).is_err());
     assert!(Scheme::new(3, 2).is_err());
     assert!(Scheme::new(1, 10).is_err());
@@ -33,7 +32,7 @@ pub fn split_invalid_args<S: Field<S>>() {
 }
 
 /// Test that combining should fail
-pub fn combine_invalid<S: Field<S>>() {
+pub fn combine_invalid<S: Field>() {
     let scheme = Scheme::new(2, 3).unwrap();
     // No shares
     let shares: Vec<Share> = Vec::new();
@@ -53,7 +52,7 @@ pub fn combine_invalid<S: Field<S>>() {
 }
 
 /// Test recombining for a single set of shares
-pub fn combine_single<S: Field<S>, R: Field<S>>() {
+pub fn combine_single<S: Field, R: Group<S>>() {
     let scheme = Scheme::new(2, 3).unwrap();
     let secret = S::from_bytes(b"hello").unwrap();
 
@@ -115,7 +114,7 @@ pub fn combine_single<S: Field<S>, R: Field<S>>() {
 }
 
 /// Test recombining with all possible subsets of shares
-pub fn combine_all_combinations<S: Field<S>, R: Field<S>>() {
+pub fn combine_all_combinations<S: Field, R: Group<S>>() {
     let secret = S::from_bytes(b"hello").unwrap();
     let scheme = Scheme::new(3, 5).unwrap();
     let feldman_vss = FeldmanVss::new(3, 5).unwrap();

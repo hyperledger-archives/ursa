@@ -24,17 +24,11 @@ use pairing_plus::{
     CurveProjective,
 };
 use rand::{CryptoRng, RngCore};
-use ursa_sharing::{error::*, tests::*, Field};
+use ursa_sharing::{error::*, tests::*, Field, Group};
 
 struct FrField(Fr);
 
-impl Field<FrField> for FrField {
-    type FieldSize = U32;
-
-    fn zero() -> Self {
-        Self(Fr::default())
-    }
-
+impl Field for FrField {
     fn one() -> Self {
         Self(Fr::from_repr(FrRepr::from(1u64)).unwrap())
     }
@@ -43,13 +37,25 @@ impl Field<FrField> for FrField {
         Self(Fr::from_repr(FrRepr::from(value as u64)).unwrap())
     }
 
+    fn scalar_div_assign(&mut self, rhs: &Self) {
+        self.0.mul_assign(&rhs.0.inverse().unwrap());
+    }
+}
+
+impl Group for FrField {
+    type Size = U32;
+
+    fn zero() -> Self {
+        Self(Fr::default())
+    }
+
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
         let value = value.as_ref();
-        if value.len() < Self::FieldSize::to_usize() {
+        if value.len() < Self::Size::to_usize() {
             let mut s = [0u8; 48];
             s[..value.len()].copy_from_slice(value);
             return Ok(Self(Fr::from_okm(GenericArray::from_slice(&s))));
-        } else if value.len() == Self::FieldSize::to_usize() {
+        } else if value.len() == Self::Size::to_usize() {
             let mut r = std::io::Cursor::new(value.as_ref());
             match Fr::deserialize(&mut r, true) {
                 Ok(f) => Ok(Self(f)),
@@ -60,7 +66,7 @@ impl Field<FrField> for FrField {
         }
     }
 
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    fn random(rng: &mut impl RngCore) -> Self {
         let mut b = [0u8; 48];
         rng.fill_bytes(&mut b);
         Self(Fr::from_okm(GenericArray::from_slice(&b)))
@@ -86,15 +92,11 @@ impl Field<FrField> for FrField {
         self.0.sub_assign(&rhs.0);
     }
 
-    fn mul_assign(&mut self, rhs: &FrField) {
+    fn scalar_mul_assign(&mut self, rhs: &Self) {
         self.0.mul_assign(&rhs.0);
     }
 
-    fn div_assign(&mut self, rhs: &FrField) {
-        self.0.mul_assign(&rhs.0.inverse().unwrap());
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut r = [0u8; 32];
         self.0.serialize(&mut r.as_mut(), true).unwrap();
         r.into()
@@ -103,30 +105,16 @@ impl Field<FrField> for FrField {
 
 struct G1Field(G1);
 
-impl Clone for G1Field {
-    fn clone(&self) -> G1Field {
-        Self(self.0.clone())
-    }
-}
-
-impl Field<FrField, G1Field> for G1Field {
-    type FieldSize = U48;
+impl Group<FrField> for G1Field {
+    type Size = U48;
 
     fn zero() -> Self {
         Self(G1::zero())
     }
 
-    fn one() -> Self {
-        Self(G1::one())
-    }
-
-    fn from_usize(_: usize) -> Self {
-        unimplemented!()
-    }
-
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
         let value = value.as_ref();
-        if value.len() != Self::FieldSize::to_usize() {
+        if value.len() != Self::Size::to_usize() {
             return Ok(Self(
                 <G1 as HashToCurve<ExpandMsgXmd<sha2::Sha256>>>::hash_to_curve(
                     value,
@@ -141,7 +129,7 @@ impl Field<FrField, G1Field> for G1Field {
         }
     }
 
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    fn random(rng: &mut impl RngCore) -> Self {
         Self(G1::random(rng))
     }
 
@@ -157,23 +145,19 @@ impl Field<FrField, G1Field> for G1Field {
         self.0.negate();
     }
 
-    fn add_assign(&mut self, rhs: &G1Field) {
+    fn add_assign(&mut self, rhs: &Self) {
         self.0.add_assign(&rhs.0);
     }
 
-    fn sub_assign(&mut self, rhs: &G1Field) {
+    fn sub_assign(&mut self, rhs: &Self) {
         self.0.sub_assign(&rhs.0);
     }
 
-    fn mul_assign(&mut self, rhs: &FrField) {
+    fn scalar_mul_assign(&mut self, rhs: &FrField) {
         self.0.mul_assign(rhs.0);
     }
 
-    fn div_assign(&mut self, rhs: &FrField) {
-        self.0.mul_assign(rhs.0.inverse().unwrap());
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, U48> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut r = [0u8; 48];
         self.0.serialize(&mut r.as_mut(), true).unwrap();
         GenericArray::clone_from_slice(&r)
@@ -182,30 +166,16 @@ impl Field<FrField, G1Field> for G1Field {
 
 struct G2Field(G2);
 
-impl Clone for G2Field {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl Field<FrField, G2Field> for G2Field {
-    type FieldSize = U96;
+impl Group<FrField> for G2Field {
+    type Size = U96;
 
     fn zero() -> Self {
         Self(G2::zero())
     }
 
-    fn one() -> Self {
-        Self(G2::one())
-    }
-
-    fn from_usize(_: usize) -> Self {
-        unimplemented!()
-    }
-
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
         let value = value.as_ref();
-        if value.len() != Self::FieldSize::to_usize() {
+        if value.len() != Self::Size::to_usize() {
             return Ok(Self(
                 <G2 as HashToCurve<ExpandMsgXmd<sha2::Sha256>>>::hash_to_curve(
                     value,
@@ -220,7 +190,7 @@ impl Field<FrField, G2Field> for G2Field {
         }
     }
 
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Self {
+    fn random(rng: &mut impl RngCore) -> Self {
         Self(G2::random(rng))
     }
 
@@ -244,15 +214,11 @@ impl Field<FrField, G2Field> for G2Field {
         self.0.sub_assign(&rhs.0);
     }
 
-    fn mul_assign(&mut self, rhs: &FrField) {
+    fn scalar_mul_assign(&mut self, rhs: &FrField) {
         self.0.mul_assign(rhs.0);
     }
 
-    fn div_assign(&mut self, rhs: &FrField) {
-        self.0.mul_assign(rhs.0.inverse().unwrap());
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut r = [0u8; 96];
         self.0.serialize(&mut r.as_mut(), true).unwrap();
         GenericArray::clone_from_slice(&r)

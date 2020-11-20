@@ -14,10 +14,11 @@
 use super::{
     error::{SharingError, SharingResult},
     shamir::{Scheme as ShamirScheme, Share as ShamirShare},
-    Field, ShareVerifier,
+    Field, Group, ShareVerifier,
 };
-use rand::prelude::*;
-use std::marker::PhantomData;
+use generic_array::typenum::Unsigned;
+use rand::{CryptoRng, RngCore};
+use std::{convert::TryFrom, marker::PhantomData};
 
 /// Feldman's Verifiable secret sharing scheme.
 /// (see <https://www.cs.umd.edu/~gasarch/TOPICS/secretsharing/feldmanVSS.pdf>
@@ -43,7 +44,7 @@ impl Scheme {
     /// Caller can optionally supply a random generator for use
     /// when computing share verifiers.
     /// If [`None`] is passed as the parameter then the `R::random()` is used.
-    pub fn split_secret<S: Field<S>, R: Field<S>>(
+    pub fn split_secret<S: Field, R: Group<S>>(
         &self,
         rng: &mut (impl RngCore + CryptoRng),
         secret: &S,
@@ -61,7 +62,7 @@ impl Scheme {
         for c in &polynomial.coefficients {
             let mut v = R::zero();
             v.add_assign(&g);
-            v.mul_assign(c);
+            v.scalar_mul_assign(c);
             vs.push(ShareVerifier {
                 value: v,
                 phantom: PhantomData,
@@ -72,7 +73,7 @@ impl Scheme {
     }
 
     /// Checks if the share is valid according to verifier set
-    pub fn verify_share<S: Field<S>, R: Field<S>>(
+    pub fn verify_share<S: Field, R: Group<S>>(
         &self,
         share: &ShamirShare,
         verifier: &FeldmanVerifier<S, R>,
@@ -100,18 +101,18 @@ impl Scheme {
         rhs.add_assign(&verifier.commitments[0].value);
         for v in &verifier.commitments[1..] {
             // i *= x
-            i.mul_assign(&x);
+            i.scalar_mul_assign(&x);
 
             // c_0 * c_1^i * c_2^{i^2} ... c_t^{i^t}
             let mut c = R::zero();
             c.add_assign(&v.value);
-            c.mul_assign(&i);
+            c.scalar_mul_assign(&i);
             rhs.add_assign(&c);
         }
         let mut lhs = R::zero();
         lhs.add_assign(&verifier.g);
         lhs.negate();
-        lhs.mul_assign(&s);
+        lhs.scalar_mul_assign(&s);
         rhs.add_assign(&lhs);
 
         if rhs.is_zero() {
@@ -125,7 +126,7 @@ impl Scheme {
     /// The shares should be verified first by calling `verify_share`.
     /// This method assumes all the shares have been verified.
     /// Usually `verify_share` is called when the share is received.
-    pub fn combine_shares<S: Field<S>, R: Field<S>>(
+    pub fn combine_shares<S: Field, R: Group<S>>(
         &self,
         shares: &[ShamirShare],
     ) -> SharingResult<R> {
@@ -135,9 +136,55 @@ impl Scheme {
 
 /// A Feldman verifier is used to provide integrity checking of shamir shares
 #[derive(Debug, Clone)]
-pub struct FeldmanVerifier<S: Field<S>, R: Field<S>> {
+pub struct FeldmanVerifier<S: Field, R: Group<S>> {
     /// The generator for the share scalar
     pub g: R,
     /// The blinded commitments the polynomials
     pub commitments: Vec<ShareVerifier<S, R>>,
+}
+
+impl<S: Field, R: Group<S>> FeldmanVerifier<S, R> {
+    /// Convert this verifier to a byte array
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut o = self.g.to_bytes().to_vec();
+        o.extend_from_slice((self.commitments.len() as u32).to_be_bytes().as_ref());
+        for c in &self.commitments {
+            o.append(&mut c.to_bytes().to_vec());
+        }
+        o
+    }
+}
+
+impl<S: Field, R: Group<S>> TryFrom<&[u8]> for FeldmanVerifier<S, R> {
+    type Error = SharingError;
+
+    fn try_from(value: &[u8]) -> SharingResult<Self> {
+        if value.len() < R::Size::to_usize() * 2 + 4 {
+            return Err(SharingError::PedersenVerifierMinSize(
+                R::Size::to_usize() * 2 + 4,
+                value.len(),
+            ));
+        }
+        let mut offset = 0;
+        let mut end = R::Size::to_usize();
+        let g = R::from_bytes(&value[offset..end])?;
+
+        offset = end;
+        end += 4;
+
+        let mut c_size = [0u8; 4];
+        c_size.copy_from_slice(&value[offset..end]);
+        let cs = u32::from_be_bytes(c_size) as usize;
+        let mut commitments = Vec::with_capacity(cs);
+        offset = end;
+        end += R::Size::to_usize();
+        for _ in 0..cs {
+            let c = R::from_bytes(&value[offset..end])?;
+            commitments.push(ShareVerifier {
+                value: c,
+                phantom: PhantomData,
+            });
+        }
+        Ok(Self { g, commitments })
+    }
 }

@@ -3,8 +3,8 @@
 This crate provides various cryptography secret sharing schemes.
 
 This is intended to be a mid-level API by providing the secret sharing schemes without any specific
-finite field or big number library. The only requirement, is to implement a single trait from this library,
-`Field`. The implementer must have a basic understanding of finite fields. The [examples](examples) folder shows
+finite field or big number library. The only requirement, is to implement the traits `Group` and `Field` from this library.
+The implementer must have a basic understanding of finite fields. The [examples](examples) folder shows
 how this can be done for various elliptic curves.
 
 The first scheme is by Adi Shamir in '79 - [Shamir Secret Sharing](#shamir).
@@ -17,9 +17,9 @@ Each of these can be used in sub protocols like threshold signatures or [distrib
 
 ## Getting started
 
-Once the `Field` trait is implemented for the secret field, the secret can be split into shares using `shamir::Scheme`.
+Once these traits are implemented for the secret field, the secret can be split into shares using `shamir::Scheme`.
 
-To use Feldman or Pedersen with elliptic curves, `Field` will need to be implemented for the group elements as well as the field elements.
+To use Feldman or Pedersen with elliptic curves, `Group` will need to be implemented for the group elements as well as the field elements.
 
 Each scheme requires specifying the threshold and the maximum number of shares to create.
 
@@ -37,7 +37,7 @@ let shares = scheme.split_secret(&mut rng, &secret)?;
 ```
 
 Feldman's Verifiable Secret Sharing returns cryptographic commitments to the polynomial allowing the shares to be verified before
-combining shares. The default generator to use for the commitments is the value returned by the field parameter `R::one()`.
+combining shares. The default generator to use for the commitments is the value returned by the field parameter `R::random()`.
 
 Feldman
 ```rust
@@ -68,7 +68,7 @@ for i in 0..secret_shares.len() {
 ```
 
 Each scheme has the same API for combining shares to reconstruct the original secret.
-Obviously, at least the threshold numnber of shares are required to combine successfully. Otherwise it returns an error.
+Obviously, at least the threshold number of shares are required to combine successfully. Otherwise it returns an error.
 
 ```rust
 let secret = scheme.combine_shares(shares.as_slice())?;

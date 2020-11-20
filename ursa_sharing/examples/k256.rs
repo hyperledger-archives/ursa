@@ -16,28 +16,34 @@ use generic_array::{typenum::U32, GenericArray};
 use k256::{
     elliptic_curve::{
         sec1::{FromEncodedPoint, ToEncodedPoint},
-        Group,
+        Group as ECCGroup,
     },
     EncodedPoint, FieldBytes, ProjectivePoint, Scalar,
 };
 use rand::{CryptoRng, RngCore};
-use ursa_sharing::{error::*, tests::*, Field};
+use ursa_sharing::{error::*, tests::*, Field, Group};
 
 struct K256Scalar(Scalar);
 
-impl Field<K256Scalar> for K256Scalar {
-    type FieldSize = U32;
-
-    fn zero() -> Self {
-        Self(Scalar::zero())
-    }
-
+impl Field for K256Scalar {
     fn one() -> Self {
         Self(Scalar::one())
     }
 
     fn from_usize(value: usize) -> Self {
         Self(Scalar::from(value as u64))
+    }
+
+    fn scalar_div_assign(&mut self, rhs: &Self) {
+        self.0 *= rhs.0.invert().unwrap()
+    }
+}
+
+impl Group for K256Scalar {
+    type Size = U32;
+
+    fn zero() -> Self {
+        Self(Scalar::zero())
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -75,15 +81,11 @@ impl Field<K256Scalar> for K256Scalar {
         self.0 -= rhs.0
     }
 
-    fn mul_assign(&mut self, rhs: &K256Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &Self) {
         self.0 *= rhs.0
     }
 
-    fn div_assign(&mut self, rhs: &K256Scalar) {
-        self.0 *= rhs.0.invert().unwrap()
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut c = [0u8; 32];
         c.copy_from_slice(self.0.to_bytes().as_slice());
         c.into()
@@ -92,19 +94,11 @@ impl Field<K256Scalar> for K256Scalar {
 
 struct K256Point(ProjectivePoint);
 
-impl Field<K256Scalar, K256Point> for K256Point {
-    type FieldSize = U32;
+impl Group<K256Scalar> for K256Point {
+    type Size = U32;
 
     fn zero() -> Self {
         Self(ProjectivePoint::identity())
-    }
-
-    fn one() -> Self {
-        Self(ProjectivePoint::generator())
-    }
-
-    fn from_usize(_: usize) -> Self {
-        unimplemented!()
     }
 
     fn from_bytes<B: AsRef<[u8]>>(value: B) -> SharingResult<Self> {
@@ -137,23 +131,19 @@ impl Field<K256Scalar, K256Point> for K256Point {
         self.0 = -self.0
     }
 
-    fn add_assign(&mut self, rhs: &K256Point) {
+    fn add_assign(&mut self, rhs: &Self) {
         self.0 += rhs.0;
     }
 
-    fn sub_assign(&mut self, rhs: &K256Point) {
+    fn sub_assign(&mut self, rhs: &Self) {
         self.0 -= rhs.0;
     }
 
-    fn mul_assign(&mut self, rhs: &K256Scalar) {
+    fn scalar_mul_assign(&mut self, rhs: &K256Scalar) {
         self.0 *= rhs.0;
     }
 
-    fn div_assign(&mut self, rhs: &K256Scalar) {
-        self.0 *= rhs.0.invert().unwrap()
-    }
-
-    fn to_bytes(&self) -> GenericArray<u8, Self::FieldSize> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let mut c = [0u8; 32];
         c.copy_from_slice(
             self.0
