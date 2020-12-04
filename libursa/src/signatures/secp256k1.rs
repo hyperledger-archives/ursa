@@ -112,31 +112,31 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
 #[cfg(any(feature = "ecdsa_secp256k1_native", feature = "ecdsa_secp256k1_asm"))]
 mod ecdsa_secp256k1 {
     use super::*;
-    use libsecp256k1;
+    use bitcoinsecp256k1;
     use sha2::Digest;
     use zeroize::Zeroize;
 
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
 
-    pub struct EcdsaSecp256k1Impl(libsecp256k1::Secp256k1<libsecp256k1::All>);
+    pub struct EcdsaSecp256k1Impl(bitcoinsecp256k1::Secp256k1<bitcoinsecp256k1::All>);
 
     impl EcdsaSecp256k1Impl {
         pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
-            let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
+            let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize().to_vec()
         }
         pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
-            let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
+            let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize_uncompressed().to_vec()
         }
         pub fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError> {
-            let res = libsecp256k1::key::PublicKey::from_slice(data)?;
+            let res = bitcoinsecp256k1::key::PublicKey::from_slice(data)?;
             let pk = PublicKey(res.serialize().to_vec());
             Ok(pk)
         }
         pub fn new() -> Self {
-            Self(libsecp256k1::Secp256k1::new())
+            Self(bitcoinsecp256k1::Secp256k1::new())
         }
         pub fn keypair<D>(
             &self,
@@ -154,10 +154,10 @@ mod ecdsa_secp256k1 {
                         rng.fill_bytes(&mut s);
                         let k = D::digest(&s);
                         s.zeroize();
-                        libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
+                        bitcoinsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                     }
                     KeyGenOption::FromSecretKey(ref s) => {
-                        libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                        bitcoinsecp256k1::key::SecretKey::from_slice(&s[..])?
                     }
                 },
                 None => {
@@ -165,10 +165,10 @@ mod ecdsa_secp256k1 {
                     OsRng.fill_bytes(&mut s);
                     let k = D::digest(&s);
                     s.zeroize();
-                    libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
+                    bitcoinsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                 }
             };
-            let pk = libsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
+            let pk = bitcoinsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
             Ok((
                 PublicKey(pk.serialize().to_vec()),
                 PrivateKey(sk[..].to_vec()),
@@ -179,8 +179,8 @@ mod ecdsa_secp256k1 {
             D: Digest<OutputSize = U32>,
         {
             let h = D::digest(message);
-            let msg = libsecp256k1::Message::from_slice(h.as_slice())?;
-            let s = libsecp256k1::key::SecretKey::from_slice(&sk[..])?;
+            let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice())?;
+            let s = bitcoinsecp256k1::key::SecretKey::from_slice(&sk[..])?;
             let sig = self.0.sign(&msg, &s);
             Ok(sig.serialize_compact().to_vec())
         }
@@ -194,18 +194,18 @@ mod ecdsa_secp256k1 {
             D: Digest<OutputSize = U32>,
         {
             let h = D::digest(message);
-            let msg = libsecp256k1::Message::from_slice(h.as_slice())?;
-            let p = libsecp256k1::PublicKey::from_slice(&pk[..])?;
-            let sig = libsecp256k1::Signature::from_compact(signature)?;
+            let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice())?;
+            let p = bitcoinsecp256k1::PublicKey::from_slice(&pk[..])?;
+            let sig = bitcoinsecp256k1::Signature::from_compact(signature)?;
             let res = self.0.verify(&msg, &sig, &p);
             match res {
                 Ok(()) => Ok(true),
-                Err(libsecp256k1::Error::IncorrectSignature) => Ok(false),
+                Err(bitcoinsecp256k1::Error::IncorrectSignature) => Ok(false),
                 Err(err) => Err(CryptoError::from(err)),
             }
         }
         pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), CryptoError> {
-            let mut sig = libsecp256k1::Signature::from_compact(signature)?;
+            let mut sig = bitcoinsecp256k1::Signature::from_compact(signature)?;
             sig.normalize_s();
             let compact = sig.serialize_compact();
             signature.clone_from_slice(&compact[..]);
@@ -338,7 +338,7 @@ mod ecdsa_secp256k1 {
 mod test {
     use super::EcdsaPublicKeyHandler;
     use super::*;
-    use libsecp256k1;
+    use bitcoinsecp256k1;
     use openssl::bn::{BigNum, BigNumContext};
     use openssl::ec::{EcGroup, EcKey, EcPoint};
     use openssl::ecdsa::EcdsaSig;
@@ -385,11 +385,11 @@ mod test {
         let p_u = p_u.unwrap();
         assert_eq!(p_u, p);
 
-        let sk = libsecp256k1::key::SecretKey::from_slice(&s[..]);
+        let sk = bitcoinsecp256k1::key::SecretKey::from_slice(&s[..]);
         assert!(sk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&p[..]);
+        let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&p[..]);
         assert!(pk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
+        let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
         assert!(pk.is_ok());
 
         let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
@@ -411,17 +411,17 @@ mod test {
         assert!(result.is_ok());
         assert!(result.unwrap());
 
-        let context = libsecp256k1::Secp256k1::new();
+        let context = bitcoinsecp256k1::Secp256k1::new();
         let pk =
-            libsecp256k1::key::PublicKey::from_slice(hex::decode(PUBLIC_KEY).unwrap().as_slice())
+            bitcoinsecp256k1::key::PublicKey::from_slice(hex::decode(PUBLIC_KEY).unwrap().as_slice())
                 .unwrap();
 
         let h = sha2::Sha256::digest(&MESSAGE_1);
-        let msg = libsecp256k1::Message::from_slice(h.as_slice()).unwrap();
+        let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice()).unwrap();
 
-        //Check if signatures produced here can be verified by libsecp256k1
+        //Check if signatures produced here can be verified by bitcoinsecp256k1
         let mut signature =
-            libsecp256k1::Signature::from_compact(&hex::decode(SIGNATURE_1).unwrap()[..]).unwrap();
+            bitcoinsecp256k1::Signature::from_compact(&hex::decode(SIGNATURE_1).unwrap()[..]).unwrap();
         signature.normalize_s();
         let result = context.verify(&msg, &signature, &pk);
         assert!(result.is_ok());
@@ -458,17 +458,17 @@ mod test {
 
                 assert_eq!(sig.len(), SIGNATURE_SIZE);
 
-                //Check if libsecp256k1 signs the message and this module still can verify it
+                //Check if bitcoinsecp256k1 signs the message and this module still can verify it
                 //And that private keys can sign with other libraries
-                let context = libsecp256k1::Secp256k1::new();
-                let sk = libsecp256k1::key::SecretKey::from_slice(
+                let context = bitcoinsecp256k1::Secp256k1::new();
+                let sk = bitcoinsecp256k1::key::SecretKey::from_slice(
                     hex::decode(PRIVATE_KEY).unwrap().as_slice(),
                 )
                 .unwrap();
 
                 let h = sha2::Sha256::digest(&MESSAGE_1);
 
-                let msg = libsecp256k1::Message::from_slice(h.as_slice()).unwrap();
+                let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice()).unwrap();
                 let sig_1 = context.sign(&msg, &sk).serialize_compact();
 
                 let result = scheme.verify(&MESSAGE_1, &sig_1, &p);
@@ -500,7 +500,7 @@ mod test {
                 temp_sig.extend(openssl_sig.r().to_vec());
                 temp_sig.extend(openssl_sig.s().to_vec());
 
-                //libsecp256k1 expects normalized "s"'s.
+                //bitcoinsecp256k1 expects normalized "s"'s.
                 scheme.normalize_s(temp_sig.as_mut_slice()).unwrap();
                 let result = scheme.verify(&MESSAGE_1, temp_sig.as_slice(), &p);
                 assert!(result.is_ok());
