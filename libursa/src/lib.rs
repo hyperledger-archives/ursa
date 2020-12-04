@@ -83,8 +83,8 @@ extern crate num_integer;
 extern crate num_traits;
 #[cfg(feature = "rustlibsecp256k1")]
 extern crate rustlibsecp256k1;
-#[cfg(any(test, feature = "secp256k1"))]
-extern crate secp256k1 as libsecp256k1;
+#[cfg(any(test, feature = "bitcoinsecp256k1"))]
+extern crate bitcoinsecp256k1;
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(any(test, feature = "ffi"))]
@@ -249,32 +249,32 @@ impl std::fmt::Display for CryptoError {
     }
 }
 
-#[cfg(feature = "secp256k1")]
-impl From<libsecp256k1::Error> for CryptoError {
-    fn from(error: libsecp256k1::Error) -> CryptoError {
+#[cfg(feature = "bitcoinsecp256k1")]
+impl From<bitcoinsecp256k1::Error> for CryptoError {
+    fn from(error: bitcoinsecp256k1::Error) -> CryptoError {
         match error {
-            libsecp256k1::Error::IncorrectSignature => {
+            bitcoinsecp256k1::Error::IncorrectSignature => {
                 CryptoError::ParseError("Incorrect Signature".to_string())
             }
-            libsecp256k1::Error::InvalidMessage => {
+            bitcoinsecp256k1::Error::InvalidMessage => {
                 CryptoError::ParseError("Invalid Message".to_string())
             }
-            libsecp256k1::Error::InvalidPublicKey => {
+            bitcoinsecp256k1::Error::InvalidPublicKey => {
                 CryptoError::ParseError("Invalid Public Key".to_string())
             }
-            libsecp256k1::Error::InvalidSignature => {
+            bitcoinsecp256k1::Error::InvalidSignature => {
                 CryptoError::ParseError("Invalid Signature".to_string())
             }
-            libsecp256k1::Error::InvalidSecretKey => {
+            bitcoinsecp256k1::Error::InvalidSecretKey => {
                 CryptoError::ParseError("Invalid Secret Key".to_string())
             }
-            libsecp256k1::Error::InvalidRecoveryId => {
+            bitcoinsecp256k1::Error::InvalidRecoveryId => {
                 CryptoError::ParseError("Invalid Recovery Id".to_string())
             }
-            libsecp256k1::Error::InvalidTweak => {
+            bitcoinsecp256k1::Error::InvalidTweak => {
                 CryptoError::ParseError("Invalid Tweak".to_string())
             }
-            libsecp256k1::Error::NotEnoughMemory => {
+            bitcoinsecp256k1::Error::NotEnoughMemory => {
                 CryptoError::ParseError("Not Enough Memory".to_string())
             }
         }

@@ -69,7 +69,7 @@ asm = ["encryption_asm", "ffi", "hashes_asm", "serde", "signatures_asm"]
 benchmarkaescbc = ["openssl"]
 benchmarkaesgcm = ["openssl"]
 benchmarked25519 = ["libsodium-ffi"]
-benchmarksecp256k1 = ["secp256k1", "openssl"]
+benchmarksecp256k1 = ["bitcoinsecp256k1", "openssl"]
 benchmarkxchacha20poly1305 = ["libsodium-ffi"]
 bls_bls12381 = ["amcl_wrapper", "hex", "hkdf", "zeroize"]
 bls_bn254 = ["amcl", "failure", "log", "rand", "sha2/std", "sha3"]
@@ -79,11 +79,11 @@ cl_native = ["amcl", "failure", "int_traits", "lazy_static", "log", "openssl", "
 chacha20poly1305 = ["aead", "hex", "rand", "rustchacha20poly1305", "zeroize"]
 chacha20poly1305_native = ["aead", "hex", "lazy_static", "libsodium-ffi", "rand", "zeroize"]
 ecdh_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "rustlibsecp256k1", "sha2/std", "zeroize"]
-ecdh_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/std", "zeroize"]
-ecdh_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/asm", "zeroize"]
+ecdh_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
+ecdh_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
 ecdsa_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "rustlibsecp256k1", "sha2/std", "zeroize"]
-ecdsa_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/std", "zeroize"]
-ecdsa_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "secp256k1", "rand_chacha", "sha2/asm", "zeroize"]
+ecdsa_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
+ecdsa_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
 ed25519 = ["arrayref", "ed25519-dalek/std", "ed25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "zeroize"]
 ed25519_asm = ["arrayref", "ed25519-dalek/nightly", "ed25519-dalek/simd_backend", "hex", "rand", "rand_chacha", "sha2/asm", "zeroize"]
 encryption = ["aescbc", "aesgcm", "chacha20poly1305"]
@@ -141,7 +141,7 @@ rand = { version = "0.7", features = ["wasm-bindgen"], optional = true }
 rand_chacha = { version = "=0.2.1", optional = true }
 rustchacha20poly1305 = { version = "0.7", package = "chacha20poly1305", optional = true }
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1", optional = true }
-secp256k1 = { version = "0.19", optional = true, features = ["rand", "serde"]}
+bitcoinsecp256k1 = { version = "0.19", package = "secp256k1", optional = true, features = ["rand", "serde"]}
 serde = { version = "1.0", features = ["derive"],  optional = true}
 serde_json = { version = "1.0", optional = true }
 sha2 = { version = "0.8", default-features = false, optional = true }
@@ -158,7 +158,7 @@ criterion = "0.3"
 libsodium-ffi = "0.2.2"
 openssl = "0.10"
 rustlibsecp256k1 = { version = "0.3", package = "libsecp256k1" }
-secp256k1 = "0.19"
+bitcoinsecp256k1 = { version = "0.19", package = "secp256k1"}
 serde_json = "1.0"
 
 [[bench]]
