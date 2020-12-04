@@ -110,7 +110,7 @@ x25519_asm = ["arrayref", "curve25519-dalek/nightly", "curve25519-dalek/avx2_bac
 aead = { version = "0.3", optional = true }
 aes = { version = "0.6", optional = true }
 aes-gcm = { version = "0.8", optional = true }
-amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254", "secp256k1"]}
+amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254"]}
 amcl_wrapper = {version = "0.4.0", features = ["bls381"], optional = true }
 arrayref = { version = "0.3.5", optional = true }
 blake2 = { version = "0.9", default-features = false, optional = true }
