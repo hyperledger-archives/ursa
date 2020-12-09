@@ -86,7 +86,7 @@ impl Scheme {
             return Err(SharingError::ShareInvalidValue);
         }
 
-        let x = S::from_usize(share.identifier);
+        let x = S::from_usize(share.identifier as usize);
         let mut i = S::one();
 
         // FUTURE: execute this sum of products

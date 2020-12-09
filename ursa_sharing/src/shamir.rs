@@ -24,7 +24,9 @@ use zeroize::Zeroize;
 #[derive(Debug, Zeroize)]
 #[zeroize(drop)]
 pub struct Share {
-    pub(crate) identifier: usize,
+    /// X-coordinate
+    pub(crate) identifier: u32,
+    /// Y-coordinate
     pub(crate) value: Vec<u8>,
 }
 
@@ -32,7 +34,7 @@ impl Share {
     /// Create a new share
     pub fn new<B: AsRef<[u8]>>(identifier: usize, value: B) -> Self {
         Self {
-            identifier,
+            identifier: identifier as u32,
             value: value.as_ref().to_vec(),
         }
     }
@@ -40,13 +42,13 @@ impl Share {
     /// Output the share value and the identifier.
     /// The identifier is the first 4 bytes
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut o = (self.identifier as u32).to_be_bytes().to_vec();
+        let mut o = self.identifier.to_be_bytes().to_vec();
         o.append(&mut self.to_bytes());
         o
     }
 
     /// Get the identifier
-    pub fn identifier(&self) -> usize {
+    pub fn identifier(&self) -> u32 {
         self.identifier
     }
 
@@ -66,7 +68,7 @@ impl TryFrom<&[u8]> for Share {
         let mut identifier = [0u8; 4];
         identifier.copy_from_slice(&value[..4]);
         Ok(Self {
-            identifier: u32::from_be_bytes(identifier) as usize,
+            identifier: u32::from_be_bytes(identifier),
             value: value[4..].to_vec(),
         })
     }
@@ -129,7 +131,7 @@ impl Scheme {
             let x = S::from_usize(identifier);
             let y = polynomial.evaluate(&x);
             shares.push(Share {
-                identifier,
+                identifier: identifier as u32,
                 value: y.to_bytes().to_vec(),
             });
         }
@@ -160,7 +162,7 @@ impl Scheme {
             if !y.is_valid() {
                 return Err(SharingError::ShareInvalidValue);
             }
-            let x = S::from_usize(share.identifier);
+            let x = S::from_usize(share.identifier as usize);
             dups.insert(share.identifier);
             x_coordinates.push(x);
             y_coordinates.push(y);
