@@ -81,10 +81,12 @@ extern crate num_bigint;
 extern crate num_integer;
 #[cfg(feature = "num-traits")]
 extern crate num_traits;
-#[cfg(feature = "rustlibsecp256k1")]
-extern crate rustlibsecp256k1;
+
+#[cfg(feature = "k256")]
+extern crate k256;
 #[cfg(any(test, feature = "bitcoinsecp256k1"))]
 extern crate bitcoinsecp256k1;
+
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(any(test, feature = "ffi"))]

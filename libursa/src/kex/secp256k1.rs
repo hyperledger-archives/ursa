@@ -114,14 +114,15 @@ mod ecdh_secp256k1 {
     }
 }
 
+// Pure rust implementation
 #[cfg(feature = "ecdh_secp256k1")]
 mod ecdh_secp256k1 {
     use super::*;
 
+    use k256;
     use rand::rngs::OsRng;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
-    use rustlibsecp256k1::{PublicKey as Secp256k1PublicKey, SecretKey, SharedSecret};
 
     #[cfg(feature = "serde")]
     use serde::{Deserialize, Serialize};
@@ -131,8 +132,6 @@ mod ecdh_secp256k1 {
     use zeroize::Zeroize;
     const PUBLIC_UNCOMPRESSED_KEY_SIZE: usize = 65;
 
-    use amcl::secp256k1::{ecdh, ecp};
-
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdhSecp256k1Impl;
 
@@ -140,6 +139,7 @@ mod ecdh_secp256k1 {
         pub fn new() -> Self {
             Self
         }
+
         pub fn keypair<D>(
             &self,
             option: Option<KeyGenOption>,
@@ -167,10 +167,12 @@ mod ecdh_secp256k1 {
                     sk.clone_from_slice(d.as_slice());
                 }
             };
-            let mut pk = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
-            ecdh::key_pair_generate(None, &mut sk, &mut pk);
-            let mut compressed = [0u8; PUBLIC_KEY_SIZE];
-            ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
+            let k256_sk = k256::SecretKey::from_bytes(&sk)
+                .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
+            let k256_pk = k256_sk.public_key();
+            use k256::elliptic_curve::sec1::ToEncodedPoint;
+            let k256_ep = k256_pk.to_encoded_point(true); //Compressed point
+            let compressed = k256_ep.to_bytes();
             Ok((PublicKey(compressed.to_vec()), PrivateKey(sk.to_vec())))
         }
 
@@ -182,16 +184,16 @@ mod ecdh_secp256k1 {
         where
             D: Digest<OutputSize = U32> + Default,
         {
-            let sk = SecretKey::parse(array_ref!(&local_private_key[..], 0, PRIVATE_KEY_SIZE))
+            let sk = k256::SecretKey::from_bytes(&local_private_key)
                 .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
-            let mut uncompressed = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
-            ecp::ECP::frombytes(&remote_public_key[..]).tobytes(&mut uncompressed, false);
-            let pk = Secp256k1PublicKey::parse(&uncompressed)
-                .map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
 
-            let secret: SharedSecret<D> = SharedSecret::new(&pk, &sk)
-                .map_err(|e| CryptoError::DigestGenError(format!("{:?}", e)))?;
-            Ok(SessionKey(secret.as_ref().to_vec()))
+            let pk = k256::PublicKey::from_sec1_bytes(&remote_public_key[..])
+                .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
+
+            //Note: this does not return possibility of error.
+            let shared_secret =
+                k256::elliptic_curve::ecdh::diffie_hellman(sk.secret_scalar(), pk.as_affine());
+            Ok(SessionKey(shared_secret.as_bytes().to_vec()))
         }
     }
 }
