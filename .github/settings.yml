@@ -6,7 +6,7 @@ repository:
   name: ursa
   description: Hyperledger Ursa is a shared cryptography library
   homepage: https://wiki.hyperledger.org/display/ursa
-  default_branch: master
+  default_branch: main
   has_downloads: true
   has_issues: true
   has_projects: false
