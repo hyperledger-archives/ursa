@@ -50,8 +50,8 @@ enhancement. Here are some example scenarios:
   commits (one for each issue).
 
 **Important:**
-  Your pull request should be rebased against the current master branch. Do
-  not merge the current master branch in with your topic branch. Do not use the
+  Your pull request should be rebased against the current main branch. Do
+  not merge the current main branch in with your topic branch. Do not use the
   Update Branch button provided by GitHub on the pull request page.
 
 **Commit Messages**

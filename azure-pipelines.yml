@@ -1,9 +1,9 @@
 ---
 trigger:
   branches:
-    include: [master]
+    include: [main]
 
-pr: [master]
+pr: [main]
 
 variables:
   SODIUM_BUILD_STATIC: 1

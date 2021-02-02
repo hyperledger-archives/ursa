@@ -25,7 +25,7 @@ When contributing code, please follow these guidelines:
 - Check that the lint tests pass
 
 ## Important
-Use `git rebase origin/master` to limit creating merge commits
+Use `git rebase origin/main` to limit creating merge commits
 
 ## Signed-off-by
 Each commit must include a "Signed-off-by" line in the commit message (`git commit -s`). This sign-off indicates that you agree the commit satifies the [Developer Certificate of Origin](https://developercertificate.org).
