@@ -165,8 +165,8 @@ impl BlindSignature {
         let e = rand_non_zero_fr();
         let s = rand_non_zero_fr();
 
-        let mut points = Vec::with_capacity(messages.len() + 2);
-        let mut scalars = Vec::with_capacity(messages.len() + 2);
+        let mut points = Vec::with_capacity(messages.len() + 3);
+        let mut scalars = Vec::with_capacity(messages.len() + 3);
         // g1*h0^blinding_factor*hi^mi.....
         points.push(commitment.0);
         scalars.push(Fr::from_repr(FrRepr::from(1)).unwrap());
