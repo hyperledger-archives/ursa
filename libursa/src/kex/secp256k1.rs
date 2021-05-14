@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn secp256k1_compatibility() {
-          use k256::{
+        use k256::{
             {PublicKey, SecretKey},
             elliptic_curve::ecdh::diffie_hellman,
         };
