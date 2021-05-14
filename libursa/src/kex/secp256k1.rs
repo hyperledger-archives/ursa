@@ -228,20 +228,19 @@ mod tests {
 
     #[test]
     fn secp256k1_compatibility() {
-        use libsecp256k1::{
-            ecdh::SharedSecret,
-            key::{PublicKey, SecretKey},
+          use k256::{
+            {PublicKey, SecretKey},
+            elliptic_curve::ecdh::diffie_hellman,
         };
 
         let scheme = EcdhSecp256k1Sha256::new();
         let (pk, sk) = scheme.keypair(None).unwrap();
-
-        let sk1 = SecretKey::from_slice(&sk[..]).unwrap();
-        let pk1 = PublicKey::from_slice(&pk[..]).unwrap();
-        let secret = SharedSecret::new(&pk1, &sk1);
+        let sk1 = SecretKey::from_bytes(&sk[..]).unwrap();
+        let pk1 = PublicKey::from_sec1_bytes(&pk[..]).unwrap();
+        let secret = diffie_hellman(sk1.secret_scalar(), pk1.as_affine());
         assert_eq!(
-            secret.as_ref(),
-            scheme.compute_shared_secret(&sk, &pk).unwrap().as_ref()
+            secret.as_bytes().to_vec(),
+            scheme.compute_shared_secret(&sk, &pk).unwrap().as_ref().to_vec()
         );
     }
 }
