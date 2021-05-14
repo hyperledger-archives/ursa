@@ -40,6 +40,11 @@ jobs:
     - name: Tests
       run: cargo test --release
 
+    - name: Libursa Build
+      run: cargo build --verbose --manifest-path=libursa/Cargo.toml
+
+    - name: Libursa Tests
+      run: cargo test --release --verbose --manifest-path=libursa/Cargo.toml
 # disabled in AZP
 #
 #  Portable:
