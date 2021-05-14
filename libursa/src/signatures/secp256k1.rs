@@ -472,7 +472,7 @@ mod test {
                         assert!(result.is_ok());
                         assert!(result.unwrap());
                     }
-                    Err(er) => assert!(false, er),
+                    Err(er) => assert!(false, "{}", er),
                 }
 
                 let signer = Signer::new(&scheme, &s);
@@ -482,10 +482,10 @@ mod test {
                         assert!(result.is_ok());
                         assert!(result.unwrap());
                     }
-                    Err(er) => assert!(false, er),
+                    Err(er) => assert!(false, "{}", er),
                 }
             }
-            Err(e) => assert!(false, e),
+            Err(e) => assert!(false, "{}", e),
         }
     }
 

@@ -262,7 +262,7 @@ mod test {
                 assert!(result.is_ok());
                 assert!(result.unwrap());
             }
-            Err(e) => assert!(false, e),
+            Err(e) => assert!(false, "{}", e),
         }
         let signer = Signer::new(&scheme, &s);
         match signer.sign(&MESSAGE_1) {
@@ -271,7 +271,7 @@ mod test {
                 assert!(result.is_ok());
                 assert!(result.unwrap());
             }
-            Err(er) => assert!(false, er),
+            Err(er) => assert!(false, "{}", er),
         }
     }
 
