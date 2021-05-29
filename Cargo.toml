@@ -21,10 +21,6 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 lto = true
 
 [workspace]
-exclude = [
-    "libursa",
-    "libzmix",
-]
 members = [
     "ursa_accumulators",
     "ursa_core",
