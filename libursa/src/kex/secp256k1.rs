@@ -130,8 +130,6 @@ mod ecdh_secp256k1 {
     use sha2::digest::generic_array::typenum::U32;
     use sha2::Digest;
     use zeroize::Zeroize;
-    #[allow(dead_code)]
-    const PUBLIC_UNCOMPRESSED_KEY_SIZE: usize = 65;
 
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdhSecp256k1Impl;
