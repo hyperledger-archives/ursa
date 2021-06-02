@@ -112,31 +112,31 @@ impl<'a> Deserialize<'a> for EcdsaSecp256k1Sha256 {
 #[cfg(any(feature = "ecdsa_secp256k1_native", feature = "ecdsa_secp256k1_asm"))]
 mod ecdsa_secp256k1 {
     use super::*;
-    use libsecp256k1;
+    use bitcoinsecp256k1;
     use sha2::Digest;
     use zeroize::Zeroize;
 
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
 
-    pub struct EcdsaSecp256k1Impl(libsecp256k1::Secp256k1<libsecp256k1::All>);
+    pub struct EcdsaSecp256k1Impl(bitcoinsecp256k1::Secp256k1<bitcoinsecp256k1::All>);
 
     impl EcdsaSecp256k1Impl {
         pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
-            let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
+            let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize().to_vec()
         }
         pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
-            let pk = libsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
+            let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&pk[..]).unwrap();
             pk.serialize_uncompressed().to_vec()
         }
         pub fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError> {
-            let res = libsecp256k1::key::PublicKey::from_slice(data)?;
+            let res = bitcoinsecp256k1::key::PublicKey::from_slice(data)?;
             let pk = PublicKey(res.serialize().to_vec());
             Ok(pk)
         }
         pub fn new() -> Self {
-            Self(libsecp256k1::Secp256k1::new())
+            Self(bitcoinsecp256k1::Secp256k1::new())
         }
         pub fn keypair<D>(
             &self,
@@ -154,10 +154,10 @@ mod ecdsa_secp256k1 {
                         rng.fill_bytes(&mut s);
                         let k = D::digest(&s);
                         s.zeroize();
-                        libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
+                        bitcoinsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                     }
                     KeyGenOption::FromSecretKey(ref s) => {
-                        libsecp256k1::key::SecretKey::from_slice(&s[..])?
+                        bitcoinsecp256k1::key::SecretKey::from_slice(&s[..])?
                     }
                 },
                 None => {
@@ -165,10 +165,10 @@ mod ecdsa_secp256k1 {
                     OsRng.fill_bytes(&mut s);
                     let k = D::digest(&s);
                     s.zeroize();
-                    libsecp256k1::key::SecretKey::from_slice(k.as_slice())?
+                    bitcoinsecp256k1::key::SecretKey::from_slice(k.as_slice())?
                 }
             };
-            let pk = libsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
+            let pk = bitcoinsecp256k1::key::PublicKey::from_secret_key(&self.0, &sk);
             Ok((
                 PublicKey(pk.serialize().to_vec()),
                 PrivateKey(sk[..].to_vec()),
@@ -179,8 +179,8 @@ mod ecdsa_secp256k1 {
             D: Digest<OutputSize = U32>,
         {
             let h = D::digest(message);
-            let msg = libsecp256k1::Message::from_slice(h.as_slice())?;
-            let s = libsecp256k1::key::SecretKey::from_slice(&sk[..])?;
+            let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice())?;
+            let s = bitcoinsecp256k1::key::SecretKey::from_slice(&sk[..])?;
             let sig = self.0.sign(&msg, &s);
             Ok(sig.serialize_compact().to_vec())
         }
@@ -194,18 +194,18 @@ mod ecdsa_secp256k1 {
             D: Digest<OutputSize = U32>,
         {
             let h = D::digest(message);
-            let msg = libsecp256k1::Message::from_slice(h.as_slice())?;
-            let p = libsecp256k1::PublicKey::from_slice(&pk[..])?;
-            let sig = libsecp256k1::Signature::from_compact(signature)?;
+            let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice())?;
+            let p = bitcoinsecp256k1::PublicKey::from_slice(&pk[..])?;
+            let sig = bitcoinsecp256k1::Signature::from_compact(signature)?;
             let res = self.0.verify(&msg, &sig, &p);
             match res {
                 Ok(()) => Ok(true),
-                Err(libsecp256k1::Error::IncorrectSignature) => Ok(false),
+                Err(bitcoinsecp256k1::Error::IncorrectSignature) => Ok(false),
                 Err(err) => Err(CryptoError::from(err)),
             }
         }
         pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), CryptoError> {
-            let mut sig = libsecp256k1::Signature::from_compact(signature)?;
+            let mut sig = bitcoinsecp256k1::Signature::from_compact(signature)?;
             sig.normalize_s();
             let compact = sig.serialize_compact();
             signature.clone_from_slice(&compact[..]);
@@ -217,8 +217,7 @@ mod ecdsa_secp256k1 {
 #[cfg(feature = "ecdsa_secp256k1")]
 mod ecdsa_secp256k1 {
     use super::*;
-    use rustlibsecp256k1;
-    use sha2::Digest;
+    use k256;
 
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
@@ -254,79 +253,36 @@ mod ecdsa_secp256k1 {
         pub fn new() -> Self {
             Self {}
         }
-        pub fn keypair<D>(
+        pub fn keypair(
             &self,
             option: Option<KeyGenOption>,
-        ) -> Result<(PublicKey, PrivateKey), CryptoError>
-        where
-            D: Digest<OutputSize = U32>,
-        {
-            let mut sk = [0u8; PRIVATE_KEY_SIZE];
-            match option {
-                Some(mut o) => match o {
-                    KeyGenOption::UseSeed(ref mut seed) => {
-                        let mut rng =
-                            ChaChaRng::from_seed(*array_ref!(seed.as_slice(), 0, PRIVATE_KEY_SIZE));
-                        seed.zeroize();
-                        rng.fill_bytes(&mut sk);
-
-                        let d = D::digest(&sk[..]);
-                        array_copy!(d.as_slice(), sk)
-                    }
-                    KeyGenOption::FromSecretKey(ref s) => array_copy!(s, sk),
-                },
-                None => {
-                    let mut rng = OsRng::default();
-                    rng.fill_bytes(&mut sk);
-                    let d = D::digest(&sk[..]);
-                    sk.clone_from_slice(d.as_slice());
-                }
-            };
-            let mut pk = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
-            ecdh::key_pair_generate(None, &mut sk, &mut pk);
-            let mut compressed = [0u8; PUBLIC_KEY_SIZE];
-            ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
+        ) -> Result<(PublicKey, PrivateKey), CryptoError> {
+            let signing_key = k256::SigningKey::random(&mut OsRng);
+            let sk = signing_key::to_bytes();
+            let verify_key = signing_key.verify_key();
+            let compressed = verify_key::to_bytes(); //serialized as compressed point
             Ok((PublicKey(compressed.to_vec()), PrivateKey(sk.to_vec())))
         }
-        pub fn sign<D>(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError>
-        where
-            D: Digest<OutputSize = U32>,
-        {
-            let h = D::digest(message);
-            let msg =
-                rustlibsecp256k1::Message::parse(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE));
-            let secret =
-                rustlibsecp256k1::SecretKey::parse(array_ref!(sk[..], 0, PRIVATE_KEY_SIZE))
-                    .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
-            let (sig, _) = rustlibsecp256k1::sign(&msg, &secret);
+        pub fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
+            let signing_key = k256::SigningKey::new(&sk)
+                .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
+            let (sig, _) = k256::signing_key.sign(&message);
             Ok(sig.serialize().to_vec())
         }
-        pub fn verify<D>(
+        pub fn verify(
             &self,
             message: &[u8],
             signature: &[u8],
             pk: &PublicKey,
-        ) -> Result<bool, CryptoError>
-        where
-            D: Digest<OutputSize = U32>,
-        {
-            let h = D::digest(message);
-            let uncompressed_pk = self.public_key_uncompressed(&pk);
-
-            let msg =
-                rustlibsecp256k1::Message::parse(array_ref!(h.as_slice(), 0, SIGNATURE_POINT_SIZE));
-            let sig = rustlibsecp256k1::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
-            let pk = rustlibsecp256k1::PublicKey::parse(array_ref!(
-                uncompressed_pk.as_slice(),
-                0,
-                PUBLIC_UNCOMPRESSED_KEY_SIZE
-            ))
-            .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
-            Ok(rustlibsecp256k1::verify(&msg, &sig, &pk))
+        ) -> Result<bool, CryptoError> {
+            let compressed_pk = self.public_key_compressed(pk);
+            let pk = k256::VerifyKey::from_encoded_point(compressed_pk)
+                .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
+            let sig: Signature = k256::Signature::from_bytes(signature);
+            Ok(k256::verify(&msg, &sig, &pk))
         }
         pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), CryptoError> {
-            let mut sig =
-                rustlibsecp256k1::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
+            let mut sig = k256::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
             sig.normalize_s();
             array_copy!(sig.serialize(), signature, 0, SIGNATURE_SIZE);
             Ok(())
@@ -338,7 +294,7 @@ mod ecdsa_secp256k1 {
 mod test {
     use super::EcdsaPublicKeyHandler;
     use super::*;
-    use libsecp256k1;
+    use bitcoinsecp256k1;
     use openssl::bn::{BigNum, BigNumContext};
     use openssl::ec::{EcGroup, EcKey, EcPoint};
     use openssl::ecdsa::EcdsaSig;
@@ -385,11 +341,12 @@ mod test {
         let p_u = p_u.unwrap();
         assert_eq!(p_u, p);
 
-        let sk = libsecp256k1::key::SecretKey::from_slice(&s[..]);
+        let sk = bitcoinsecp256k1::key::SecretKey::from_slice(&s[..]);
         assert!(sk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&p[..]);
+        let pk = bitcoinsecp256k1::key::PublicKey::from_slice(&p[..]);
         assert!(pk.is_ok());
-        let pk = libsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
+        let pk =
+            bitcoinsecp256k1::key::PublicKey::from_slice(&scheme.public_key_uncompressed(&p)[..]);
         assert!(pk.is_ok());
 
         let openssl_group = EcGroup::from_curve_name(Nid::SECP256K1).unwrap();
@@ -411,17 +368,19 @@ mod test {
         assert!(result.is_ok());
         assert!(result.unwrap());
 
-        let context = libsecp256k1::Secp256k1::new();
-        let pk =
-            libsecp256k1::key::PublicKey::from_slice(hex::decode(PUBLIC_KEY).unwrap().as_slice())
-                .unwrap();
+        let context = bitcoinsecp256k1::Secp256k1::new();
+        let pk = bitcoinsecp256k1::key::PublicKey::from_slice(
+            hex::decode(PUBLIC_KEY).unwrap().as_slice(),
+        )
+        .unwrap();
 
         let h = sha2::Sha256::digest(&MESSAGE_1);
-        let msg = libsecp256k1::Message::from_slice(h.as_slice()).unwrap();
+        let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice()).unwrap();
 
-        //Check if signatures produced here can be verified by libsecp256k1
+        //Check if signatures produced here can be verified by bitcoinsecp256k1
         let mut signature =
-            libsecp256k1::Signature::from_compact(&hex::decode(SIGNATURE_1).unwrap()[..]).unwrap();
+            bitcoinsecp256k1::Signature::from_compact(&hex::decode(SIGNATURE_1).unwrap()[..])
+                .unwrap();
         signature.normalize_s();
         let result = context.verify(&msg, &signature, &pk);
         assert!(result.is_ok());
@@ -458,17 +417,17 @@ mod test {
 
                 assert_eq!(sig.len(), SIGNATURE_SIZE);
 
-                //Check if libsecp256k1 signs the message and this module still can verify it
+                //Check if bitcoinsecp256k1 signs the message and this module still can verify it
                 //And that private keys can sign with other libraries
-                let context = libsecp256k1::Secp256k1::new();
-                let sk = libsecp256k1::key::SecretKey::from_slice(
+                let context = bitcoinsecp256k1::Secp256k1::new();
+                let sk = bitcoinsecp256k1::key::SecretKey::from_slice(
                     hex::decode(PRIVATE_KEY).unwrap().as_slice(),
                 )
                 .unwrap();
 
                 let h = sha2::Sha256::digest(&MESSAGE_1);
 
-                let msg = libsecp256k1::Message::from_slice(h.as_slice()).unwrap();
+                let msg = bitcoinsecp256k1::Message::from_slice(h.as_slice()).unwrap();
                 let sig_1 = context.sign(&msg, &sk).serialize_compact();
 
                 let result = scheme.verify(&MESSAGE_1, &sig_1, &p);
@@ -500,7 +459,7 @@ mod test {
                 temp_sig.extend(openssl_sig.r().to_vec());
                 temp_sig.extend(openssl_sig.s().to_vec());
 
-                //libsecp256k1 expects normalized "s"'s.
+                //bitcoinsecp256k1 expects normalized "s"'s.
                 scheme.normalize_s(temp_sig.as_mut_slice()).unwrap();
                 let result = scheme.verify(&MESSAGE_1, temp_sig.as_slice(), &p);
                 assert!(result.is_ok());
@@ -513,7 +472,7 @@ mod test {
                         assert!(result.is_ok());
                         assert!(result.unwrap());
                     }
-                    Err(er) => assert!(false, er),
+                    Err(er) => assert!(false, "{}", er),
                 }
 
                 let signer = Signer::new(&scheme, &s);
@@ -523,10 +482,10 @@ mod test {
                         assert!(result.is_ok());
                         assert!(result.unwrap());
                     }
-                    Err(er) => assert!(false, er),
+                    Err(er) => assert!(false, "{}", er),
                 }
             }
-            Err(e) => assert!(false, e),
+            Err(e) => assert!(false, "{}", e),
         }
     }
 

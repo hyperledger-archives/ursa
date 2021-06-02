@@ -89,7 +89,7 @@ impl fmt::Display for UrsaCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut first = true;
 
-        for cause in Fail::iter_chain(&self.inner) {
+        for cause in <dyn Fail>::iter_chain(&self.inner) {
             if first {
                 first = false;
                 writeln!(f, "Error: {}", cause)?;

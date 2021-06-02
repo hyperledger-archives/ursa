@@ -1,0 +1,96 @@
+name: Ursa CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  SODIUM_BUILD_STATIC: 1
+
+jobs:
+  Build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Format
+      run: cargo fmt --all -- --check
+
+    - name: Docs
+      run: cargo doc --no-deps
+
+    - name: Clippy
+      run: cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+
+    - name: Check
+      run: cargo check
+
+    - name: Audit
+      run: cargo audit
+
+    - name: Tests
+      run: cargo test --release
+# disabled in AZP
+#
+#  Portable:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Portable
+#      run: cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=portable
+#
+#  secp256k1:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: test secp256k1
+#      run: cargo run --release --manifest-path=libursa/Cargo.toml --bin test_secp256k1 --features="benchmarksecp256k1"
+#
+#
+#  ed25519:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: test ed25519
+#      run: SODIUM_BUILD_STATIC=1 cargo run --release --manifest-path=libursa/Cargo.toml --bin test_ed25519 --features="benchmarked25519"
+#
+#
+#  WASMPACK:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: WASM pack
+#      run: |
+#         wasm-pack build libursa -- --no-default-features --features=portable_wasm
+#         wasm-pack build libzmix/bbs -- --no-default-features --features=wasm
+#
+#  Nightly:
+#
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - name: Build ASM on nightly
+#      run: |
+#         curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+#         rustup toolchain install nightly
+#         rustup default nightly
+#         rustc --version
+#         cargo build --manifest-path=libzmix/Cargo.toml --no-default-features --features=asm

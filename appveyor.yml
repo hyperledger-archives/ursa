@@ -10,7 +10,7 @@ environment:
 
 branches:
   only:
-    - master
+    - main
 
 install:
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe

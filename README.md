@@ -1,6 +1,6 @@
 # HYPERLEDGER URSA
 
-[![Build Status](https://dev.azure.com/Hyperledger/Ursa/_apis/build/status/hyperledger.ursa?branchName=master)](https://dev.azure.com/Hyperledger/Ursa/_build/latest?definitionId=66&branchName=master)
+[![Ursa CI](https://github.com/hyperledger/ursa/workflows/Ursa%20CI/badge.svg)](https://github.com/hyperledger/ursa/actions?query=workflow%3A%22Ursa+CI%22)
 [![Build status](https://ci.appveyor.com/api/projects/status/1htmp82mdvmfjjap?svg=true)](https://ci.appveyor.com/project/hyperledger/ursa)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2447/badge)](https://bestpractices.coreinfrastructure.org/projects/2447)
 
