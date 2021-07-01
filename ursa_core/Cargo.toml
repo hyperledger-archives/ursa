@@ -7,4 +7,14 @@ name = "ursa_core"
 readme = "../README.md"
 version = "0.5.0"
 
+
+[lib]
+name = "ursa_core"
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib", "cdylib"]
+
+
 [dependencies]
+serde = { version = "1.0", features = ["derive"],  optional = true}
+serde_json = { version = "1.0", optional = true }
+zeroize = { version = "1.1", features = ["zeroize_derive"], optional =  true }
