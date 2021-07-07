@@ -44,3 +44,10 @@ feature = "wasm"
 #[macro_use]
 pub mod utils;
 
+
+#[cfg(any(feature = "cl_native", feature = "sharing_native"))]
+#[path = "bn/openssl.rs"]
+pub mod bn;
+#[cfg(any(feature = "cl", feature = "sharing"))]
+#[path = "bn/rust.rs"]
+pub mod bn;
