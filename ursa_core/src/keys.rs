@@ -4,18 +4,25 @@ use std::ops::Drop;
 use zeroize::Zeroize;
 
 // A private key instance.
-/// The underlying content is dependent on implementation.
-pub struct PrivateKey(pub Vec<u8>);
-impl_bytearray!(PrivateKey);
+pub trait PrivateKey: Zeroize {
+    fn to_bytes(&self, compressed: bool) -> Vec<u8>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>;
+}
 
-pub struct PublicKey(pub Vec<u8>);
-impl_bytearray!(PublicKey);
+pub trait PublicKey: Zeroize {
+    fn to_bytes(&self, compressed: bool) -> Vec<u8>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+}
 
-pub struct SessionKey(pub Vec<u8>);
-impl_bytearray!(SessionKey);
+pub trait SessionKey: Zeroize {
+    fn to_bytes(&self, compressed: bool) -> Vec<u8>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+}
 
-pub struct MacKey(pub Vec<u8>);
-impl_bytearray!(MacKey);
+pub trait MacKey: Zeroize {
+    fn to_bytes(&self, compressed: bool) -> Vec<u8>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+}
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialEq, Eq)]
@@ -48,4 +55,15 @@ fn serialize_tests() {
         r#"{"FromSecretKey":"01010101010102"}"#,
         serde_json::to_string(&e).unwrap()
     );
+
+
+}
+
+
+fn new_serialize_test() {
+
+
+    struct RandomKeyAlgorithm;
+
+
 }
