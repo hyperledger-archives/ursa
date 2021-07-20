@@ -59,11 +59,20 @@ fn serialize_tests() {
 
 }
 
-
-fn new_serialize_test() {
-
-
-    struct RandomKeyAlgorithm;
-
-
-}
+//#[test]
+//fn new_serialize_test() {
+//
+//
+//    struct RandomKeyAlgorithm;
+//    impl PrivateKey for RandomKeyAlgorithm {
+//
+//        fn to_bytes(&self, compressed: bool) -> Vec<u8> {
+//
+//
+//        }
+//
+//    }
+//
+//
+//
+//}
