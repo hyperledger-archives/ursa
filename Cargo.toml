@@ -23,11 +23,15 @@ lto = true
 [workspace]
 members = [
     "ursa_accumulators",
-    "ursa_core",
     "ursa_encryption",
     "ursa_sharing",
     "ursa_shortgroupsignatures",
     "ursa_signatures"
+]
+
+exclude = [
+    "ursa_core"
+
 ]
 
 [features]
@@ -36,3 +40,5 @@ sharing = ["ursa_sharing"]
 
 [dependencies]
 ursa_sharing = { version = "0.1", path = "ursa_sharing", optional = true }
+
+

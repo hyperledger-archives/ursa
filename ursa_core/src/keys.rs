@@ -56,7 +56,6 @@ fn serialize_tests() {
         serde_json::to_string(&e).unwrap()
     );
 
-
 }
 
 //#[test]
