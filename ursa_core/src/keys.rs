@@ -6,29 +6,30 @@ use super::errors::UrsaCryptoResult;
 // A private key instance.
 pub trait PrivateKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<&Self>;
 }
 
 pub trait PublicKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<&Self>;
 }
 
 pub trait SessionKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<&Self>;
 }
 
 pub trait MacKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<&Self>;
 }
+
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialEq, Eq)]
 pub enum KeyGenOption {
     UseSeed(Vec<u8>),
-    FromSecretKey(PrivateKey),
+    FromSecretKey(),
 }
 
 impl Drop for KeyGenOption {
