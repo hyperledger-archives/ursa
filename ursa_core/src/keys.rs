@@ -1,27 +1,27 @@
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::ops::Drop;
 use zeroize::Zeroize;
+use super::errors::UrsaCryptoResult;
 
 // A private key instance.
 pub trait PrivateKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>;
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
 }
 
 pub trait PublicKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
 }
 
 pub trait SessionKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
 }
 
 pub trait MacKey: Zeroize {
     fn to_bytes(&self, compressed: bool) -> Vec<u8>;
-    fn from_bytes(data: &[u8], compressed: bool) -> UrsaResult<Self>
+    fn from_bytes(data: &[u8], compressed: bool) -> UrsaCryptoResult<Self>;
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -40,38 +40,24 @@ impl Drop for KeyGenOption {
     }
 }
 
-#[cfg(feature = "serde")]
-#[test]
-fn serialize_tests() {
-    let t = vec![1u8, 1u8, 2u8, 2u8, 3u8, 3u8, 4u8, 4u8];
-    let e = KeyGenOption::UseSeed(t[..].to_vec());
-    let s = serde_json::to_string(&e).unwrap();
-    assert_eq!(r#"{"UseSeed":[1,1,2,2,3,3,4,4]}"#, s);
-    let f: KeyGenOption = serde_json::from_str(&s).unwrap();
-    assert_eq!(KeyGenOption::UseSeed(t), f);
-    let sk = PrivateKey(vec![1u8, 1u8, 1u8, 1u8, 1u8, 1u8, 2u8]);
-    let e = KeyGenOption::FromSecretKey(sk);
-    assert_eq!(
-        r#"{"FromSecretKey":"01010101010102"}"#,
-        serde_json::to_string(&e).unwrap()
-    );
+#[cfg(test)]
+mod test {
+    #[test]
+    fn serialize_tests() {
+        use super::*;
+        let t = vec![1u8, 1u8, 2u8, 2u8, 3u8, 3u8, 4u8, 4u8];
+        let e = KeyGenOption::UseSeed(t[..].to_vec());
+        let s = serde_json::to_string(&e).unwrap();
+        assert_eq!(r#"{"UseSeed":[1,1,2,2,3,3,4,4]}"#, s);
+        let f: KeyGenOption = serde_json::from_str(&s).unwrap();
+        assert_eq!(KeyGenOption::UseSeed(t), f);
+        let sk = PrivateKey(vec![1u8, 1u8, 1u8, 1u8, 1u8, 1u8, 2u8]);
+        let e = KeyGenOption::FromSecretKey(sk);
+        assert_eq!(
+            r#"{"FromSecretKey":"01010101010102"}"#,
+            serde_json::to_string(&e).unwrap()
+        );
+    
+    }
 
 }
-
-//#[test]
-//fn new_serialize_test() {
-//
-//
-//    struct RandomKeyAlgorithm;
-//    impl PrivateKey for RandomKeyAlgorithm {
-//
-//        fn to_bytes(&self, compressed: bool) -> Vec<u8> {
-//
-//
-//        }
-//
-//    }
-//
-//
-//
-//}
