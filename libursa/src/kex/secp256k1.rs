@@ -191,7 +191,7 @@ mod ecdh_secp256k1 {
 
             //Note: this does not return possibility of error.
             let shared_secret =
-                k256::elliptic_curve::ecdh::diffie_hellman(sk.secret_scalar(), pk.as_affine());
+                k256::elliptic_curve::ecdh::diffie_hellman(sk.to_secret_scalar(), pk.as_affine());
             Ok(SessionKey(shared_secret.as_bytes().to_vec()))
         }
     }
