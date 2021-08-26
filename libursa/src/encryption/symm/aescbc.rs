@@ -55,8 +55,8 @@ macro_rules! aes_cbc_hmac_impl {
                     $algo::new_var(&self.key[..$algokeysize::to_usize()], &nonce.as_slice())
                         .map_err(|_| Error)?;
                 let mut ciphertext = encryptor.encrypt_vec(payload.msg);
-                let mut hmac =
-                    $hash::new_from_slice(&self.key[$algokeysize::to_usize()..]).map_err(|_| Error)?;
+                let mut hmac = $hash::new_from_slice(&self.key[$algokeysize::to_usize()..])
+                    .map_err(|_| Error)?;
                 hmac.update(payload.aad);
                 hmac.update(nonce.as_slice());
                 hmac.update(ciphertext.as_slice());
@@ -80,8 +80,8 @@ macro_rules! aes_cbc_hmac_impl {
                 let buffer = Vec::from(&payload.msg[..tag_start]);
                 let tag = Vec::from(&payload.msg[tag_start..]);
 
-                let mut hmac =
-                    $hash::new_from_slice(&self.key[$algokeysize::to_usize()..]).map_err(|_| Error)?;
+                let mut hmac = $hash::new_from_slice(&self.key[$algokeysize::to_usize()..])
+                    .map_err(|_| Error)?;
                 hmac.update(payload.aad);
                 hmac.update(nonce.as_slice());
                 hmac.update(buffer.as_slice());
