@@ -16,39 +16,40 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        workdir: [ ".", "./libindy" ]
+
     steps:
     - uses: actions/checkout@v2
 
     - name: Build
+      working-directory: ${{ matrix.workdir }}
       run: cargo build --verbose
 
     - name: Format
+      working-directory: ${{ matrix.workdir }}
       run: cargo fmt --all -- --check
 
     - name: Docs
+      working-directory: ${{ matrix.workdir }}
       run: cargo doc --no-deps
 
     - name: Clippy
+      working-directory: ${{ matrix.workdir }}
       run: cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
 
     - name: Check
+      working-directory: ${{ matrix.workdir }}
       run: cargo check
 
     - name: Audit
+      working-directory: ${{ matrix.workdir }}
       run: cargo audit
 
     - name: Tests
+      working-directory: {{ env.WORKDIR }}
       run: cargo test --release
-
-  Build_libursa:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Build
-      run: cd libursa && cargo build --verbose
 
 # disabled in AZP
 #
