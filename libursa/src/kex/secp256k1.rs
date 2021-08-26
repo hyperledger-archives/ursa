@@ -235,7 +235,7 @@ mod tests {
         let (pk, sk) = scheme.keypair(None).unwrap();
         let sk1 = SecretKey::from_bytes(&sk[..]).unwrap();
         let pk1 = PublicKey::from_sec1_bytes(&pk[..]).unwrap();
-        let secret = diffie_hellman(sk1.secret_scalar(), pk1.as_affine());
+        let secret = diffie_hellman(sk1.to_secret_scalar(), pk1.as_affine());
         assert_eq!(
             secret.as_bytes().to_vec(),
             scheme
