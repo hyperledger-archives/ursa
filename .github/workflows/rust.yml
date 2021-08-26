@@ -39,6 +39,17 @@ jobs:
 
     - name: Tests
       run: cargo test --release
+
+  Build_libursa:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build
+      run: cd libursa && cargo build --verbose
+
 # disabled in AZP
 #
 #  Portable:
