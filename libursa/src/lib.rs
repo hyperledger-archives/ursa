@@ -82,10 +82,10 @@ extern crate num_integer;
 #[cfg(feature = "num-traits")]
 extern crate num_traits;
 
-#[cfg(feature = "k256")]
-extern crate k256;
 #[cfg(any(test, feature = "bitcoinsecp256k1"))]
 extern crate bitcoinsecp256k1;
+#[cfg(feature = "k256")]
+extern crate k256;
 
 #[cfg(feature = "serde")]
 extern crate serde;

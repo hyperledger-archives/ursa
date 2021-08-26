@@ -227,8 +227,8 @@ mod tests {
     #[test]
     fn secp256k1_compatibility() {
         use k256::{
-            {PublicKey, SecretKey},
             elliptic_curve::ecdh::diffie_hellman,
+            {PublicKey, SecretKey},
         };
 
         let scheme = EcdhSecp256k1Sha256::new();
@@ -238,7 +238,11 @@ mod tests {
         let secret = diffie_hellman(sk1.secret_scalar(), pk1.as_affine());
         assert_eq!(
             secret.as_bytes().to_vec(),
-            scheme.compute_shared_secret(&sk, &pk).unwrap().as_ref().to_vec()
+            scheme
+                .compute_shared_secret(&sk, &pk)
+                .unwrap()
+                .as_ref()
+                .to_vec()
         );
     }
 }
