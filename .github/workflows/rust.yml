@@ -48,7 +48,7 @@ jobs:
       run: cargo audit
 
     - name: Tests
-      working-directory: {{ env.WORKDIR }}
+      working-directory: ${{ matrix.workdir }}
       run: cargo test --release
 
 # disabled in AZP
