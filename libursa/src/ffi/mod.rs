@@ -56,7 +56,7 @@ impl ByteArray {
     }
 
     pub fn into_byte_buffer(self) -> ByteBuffer {
-        unsafe { std::mem::transmute(self) }
+        ByteBuffer::from_vec(self.into())
     }
 }
 
