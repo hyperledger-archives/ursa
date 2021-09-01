@@ -56,7 +56,7 @@ impl ByteArray {
     }
 
     pub fn into_byte_buffer(self) -> ByteBuffer {
-        ByteBuffer::from_vec(self.into())
+        ByteBuffer::from_vec(self.to_vec())
     }
 }
 
