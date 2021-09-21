@@ -31,7 +31,8 @@ members = [
 ]
 
 exclude = [
-    "libursa"
+    "libursa",
+    "r1cs-select",
 ]
 
 [features]
