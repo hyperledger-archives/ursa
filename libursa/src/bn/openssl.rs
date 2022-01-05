@@ -835,13 +835,13 @@ mod tests {
         assert_eq!(num, num_cloned);
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[derive(Serialize, Deserialize)]
     struct Test {
         field: BigNumber,
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_works() {
         let s = Test {
@@ -853,7 +853,7 @@ mod tests {
         assert_eq!("{\"field\":\"1\"}", serialized.unwrap());
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn deserialize_works() {
         let s = "{\"field\":\"1\"}";

@@ -88,15 +88,6 @@ extern crate k256;
 #[cfg(feature = "serde")]
 extern crate serde;
 #[cfg(any(test, feature = "ffi"))]
-#[cfg_attr(
-    any(
-        feature = "cl",
-        feature = "cl_native",
-        feature = "ffi",
-        feature = "wasm"
-    ),
-    macro_use
-)]
 extern crate serde_json;
 #[cfg(feature = "ffi")]
 #[macro_use]
