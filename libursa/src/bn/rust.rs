@@ -492,10 +492,10 @@ impl BigNumber {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
-            hasher.input(&num);
+            hasher.update(&num);
         }
 
-        Ok(hasher.result().as_slice().to_vec())
+        Ok(hasher.finalize().as_slice().to_vec())
     }
 }
 
