@@ -43,13 +43,13 @@ jobs:
       working-directory: ${{ matrix.workdir }}
       run: cargo check
 
-    - name: Audit
-      working-directory: ${{ matrix.workdir }}
-      run: cargo audit
-
     - name: Tests
       working-directory: ${{ matrix.workdir }}
       run: cargo test --release
+
+    - name: Audit
+      working-directory: ${{ matrix.workdir }}
+      run: cargo audit
 
 # disabled in AZP
 #
