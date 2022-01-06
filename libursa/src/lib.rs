@@ -25,8 +25,6 @@ extern crate block_modes;
 extern crate block_padding;
 #[cfg(feature = "hmac")]
 extern crate hmac;
-#[cfg(any(test, feature = "libsodium-ffi"))]
-extern crate libsodium_ffi;
 #[cfg(any(test, feature = "openssl"))]
 extern crate openssl;
 #[cfg(feature = "rand")]
@@ -218,6 +216,10 @@ pub mod sharing;
 pub mod signatures;
 #[cfg(feature = "wasm")]
 pub mod wasm;
+
+#[cfg(feature = "chacha20poly1305_native")]
+#[warn(dead_code)]
+const REMOVED: &str = "Support for libsodium as a backend has been removed. The chacha20poly1305_native feature is currently equivalent to chacha20poly1305, and deprecated.";
 
 pub type CryptoResult<T> = Result<T, CryptoError>;
 

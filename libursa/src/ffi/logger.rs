@@ -4,7 +4,6 @@ use errors::prelude::*;
 use ffi::ErrorCode;
 
 extern crate log;
-extern crate time;
 
 use utils::ctypes::*;
 use utils::logger::{EnabledCB, FlushCB, HLCryptoDefaultLogger, HLCryptoLogger, LogCB};
