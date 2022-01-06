@@ -1908,6 +1908,7 @@ mod tests {
     use super::*;
     use cl::issuer;
     use serde_json;
+    use std::time::Instant;
 
     #[test]
     fn key_correctness_proof_validation_works_for_deserialized_output_v0_4_1_crypto() {
@@ -2211,8 +2212,6 @@ mod tests {
         assert_eq!(mocks::primary_proof(), proof);
     }
 
-    extern crate time;
-
     /*
     Results:
 
@@ -2246,25 +2245,23 @@ mod tests {
         println!("Update Proof test -> start");
         let n = 100;
 
-        let total_start_time = time::get_time();
+        let total_start_time = Instant::now();
 
         let cred_schema = issuer::mocks::credential_schema();
         let non_cred_schema = issuer::mocks::non_credential_schema();
         let (cred_pub_key, cred_priv_key, cred_key_correctness_proof) =
             issuer::Issuer::new_credential_def(&cred_schema, &non_cred_schema, true).unwrap();
 
-        let start_time = time::get_time();
+        let start_time = Instant::now();
 
         let (rev_key_pub, rev_key_priv, mut rev_reg, mut rev_tails_generator) =
             issuer::Issuer::new_revocation_registry_def(&cred_pub_key, n, false).unwrap();
 
         let simple_tail_accessor = SimpleTailsAccessor::new(&mut rev_tails_generator).unwrap();
 
-        let end_time = time::get_time();
-
         println!(
             "Create RevocationRegistry Time: {:?}",
-            end_time - start_time
+            Instant::now() - start_time
         );
 
         let cred_values = issuer::mocks::credential_values();
@@ -2338,24 +2335,21 @@ mod tests {
 
         // Update NonRevoc Credential
 
-        let start_time = time::get_time();
+        let start_time = Instant::now();
 
         witness
             .update(rev_idx, n, &rev_reg_delta, &simple_tail_accessor)
             .unwrap();
 
-        let end_time = time::get_time();
-
         println!(
             "Update NonRevocation Credential Time: {:?}",
-            end_time - start_time
+            Instant::now() - start_time
         );
 
-        let total_end_time = time::get_time();
         println!(
             "Total Time for {} credentials: {:?}",
             n,
-            total_end_time - total_start_time
+            Instant::now() - total_start_time
         );
 
         println!("Update Proof test -> end");

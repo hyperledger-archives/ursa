@@ -89,7 +89,6 @@ found in Libursa.
 Ursa uses the following external dependencies:
 
 - [openssl 1.1.0j or greater](https://www.openssl.org/source/openssl-1.1.0j.tar.gz) (Written in C)
-- [libsodium 1.0.18 or greater](https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz) (Written in C)
 - [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (Written in C)
 
 These dependencies are used when building in the default secure mode. These
@@ -104,9 +103,7 @@ when using portable mode for their applications.
 
 # Building from Source
 
-Libursa and Libzmix rely on libsodium for the default
-secure mode. Please see the following document for specific platform
-installations [here](docs/build-environment.md).
+Please see the following document for platform-specific installations [here](docs/build-environment.md).
 
 ## Libursa
 

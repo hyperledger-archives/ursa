@@ -170,7 +170,6 @@ mod test {
     use super::super::{SignatureScheme, Signer};
     use super::*;
     use keys::{KeyGenOption, PrivateKey, PublicKey};
-    use libsodium_ffi as ffi;
 
     const MESSAGE_1: &[u8] = b"This is a dummy message for use with tests";
     const SIGNATURE_1: &str = "451b5b8e8725321541954997781de51f4142e4a56bab68d24f6a6b92615de5eefb74134138315859a32c7cf5fe5a488bc545e2e08e5eedfd1fb10188d532d808";
@@ -215,18 +214,6 @@ mod test {
         let result = scheme.verify(&MESSAGE_1, hex::decode(SIGNATURE_1).unwrap().as_slice(), &p);
         assert!(result.is_ok());
         assert!(result.unwrap());
-
-        //Check if signatures produced here can be verified by libsodium
-        let signature = hex::decode(SIGNATURE_1).unwrap();
-        let res = unsafe {
-            ffi::crypto_sign_ed25519_verify_detached(
-                signature.as_slice().as_ptr() as *const u8,
-                MESSAGE_1.as_ptr() as *const u8,
-                MESSAGE_1.len() as u64,
-                p.as_ptr() as *const u8,
-            )
-        };
-        assert_eq!(res, 0);
     }
 
     #[test]
@@ -245,22 +232,6 @@ mod test {
 
                 assert_eq!(sig.len(), SIGNATURE_SIZE);
                 assert_eq!(hex::encode(sig.as_slice()), SIGNATURE_1);
-
-                //Check if libsodium signs the message and this module still can verify it
-                //And that private keys can sign with other libraries
-                let mut signature = [0u8; ffi::crypto_sign_ed25519_BYTES as usize];
-                unsafe {
-                    ffi::crypto_sign_ed25519_detached(
-                        signature.as_mut_ptr() as *mut u8,
-                        0u64 as *mut u64,
-                        MESSAGE_1.as_ptr() as *const u8,
-                        MESSAGE_1.len() as u64,
-                        s.as_ptr() as *const u8,
-                    )
-                };
-                let result = scheme.verify(&MESSAGE_1, &signature, &p);
-                assert!(result.is_ok());
-                assert!(result.unwrap());
             }
             Err(e) => assert!(false, "{}", e),
         }
