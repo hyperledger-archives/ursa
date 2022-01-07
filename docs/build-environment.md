@@ -1,6 +1,6 @@
 # Setup your build environment
 
-The instructions below show the necessary steps to configure the environment to build all modes of libursa. There are convienance docker images in the **docker** folder that can be used.
+The instructions below show the necessary steps to configure the environment to build all modes of libursa. There are convenience docker images in the **docker** folder that can be used.
 
 ## Fedora, RedHat, CentOS
 
