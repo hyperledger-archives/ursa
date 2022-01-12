@@ -9,7 +9,7 @@ use aead::{
 use aes::{Aes128, Aes256};
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use sha2::{Sha256, Sha512};
@@ -55,12 +55,12 @@ macro_rules! aes_cbc_hmac_impl {
                     $algo::new_var(&self.key[..$algokeysize::to_usize()], &nonce.as_slice())
                         .map_err(|_| Error)?;
                 let mut ciphertext = encryptor.encrypt_vec(payload.msg);
-                let mut hmac =
-                    $hash::new_varkey(&self.key[$algokeysize::to_usize()..]).map_err(|_| Error)?;
-                hmac.input(payload.aad);
-                hmac.input(nonce.as_slice());
-                hmac.input(ciphertext.as_slice());
-                let hash = hmac.result().code();
+                let mut hmac = $hash::new_from_slice(&self.key[$algokeysize::to_usize()..])
+                    .map_err(|_| Error)?;
+                hmac.update(payload.aad);
+                hmac.update(nonce.as_slice());
+                hmac.update(ciphertext.as_slice());
+                let hash = hmac.finalize().into_bytes();
                 ciphertext.extend_from_slice(hash.as_slice());
                 Ok(ciphertext)
             }
@@ -80,12 +80,12 @@ macro_rules! aes_cbc_hmac_impl {
                 let buffer = Vec::from(&payload.msg[..tag_start]);
                 let tag = Vec::from(&payload.msg[tag_start..]);
 
-                let mut hmac =
-                    $hash::new_varkey(&self.key[$algokeysize::to_usize()..]).map_err(|_| Error)?;
-                hmac.input(payload.aad);
-                hmac.input(nonce.as_slice());
-                hmac.input(buffer.as_slice());
-                let expected_tag = hmac.result().code();
+                let mut hmac = $hash::new_from_slice(&self.key[$algokeysize::to_usize()..])
+                    .map_err(|_| Error)?;
+                hmac.update(payload.aad);
+                hmac.update(nonce.as_slice());
+                hmac.update(buffer.as_slice());
+                let expected_tag = hmac.finalize().into_bytes();
 
                 if expected_tag.ct_eq(&tag).unwrap_u8() == 1 {
                     let decryptor =

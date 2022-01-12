@@ -1,6 +1,8 @@
-## 0.5.0 WIP
+## 0.3.7 (2021-09) 
 
-- Package refactor into multiple subcrates
+- Package refactor into multiple subcrates (WIP)
+- Migrate from libsecp256k1 to k256
+- Upgrade dependencies
 
 ## 0.1.0 (2019-03-21)
 

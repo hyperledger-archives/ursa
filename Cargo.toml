@@ -33,6 +33,10 @@ exclude = [
     "pairings",
 ]
 
+exclude = [
+    "libursa"
+]
+
 [features]
 default = ["sharing"]
 sharing = ["ursa_sharing"]
