@@ -1,6 +1,4 @@
 extern crate log;
-#[cfg(feature = "serialization")]
-extern crate serde_json;
 
 #[cfg(feature = "ffi")]
 use ffi::ErrorCode;
@@ -223,6 +221,8 @@ thread_local! {
 
 #[cfg(feature = "ffi")]
 pub fn set_current_error(err: &UrsaCryptoError) {
+    use serde_json::json;
+
     CURRENT_ERROR_C_JSON.with(|error| {
         let error_json = json!({
             "message": err.to_string(),

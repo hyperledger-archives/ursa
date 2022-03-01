@@ -68,16 +68,16 @@ aesgcm = ["aead", "aes-gcm", "hex", "rand", "zeroize"]
 asm = ["encryption_asm", "ffi", "hashes_asm", "serde", "signatures_asm"]
 benchmarkaescbc = ["openssl"]
 benchmarkaesgcm = ["openssl"]
-benchmarked25519 = ["libsodium-ffi"]
+benchmarked25519 = ["ed25519"]
 benchmarksecp256k1 = ["bitcoinsecp256k1", "openssl"]
-benchmarkxchacha20poly1305 = ["libsodium-ffi"]
-bls_bls12381 = ["amcl_wrapper", "hex", "hkdf", "zeroize"]
+benchmarkxchacha20poly1305 = ["chacha20poly1305"]
+bls_bls12381 = ["amcl_wrapper", "hex", "hkdf", "sha2/std", "zeroize"]
 bls_bn254 = ["amcl", "failure", "log", "rand", "sha2/std", "sha3"]
 bls_bn254_asm = ["amcl", "failure", "log", "rand", "sha2/asm", "sha3"]
-cl = ["amcl", "failure", "glass_pumpkin", "int_traits", "lazy_static", "log", "num-bigint", "num-integer", "num-traits", "rand", "sha2/std", "time"]
-cl_native = ["amcl", "failure", "int_traits", "lazy_static", "log", "openssl", "rand", "time"]
+cl = ["amcl", "failure", "glass_pumpkin", "int_traits", "lazy_static", "log", "num-bigint", "num-integer", "num-traits", "rand", "sha2/std"]
+cl_native = ["amcl", "failure", "int_traits", "lazy_static", "log", "openssl", "rand"]
 chacha20poly1305 = ["aead", "hex", "rand", "rustchacha20poly1305", "zeroize"]
-chacha20poly1305_native = ["aead", "hex", "lazy_static", "libsodium-ffi", "rand", "zeroize"]
+chacha20poly1305_native = ["chacha20poly1305"]
 ecdh_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "k256", "sha2/std", "zeroize"]
 ecdh_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
 ecdh_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
@@ -87,8 +87,8 @@ ecdsa_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp
 ed25519 = ["arrayref", "ed25519-dalek/std", "ed25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "zeroize"]
 ed25519_asm = ["arrayref", "ed25519-dalek/nightly", "ed25519-dalek/simd_backend", "hex", "rand", "rand_chacha", "sha2/asm", "zeroize"]
 encryption = ["aescbc", "aesgcm", "chacha20poly1305"]
-encryption_asm = ["aescbc_native", "aesgcm_native", "chacha20poly1305_native"]
-ffi = ["failure", "ffi-support", "logger", "serde", "serde_json", "time"]
+encryption_asm = ["aescbc_native", "aesgcm_native", "chacha20poly1305"]
+ffi = ["failure", "ffi-support", "logger", "serde", "serde_json"]
 hashes = ["blake2/std", "sha2/std", "sha3"]
 hashes_asm = ["blake2/simd_asm", "sha2/asm", "sha3"]
 kex = ["ecdh_secp256k1", "x25519"]
@@ -97,8 +97,8 @@ kex_asm = ["ecdh_secp256k1_asm", "x25519_asm"]
 logger = ["env_logger", "log"]
 portable = ["clear_on_drop/no_cc", "encryption", "hashes", "kex", "serde", "signatures", "sharing"]
 portable_wasm = ["portable", "wasm"]
-sharing = ["failure", "glass_pumpkin", "int_traits", "lazy_static", "num-bigint", "num-integer", "num-traits", "log", "rand", "sha2/std", "time"]
-sharing_native = ["failure", "int_traits", "lazy_static", "log", "openssl", "rand", "time"]
+sharing = ["failure", "glass_pumpkin", "int_traits", "lazy_static", "num-bigint", "num-integer", "num-traits", "log", "rand", "sha2/std"]
+sharing_native = ["failure", "int_traits", "lazy_static", "log", "openssl", "rand"]
 signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
 signatures_native = ["cl_native", "ed25519", "ecdsa_secp256k1_native", "bls_bls12381", "bls_bn254"]
 signatures_asm = ["cl_native", "ed25519_asm", "ecdsa_secp256k1_asm", "bls_bls12381", "bls_bn254_asm"]
@@ -130,7 +130,6 @@ hmac = { version = "0.11.0", optional = true }
 int_traits = { version = "0.1.1", optional = true }
 js-sys = { version = "0.3.13", optional = true }
 lazy_static = { version = "1.4", optional = true }
-libsodium-ffi = { version = "0.2.2", optional = true }
 log = { version = "0.4.8", optional = true }
 num-bigint = { version = "0.3.0", features = ["rand"], optional = true}
 num-integer = { version = "=0.1.42", optional = true }
@@ -147,7 +146,6 @@ serde_json = { version = "1.0", optional = true }
 sha2 = { version = "0.9.5", default-features = false, optional = true }
 sha3 = { version = "0.9.1", optional = true }
 subtle = { version = "2.3", optional = true }
-time = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
 x25519-dalek = { version = "1.1", optional = true, default-features = false }
 zeroize = { version = "1.1", features = ["zeroize_derive"], optional =  true }
@@ -155,7 +153,6 @@ zeroize = { version = "1.1", features = ["zeroize_derive"], optional =  true }
 [dev-dependencies]
 bytebuffer-rs = "0.3.0"
 criterion = "0.3"
-libsodium-ffi = "0.2.2"
 openssl = "0.10"
 k256 = { version = "0.9.6"}
 bitcoinsecp256k1 = { version = "0.19", package = "secp256k1"}

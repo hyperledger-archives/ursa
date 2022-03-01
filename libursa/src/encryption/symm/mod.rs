@@ -29,7 +29,7 @@
 //! ```
 //!
 //! AES-GCM uses OpenSSL for native mode and the crate `aes-gcm` for portable mode.
-//! XCHACHA20POLY1305 uses Libsodium for native mode and the crate `chacha20poly1305` for portable mode.
+//! CHACHA20POLY1305 and XCHACHA20POLY1305 use the crate `chacha20poly1305`.
 //!
 //! More ciphers will added as needed like AES-GCM-SIV or [XCHACHA20POLY1305-SIV](https://tools.ietf.org/id/draft-madden-generalised-siv-00.html)
 //! where using poly1305 instead of HMAC might be appropriate.
@@ -576,20 +576,10 @@ pub mod aesgcm;
 #[path = "aesgcm.rs"]
 pub mod aesgcm;
 
-#[cfg(feature = "chacha20poly1305_native")]
-#[path = "chacha20poly1305_asm.rs"]
+#[cfg(feature = "chacha20poly1305")]
 pub mod chacha20poly1305;
 
 #[cfg(feature = "chacha20poly1305")]
-#[path = "chacha20poly1305.rs"]
-pub mod chacha20poly1305;
-
-#[cfg(feature = "chacha20poly1305_native")]
-#[path = "xchacha20poly1305_asm.rs"]
-pub mod xchacha20poly1305;
-
-#[cfg(feature = "chacha20poly1305")]
-#[path = "xchacha20poly1305.rs"]
 pub mod xchacha20poly1305;
 
 pub mod prelude {
@@ -597,9 +587,9 @@ pub mod prelude {
     pub use super::aescbc::{Aes128CbcHmac256, Aes256CbcHmac512};
     #[cfg(any(feature = "aesgcm", feature = "aesgcm_native"))]
     pub use super::aesgcm::{Aes128Gcm, Aes256Gcm};
-    #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
+    #[cfg(feature = "chacha20poly1305")]
     pub use super::chacha20poly1305::ChaCha20Poly1305;
-    #[cfg(any(feature = "chacha20poly1305", feature = "chacha20poly1305_native"))]
+    #[cfg(feature = "chacha20poly1305")]
     pub use super::xchacha20poly1305::XChaCha20Poly1305;
     pub use super::{DynEncryptor, Encryptor, EncryptorType, SymmetricEncryptor};
 }
