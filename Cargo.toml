@@ -22,7 +22,7 @@ lto = true
 
 [workspace]
 members = [
-    "ursa_core"
+    "ursa_core",
     "ursa_accumulators",
     "ursa_encryption",
     "ursa_sharing",
