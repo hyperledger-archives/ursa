@@ -586,8 +586,8 @@ impl Bls {
     where
         T: Digest,
     {
-        hasher.input(message);
-        Ok(PointG1::from_hash(hasher.result().as_slice())?)
+        hasher.update(message);
+        Ok(PointG1::from_hash(hasher.finalize().as_slice())?)
     }
 }
 

@@ -1378,6 +1378,7 @@ mod test {
     use self::prover::Prover;
     use self::verifier::Verifier;
     use super::*;
+    #[cfg(feature = "serde")]
     use serde_json;
 
     #[test]
@@ -1670,6 +1671,7 @@ mod test {
         assert!(proof_verifier.verify(&proof, &proof_request_nonce).unwrap());
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn credential_primary_public_key_conversion_works() {
         let string1 = r#"{
@@ -1706,6 +1708,7 @@ mod test {
         assert_eq!(two, one);
     }
 
+    #[cfg(feature = "serde")]
     #[test]
     fn primary_equal_proof_conversion_works() {
         let string1 = r#"{

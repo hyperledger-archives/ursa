@@ -726,7 +726,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "serialization")]
+#[cfg(feature = "serde")]
 #[cfg(test)]
 mod serialization_tests {
     use super::*;

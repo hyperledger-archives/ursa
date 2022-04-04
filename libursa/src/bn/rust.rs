@@ -492,10 +492,10 @@ impl BigNumber {
         let mut hasher = sha2::Sha256::new();
 
         for num in nums.iter() {
-            hasher.input(&num);
+            hasher.update(&num);
         }
 
-        Ok(hasher.result().as_slice().to_vec())
+        Ok(hasher.finalize().as_slice().to_vec())
     }
 }
 
@@ -841,13 +841,13 @@ mod tests {
         assert_eq!(num.lshift1().unwrap(), BigNumber::from_u32(2000).unwrap());
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[derive(Serialize, Deserialize)]
     struct Test {
         field: BigNumber,
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn serialize_works() {
         let s = Test {
@@ -859,7 +859,7 @@ mod tests {
         assert_eq!("{\"field\":\"1\"}", serialized.unwrap());
     }
 
-    #[cfg(feature = "serialization")]
+    #[cfg(feature = "serde")]
     #[test]
     fn deserialize_works() {
         let s = "{\"field\":\"1\"}";

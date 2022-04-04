@@ -4,7 +4,6 @@ use errors::prelude::*;
 use ffi::ErrorCode;
 
 extern crate log;
-extern crate time;
 
 use utils::ctypes::*;
 use utils::logger::{EnabledCB, FlushCB, HLCryptoDefaultLogger, HLCryptoLogger, LogCB};
@@ -51,7 +50,7 @@ pub extern "C" fn ursa_set_logger(
 /// Set default logger implementation.
 ///
 /// Allows library user use `env_logger` logger as default implementation.
-/// More details about `env_logger` and its customization can be found here: https://crates.io/crates/env_logger
+/// More details about `env_logger` and its customization can be found [here](https://crates.io/crates/env_logger)
 ///
 /// #Params
 /// pattern: (optional) pattern that corresponds with the log messages to show.

@@ -31,7 +31,6 @@ members = [
 
 exclude = [
     "ursa_core"
-
 ]
 
 [features]

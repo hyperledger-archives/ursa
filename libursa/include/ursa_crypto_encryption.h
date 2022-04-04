@@ -20,7 +20,7 @@ extern int32_t ursa_aes256_gcm_tagsize(void);
 extern int32_t ursa_xchacha20_poly1305_keysize(void);
 extern int32_t ursa_xchacha20_poly1305_noncesize(void);
 extern int32_t ursa_xchacha20_poly1305_tagsize(void);
-extern int32_t random_bytes(uin32_t bytes);
+extern int32_t random_bytes(uint32_t bytes);
 
 extern int32_t ursa_encrypt(const struct ByteBuffer* ciphertext,
                             const char* const algorithm,

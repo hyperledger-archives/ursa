@@ -382,10 +382,10 @@ mod tests {
         let pk_wrapper = ByteArray::from(&pk);
         let res = ursa_ed25519_get_public_key(&pk_wrapper, &mut public_key, &mut error);
         assert_eq!(res, 0);
-        assert_eq!(
-            error.get_message().into_string(),
-            "KeyGenError(signature error)".to_string()
-        );
+        assert!(error
+            .get_message()
+            .as_str()
+            .starts_with("KeyGenError(signature error"));
         let seed = ByteArray::default();
         let res =
             ursa_ed25519_keypair_from_seed(&seed, &mut public_key, &mut private_key, &mut error);
