@@ -22,6 +22,7 @@ lto = true
 
 [workspace]
 members = [
+    "ursa_core"
     "ursa_accumulators",
     "ursa_encryption",
     "ursa_sharing",
@@ -30,7 +31,7 @@ members = [
 ]
 
 exclude = [
-    "ursa_core"
+    "libursa"
 ]
 
 [features]
