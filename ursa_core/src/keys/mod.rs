@@ -1,5 +1,5 @@
-use zeroize::Zeroize;
 use super::errors::UrsaCryptoResult;
+use zeroize::Zeroize;
 
 // A private key instance.
 pub trait PrivateKey: Zeroize {

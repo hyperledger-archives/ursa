@@ -1,7 +1,7 @@
+extern crate failure;
 extern crate log;
 extern crate serde;
 extern crate zeroize;
-extern crate failure;
 #[cfg(any(feature = "cl_native", feature = "sharing_native"))]
 #[path = "bn/openssl.rs"]
 pub mod bn;
@@ -10,5 +10,3 @@ pub mod bn;
 pub mod bn;
 pub mod errors;
 pub mod keys;
-
-
