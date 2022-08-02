@@ -159,7 +159,7 @@ impl CredentialValue {
 
 /// Values of attributes from `Claim Schema` (must be integers).
 #[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CredentialValues {
     attrs_values: BTreeMap<String, CredentialValue>,
 }
