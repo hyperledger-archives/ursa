@@ -15,7 +15,6 @@
     missing_docs,
     trivial_casts,
     trivial_numeric_casts,
-    unconditional_recursion,
     unused_import_braces,
     unused_lifetimes,
     unused_qualifications,

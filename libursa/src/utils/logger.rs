@@ -134,7 +134,7 @@ impl HLCryptoDefaultLogger {
                 )
             })
             .filter(None, LevelFilter::Off)
-            .parse_filters(pattern.as_ref().map(String::as_str).unwrap_or(""))
+            .parse_filters(pattern.as_deref().unwrap_or(""))
             .try_init()?;
 
         Ok(())

@@ -740,6 +740,113 @@ pub extern "C" fn ursa_cl_credential_values_free(credential_values: *const c_voi
     res
 }
 
+/// Returns json representation of credential values.
+///
+/// # Arguments
+/// * `credential_values` - Reference that contains credential values pointer.
+/// * `credential_values_json_p` - Reference that will contain credential values json.
+#[no_mangle]
+pub extern "C" fn ursa_cl_credential_values_to_json(
+    credential_values: *const c_void,
+    credential_values_json_p: *mut *const c_char,
+) -> ErrorCode {
+    trace!(
+        "ursa_cl_credential_values_to_json: >>> credential_values: {:?}\n\
+         credential_values_json_p: {:?}",
+        credential_values,
+        credential_values_json_p
+    );
+
+    check_useful_c_reference!(
+        credential_values,
+        CredentialValues,
+        ErrorCode::CommonInvalidParam1
+    );
+    check_useful_c_ptr!(credential_values_json_p, ErrorCode::CommonInvalidParam2);
+
+    trace!(
+        "ursa_cl_credential_values_to_json: entity >>> credential_values: {:?}",
+        credential_values
+    );
+
+    let res = match serde_json::to_string(credential_values) {
+        Ok(credential_values_json) => {
+            trace!(
+                "ursa_cl_credential_values_to_json: credential_values_json: {:?}",
+                credential_values_json
+            );
+            let credential_values_json = string_to_cstring(credential_values_json);
+            unsafe {
+                *credential_values_json_p = credential_values_json.into_raw();
+            }
+            trace!(
+                "ursa_cl_credential_values_to_json: credential_values_json_p: {:?}",
+                credential_values_json_p
+            );
+            ErrorCode::Success
+        }
+        Err(err) => err
+            .to_ursa(
+                UrsaCryptoErrorKind::InvalidState,
+                "Unable to serialize blinded credential secret as json",
+            )
+            .into(),
+    };
+
+    trace!("ursa_cl_credential_values_to_json: <<< res: {:?}", res);
+    res
+}
+
+/// Creates and returns blinded credential secrets from json.
+///
+/// Note: Blinded credential secrets instance deallocation must be performed
+/// by calling ursa_cl_credential_values_free
+///
+/// # Arguments
+/// * `credential_values_json` - Reference that contains blinded credential secret json.
+/// * `credential_values_p` - Reference that will contain blinded credential secret instance pointer.
+#[no_mangle]
+pub extern "C" fn ursa_cl_credential_values_from_json(
+    credential_values_json: *const c_char,
+    credential_values_p: *mut *const c_void,
+) -> ErrorCode {
+    trace!("ursa_cl_credential_values_from_json: >>> credential_values_json: {:?}, credential_values_p: {:?}", credential_values_json, credential_values_p);
+
+    check_useful_c_str!(credential_values_json, ErrorCode::CommonInvalidParam1);
+    check_useful_c_ptr!(credential_values_p, ErrorCode::CommonInvalidParam2);
+
+    trace!(
+        "ursa_cl_credential_values_from_json: entity: credential_values_json: {:?}",
+        credential_values_json
+    );
+
+    let res = match serde_json::from_str::<CredentialValues>(&credential_values_json) {
+        Ok(credential_values) => {
+            trace!(
+                "ursa_cl_credential_values_from_json: credential_values: {:?}",
+                credential_values
+            );
+            unsafe {
+                *credential_values_p = Box::into_raw(Box::new(credential_values)) as *const c_void;
+            }
+            trace!(
+                "ursa_cl_credential_values_from_json: *credential_values_p: {:?}",
+                credential_values_p
+            );
+            ErrorCode::Success
+        }
+        Err(err) => err
+            .to_ursa(
+                UrsaCryptoErrorKind::InvalidStructure,
+                "Unable to deserialize blinded credential secret from json",
+            )
+            .into(),
+    };
+
+    trace!("ursa_cl_credential_values_from_json: <<< res: {:?}", res);
+    res
+}
+
 /// Creates and returns sub proof request entity builder.
 ///
 /// The purpose of sub proof request builder is building of sub proof request entity that
@@ -1345,6 +1452,35 @@ mod tests {
 
         let err_code = ursa_cl_credential_values_free(credential_values);
         assert_eq!(err_code, ErrorCode::Success);
+    }
+
+    #[test]
+    fn ursa_cl_credential_values_to_json_works() {
+        let credential_values = _credential_values();
+
+        let mut credential_values_json_p: *const c_char = ptr::null();
+        let err_code =
+            ursa_cl_credential_values_to_json(credential_values, &mut credential_values_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_credential_values(credential_values);
+    }
+
+    #[test]
+    fn ursa_cl_credential_values_from_json_works() {
+        let credential_values = _credential_values();
+
+        let mut credential_values_json_p: *const c_char = ptr::null();
+        let err_code =
+            ursa_cl_credential_values_to_json(credential_values, &mut credential_values_json_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        let mut credential_values_p: *const c_void = ptr::null();
+        let err_code =
+            ursa_cl_credential_values_from_json(credential_values_json_p, &mut credential_values_p);
+        assert_eq!(err_code, ErrorCode::Success);
+
+        _free_credential_values(credential_values);
     }
 
     #[test]

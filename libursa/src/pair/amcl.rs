@@ -68,7 +68,7 @@ fn _random_mod_order() -> UrsaCryptoResult<BIG> {
     let entropy_bytes = 128;
     let mut seed = vec![0; entropy_bytes];
     let mut rng = rand::thread_rng();
-    rng.fill_bytes(&mut seed.as_mut_slice());
+    rng.fill_bytes(seed.as_mut_slice());
     let mut rng = RAND::new();
     rng.clean();
     // AMCL recommends to initialise from at least 128 bytes, check doc for `RAND.seed`
@@ -219,7 +219,7 @@ impl<'a> Deserialize<'a> for PointG1 {
             where
                 E: serde::de::Error,
             {
-                Ok(PointG1::from_string(value).map_err(E::custom)?)
+                PointG1::from_string(value).map_err(E::custom)
             }
         }
 
@@ -360,7 +360,7 @@ impl<'a> Deserialize<'a> for PointG2 {
             where
                 E: serde::de::Error,
             {
-                Ok(PointG2::from_string(value).map_err(E::custom)?)
+                PointG2::from_string(value).map_err(E::custom)
             }
         }
 
@@ -542,7 +542,7 @@ impl<'a> Deserialize<'a> for GroupOrderElement {
             where
                 E: serde::de::Error,
             {
-                Ok(GroupOrderElement::from_string(value).map_err(E::custom)?)
+                GroupOrderElement::from_string(value).map_err(E::custom)
             }
         }
 
@@ -558,19 +558,19 @@ pub struct Pair {
 impl Pair {
     pub const BYTES_REPR_SIZE: usize = MODBYTES * 16;
     /// e(PointG1, PointG2)
-    pub fn pair(p: &PointG1, q: &PointG2) -> UrsaCryptoResult<Pair> {
+    pub fn pair(p: &PointG1, q: &PointG2) -> UrsaCryptoResult<Self> {
         let mut result = fexp(&ate(&q.point, &p.point));
         result.reduce();
 
-        Ok(Pair { pair: result })
+        Ok(Self { pair: result })
     }
 
     /// e(PointG1, PointG2, PointG1_1, PointG2_1)
-    pub fn pair2(p: &PointG1, q: &PointG2, r: &PointG1, s: &PointG2) -> UrsaCryptoResult<Pair> {
+    pub fn pair2(p: &PointG1, q: &PointG2, r: &PointG1, s: &PointG2) -> UrsaCryptoResult<Self> {
         let mut result = fexp(&ate2(&q.point, &p.point, &s.point, &r.point));
         result.reduce();
 
-        Ok(Pair { pair: result })
+        Ok(Self { pair: result })
     }
 
     /// e() * e()
@@ -655,7 +655,7 @@ impl<'a> Deserialize<'a> for Pair {
             where
                 E: serde::de::Error,
             {
-                Ok(Pair::from_string(value).map_err(E::custom)?)
+                Pair::from_string(value).map_err(E::custom)
             }
         }
 
