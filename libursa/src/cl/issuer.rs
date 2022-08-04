@@ -814,7 +814,7 @@ impl Issuer {
 
         let mut r = HashMap::new();
         for (key, xr_value) in xr.iter() {
-            r.insert(key.to_string(), s.mod_exp(&xr_value, &n, Some(&mut ctx))?);
+            r.insert(key.to_string(), s.mod_exp(xr_value, &n, Some(&mut ctx))?);
         }
 
         let z = s.mod_exp(&xz, &n, Some(&mut ctx))?;
@@ -904,7 +904,7 @@ impl Issuer {
                 key.to_string(),
                 cred_pr_pub_key
                     .s
-                    .mod_exp(&xr_tilda_value, &cred_pr_pub_key.n, Some(&mut ctx))?,
+                    .mod_exp(xr_tilda_value, &cred_pr_pub_key.n, Some(&mut ctx))?,
             );
         }
 
@@ -932,7 +932,7 @@ impl Issuer {
             let xr_tilda_value = &xr_tilda[&key];
             let val = c
                 .mul(&cred_pr_pub_key_meta.xr[&key], Some(&mut ctx))?
-                .add(&xr_tilda_value)?;
+                .add(xr_tilda_value)?;
             xr_cap.push((key, val));
         }
 
@@ -1047,7 +1047,7 @@ impl Issuer {
                 })?;
                 let m_cap = &blinded_cred_secrets_correctness_proof.m_caps[attr];
                 acc?.mod_mul(
-                    &pk_r.mod_exp(&m_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
+                    &pk_r.mod_exp(m_cap, &cred_pr_pub_key.n, Some(&mut ctx))?,
                     &cred_pr_pub_key.n,
                     Some(&mut ctx),
                 )
@@ -1066,7 +1066,7 @@ impl Issuer {
                 .mod_mul(
                     &get_pedersen_commitment(
                         &cred_pr_pub_key.z,
-                        &m_cap,
+                        m_cap,
                         &cred_pr_pub_key.s,
                         &blinded_cred_secrets_correctness_proof.r_caps[key],
                         &cred_pr_pub_key.n,
@@ -1146,8 +1146,8 @@ impl Issuer {
         let (a, q) = Issuer::_sign_primary_credential(
             cred_pub_key,
             cred_priv_key,
-            &credential_context,
-            &cred_values,
+            credential_context,
+            cred_values,
             &v,
             blinded_credential_secrets,
             &e,
@@ -1200,7 +1200,7 @@ impl Issuer {
 
         let mut context = BigNumber::new_context()?;
 
-        let mut rx = p_pub_key.s.mod_exp(&v, &p_pub_key.n, Some(&mut context))?;
+        let mut rx = p_pub_key.s.mod_exp(v, &p_pub_key.n, Some(&mut context))?;
 
         if blinded_cred_secrets.u != BigNumber::from_u32(0)? {
             rx = rx.mod_mul(&blinded_cred_secrets.u, &p_pub_key.n, Some(&mut context))?;
@@ -1209,7 +1209,7 @@ impl Issuer {
         rx = rx.mod_mul(
             &p_pub_key
                 .rctxt
-                .mod_exp(&cred_context, &p_pub_key.n, Some(&mut context))?,
+                .mod_exp(cred_context, &p_pub_key.n, Some(&mut context))?,
             &p_pub_key.n,
             Some(&mut context),
         )?;

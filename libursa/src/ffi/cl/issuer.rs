@@ -1220,13 +1220,13 @@ pub extern "C" fn ursa_cl_issuer_sign_credential(
 
     let res = match Issuer::sign_credential(
         &prover_id,
-        &blinded_credential_secrets,
-        &blinded_credential_secrets_correctness_proof,
-        &credential_nonce,
-        &credential_issuance_nonce,
-        &credential_values,
-        &credential_pub_key,
-        &credential_priv_key,
+        blinded_credential_secrets,
+        blinded_credential_secrets_correctness_proof,
+        credential_nonce,
+        credential_issuance_nonce,
+        credential_values,
+        credential_pub_key,
+        credential_priv_key,
     ) {
         Ok((credential_signature, credential_signature_correctness_proof)) => {
             trace!("ursa_cl_issuer_sign_credential: credential_signature: {:?}, credential_signature_correctness_proof: {:?}",
@@ -1359,13 +1359,13 @@ pub extern "C" fn ursa_cl_issuer_sign_credential_with_revoc(
     let rta = FFITailsAccessor::new(ctx_tails, take_tail, put_tail);
     let res = match Issuer::sign_credential_with_revoc(
         &prover_id,
-        &blinded_credential_secrets,
-        &blinded_credential_secrets_correctness_proof,
-        &credential_nonce,
-        &credential_issuance_nonce,
-        &credential_values,
-        &credential_pub_key,
-        &credential_priv_key,
+        blinded_credential_secrets,
+        blinded_credential_secrets_correctness_proof,
+        credential_nonce,
+        credential_issuance_nonce,
+        credential_values,
+        credential_pub_key,
+        credential_priv_key,
         rev_idx,
         max_cred_num,
         issuance_by_default,
