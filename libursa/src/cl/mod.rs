@@ -28,7 +28,7 @@ use std::iter::FromIterator;
 /// let _nonce = new_nonce().unwrap();
 /// ```
 pub fn new_nonce() -> UrsaCryptoResult<Nonce> {
-    Ok(helpers::bn_rand(constants::LARGE_NONCE)?)
+    helpers::bn_rand(constants::LARGE_NONCE)
 }
 
 /// A list of attributes a Credential is based on.
@@ -128,24 +128,15 @@ impl CredentialValue {
     }
 
     pub fn is_known(&self) -> bool {
-        match *self {
-            CredentialValue::Known { .. } => true,
-            _ => false,
-        }
+        matches!(*self, CredentialValue::Known { .. })
     }
 
     pub fn is_hidden(&self) -> bool {
-        match *self {
-            CredentialValue::Hidden { .. } => true,
-            _ => false,
-        }
+        matches!(*self, CredentialValue::Hidden { .. })
     }
 
     pub fn is_commitment(&self) -> bool {
-        match *self {
-            CredentialValue::Commitment { .. } => true,
-            _ => false,
-        }
+        matches!(*self, CredentialValue::Commitment { .. })
     }
 
     pub fn value(&self) -> &BigNumber {
@@ -285,7 +276,7 @@ impl CredentialPublicKey {
     }
 
     pub fn get_primary_key(&self) -> UrsaCryptoResult<CredentialPrimaryPublicKey> {
-        Ok(self.p_key.try_clone()?)
+        self.p_key.try_clone()
     }
 
     pub fn get_revocation_key(&self) -> UrsaCryptoResult<Option<CredentialRevocationPublicKey>> {
@@ -527,7 +518,7 @@ impl Tail {
         let i_bytes = helpers::transform_u32_to_array_of_u8(index);
         let mut pow = GroupOrderElement::from_bytes(&i_bytes)?;
         pow = gamma.pow_mod(&pow)?;
-        Ok(g_dash.mul(&pow)?)
+        g_dash.mul(&pow)
     }
 }
 
@@ -785,7 +776,7 @@ pub struct MasterSecret {
 
 impl MasterSecret {
     pub fn value(&self) -> UrsaCryptoResult<BigNumber> {
-        Ok(self.ms.try_clone()?)
+        self.ms.try_clone()
     }
 
     pub fn try_clone(&self) -> UrsaCryptoResult<MasterSecret> {
@@ -807,7 +798,7 @@ impl BlindedCredentialSecrets {
     pub fn try_clone(&self) -> UrsaCryptoResult<Self> {
         Ok(Self {
             u: self.u.try_clone()?,
-            ur: self.ur.clone(),
+            ur: self.ur,
             hidden_attributes: self.hidden_attributes.clone(),
             committed_attributes: clone_bignum_btreemap(&self.committed_attributes)?,
         })
@@ -826,7 +817,7 @@ impl CredentialSecretsBlindingFactors {
     pub fn try_clone(&self) -> UrsaCryptoResult<Self> {
         Ok(Self {
             v_prime: self.v_prime.try_clone()?,
-            vr_prime: self.vr_prime.clone(),
+            vr_prime: self.vr_prime,
         })
     }
 }
@@ -1308,25 +1299,25 @@ trait BytesView {
 
 impl BytesView for BigNumber {
     fn to_bytes(&self) -> UrsaCryptoResult<Vec<u8>> {
-        Ok(self.to_bytes()?)
+        self.to_bytes()
     }
 }
 
 impl BytesView for PointG1 {
     fn to_bytes(&self) -> UrsaCryptoResult<Vec<u8>> {
-        Ok(self.to_bytes()?)
+        self.to_bytes()
     }
 }
 
 impl BytesView for GroupOrderElement {
     fn to_bytes(&self) -> UrsaCryptoResult<Vec<u8>> {
-        Ok(self.to_bytes()?)
+        self.to_bytes()
     }
 }
 
 impl BytesView for Pair {
     fn to_bytes(&self) -> UrsaCryptoResult<Vec<u8>> {
-        Ok(self.to_bytes()?)
+        self.to_bytes()
     }
 }
 

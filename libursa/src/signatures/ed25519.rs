@@ -45,9 +45,9 @@ impl Ed25519Sha512 {
         let cey = CompressedEdwardsY::from_slice(&pk[..]);
         match cey.decompress() {
             Some(ep) => Ok(PublicKey(ep.to_montgomery().as_bytes().to_vec())),
-            None => Err(CryptoError::ParseError(format!(
-                "Invalid public key provided. Cannot convert to key exchange key"
-            ))),
+            None => Err(CryptoError::ParseError(
+                "Invalid public key provided. Cannot convert to key exchange key".to_string(),
+            )),
         }
     }
 
@@ -67,9 +67,9 @@ impl Ed25519Sha512 {
     pub fn sign_key_to_key_exchange(sk: &PrivateKey) -> Result<PrivateKey, CryptoError> {
         // Length is normally 64 but we only need the secret from the first half
         if sk.len() < 32 {
-            return Err(CryptoError::ParseError(format!(
-                "Invalid private key provided"
-            )));
+            return Err(CryptoError::ParseError(
+                "Invalid private key provided".to_string(),
+            ));
         }
         // hash secret
         let hash = sha2::Sha512::digest(&sk[..32]);
@@ -93,9 +93,9 @@ impl Ed25519Sha512 {
     /// ```
     pub fn expand_keypair(ikm: &[u8]) -> Result<(PublicKey, PrivateKey), CryptoError> {
         if ikm.len() < 32 {
-            return Err(CryptoError::ParseError(format!(
-                "Invalid key material provided"
-            )));
+            return Err(CryptoError::ParseError(
+                "Invalid key material provided".to_string(),
+            ));
         }
         let mut private = vec![0u8; 64];
         private[..32].copy_from_slice(&ikm[..32]);

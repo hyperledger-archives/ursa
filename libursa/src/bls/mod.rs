@@ -579,7 +579,7 @@ impl Bls {
     {
         let h = Bls::_hash(message, hasher)?;
         // e(&signature, &gen.point) == e(&h, &ver_key) => 1 == e(&h, &ver_key)*e(&signature, &gen.point)^-1 == e(&h, &ver_key)*e(&signature, -&gen.point)
-        Pair::pair2(&signature, &gen.point.neg()?, &h, &ver_key)?.is_unity()
+        Pair::pair2(signature, &gen.point.neg()?, &h, ver_key)?.is_unity()
     }
 
     fn _hash<T>(message: &[u8], mut hasher: T) -> UrsaCryptoResult<PointG1>
@@ -587,7 +587,7 @@ impl Bls {
         T: Digest,
     {
         hasher.update(message);
-        Ok(PointG1::from_hash(hasher.finalize().as_slice())?)
+        PointG1::from_hash(hasher.finalize().as_slice())
     }
 }
 
@@ -620,7 +620,7 @@ mod tests {
     fn sign_key_as_bytes_works() {
         let sign_key = SignKey::new(None).unwrap();
         let bytes = sign_key.as_bytes();
-        assert!(bytes.len() > 0);
+        assert!(!bytes.is_empty());
     }
 
     #[test]

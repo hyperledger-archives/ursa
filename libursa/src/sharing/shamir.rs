@@ -273,7 +273,7 @@ pub fn split_secret<B: AsRef<[u8]>>(
         ));
     }
     let secret = secret.as_ref();
-    if secret.len() == 0 {
+    if secret.is_empty() {
         return Err(CryptoError::GeneralError(
             "secret cannot be empty".to_string(),
         ));
@@ -329,7 +329,7 @@ pub fn combine_shares<B: AsRef<[Share]>>(shares: B, field: &BigNumber) -> Crypto
     let mut y_coordinates = Vec::with_capacity(shares.len());
 
     for share in shares {
-        if &share.value == &zero {
+        if share.value == zero {
             return Err(CryptoError::GeneralError(
                 "Share must have a non-zero value".to_string(),
             ));
