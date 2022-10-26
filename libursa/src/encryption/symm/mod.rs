@@ -257,7 +257,7 @@ pub trait Encryptor: Aead + NewAead {
             msg: &ciphertext[Self::NonceSize::to_usize()..],
             aad: aad.as_ref(),
         };
-        let plaintext = self.decrypt(&nonce, payload)?;
+        let plaintext = self.decrypt(nonce, payload)?;
         Ok(plaintext)
     }
 

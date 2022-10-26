@@ -226,7 +226,7 @@ pub fn gen_x(p: &BigNumber, q: &BigNumber) -> UrsaCryptoResult<BigNumber> {
 pub fn _gen_x(p: &BigNumber, q: &BigNumber) -> UrsaCryptoResult<BigNumber> {
     trace!("Helpers::gen_x: >>> p: {:?}, q: {:?}", p, q);
 
-    let mut x = p.mul(&q, None)?.sub_word(3)?.rand_range()?;
+    let mut x = p.mul(q, None)?.sub_word(3)?.rand_range()?;
 
     x.add_word(2)?;
 
@@ -326,7 +326,7 @@ pub fn calc_teq<S: ::std::hash::BuildHasher>(
 
     let mut ctx = BigNumber::new_context()?;
     // a_prime^e % p_pub_key.n
-    let mut result: BigNumber = a_prime.mod_exp(&e, &p_pub_key.n, Some(&mut ctx))?;
+    let mut result: BigNumber = a_prime.mod_exp(e, &p_pub_key.n, Some(&mut ctx))?;
 
     for k in unrevealed_attrs.iter() {
         let cur_r = p_pub_key.r.get(k).ok_or_else(|| {
@@ -344,18 +344,18 @@ pub fn calc_teq<S: ::std::hash::BuildHasher>(
 
         // result = result * (cur_r^cur_m % p_pub_key.n) % p_pub_key.n
         result = cur_r
-            .mod_exp(&cur_m, &p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(cur_m, &p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&result, &p_pub_key.n, Some(&mut ctx))?;
     }
 
     result = p_pub_key
         .s
-        .mod_exp(&v, &p_pub_key.n, Some(&mut ctx))?
+        .mod_exp(v, &p_pub_key.n, Some(&mut ctx))?
         .mod_mul(&result, &p_pub_key.n, Some(&mut ctx))?;
 
     result = p_pub_key
         .rctxt
-        .mod_exp(&m2tilde, &p_pub_key.n, Some(&mut ctx))?
+        .mod_exp(m2tilde, &p_pub_key.n, Some(&mut ctx))?
         .mod_mul(&result, &p_pub_key.n, Some(&mut ctx))?;
 
     trace!("Helpers::calc_teq: <<< t: {:?}", result);
@@ -401,9 +401,9 @@ pub fn calc_tne<S: ::std::hash::BuildHasher>(
 
         let t_tau = p_pub_key
             .z
-            .mod_exp(&cur_u, &p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(cur_u, &p_pub_key.n, Some(&mut ctx))?
             .mod_mul(
-                &p_pub_key.s.mod_exp(&cur_r, &p_pub_key.n, Some(&mut ctx))?,
+                &p_pub_key.s.mod_exp(cur_r, &p_pub_key.n, Some(&mut ctx))?,
                 &p_pub_key.n,
                 Some(&mut ctx),
             )?;
@@ -425,7 +425,7 @@ pub fn calc_tne<S: ::std::hash::BuildHasher>(
 
     let t_tau = p_pub_key
         .z
-        .mod_exp(&mj, &p_pub_key.n, Some(&mut ctx))?
+        .mod_exp(mj, &p_pub_key.n, Some(&mut ctx))?
         .mod_mul(
             &p_pub_key
                 .s
@@ -453,13 +453,13 @@ pub fn calc_tne<S: ::std::hash::BuildHasher>(
         })?;
 
         q = cur_t
-            .mod_exp(&cur_u, &p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(cur_u, &p_pub_key.n, Some(&mut ctx))?
             .mul(&q, Some(&mut ctx))?;
     }
 
     q = p_pub_key
         .s
-        .mod_exp(&alpha, &p_pub_key.n, Some(&mut ctx))?
+        .mod_exp(alpha, &p_pub_key.n, Some(&mut ctx))?
         .mod_mul(&q, &p_pub_key.n, Some(&mut ctx))?;
 
     tau_list.push(q);
@@ -536,12 +536,14 @@ pub fn four_squares(delta: i32) -> UrsaCryptoResult<HashMap<String, BigNumber>> 
     Ok(res)
 }
 
+#[inline(always)]
 pub fn group_element_to_bignum(el: &GroupOrderElement) -> UrsaCryptoResult<BigNumber> {
-    Ok(BigNumber::from_bytes(&el.to_bytes()?)?)
+    BigNumber::from_bytes(&el.to_bytes()?)
 }
 
+#[inline(always)]
 pub fn bignum_to_group_element(num: &BigNumber) -> UrsaCryptoResult<GroupOrderElement> {
-    Ok(GroupOrderElement::from_bytes(&num.to_bytes()?)?)
+    GroupOrderElement::from_bytes(&num.to_bytes()?)
 }
 
 pub fn create_tau_list_expected_values(

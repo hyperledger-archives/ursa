@@ -97,7 +97,7 @@ impl Prover {
         let blinded_primary_credential_secrets =
             Prover::_generate_blinded_primary_credential_secrets_factors(
                 &credential_pub_key.p_key,
-                &credential_values,
+                credential_values,
             )?;
 
         let blinded_revocation_credential_secrets = match credential_pub_key.r_key {
@@ -111,8 +111,8 @@ impl Prover {
             Prover::_new_blinded_credential_secrets_correctness_proof(
                 &credential_pub_key.p_key,
                 &blinded_primary_credential_secrets,
-                &credential_nonce,
-                &credential_values,
+                credential_nonce,
+                credential_values,
             )?;
 
         let blinded_credential_secrets = BlindedCredentialSecrets {
@@ -252,9 +252,9 @@ impl Prover {
             &mut Some(ref mut non_revocation_cred),
             Some(ref vr_prime),
             &Some(ref r_key),
-            Some(ref r_key_pub),
-            Some(ref r_reg),
-            Some(ref witness),
+            Some(r_key_pub),
+            Some(r_reg),
+            Some(witness),
         ) = (
             &mut credential_signature.r_credential,
             credential_secrets_blinding_factors.vr_prime,
@@ -266,7 +266,7 @@ impl Prover {
             Prover::_process_non_revocation_credential(
                 non_revocation_cred,
                 vr_prime,
-                &r_key,
+                r_key,
                 r_key_pub,
                 r_reg,
                 witness,
@@ -364,7 +364,7 @@ impl Prover {
                 &r_inverse,
                 &key_correctness_proof.c,
                 &pr_pub_key.s,
-                &xr_cap_value,
+                xr_cap_value,
                 &pr_pub_key.n,
                 &mut ctx,
             )?;
@@ -450,9 +450,9 @@ impl Prover {
                     attr.clone(),
                     get_pedersen_commitment(
                         &p_pub_key.s,
-                        &blinding_factor,
+                        blinding_factor,
                         &p_pub_key.z,
-                        &value,
+                        value,
                         &p_pub_key.n,
                         &mut ctx,
                     )?,
@@ -652,7 +652,7 @@ impl Prover {
         let r_cnxt_m2 = BigNumber::from_bytes(&r_cred.m2.to_bytes()?)?;
         r_cred.vr_prime_prime = vr_prime.add_mod(&r_cred.vr_prime_prime)?;
         Prover::_test_witness_signature(
-            &r_cred,
+            r_cred,
             cred_rev_pub_key,
             rev_key_pub,
             rev_reg,
@@ -969,14 +969,14 @@ impl ProofBuilder {
         let mut non_revoc_init_proof = None;
         let mut m2_tilde: Option<BigNumber> = None;
 
-        if let (&Some(ref r_cred), &Some(ref r_reg), &Some(ref r_pub_key), &Some(ref witness)) = (
+        if let (&Some(ref r_cred), &Some(r_reg), &Some(ref r_pub_key), &Some(witness)) = (
             &credential_signature.r_credential,
             &rev_reg,
             &credential_pub_key.r_key,
             &witness,
         ) {
             let proof =
-                ProofBuilder::_init_non_revocation_proof(&r_cred, &r_reg, &r_pub_key, &witness)?;
+                ProofBuilder::_init_non_revocation_proof(r_cred, r_reg, r_pub_key, witness)?;
 
             self.c_list.extend_from_slice(&proof.as_c_list()?);
             self.tau_list.extend_from_slice(&proof.as_tau_list()?);
@@ -1106,7 +1106,7 @@ impl ProofBuilder {
             let mut non_revoc_proof: Option<NonRevocProof> = None;
             if let Some(ref non_revoc_init_proof) = init_proof.non_revoc_init_proof {
                 non_revoc_proof = Some(ProofBuilder::_finalize_non_revocation_proof(
-                    &non_revoc_init_proof,
+                    non_revoc_init_proof,
                     &challenge,
                 )?);
             }
@@ -1253,7 +1253,7 @@ impl ProofBuilder {
         let mut ne_proofs: Vec<PrimaryPredicateInequalityInitProof> = Vec::new();
         for predicate in sub_proof_request.predicates.iter() {
             let ne_proof = ProofBuilder::_init_ne_proof(
-                &issuer_pub_key,
+                issuer_pub_key,
                 &eq_proof.m_tilde,
                 cred_values,
                 predicate,
@@ -1283,17 +1283,13 @@ impl ProofBuilder {
         trace!("ProofBuilder::_init_non_revocation_proof: >>> r_cred: {:?}, rev_reg: {:?}, cred_rev_pub_key: {:?}, witness: {:?}",
                r_cred, rev_reg, cred_rev_pub_key, witness);
 
-        let c_list_params = ProofBuilder::_gen_c_list_params(&r_cred)?;
-        let c_list = ProofBuilder::_create_c_list_values(
-            &r_cred,
-            &c_list_params,
-            &cred_rev_pub_key,
-            witness,
-        )?;
+        let c_list_params = ProofBuilder::_gen_c_list_params(r_cred)?;
+        let c_list =
+            ProofBuilder::_create_c_list_values(r_cred, &c_list_params, cred_rev_pub_key, witness)?;
 
         let tau_list_params = ProofBuilder::_gen_tau_list_params()?;
         let tau_list =
-            create_tau_list_values(&cred_rev_pub_key, &rev_reg, &tau_list_params, &c_list)?;
+            create_tau_list_values(cred_rev_pub_key, rev_reg, &tau_list_params, &c_list)?;
 
         let r_init_proof = NonRevocInitProof {
             c_list_params,
@@ -1351,7 +1347,7 @@ impl ProofBuilder {
             .cloned()
             .collect::<HashSet<String>>();
 
-        let mut m_tilde = clone_bignum_map(&common_attributes)?;
+        let mut m_tilde = clone_bignum_map(common_attributes)?;
         get_mtilde(&unrevealed_attrs, &mut m_tilde)?;
 
         let a_prime = cred_pub_key
@@ -1364,7 +1360,7 @@ impl ProofBuilder {
         let v_prime = c1.v.sub(&c1.e.mul(&r, Some(&mut ctx))?)?;
 
         let t = calc_teq(
-            &cred_pub_key,
+            cred_pub_key,
             &a_prime,
             &e_tilde,
             &v_tilde,
@@ -1452,7 +1448,7 @@ impl ProofBuilder {
             let cur_r = bn_rand(LARGE_VPRIME)?;
             let cut_t = get_pedersen_commitment(
                 &p_pub_key.z,
-                &cur_u,
+                cur_u,
                 &p_pub_key.s,
                 &cur_r,
                 &p_pub_key.n,
@@ -1501,10 +1497,10 @@ impl ProofBuilder {
         })?;
 
         let tau_list = calc_tne(
-            &p_pub_key,
+            p_pub_key,
             &u_tilde,
             &r_tilde,
-            &mj,
+            mj,
             &alpha_tilde,
             &t,
             predicate.is_less(),
@@ -1586,8 +1582,8 @@ impl ProofBuilder {
 
             // val = cur_mtilde + (cur_val * challenge)
             let val = challenge
-                .mul(&cur_val.value(), Some(&mut ctx))?
-                .add(&cur_mtilde)?;
+                .mul(cur_val.value(), Some(&mut ctx))?
+                .add(cur_mtilde)?;
 
             m_hat.insert(k.clone(), val);
         }
@@ -1655,26 +1651,26 @@ impl ProofBuilder {
             let cur_rtilde = &init_proof.r_tilde[&i.to_string()];
             let cur_r = &init_proof.r[&i.to_string()];
 
-            let new_u: BigNumber = c_h.mul(&cur_u, Some(&mut ctx))?.add(&cur_utilde)?;
-            let new_r: BigNumber = c_h.mul(&cur_r, Some(&mut ctx))?.add(&cur_rtilde)?;
+            let new_u: BigNumber = c_h.mul(cur_u, Some(&mut ctx))?.add(cur_utilde)?;
+            let new_r: BigNumber = c_h.mul(cur_r, Some(&mut ctx))?.add(cur_rtilde)?;
 
             u.insert(i.to_string(), new_u);
             r.insert(i.to_string(), new_r);
 
-            urproduct = cur_u.mul(&cur_r, Some(&mut ctx))?.add(&urproduct)?;
+            urproduct = cur_u.mul(cur_r, Some(&mut ctx))?.add(&urproduct)?;
 
             let cur_rtilde_delta = &init_proof.r_tilde["DELTA"];
 
             let new_delta = c_h
                 .mul(&init_proof.r["DELTA"], Some(&mut ctx))?
-                .add(&cur_rtilde_delta)?;
+                .add(cur_rtilde_delta)?;
 
             r.insert("DELTA".to_string(), new_delta);
         }
 
         let alpha = init_proof.r["DELTA"]
             .sub(&urproduct)?
-            .mul(&c_h, Some(&mut ctx))?
+            .mul(c_h, Some(&mut ctx))?
             .add(&init_proof.alpha_tilde)?;
 
         let primary_predicate_ne_proof = PrimaryPredicateInequalityProof {
@@ -1877,7 +1873,7 @@ impl ProofBuilder {
             c_h
         );
 
-        let ch_num_z = bignum_to_group_element(&c_h)?;
+        let ch_num_z = bignum_to_group_element(c_h)?;
         let mut x_list: Vec<GroupOrderElement> = Vec::new();
 
         for (x, y) in init_proof
@@ -1886,7 +1882,7 @@ impl ProofBuilder {
             .iter()
             .zip(init_proof.c_list_params.as_list()?.iter())
         {
-            x_list.push(x.add_mod(&ch_num_z.mul_mod(&y)?.mod_neg()?)?);
+            x_list.push(x.add_mod(&ch_num_z.mul_mod(y)?.mod_neg()?)?);
         }
 
         let non_revoc_proof = NonRevocProof {

@@ -536,7 +536,7 @@ impl BigNumber {
     ) -> UrsaCryptoResult<BigNumber> {
         //(a * (1/b mod p) mod p)
         match ctx {
-            Some(mut context) => self._mod_div(b, p, &mut context),
+            Some(context) => self._mod_div(b, p, context),
             None => {
                 let mut context = BigNumber::new_context()?;
                 self._mod_div(b, p, &mut context)
@@ -563,7 +563,7 @@ impl BigNumber {
     }
 
     pub fn random_qr(n: &BigNumber) -> UrsaCryptoResult<BigNumber> {
-        let qr = n.rand_range()?.sqr(None)?.modulus(&n, None)?;
+        let qr = n.rand_range()?.sqr(None)?.modulus(n, None)?;
         Ok(qr)
     }
 
@@ -579,7 +579,7 @@ impl BigNumber {
         let mut sha256 = Hasher::new(MessageDigest::sha256())?;
 
         for num in nums.iter() {
-            sha256.update(&num)?;
+            sha256.update(num)?;
         }
 
         Ok(sha256.finish()?.to_vec())
@@ -638,7 +638,7 @@ impl<'a> Deserialize<'a> for BigNumber {
             where
                 E: serde::de::Error,
             {
-                Ok(BigNumber::from_dec(value).map_err(E::custom)?)
+                BigNumber::from_dec(value).map_err(E::custom)
             }
         }
 
@@ -857,7 +857,7 @@ mod tests {
     #[test]
     fn deserialize_works() {
         let s = "{\"field\":\"1\"}";
-        let bn: Result<Test, _> = serde_json::from_str(&s);
+        let bn: Result<Test, _> = serde_json::from_str(s);
 
         assert!(bn.is_ok());
         assert_eq!("1", bn.unwrap().field.to_dec().unwrap());

@@ -242,11 +242,11 @@ impl ProofVerifier {
             ) {
                 tau_list.extend_from_slice(
                     &ProofVerifier::_verify_non_revocation_proof(
-                        &cred_rev_pub_key,
-                        &rev_reg,
-                        &rev_key_pub,
+                        cred_rev_pub_key,
+                        rev_reg,
+                        rev_key_pub,
                         &proof.aggregated_proof.c_hash,
-                        &non_revocation_proof,
+                        non_revocation_proof,
                     )?
                     .as_slice()?,
                 );
@@ -464,7 +464,7 @@ impl ProofVerifier {
             .collect::<HashSet<String>>();
 
         let t1: BigNumber = calc_teq(
-            &p_pub_key,
+            p_pub_key,
             &proof.a_prime,
             &proof.e,
             &proof.v,
@@ -496,7 +496,7 @@ impl ProofVerifier {
             .z
             .mod_div(&rar, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
-            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?;
+            .mod_exp(c_hash, &p_pub_key.n, Some(&mut ctx))?;
 
         let t: BigNumber = t1.mod_mul(&t2, &p_pub_key.n, Some(&mut ctx))?;
 
@@ -519,7 +519,7 @@ impl ProofVerifier {
 
         let mut ctx = BigNumber::new_context()?;
         let mut tau_list = calc_tne(
-            &p_pub_key,
+            p_pub_key,
             &proof.u,
             &proof.r,
             &proof.mj,
@@ -537,7 +537,7 @@ impl ProofVerifier {
             })?;
 
             tau_list[i] = cur_t
-                .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+                .mod_exp(c_hash, &p_pub_key.n, Some(&mut ctx))?
                 .inverse(&p_pub_key.n, Some(&mut ctx))?
                 .mod_mul(&tau_list[i], &p_pub_key.n, Some(&mut ctx))?;
         }
@@ -563,12 +563,12 @@ impl ProofVerifier {
                 Some(&mut ctx),
             )?
             .mul(&delta_prime, Some(&mut ctx))?
-            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(c_hash, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&tau_list[ITERATION], &p_pub_key.n, Some(&mut ctx))?;
 
         tau_list[ITERATION + 1] = delta
-            .mod_exp(&c_hash, &p_pub_key.n, Some(&mut ctx))?
+            .mod_exp(c_hash, &p_pub_key.n, Some(&mut ctx))?
             .inverse(&p_pub_key.n, Some(&mut ctx))?
             .mod_mul(&tau_list[ITERATION + 1], &p_pub_key.n, Some(&mut ctx))?;
 
@@ -590,12 +590,12 @@ impl ProofVerifier {
         trace!("ProofVerifier::_verify_non_revocation_proof: >>> r_pub_key: {:?}, rev_reg: {:?}, rev_key_pub: {:?}, c_hash: {:?}",
                r_pub_key, rev_reg, rev_key_pub, c_hash);
 
-        let ch_num_z = bignum_to_group_element(&c_hash)?;
+        let ch_num_z = bignum_to_group_element(c_hash)?;
 
         let t_hat_expected_values =
             create_tau_list_expected_values(r_pub_key, rev_reg, rev_key_pub, &proof.c_list)?;
         let t_hat_calc_values =
-            create_tau_list_values(&r_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
+            create_tau_list_values(r_pub_key, rev_reg, &proof.x_list, &proof.c_list)?;
 
         let non_revoc_proof_tau_list = Ok(NonRevocProofTauList {
             t1: t_hat_expected_values
