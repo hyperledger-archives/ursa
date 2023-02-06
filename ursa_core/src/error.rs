@@ -1,3 +1,4 @@
+use string_error::*;
 use thiserror::Error as ThisError;
 
 /// The common errors that can occur in Ursa
@@ -30,6 +31,24 @@ pub enum UrsaError {
     /// Generic errors to handle anything that implements the std::error::Error trait
     #[error("error: {0}")]
     Kind(Box<dyn std::error::Error>),
+}
+
+impl From<String> for UrsaError {
+    fn from(value: String) -> Self {
+        Self::Kind(into_err(value))
+    }
+}
+
+impl From<&String> for UrsaError {
+    fn from(value: &String) -> Self {
+        Self::Kind(into_err(value.clone()))
+    }
+}
+
+impl From<&str> for UrsaError {
+    fn from(value: &str) -> Self {
+        Self::Kind(new_err(value))
+    }
 }
 
 /// Results returned from ursa components
