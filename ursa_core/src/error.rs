@@ -3,6 +3,7 @@ use thiserror::Error as ThisError;
 
 /// The common errors that can occur in Ursa
 #[derive(ThisError, Debug)]
+#[non_exhaustive]
 pub enum UrsaError {
     /// Convert IO errors
     #[error("io error")]
