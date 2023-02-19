@@ -113,51 +113,51 @@ aes = { version = "0.6", optional = true }
 aes-gcm = { version = "0.8", optional = true }
 amcl = { version = "0.2",  optional = true, default-features = false, features = ["bn254"]}
 amcl_wrapper = {version = "0.4.0", features = ["bls381"], optional = true }
-arrayref = { version = "0.3.5", optional = true }
-blake2 = { version = "0.9", default-features = false, optional = true }
+arrayref = { version = "0.3.6", optional = true }
+blake2 = { version = "0.10", default-features = false, optional = true }
 block-modes = { version = "0.7", optional = true }
-block-padding = { version = "0.2", optional = true }
-clear_on_drop = { version = "0.2.4", optional = true }
-console_error_panic_hook = { version = "0.1.5", optional = true }
-curve25519-dalek = { version = "3.1", default-features = false, optional = true }
+block-padding = { version = "0.3", optional = true }
+clear_on_drop = { version = "0.2.5", optional = true }
+console_error_panic_hook = { version = "0.1.7", optional = true }
+curve25519-dalek = { version = "3.2", default-features = false, optional = true }
 ed25519-dalek = { version = "1.0", default-features = false, optional = true }
-env_logger = { version = "0.7.0", optional = true }
-failure = { version = "0.1.6", optional = true }
+env_logger = { version = "0.10", optional = true }
+failure = { version = "0.1.8", optional = true }
 ffi-support = { version = "0.4", optional = true }
-glass_pumpkin = { version = "0.4", optional = true }
-hex = { version = "0.4.0", optional = true }
-hkdf = { version = "0.11.0", optional = true }
-hmac = { version = "0.11.0", optional = true }
+glass_pumpkin = { version = "1.5", optional = true }
+hex = { version = "0.4.3", optional = true }
+hkdf = { version = "0.12", optional = true }
+hmac = { version = "0.12.1", optional = true }
 int_traits = { version = "0.1.1", optional = true }
-js-sys = { version = "0.3.13", optional = true }
+js-sys = { version = "0.3.61", optional = true }
 lazy_static = { version = "1.4", optional = true }
-log = { version = "0.4.8", optional = true }
-num-bigint = { version = "0.3.0", features = ["rand"], optional = true}
-num-integer = { version = "=0.1.42", optional = true }
-num-traits = { version = "=0.2.11", optional = true }
+log = { version = "0.4.17", optional = true }
+num-bigint = { version = "0.4", features = ["rand"], optional = true }
+num-integer = { version = "0.1.45", optional = true }
+num-traits = { version = "0.2.15", optional = true }
 openssl = { version = "0.10", optional = true }
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "0.7", features = ["wasm-bindgen"], optional = true }
 getrandom = { version = "0.2", features = ["js"], optional = true }
 rand_chacha = { version = "=0.2.1", optional = true }
 rustchacha20poly1305 = { version = "0.7", package = "chacha20poly1305", optional = true }
-k256 = { version = "0.9.6", optional = true, features = ["ecdh", "ecdsa", "sha256"]}
-bitcoinsecp256k1 = { version = "0.19", package = "secp256k1", optional = true, features = ["rand", "serde"]}
-serde = { version = "1.0", features = ["derive"],  optional = true}
+k256 = { version = "0.12", optional = true, features = ["ecdh", "ecdsa", "sha256"]}
+bitcoinsecp256k1 = { version = "0.26", package = "secp256k1", optional = true, features = ["rand", "serde"]}
+serde = { version = "1.0", features = ["derive"],  optional = true }
 serde_json = { version = "1.0", optional = true }
-sha2 = { version = "0.9.5", default-features = false, optional = true }
-sha3 = { version = "0.9.1", optional = true }
-subtle = { version = "2.3", optional = true }
+sha2 = { version = "0.10", default-features = false, optional = true }
+sha3 = { version = "0.10", optional = true }
+subtle = { version = "2.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
-x25519-dalek = { version = "1.1", optional = true, default-features = false }
-zeroize = { version = "1.1", features = ["zeroize_derive"], optional =  true }
+x25519-dalek = { version = "1.2.1", optional = true, default-features = false, git = "https://github.com/appetrosyan/x25519-dalek" }
+zeroize = { version = "1.5", features = ["zeroize_derive"], optional =  true }
 
 [dev-dependencies]
-bytebuffer-rs = "0.3.0"
+bytebuffer-rs = "2.0.1"
 criterion = "0.3"
 openssl = "0.10"
-k256 = { version = "0.9.6"}
-bitcoinsecp256k1 = { version = "0.19", package = "secp256k1"}
+k256 = { version = "0.12"}
+bitcoinsecp256k1 = { version = "0.26", package = "secp256k1"}
 serde_json = "1.0"
 
 [[bench]]
