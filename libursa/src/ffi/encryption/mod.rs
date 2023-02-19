@@ -1,7 +1,7 @@
 use super::ByteArray;
+use crate::encryption::random_vec;
+use crate::encryption::symm::prelude::*;
 use aead::{generic_array::typenum::Unsigned, Aead, NewAead};
-use encryption::random_vec;
-use encryption::symm::prelude::*;
 use ffi_support::{ByteBuffer, ErrorCode, ExternError, FfiStr};
 use std::ffi::CString;
 use std::str::FromStr;

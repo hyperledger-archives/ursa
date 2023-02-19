@@ -1,7 +1,7 @@
 extern crate log;
 
 #[cfg(feature = "ffi")]
-use ffi::ErrorCode;
+use crate::ffi::ErrorCode;
 
 use std::cell::RefCell;
 use std::ffi::CString;
@@ -14,7 +14,7 @@ use std::ptr;
 use failure::{Backtrace, Context, Fail};
 
 #[cfg(feature = "ffi")]
-use utils::ctypes;
+use crate::utils::ctypes;
 
 #[cfg(feature = "ffi")]
 pub mod prelude {

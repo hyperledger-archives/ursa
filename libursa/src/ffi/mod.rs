@@ -12,7 +12,7 @@ pub mod logger;
 ))]
 pub mod signatures;
 
-use errors::prelude::*;
+use crate::errors::prelude::*;
 use ffi_support::ByteBuffer;
 use std::os::raw::c_char;
 
@@ -192,9 +192,9 @@ pub extern "C" fn ursa_get_current_error(error_json_p: *mut *const c_char) {
 mod tests {
     use super::*;
 
-    use ffi::cl::issuer::ursa_cl_credential_private_key_from_json;
+    use crate::ffi::cl::issuer::ursa_cl_credential_private_key_from_json;
+    use crate::utils::ctypes::*;
     use std::ptr;
-    use utils::ctypes::*;
 
     #[test]
     fn ursa_get_current_error_works() {

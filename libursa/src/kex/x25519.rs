@@ -6,7 +6,7 @@ use sha2::Digest;
 use x25519_dalek::{PublicKey as X25519PublicKey, StaticSecret};
 use zeroize::Zeroize;
 
-use CryptoError;
+use crate::CryptoError;
 
 pub struct X25519Sha256;
 
@@ -78,7 +78,7 @@ mod tests {
     #[cfg(any(feature = "ed25519", feature = "ed25519_asm"))]
     #[test]
     fn convert_from_sig_keys() {
-        use signatures::{ed25519::Ed25519Sha512, SignatureScheme};
+        use crate::signatures::{ed25519::Ed25519Sha512, SignatureScheme};
         let sig_scheme = Ed25519Sha512::new();
         let (pk, sk) = sig_scheme.keypair(None).unwrap();
         let res = Ed25519Sha512::ver_key_to_key_exchange(&pk);

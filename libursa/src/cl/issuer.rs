@@ -1,11 +1,11 @@
-use bn::BigNumber;
-use cl::constants::*;
-use cl::hash::get_hash_as_int;
-use cl::helpers::*;
-use cl::*;
-use errors::prelude::*;
-use pair::*;
-use utils::commitment::get_pedersen_commitment;
+use crate::bn::BigNumber;
+use crate::cl::constants::*;
+use crate::cl::hash::get_hash_as_int;
+use crate::cl::helpers::*;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::pair::*;
+use crate::utils::commitment::get_pedersen_commitment;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::iter::FromIterator;
@@ -1416,8 +1416,8 @@ mod tests {
     use self::prover::mocks as prover_mocks;
     use self::prover::Prover;
     use super::*;
-    use cl::helpers::MockHelper;
-    use cl::issuer::{mocks, Issuer};
+    use crate::cl::helpers::MockHelper;
+    use crate::cl::issuer::{mocks, Issuer};
 
     #[test]
     fn generate_context_attribute_works() {

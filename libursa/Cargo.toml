@@ -2,12 +2,13 @@
 name = "ursa"
 version = "0.3.7"
 authors = ["Hyperledger Ursa Contributors"]
-description = "This is the shared crypto library for Hyperledger components."
+description = "The Hyperledger Cryptographic library."
 license = "Apache-2.0"
 readme =  "../README.md"
 repository = "https://github.com/hyperledger/ursa"
 documentation = "https://docs.rs/ursa"
 homepage = "https://crates.io/crates/ursa"
+edition = "2021"
 keywords = ["cryptography", "aead", "hash", "signature", "zero-knowledge"]
 include = [
     "src/bls/**/*.rs",
@@ -177,7 +178,7 @@ license-file = ["../LICENSE", "0"]
 copyright = "2019, Hyperledger"
 depends = "$auto"
 extended-description = """\
-Rust written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
+Rust-written reliable, secure, easy-to-use, and pluggable cryptographic implementations."""
 section = "admin"
 revision = "1"
 priority = "optional"

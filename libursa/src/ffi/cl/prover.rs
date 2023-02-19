@@ -1,8 +1,8 @@
-use cl::prover::*;
-use cl::*;
-use errors::prelude::*;
-use ffi::ErrorCode;
-use utils::ctypes::*;
+use crate::cl::prover::*;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::ffi::ErrorCode;
+use crate::utils::ctypes::*;
 
 use serde_json;
 use std::os::raw::{c_char, c_void};
@@ -1261,9 +1261,9 @@ pub extern "C" fn ursa_cl_proof_free(proof: *const c_void) -> ErrorCode {
 mod tests {
     use super::*;
 
-    use ffi::cl::issuer::mocks::*;
-    use ffi::cl::mocks::*;
-    use ffi::cl::prover::mocks::*;
+    use crate::ffi::cl::issuer::mocks::*;
+    use crate::ffi::cl::mocks::*;
+    use crate::ffi::cl::prover::mocks::*;
     use std::ptr;
 
     // Master secret is now called link secret.
@@ -2207,7 +2207,7 @@ mod tests {
 pub mod mocks {
     use super::*;
 
-    use ffi::cl::mocks::*;
+    use crate::ffi::cl::mocks::*;
     use std::ptr;
 
     pub fn _master_secret() -> *const c_void {

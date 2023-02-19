@@ -26,30 +26,37 @@ jobs:
     - name: Build
       working-directory: ${{ matrix.workdir }}
       run: cargo build --verbose
+      if: always()
 
     - name: Format
       working-directory: ${{ matrix.workdir }}
       run: cargo fmt --all -- --check
+      if: always()
 
     - name: Docs
       working-directory: ${{ matrix.workdir }}
       run: cargo doc --no-deps
+      if: always()
 
     - name: Clippy
       working-directory: ${{ matrix.workdir }}
       run: cargo clippy --all -- -W clippy::not_unsafe_ptr_arg_deref -A clippy::many_single_char_names
+      if: always()
 
     - name: Check
       working-directory: ${{ matrix.workdir }}
       run: cargo check
+      if: always()
 
     - name: Tests
       working-directory: ${{ matrix.workdir }}
       run: cargo test --release
+      if: always()
 
     - name: Audit
       working-directory: ${{ matrix.workdir }}
       run: cargo audit
+      if: always()
 
 # disabled in AZP
 #

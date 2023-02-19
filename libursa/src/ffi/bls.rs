@@ -1,7 +1,7 @@
-use bls::*;
-use errors::prelude::*;
+use crate::bls::*;
+use crate::errors::prelude::*;
 
-use ffi::ErrorCode;
+use crate::ffi::ErrorCode;
 use std::os::raw::c_void;
 use std::slice;
 

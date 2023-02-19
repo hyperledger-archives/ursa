@@ -21,8 +21,8 @@ pub mod prelude {
     pub use super::{SignatureScheme, Signer};
 }
 
-use keys::{KeyGenOption, PrivateKey, PublicKey};
-use CryptoError;
+use crate::keys::{KeyGenOption, PrivateKey, PublicKey};
+use crate::CryptoError;
 
 pub trait SignatureScheme {
     fn new() -> Self;

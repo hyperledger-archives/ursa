@@ -146,9 +146,9 @@
 // }
 
 use super::super::ByteArray;
-use keys::{KeyGenOption, PrivateKey, PublicKey};
-use signatures::ed25519;
-use signatures::prelude::*;
+use crate::keys::{KeyGenOption, PrivateKey, PublicKey};
+use crate::signatures::ed25519;
+use crate::signatures::prelude::*;
 
 use ffi_support::{ByteBuffer, ErrorCode, ExternError};
 

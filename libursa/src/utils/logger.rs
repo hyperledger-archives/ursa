@@ -7,7 +7,7 @@ use log::{Metadata, Record};
 use std::env;
 use std::io::Write;
 
-use errors::prelude::*;
+use crate::errors::prelude::*;
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};

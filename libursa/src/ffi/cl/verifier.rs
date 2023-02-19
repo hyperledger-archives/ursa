@@ -1,8 +1,8 @@
-use cl::verifier::*;
-use cl::*;
-use errors::prelude::*;
-use ffi::ErrorCode;
-use utils::ctypes::*;
+use crate::cl::verifier::*;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::ffi::ErrorCode;
+use crate::utils::ctypes::*;
 
 use std::os::raw::{c_char, c_void};
 
@@ -208,7 +208,7 @@ mod tests {
     use super::super::issuer::mocks::*;
     use super::super::prover::mocks::*;
     use super::mocks::*;
-    use ffi::cl::mocks::*;
+    use crate::ffi::cl::mocks::*;
     use std::ptr;
 
     // Master secret is now called link secret.

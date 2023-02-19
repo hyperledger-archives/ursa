@@ -1,4 +1,5 @@
 use super::SignatureScheme;
+use crate::keys::{KeyGenOption, PrivateKey as UrsaPrivateKey, PublicKey as UrsaPublicKey};
 /// Implements
 /// https://eprint.iacr.org/2018/483 and
 /// https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
@@ -11,12 +12,11 @@ use amcl_wrapper::{
     group_elem_g2::G2,
     types_g2::GroupG2_SIZE,
 };
-use keys::{KeyGenOption, PrivateKey as UrsaPrivateKey, PublicKey as UrsaPublicKey};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-use CryptoError;
+use crate::CryptoError;
 
 pub const PRIVATE_KEY_SIZE: usize = MODBYTES;
 /// This is a simple alias so the consumer can just use PrivateKey::random() to generate a new one

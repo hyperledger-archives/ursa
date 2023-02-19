@@ -1,9 +1,9 @@
-use cl::issuer::*;
-use cl::*;
-use errors::prelude::*;
-use ffi::cl::{FFITailPut, FFITailTake, FFITailsAccessor};
-use ffi::ErrorCode;
-use utils::ctypes::*;
+use crate::cl::issuer::*;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::ffi::cl::{FFITailPut, FFITailTake, FFITailsAccessor};
+use crate::ffi::ErrorCode;
+use crate::utils::ctypes::*;
 
 use serde_json;
 use std::collections::HashSet;
@@ -2012,9 +2012,9 @@ pub extern "C" fn ursa_cl_issuer_merge_revocation_registry_deltas(
 mod tests {
     use super::*;
 
-    use ffi::cl::issuer::mocks::*;
-    use ffi::cl::mocks::*;
-    use ffi::cl::prover::mocks::*;
+    use crate::ffi::cl::issuer::mocks::*;
+    use crate::ffi::cl::mocks::*;
+    use crate::ffi::cl::prover::mocks::*;
     use std::ptr;
 
     #[test]
@@ -3025,7 +3025,7 @@ mod tests {
 pub mod mocks {
     use super::*;
 
-    use ffi::cl::mocks::*;
+    use crate::ffi::cl::mocks::*;
     use std::ffi::CString;
     use std::ptr;
 

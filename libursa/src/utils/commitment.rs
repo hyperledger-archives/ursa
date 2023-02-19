@@ -1,5 +1,5 @@
-use bn::{BigNumber, BigNumberContext};
-use errors::prelude::*;
+use crate::bn::{BigNumber, BigNumberContext};
+use crate::errors::prelude::*;
 
 /// Generate a pedersen commitment to a given number
 ///

@@ -9,10 +9,10 @@
 //! Future work would be to use pedersen commitments or reed-solomon
 //! codes to check for corrupted shares.
 
-use bn::BigNumber;
+use crate::bn::BigNumber;
 use std::{cmp::Ordering, collections::BTreeSet};
 
-use {CryptoError, CryptoResult};
+use crate::{CryptoError, CryptoResult};
 
 /// Represents an element in a finite field as [0, n)
 #[derive(Debug)]

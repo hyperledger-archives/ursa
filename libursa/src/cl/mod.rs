@@ -9,9 +9,9 @@ pub mod issuer;
 pub mod prover;
 pub mod verifier;
 
-use bn::BigNumber;
-use errors::prelude::*;
-use pair::*;
+use crate::bn::BigNumber;
+use crate::errors::prelude::*;
+use crate::pair::*;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

@@ -1,9 +1,9 @@
-use cl::issuer::Issuer;
-use cl::verifier::Verifier;
-use cl::*;
-use errors::prelude::*;
-use ffi::ErrorCode;
-use utils::ctypes::*;
+use crate::cl::issuer::Issuer;
+use crate::cl::verifier::Verifier;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::ffi::ErrorCode;
+use crate::utils::ctypes::*;
 
 use serde_json;
 use std::os::raw::{c_char, c_void};
@@ -1221,7 +1221,7 @@ impl RevocationTailsAccessor for FFITailsAccessor {
 mod tests {
     use super::*;
 
-    use ffi::cl::mocks::*;
+    use crate::ffi::cl::mocks::*;
     use std::ffi::CString;
     use std::ptr;
 
