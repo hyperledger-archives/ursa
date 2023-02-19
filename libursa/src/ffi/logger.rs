@@ -1,12 +1,12 @@
 use std::os::raw::{c_char, c_void};
 
-use errors::prelude::*;
-use ffi::ErrorCode;
+use crate::errors::prelude::*;
+use crate::ffi::ErrorCode;
 
 extern crate log;
 
-use utils::ctypes::*;
-use utils::logger::{EnabledCB, FlushCB, HLCryptoDefaultLogger, HLCryptoLogger, LogCB};
+use crate::utils::ctypes::*;
+use crate::utils::logger::{EnabledCB, FlushCB, HLCryptoDefaultLogger, HLCryptoLogger, LogCB};
 
 /// Set custom logger implementation.
 ///

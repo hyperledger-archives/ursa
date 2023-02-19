@@ -1,6 +1,7 @@
 pub const ALGORITHM_NAME: &str = "ED25519_SHA2_512";
 
 use super::{KeyGenOption, SignatureScheme};
+use crate::keys::{PrivateKey, PublicKey};
 #[cfg(any(feature = "x25519", feature = "x25519_asm"))]
 use ed25519_dalek::SecretKey as SK;
 use ed25519_dalek::{Keypair, PublicKey as PK, Signature, Signer, Verifier};
@@ -8,7 +9,6 @@ pub use ed25519_dalek::{
     EXPANDED_SECRET_KEY_LENGTH as PRIVATE_KEY_SIZE, PUBLIC_KEY_LENGTH as PUBLIC_KEY_SIZE,
     SIGNATURE_LENGTH as SIGNATURE_SIZE,
 };
-use keys::{PrivateKey, PublicKey};
 use rand::rngs::OsRng;
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
@@ -16,7 +16,7 @@ use sha2::Digest;
 use std::convert::TryFrom;
 use zeroize::Zeroize;
 
-use CryptoError;
+use crate::CryptoError;
 
 pub struct Ed25519Sha512;
 
@@ -169,7 +169,7 @@ mod test {
     use self::Ed25519Sha512;
     use super::super::{SignatureScheme, Signer};
     use super::*;
-    use keys::{KeyGenOption, PrivateKey, PublicKey};
+    use crate::keys::{KeyGenOption, PrivateKey, PublicKey};
 
     const MESSAGE_1: &[u8] = b"This is a dummy message for use with tests";
     const SIGNATURE_1: &str = "451b5b8e8725321541954997781de51f4142e4a56bab68d24f6a6b92615de5eefb74134138315859a32c7cf5fe5a488bc545e2e08e5eedfd1fb10188d532d808";

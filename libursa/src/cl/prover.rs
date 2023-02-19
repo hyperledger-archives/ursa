@@ -1,11 +1,11 @@
 use super::helpers::*;
-use bn::BigNumber;
-use cl::constants::*;
-use cl::hash::get_hash_as_int;
-use cl::*;
-use errors::prelude::*;
-use pair::*;
-use utils::commitment::get_pedersen_commitment;
+use crate::bn::BigNumber;
+use crate::cl::constants::*;
+use crate::cl::hash::get_hash_as_int;
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::pair::*;
+use crate::utils::commitment::get_pedersen_commitment;
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
@@ -1902,7 +1902,7 @@ impl ProofBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cl::issuer;
+    use crate::cl::issuer;
     #[cfg(feature = "serde")]
     use serde_json::{self, json};
     use std::time::Instant;

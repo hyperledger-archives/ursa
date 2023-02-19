@@ -1,4 +1,4 @@
-use errors::prelude::*;
+use crate::errors::prelude::*;
 
 use amcl::bn254::big::BIG;
 

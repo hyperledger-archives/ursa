@@ -1,7 +1,7 @@
 //! A suite of Diffie-Hellman key exchange methods.
 
-use keys::{KeyGenOption, PrivateKey, PublicKey, SessionKey};
-use CryptoError;
+use crate::keys::{KeyGenOption, PrivateKey, PublicKey, SessionKey};
+use crate::CryptoError;
 
 /// A Generic trait for key exchange schemes. Each scheme provides a way to generate keys and
 /// do a diffie-hellman computation

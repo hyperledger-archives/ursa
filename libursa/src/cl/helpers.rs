@@ -1,8 +1,8 @@
 use super::constants::*;
-use bn::{BigNumber, BIGNUMBER_1};
-use cl::*;
-use errors::prelude::*;
-use pair::GroupOrderElement;
+use crate::bn::{BigNumber, BIGNUMBER_1};
+use crate::cl::*;
+use crate::errors::prelude::*;
+use crate::pair::GroupOrderElement;
 
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
@@ -669,7 +669,7 @@ pub fn create_tau_list_values(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cl::{issuer, prover};
+    use crate::cl::{issuer, prover};
 
     #[test]
     fn encode_attribute_works() {

@@ -1,9 +1,9 @@
-use bn::BigNumber;
-use cl::constants::{ITERATION, LARGE_E_START_VALUE};
-use cl::hash::get_hash_as_int;
-use cl::helpers::*;
-use cl::*;
-use errors::prelude::*;
+use crate::bn::BigNumber;
+use crate::cl::constants::{ITERATION, LARGE_E_START_VALUE};
+use crate::cl::hash::get_hash_as_int;
+use crate::cl::helpers::*;
+use crate::cl::*;
+use crate::errors::prelude::*;
 
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeSet, HashMap};
@@ -644,10 +644,10 @@ impl ProofVerifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cl::helpers::MockHelper;
-    use cl::issuer;
-    use cl::prover;
-    use cl::prover::mocks::*;
+    use crate::cl::helpers::MockHelper;
+    use crate::cl::issuer;
+    use crate::cl::prover;
+    use crate::cl::prover::mocks::*;
 
     #[test]
     fn sub_proof_request_builder_works() {

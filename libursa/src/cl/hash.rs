@@ -1,5 +1,5 @@
-use bn::BigNumber;
-use errors::prelude::*;
+use crate::bn::BigNumber;
+use crate::errors::prelude::*;
 
 pub fn get_hash_as_int(nums: &[Vec<u8>]) -> UrsaCryptoResult<BigNumber> {
     trace!("Helpers::get_hash_as_int: >>> nums: {:?}", nums);

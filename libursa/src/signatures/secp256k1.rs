@@ -1,7 +1,6 @@
 use super::*;
 
 use sha2::digest::generic_array::typenum::U32;
-use CryptoError;
 
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};

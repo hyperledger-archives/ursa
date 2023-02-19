@@ -1,5 +1,5 @@
-use errors::prelude::*;
-use pair::{GroupOrderElement, Pair, PointG1, PointG2};
+use crate::errors::prelude::*;
+use crate::pair::{GroupOrderElement, Pair, PointG1, PointG2};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-use bn::{BigNumber, BIGNUMBER_2};
+use crate::bn::{BigNumber, BIGNUMBER_2};
 
 pub const LARGE_MASTER_SECRET: usize = 256;
 pub const LARGE_E_START: usize = 596;
