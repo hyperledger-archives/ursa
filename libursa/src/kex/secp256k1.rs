@@ -166,7 +166,7 @@ mod ecdh_secp256k1 {
                     sk.clone_from_slice(d.as_slice());
                 }
             };
-            let k256_sk = k256::SecretKey::from_bytes(&sk)
+            let k256_sk = k256::SecretKey::from_be_bytes(&sk)
                 .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
             let k256_pk = k256_sk.public_key();
             use k256::elliptic_curve::sec1::ToEncodedPoint;
@@ -183,16 +183,18 @@ mod ecdh_secp256k1 {
         where
             D: Digest<OutputSize = U32> + Default,
         {
-            let sk = k256::SecretKey::from_bytes(&local_private_key)
+            let sk = k256::SecretKey::from_be_bytes(local_private_key.as_ref())
                 .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
 
             let pk = k256::PublicKey::from_sec1_bytes(&remote_public_key[..])
                 .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
 
             //Note: this does not return possibility of error.
-            let shared_secret =
-                k256::elliptic_curve::ecdh::diffie_hellman(sk.to_secret_scalar(), pk.as_affine());
-            Ok(SessionKey(shared_secret.as_bytes().to_vec()))
+            let shared_secret = k256::elliptic_curve::ecdh::diffie_hellman(
+                k256::NonZeroScalar::from(sk),
+                pk.as_affine(),
+            );
+            Ok(SessionKey(shared_secret.raw_secret_bytes().to_vec()))
         }
     }
 }
@@ -233,11 +235,11 @@ mod tests {
 
         let scheme = EcdhSecp256k1Sha256::new();
         let (pk, sk) = scheme.keypair(None).unwrap();
-        let sk1 = SecretKey::from_bytes(&sk[..]).unwrap();
+        let sk1 = SecretKey::from_be_bytes(&sk[..]).unwrap();
         let pk1 = PublicKey::from_sec1_bytes(&pk[..]).unwrap();
-        let secret = diffie_hellman(sk1.to_secret_scalar(), pk1.as_affine());
+        let secret = diffie_hellman(k256::NonZeroScalar::from(sk1), pk1.as_affine());
         assert_eq!(
-            secret.as_bytes().to_vec(),
+            secret.raw_secret_bytes().to_vec(),
             scheme
                 .compute_shared_secret(&sk, &pk)
                 .unwrap()

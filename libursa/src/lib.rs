@@ -249,32 +249,23 @@ impl std::fmt::Display for CryptoError {
 #[cfg(feature = "bitcoinsecp256k1")]
 impl From<bitcoinsecp256k1::Error> for CryptoError {
     fn from(error: bitcoinsecp256k1::Error) -> CryptoError {
-        match error {
-            bitcoinsecp256k1::Error::IncorrectSignature => {
-                CryptoError::ParseError("Incorrect Signature".to_string())
+        use bitcoinsecp256k1::Error::*;
+        CryptoError::ParseError(
+            match error {
+                IncorrectSignature => "Incorrect signature",
+                InvalidMessage => "Invalid message",
+                InvalidPublicKey => "Invalid public key",
+                InvalidPublicKeySum => "Invalid public key sum",
+                InvalidSignature => "Invalid signature",
+                InvalidSharedSecret => "Invalid shared secret",
+                InvalidSecretKey => "Invalid secret key",
+                InvalidRecoveryId => "Invalid recovery id",
+                InvalidTweak => "Invalid tweak",
+                NotEnoughMemory => "Not enough memory",
+                InvalidParityValue(_) => "Invalid parity", // Value is opaque, cannot print
             }
-            bitcoinsecp256k1::Error::InvalidMessage => {
-                CryptoError::ParseError("Invalid Message".to_string())
-            }
-            bitcoinsecp256k1::Error::InvalidPublicKey => {
-                CryptoError::ParseError("Invalid Public Key".to_string())
-            }
-            bitcoinsecp256k1::Error::InvalidSignature => {
-                CryptoError::ParseError("Invalid Signature".to_string())
-            }
-            bitcoinsecp256k1::Error::InvalidSecretKey => {
-                CryptoError::ParseError("Invalid Secret Key".to_string())
-            }
-            bitcoinsecp256k1::Error::InvalidRecoveryId => {
-                CryptoError::ParseError("Invalid Recovery Id".to_string())
-            }
-            bitcoinsecp256k1::Error::InvalidTweak => {
-                CryptoError::ParseError("Invalid Tweak".to_string())
-            }
-            bitcoinsecp256k1::Error::NotEnoughMemory => {
-                CryptoError::ParseError("Not Enough Memory".to_string())
-            }
-        }
+            .to_owned(),
+        )
     }
 }
 
@@ -292,7 +283,6 @@ impl From<bitcoinsecp256k1::Error> for CryptoError {
 ))]
 impl From<errors::UrsaCryptoError> for CryptoError {
     fn from(err: errors::UrsaCryptoError) -> Self {
-        let kind = err.kind();
-        CryptoError::GeneralError(format!("{}", kind))
+        CryptoError::GeneralError(format!("{}", err.kind()))
     }
 }

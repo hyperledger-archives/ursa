@@ -132,7 +132,7 @@ pub extern "C" fn ursa_bls_generator_free(gen: *const c_void) -> ErrorCode {
     check_useful_c_ptr!(gen, ErrorCode::CommonInvalidParam1);
 
     unsafe {
-        Box::from_raw(gen as *mut Generator);
+        drop(Box::from_raw(gen as *mut Generator));
     }
     let res = ErrorCode::Success;
 
@@ -294,7 +294,7 @@ pub extern "C" fn ursa_bls_sign_key_free(sign_key: *const c_void) -> ErrorCode {
     );
 
     unsafe {
-        Box::from_raw(sign_key as *mut SignKey);
+        drop(Box::from_raw(sign_key as *mut SignKey));
     }
     let res = ErrorCode::Success;
 
@@ -444,7 +444,7 @@ pub extern "C" fn ursa_bls_ver_key_free(ver_key: *const c_void) -> ErrorCode {
     trace!("ursa_bls_ver_key_free: >>> ver_key: {:?}", ver_key);
 
     unsafe {
-        Box::from_raw(ver_key as *mut VerKey);
+        drop(Box::from_raw(ver_key as *mut VerKey));
     }
     let res = ErrorCode::Success;
 
@@ -594,7 +594,7 @@ pub extern "C" fn ursa_bls_pop_free(pop: *const c_void) -> ErrorCode {
     trace!("ursa_bls_pop_free: >>> pop: {:?}", pop);
 
     unsafe {
-        Box::from_raw(pop as *mut ProofOfPossession);
+        drop(Box::from_raw(pop as *mut ProofOfPossession));
     }
     let res = ErrorCode::Success;
 
@@ -701,7 +701,7 @@ pub extern "C" fn ursa_bls_signature_free(signature: *const c_void) -> ErrorCode
     trace!("ursa_bls_signature_free: >>> signature: {:?}", signature);
 
     unsafe {
-        Box::from_raw(signature as *mut Signature);
+        drop(Box::from_raw(signature as *mut Signature));
     }
     let res = ErrorCode::Success;
 
@@ -864,7 +864,7 @@ pub extern "C" fn ursa_bls_multi_signature_free(multi_sig: *const c_void) -> Err
     );
 
     unsafe {
-        Box::from_raw(multi_sig as *mut MultiSignature);
+        drop(Box::from_raw(multi_sig as *mut MultiSignature));
     }
     let res = ErrorCode::Success;
 

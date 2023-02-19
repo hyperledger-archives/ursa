@@ -9,7 +9,7 @@ use aead::{
 use aes::{Aes128, Aes256};
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
-use hmac::{Hmac, Mac, NewMac};
+use hmac::{Hmac, Mac};
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use sha2::{Sha256, Sha512};
