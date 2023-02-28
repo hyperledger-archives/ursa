@@ -424,7 +424,7 @@ pub type Accumulator = PointG2;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct RevocationRegistry {
-    accum: Accumulator,
+    pub accum: Accumulator,
 }
 
 impl From<RevocationRegistryDelta> for RevocationRegistry {
