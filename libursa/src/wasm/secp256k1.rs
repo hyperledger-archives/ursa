@@ -13,9 +13,9 @@ use super::{KeyPair, WasmPrivateKey, WasmPublicKey, WasmSessionKey};
 pub struct EcdsaSecp256k1Sha256(EcdsaSecp256k1Sha256Impl);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl EcdsaSecp256k1Sha256 {
-    pub fn new() -> EcdsaSecp256k1Sha256 {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
         EcdsaSecp256k1Sha256(EcdsaSecp256k1Sha256Impl::new())
     }
 
@@ -26,14 +26,16 @@ impl EcdsaSecp256k1Sha256 {
         Ok(KeyPair { pk, sk })
     }
 
-    pub fn keyPairFromSeed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
+    #[wasm_bindgen(js_name = keypairFromSeed)]
+    pub fn keypair_from_seed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
         let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))));
         let pk = WasmPublicKey::from(&pk);
         let sk = WasmPrivateKey::from(&sk);
         Ok(KeyPair { pk, sk })
     }
 
-    pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
+    #[wasm_bindgen(js_name = getPublicKey)]
+    pub fn get_public_key(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
         let sk = PrivateKey::from(sk);
         let (pk, _) = maperr!(self
             .0
@@ -58,22 +60,26 @@ impl EcdsaSecp256k1Sha256 {
         Ok(maperr!(self.0.verify(message, signature, &pk)))
     }
 
-    pub fn normalizeS(&self, signature: &mut [u8]) -> Result<(), JsValue> {
+    #[wasm_bindgen(js_name = normalizeS)]
+    pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), JsValue> {
         maperr!(self.0.normalize_s(signature));
         Ok(())
     }
 
-    pub fn publicKeyCompressed(&self, pk: &WasmPublicKey) -> WasmPublicKey {
+    #[wasm_bindgen(js_name = publicKeyCompressed)]
+    pub fn public_key_compressed(&self, pk: &WasmPublicKey) -> WasmPublicKey {
         let pk = PublicKey::from(pk);
         WasmPublicKey::from(self.0.public_key_compressed(&pk))
     }
 
-    pub fn publicKeyUncompressed(&self, pk: &WasmPublicKey) -> WasmPublicKey {
+    #[wasm_bindgen(js_name = publicKeyUnCompressed)]
+    pub fn public_key_uncompressed(&self, pk: &WasmPublicKey) -> WasmPublicKey {
         let pk = PublicKey::from(pk);
         WasmPublicKey::from(self.0.public_key_uncompressed(&pk))
     }
 
-    pub fn parseToPublicKey(&self, bytes: &[u8]) -> Result<WasmPublicKey, JsValue> {
+    #[wasm_bindgen(js_name = parseToPublicKey)]
+    pub fn parse_to_public_key(&self, bytes: &[u8]) -> Result<WasmPublicKey, JsValue> {
         let pk = maperr!(self.0.parse(bytes));
         Ok(WasmPublicKey::from(&pk))
     }
@@ -83,9 +89,9 @@ impl EcdsaSecp256k1Sha256 {
 pub struct EcdhSecp256k1Sha256(EcdhSecp256k1Sha256Impl);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl EcdhSecp256k1Sha256 {
-    pub fn new() -> EcdhSecp256k1Sha256 {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
         EcdhSecp256k1Sha256(EcdhSecp256k1Sha256Impl::new())
     }
 
@@ -96,14 +102,16 @@ impl EcdhSecp256k1Sha256 {
         Ok(KeyPair { pk, sk })
     }
 
-    pub fn keyPairFromSeed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
+    #[wasm_bindgen(js_name = keypair_from_seed)]
+    pub fn keypair_from_seed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
         let (pk, sk) = maperr!(self.0.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))));
         let pk = WasmPublicKey::from(&pk);
         let sk = WasmPrivateKey::from(&sk);
         Ok(KeyPair { pk, sk })
     }
 
-    pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
+    #[wasm_bindgen(js_name = getPublicKey)]
+    pub fn get_public_key(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
         let sk = PrivateKey::from(sk);
         let (pk, _) = maperr!(self
             .0
@@ -112,7 +120,8 @@ impl EcdhSecp256k1Sha256 {
         Ok(pk)
     }
 
-    pub fn computeSharedSecret(
+    #[wasm_bindgen(js_name = computeSharedSecret)]
+    pub fn compute_shared_secret(
         &self,
         sk: &WasmPrivateKey,
         pk: &WasmPublicKey,

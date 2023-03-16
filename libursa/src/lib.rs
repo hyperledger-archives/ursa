@@ -129,12 +129,14 @@ pub mod utils;
 
 #[cfg(any(feature = "bls_bn254", feature = "bls_bn254_asm"))]
 pub mod bls;
-#[cfg(any(feature = "cl_native", feature = "sharing_native"))]
-#[path = "bn/openssl.rs"]
+
+#[cfg_attr(
+    any(feature = "cl_native", feature = "sharing_native"),
+    path = "bn/openssl.rs"
+)]
+#[cfg_attr(any(feature = "cl", feature = "sharing"), path = "bn/rust.rs")]
 pub mod bn;
-#[cfg(any(feature = "cl", feature = "sharing"))]
-#[path = "bn/rust.rs"]
-pub mod bn;
+
 #[cfg(any(feature = "cl", feature = "cl_native"))]
 pub mod cl;
 #[cfg(any(

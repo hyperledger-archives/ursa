@@ -9,8 +9,8 @@ use super::{KeyPair, WasmPrivateKey, WasmPublicKey, WasmSessionKey};
 pub struct X25519Sha256;
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl X25519Sha256 {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self
     }
@@ -24,7 +24,8 @@ impl X25519Sha256 {
         })
     }
 
-    pub fn keyPairFromSeed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
+    #[wasm_bindgen(js_name = keypair_from_seed)]
+    pub fn key_pair_from_seed(&self, seed: &[u8]) -> Result<KeyPair, JsValue> {
         let scheme = X25519Sha256Impl {};
         let (pk, sk) = maperr!(scheme.keypair(Some(KeyGenOption::UseSeed(seed.to_vec()))));
         Ok(KeyPair {
@@ -33,14 +34,16 @@ impl X25519Sha256 {
         })
     }
 
-    pub fn getPublicKey(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
+    #[wasm_bindgen(js_name = getPublicKey)]
+    pub fn get_public_key(&self, sk: &WasmPrivateKey) -> Result<WasmPublicKey, JsValue> {
         let sk = sk.into();
         let scheme = X25519Sha256Impl {};
         let (pk, _) = maperr!(scheme.keypair(Some(KeyGenOption::FromSecretKey(sk))));
         Ok(pk.into())
     }
 
-    pub fn computeSharedSecret(
+    #[wasm_bindgen(js_name = computeSharedSecret)]
+    pub fn compute_shared_secret(
         &self,
         sk: &WasmPrivateKey,
         pk: &WasmPublicKey,
