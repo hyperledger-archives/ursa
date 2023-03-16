@@ -1,10 +1,12 @@
+use cl;
 use js_sys::Function;
-use wasm_bindgen::prelude::*;
-
 use std::collections::HashSet;
 
-use cl;
-use cl::RevocationTailsAccessor;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+use crate::cl::RevocationTailsAccessor;
 
 use super::convert_from_js;
 
@@ -13,10 +15,12 @@ pub struct CredentialSchema(cl::CredentialSchemaBuilder);
 
 #[wasm_bindgen]
 impl CredentialSchema {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> CredentialSchema {
         CredentialSchema(cl::CredentialSchemaBuilder::new().unwrap())
     }
 
+    #[wasm_bindgen(js_name = addAttr)]
     pub fn add_attr(&mut self, attribute: &str) {
         self.0.add_attr(attribute).unwrap();
     }
@@ -27,10 +31,12 @@ pub struct NonCredentialSchema(cl::NonCredentialSchemaBuilder);
 
 #[wasm_bindgen]
 impl NonCredentialSchema {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> NonCredentialSchema {
         NonCredentialSchema(cl::NonCredentialSchemaBuilder::new().unwrap())
     }
 
+    #[wasm_bindgen(js_name = addAttr)]
     pub fn add_attr(&mut self, attribute: &str) {
         self.0.add_attr(attribute).unwrap();
     }
@@ -39,38 +45,43 @@ impl NonCredentialSchema {
 #[wasm_bindgen]
 pub struct CredentialValues(cl::CredentialValuesBuilder);
 
-//#[wasm_bindgen]
-//impl CredentialValues {
-//    pub fn new() -> CredentialValues
-//        CredentialValues(cl::CredentialValuesBuilder::new().unwrap())
-//    }
-//
-//    pub fn add_master_secret(&mut self, value: &MasterSecret) -> Result<(), JsValue> {
-//        let ms = maperr!(value.0.value());
-//        maperr!(self.0.add_value_hidden("master_secret", &ms));
-//        Ok(())
-//    }
-//
-//    pub fn add_known(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
-//        maperr!(self.0.add_dec_known(attr, value));
-//        Ok(())
-//    }
-//
-//    pub fn add_hidden(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
-//        maperr!(self.0.add_dec_hidden(attr, value));
-//        Ok(())
-//    }
-//
-//    pub fn add_commitment(
-//        &mut self,
-//        attr: &str,
-//        value: &str,
-//        blinding_factor: &str,
-//    ) -> Result<(), JsValue> {
-//        maperr!(self.0.add_dec_commitment(attr, value, blinding_factor));
-//        Ok(())
-//    }
-//}
+#[wasm_bindgen]
+impl CredentialValues {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> CredentialValues {
+        CredentialValues(cl::CredentialValuesBuilder::new().unwrap())
+    }
+
+    #[wasm_bindgen(js_name = addMasterSecret)]
+    pub fn add_master_secret(&mut self, value: &MasterSecret) -> Result<(), JsValue> {
+        let ms = maperr!(value.0.value());
+        maperr!(self.0.add_value_hidden("master_secret", &ms));
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = addKnown)]
+    pub fn add_known(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
+        maperr!(self.0.add_dec_known(attr, value));
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = addHidden)]
+    pub fn add_hidden(&mut self, attr: &str, value: &str) -> Result<(), JsValue> {
+        maperr!(self.0.add_dec_hidden(attr, value));
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = addCommitment)]
+    pub fn add_commitment(
+        &mut self,
+        attr: &str,
+        value: &str,
+        blinding_factor: &str,
+    ) -> Result<(), JsValue> {
+        maperr!(self.0.add_dec_commitment(attr, value, blinding_factor));
+        Ok(())
+    }
+}
 
 #[wasm_bindgen]
 pub struct CredentialPrimaryPublicKey(cl::CredentialPrimaryPublicKey);
@@ -79,14 +90,16 @@ pub struct CredentialPrimaryPublicKey(cl::CredentialPrimaryPublicKey);
 pub struct CredentialPublicKey(cl::CredentialPublicKey);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl CredentialPublicKey {
-    pub fn getPrimaryKey(&self) -> Result<CredentialPrimaryPublicKey, JsValue> {
+    #[wasm_bindgen(js_name = getPrimaryKey)]
+    pub fn get_primary_key(&self) -> Result<CredentialPrimaryPublicKey, JsValue> {
         Ok(CredentialPrimaryPublicKey(maperr!(self
             .0
             .get_primary_key())))
     }
-    pub fn getRevocationKey(&self) -> Result<JsValue, JsValue> {
+
+    #[wasm_bindgen(js_name = getRevocationKey)]
+    pub fn get_revocation_key(&self) -> Result<JsValue, JsValue> {
         match maperr!(self.0.get_revocation_key()) {
             Some(k) => Ok(JsValue::from_serde(&CredentialRevocationPublicKey(k)).unwrap()),
             None => Ok(JsValue::NULL),
@@ -108,11 +121,11 @@ pub struct CredentialKeyCorrectnessProof(cl::CredentialKeyCorrectnessProof);
 /// instead of a tuple. The compiler complains about unused fields
 /// so allow(unused) is in place for now
 #[wasm_bindgen]
-#[allow(non_snake_case, unused)]
+#[allow(dead_code)]
 pub struct CredentialDefinition {
-    publicKey: CredentialPublicKey,
-    privateKey: CredentialPrivateKey,
-    keyCorrectnessProof: CredentialKeyCorrectnessProof,
+    public_key: CredentialPublicKey,
+    private_key: CredentialPrivateKey,
+    key_correctness_proof: CredentialKeyCorrectnessProof,
 }
 
 #[wasm_bindgen]
@@ -120,6 +133,7 @@ pub struct MasterSecret(cl::MasterSecret);
 
 #[wasm_bindgen]
 impl MasterSecret {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Result<MasterSecret, JsValue> {
         Ok(MasterSecret(maperr!(
             cl::prover::Prover::new_master_secret()
@@ -132,6 +146,7 @@ pub struct Nonce(cl::Nonce);
 
 #[wasm_bindgen]
 impl Nonce {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Result<Nonce, JsValue> {
         Ok(Nonce(maperr!(cl::new_nonce())))
     }
@@ -150,20 +165,20 @@ pub struct BlindedCredentialSecretsCorrectnessProof(cl::BlindedCredentialSecrets
 /// instead of a tuple. The compiler complains about unused fields
 /// so allow(unused) is in place for now
 #[wasm_bindgen]
-#[allow(non_snake_case, unused)]
+#[allow(dead_code)]
 pub struct ProverBlindedCredentialSecrets {
-    blindedCredentialSecrets: BlindedCredentialSecrets,
-    credentialSecretsBlindingFactors: CredentialSecretsBlindingFactors,
-    blindedCredentialSecretsCorrectnessProof: BlindedCredentialSecretsCorrectnessProof,
+    blinded_credential_secrets: BlindedCredentialSecrets,
+    credential_secrets_blinding_factors: CredentialSecretsBlindingFactors,
+    blinded_credential_secrets_correctness_proof: BlindedCredentialSecretsCorrectnessProof,
 }
 
 #[wasm_bindgen]
 pub struct CredentialSignature(cl::CredentialSignature);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl CredentialSignature {
-    pub fn extractIndex(&self) -> Option<u32> {
+    #[wasm_bindgen(js_name = extractIndex)]
+    pub fn extract_index(&self) -> Option<u32> {
         self.0.extract_index()
     }
 }
@@ -172,19 +187,18 @@ impl CredentialSignature {
 pub struct SignatureCorrectnessProof(cl::SignatureCorrectnessProof);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 pub struct IssuedCredential {
-    credentialSignature: CredentialSignature,
-    signatureCorrectnessProof: SignatureCorrectnessProof,
+    credential_signature: CredentialSignature,
+    signature_correctness_proof: SignatureCorrectnessProof,
 }
 
 /// Convenience class for javascript. This provides a name-value pair structure
 /// instead of a tuple. The compiler complains about unused fields
 /// so allow(unused) is in place for now
 #[wasm_bindgen]
-#[allow(non_snake_case, unused)]
+#[allow(dead_code)]
 pub struct IssuedCredentialWithRevocation {
-    issuedCredential: IssuedCredential,
+    issued_credential: IssuedCredential,
     delta: Option<RevocationRegistryDelta>,
 }
 
@@ -207,9 +221,9 @@ pub struct RevocationRegistry(cl::RevocationRegistry);
 pub struct RevocationRegistryDelta(cl::RevocationRegistryDelta);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl RevocationRegistryDelta {
-    pub fn fromParts(
+    #[wasm_bindgen(js_name = fromParts)]
+    pub fn from_parts(
         rev_reg_from: &JsValue,
         rev_reg_to: &RevocationRegistry,
         issued: &JsValue,
@@ -242,6 +256,8 @@ impl RevocationTailsGenerator {
     pub fn count(&self) -> u32 {
         self.0.count()
     }
+
+    #[wasm_bindgen(js_name = next)]
     pub fn try_next(&mut self) -> Result<JsValue, JsValue> {
         let res = maperr!(self.0.try_next());
         match res {
@@ -256,6 +272,7 @@ pub struct SimpleTailsAccessor(cl::SimpleTailsAccessor);
 
 #[wasm_bindgen]
 impl SimpleTailsAccessor {
+    #[wasm_bindgen(constructor)]
     pub fn new(
         rev_tails_generator: &mut RevocationTailsGenerator,
     ) -> Result<SimpleTailsAccessor, JsValue> {
@@ -263,6 +280,7 @@ impl SimpleTailsAccessor {
         Ok(SimpleTailsAccessor(sta))
     }
 
+    #[wasm_bindgen(js_name = accessTail)]
     pub fn access_tail(&self, tail_id: u32, accessor: &Function) {
         let context = JsValue::NULL;
         self.0
@@ -281,6 +299,7 @@ pub struct Witness(cl::Witness);
 
 #[wasm_bindgen]
 impl Witness {
+    #[wasm_bindgen(constructor)]
     pub fn new(
         rev_idx: u32,
         max_cred_num: u32,
@@ -322,18 +341,20 @@ pub struct Proof(cl::Proof);
 pub struct SubProofRequest(cl::SubProofRequestBuilder);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl SubProofRequest {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> SubProofRequest {
         let spr = cl::verifier::Verifier::new_sub_proof_request_builder().unwrap();
         SubProofRequest(spr)
     }
 
-    pub fn addRevelatedAttribute(&mut self, attribute: &str) {
+    #[wasm_bindgen(js_name = addRevealedAttribute)]
+    pub fn add_revelated_attribute(&mut self, attribute: &str) {
         self.0.add_revealed_attr(attribute).unwrap();
     }
 
-    pub fn addPredicate(&mut self, attribute: &str, p_type: &str, value: i32) {
+    #[wasm_bindgen(js_name = addPredicate)]
+    pub fn add_predicate(&mut self, attribute: &str, p_type: &str, value: i32) {
         self.0.add_predicate(attribute, p_type, value).unwrap();
     }
 }
@@ -342,17 +363,19 @@ impl SubProofRequest {
 pub struct ProofBuilder(cl::prover::ProofBuilder);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl ProofBuilder {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> ProofBuilder {
         ProofBuilder(cl::prover::Prover::new_proof_builder().unwrap())
     }
 
-    pub fn addCommonAttribute(&mut self, attribute: &str) {
+    #[wasm_bindgen(js_name = addCommonAttribute)]
+    pub fn add_common_attribute(&mut self, attribute: &str) {
         self.0.add_common_attribute(attribute).unwrap();
     }
 
-    pub fn addSubProofRequest(
+    #[wasm_bindgen(js_name = addSubProofRequest)]
+    pub fn add_sub_proof_request(
         &mut self,
         sub_proof_request: SubProofRequest,
         credential_schema: CredentialSchema,
@@ -393,13 +416,14 @@ impl ProofBuilder {
 pub struct ProofVerifier(cl::verifier::ProofVerifier);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl ProofVerifier {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> ProofVerifier {
         ProofVerifier(cl::verifier::Verifier::new_proof_verifier().unwrap())
     }
 
-    pub fn addSubProofRequest(
+    #[wasm_bindgen(js_name = addSubProofRequest)]
+    pub fn add_sub_proof_request(
         &mut self,
         sub_proof_request: SubProofRequest,
         credential_schema: CredentialSchema,
@@ -425,19 +449,19 @@ impl ProofVerifier {
         Ok(())
     }
 
-    pub fn verify(&self, proof: &Proof, nonce: &Nonce) -> Result<bool, JsValue> {
-//        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
-//        Ok(res)
-        unimplemented!();
+    pub fn verify(&mut self, proof: &Proof, nonce: &Nonce) -> Result<bool, JsValue> {
+        let res = maperr!(self.0.verify(&proof.0, &nonce.0));
+        Ok(res)
     }
 }
 
+#[wasm_bindgen]
 pub struct Issuer;
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl Issuer {
-    pub fn newCredentialDef(
+    #[wasm_bindgen(js_name = newCredentialDefinition)]
+    pub fn new_credential_def(
         credential_schema: CredentialSchema,
         non_credential_schema: NonCredentialSchema,
         support_revocation: bool,
@@ -450,13 +474,14 @@ impl Issuer {
             support_revocation
         ));
         Ok(CredentialDefinition {
-            publicKey: CredentialPublicKey(pk),
-            privateKey: CredentialPrivateKey(sk),
-            keyCorrectnessProof: CredentialKeyCorrectnessProof(kp),
+            public_key: CredentialPublicKey(pk),
+            private_key: CredentialPrivateKey(sk),
+            key_correctness_proof: CredentialKeyCorrectnessProof(kp),
         })
     }
 
-    pub fn signCredential(
+    #[wasm_bindgen(js_name = signCredential)]
+    pub fn sign_credential(
         prover_id: &str,
         blinded_credential_secrets: &BlindedCredentialSecrets,
         blinded_credential_secrets_correctness_proof: &BlindedCredentialSecretsCorrectnessProof,
@@ -479,12 +504,13 @@ impl Issuer {
             &credential_priv_key.0
         ));
         Ok(IssuedCredential {
-            credentialSignature: CredentialSignature(cs),
-            signatureCorrectnessProof: SignatureCorrectnessProof(scp),
+            credential_signature: CredentialSignature(cs),
+            signature_correctness_proof: SignatureCorrectnessProof(scp),
         })
     }
 
-    pub fn signCredentialWithRevocation(
+    #[wasm_bindgen(js_name = signCredentialWithRevocation)]
+    pub fn sign_credential_with_revocation(
         prover_id: &str,
         blinded_credential_secrets: &BlindedCredentialSecrets,
         blinded_credential_secrets_correctness_proof: &BlindedCredentialSecretsCorrectnessProof,
@@ -519,21 +545,22 @@ impl Issuer {
             &rev_tails_accessor.0
         ));
         Ok(IssuedCredentialWithRevocation {
-            issuedCredential: IssuedCredential {
-                credentialSignature: CredentialSignature(cs),
-                signatureCorrectnessProof: SignatureCorrectnessProof(scp),
+            issued_credential: IssuedCredential {
+                credential_signature: CredentialSignature(cs),
+                signature_correctness_proof: SignatureCorrectnessProof(scp),
             },
             delta: delta.map(|d| RevocationRegistryDelta(d)),
         })
     }
 }
 
+#[wasm_bindgen]
 pub struct Prover;
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl Prover {
-    pub fn blindCredentialSecrets(
+    #[wasm_bindgen(js_name = blindedCredentialSecrets)]
+    pub fn blind_credential_secrets(
         credential_pub_key: &CredentialPublicKey,
         credential_key_correctness_proof: &CredentialKeyCorrectnessProof,
         credential_values: CredentialValues,
@@ -551,16 +578,18 @@ impl Prover {
             &credential_nonce.0
         ));
         Ok(ProverBlindedCredentialSecrets {
-            blindedCredentialSecrets: BlindedCredentialSecrets(blinded_credential_secrets),
-            credentialSecretsBlindingFactors: CredentialSecretsBlindingFactors(
+            blinded_credential_secrets: BlindedCredentialSecrets(blinded_credential_secrets),
+            credential_secrets_blinding_factors: CredentialSecretsBlindingFactors(
                 credential_secrets_blinding_factors,
             ),
-            blindedCredentialSecretsCorrectnessProof: BlindedCredentialSecretsCorrectnessProof(
+            blinded_credential_secrets_correctness_proof: BlindedCredentialSecretsCorrectnessProof(
                 blinded_credential_secrets_correctness_proof,
             ),
         })
     }
-    pub fn processCredentialSignature(
+
+    #[wasm_bindgen(js_name = processCredentialSignature)]
+    pub fn process_credential_signature(
         issued_credential: &IssuedCredential,
         credential_values: CredentialValues,
         credential_secrets_blinding_factors: &CredentialSecretsBlindingFactors,
@@ -574,13 +603,13 @@ impl Prover {
         let rev_reg = check_opt_reference!(rev_reg, RevocationRegistry);
         let witness = check_opt_reference!(witness, Witness);
 
-        let mut cs = maperr!(issued_credential.credentialSignature.0.try_clone());
+        let mut cs = maperr!(issued_credential.credential_signature.0.try_clone());
         let cv = finalize!(credential_values);
 
         maperr!(cl::prover::Prover::process_credential_signature(
             &mut cs,
             &cv,
-            &issued_credential.signatureCorrectnessProof.0,
+            &issued_credential.signature_correctness_proof.0,
             &credential_secrets_blinding_factors.0,
             &credential_pub_key.0,
             &nonce.0,

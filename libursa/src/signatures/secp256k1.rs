@@ -1,8 +1,7 @@
 use super::*;
+
 use sha2::digest::generic_array::typenum::U32;
 use CryptoError;
-
-use rand::rngs::OsRng;
 
 #[cfg(feature = "serde")]
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
@@ -116,6 +115,7 @@ mod ecdsa_secp256k1 {
     use sha2::Digest;
     use zeroize::Zeroize;
 
+    use rand::rngs::OsRng;
     use rand::{RngCore, SeedableRng};
     use rand_chacha::ChaChaRng;
 
@@ -217,13 +217,12 @@ mod ecdsa_secp256k1 {
 #[cfg(feature = "ecdsa_secp256k1")]
 mod ecdsa_secp256k1 {
     use super::*;
-    use k256;
 
-    use rand::{RngCore, SeedableRng};
-    use rand_chacha::ChaChaRng;
-    use zeroize::Zeroize;
-
-    use amcl::secp256k1::{ecdh, ecp};
+    use amcl_wrapper::amcl::secp256k1::ecp::ECP;
+    use k256::ecdsa::signature::{Signature, Signer, Verifier};
+    use k256::elliptic_curve::rand_core::OsRng;
+    use k256::EncodedPoint;
+    use sha2::Digest;
 
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct EcdsaSecp256k1Impl;
@@ -231,60 +230,92 @@ mod ecdsa_secp256k1 {
     impl EcdsaSecp256k1Impl {
         pub fn public_key_compressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut compressed = [0u8; PUBLIC_KEY_SIZE];
-            ecp::ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
+            ECP::frombytes(&pk[..]).tobytes(&mut compressed, true);
             compressed.to_vec()
         }
+
         pub fn public_key_uncompressed(&self, pk: &PublicKey) -> Vec<u8> {
             let mut uncompressed = [0u8; PUBLIC_UNCOMPRESSED_KEY_SIZE];
-            ecp::ECP::frombytes(&pk[..]).tobytes(&mut uncompressed, false);
+            ECP::frombytes(&pk[..]).tobytes(&mut uncompressed, false);
             uncompressed.to_vec()
         }
+
         pub fn parse(&self, data: &[u8]) -> Result<PublicKey, CryptoError> {
             match data.len() {
                 PUBLIC_KEY_SIZE => Ok(PublicKey(data.to_vec())),
                 PUBLIC_UNCOMPRESSED_KEY_SIZE => {
                     let mut compressed = [0u8; PUBLIC_KEY_SIZE];
-                    ecp::ECP::frombytes(data).tobytes(&mut compressed, true);
+                    ECP::frombytes(data).tobytes(&mut compressed, true);
                     Ok(PublicKey(compressed.to_vec()))
                 }
                 _ => Err(CryptoError::ParseError("Invalid key length".to_string())),
             }
         }
+
         pub fn new() -> Self {
             Self {}
         }
-        pub fn keypair(
+
+        pub fn keypair<D>(
             &self,
             option: Option<KeyGenOption>,
-        ) -> Result<(PublicKey, PrivateKey), CryptoError> {
-            let signing_key = k256::SigningKey::random(&mut OsRng);
-            let sk = signing_key::to_bytes();
-            let verify_key = signing_key.verify_key();
-            let compressed = verify_key::to_bytes(); //serialized as compressed point
+        ) -> Result<(PublicKey, PrivateKey), CryptoError>
+        where
+            D: Digest<OutputSize = U32>,
+        {
+            let signing_key = match option {
+                Some(ref o) => match o {
+                    KeyGenOption::FromSecretKey(s) => k256::ecdsa::SigningKey::from_bytes(&s.0),
+                    _ => unreachable!(),
+                },
+                None => Ok(k256::ecdsa::SigningKey::random(&mut OsRng)),
+            }
+            .map_err(|e| CryptoError::KeyGenError(format!("{:?}", e)))?;
+            let sk = signing_key.to_bytes();
+            let verify_key = signing_key.verifying_key();
+            let compressed = verify_key.to_bytes(); //serialized as compressed point
             Ok((PublicKey(compressed.to_vec()), PrivateKey(sk.to_vec())))
         }
-        pub fn sign(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError> {
-            let signing_key = k256::SigningKey::new(&sk)
+
+        pub fn sign<D>(&self, message: &[u8], sk: &PrivateKey) -> Result<Vec<u8>, CryptoError>
+        where
+            D: Digest<OutputSize = U32>,
+        {
+            let signing_key = k256::ecdsa::SigningKey::from_bytes(&sk.0)
                 .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
-            let (sig, _) = k256::signing_key.sign(&message);
-            Ok(sig.serialize().to_vec())
+            let sig: k256::ecdsa::Signature = signing_key.sign(message);
+            Ok(k256::ecdsa::signature::Signature::as_bytes(&sig).to_vec())
         }
-        pub fn verify(
+
+        pub fn verify<D>(
             &self,
             message: &[u8],
             signature: &[u8],
             pk: &PublicKey,
-        ) -> Result<bool, CryptoError> {
+        ) -> Result<bool, CryptoError>
+        where
+            D: Digest<OutputSize = U32>,
+        {
+            let digest = D::digest(message);
+            let message = digest.as_slice();
             let compressed_pk = self.public_key_compressed(pk);
-            let pk = k256::VerifyKey::from_encoded_point(compressed_pk)
+            let encoded_point = EncodedPoint::from_bytes(compressed_pk)
                 .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
-            let sig: Signature = k256::Signature::from_bytes(signature);
-            Ok(k256::verify(&msg, &sig, &pk))
+            let pk = k256::ecdsa::VerifyingKey::from_encoded_point(&encoded_point)
+                .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
+            let sig = <k256::ecdsa::Signature as k256::ecdsa::signature::Signature>::from_bytes(
+                signature,
+            )
+            .map_err(|e| CryptoError::SigningError(format!("{:?}", e)))?;
+            Ok(pk.verify(&message, &sig).is_ok())
         }
+
         pub fn normalize_s(&self, signature: &mut [u8]) -> Result<(), CryptoError> {
-            let mut sig = k256::Signature::parse(array_ref!(signature, 0, SIGNATURE_SIZE));
-            sig.normalize_s();
-            array_copy!(sig.serialize(), signature, 0, SIGNATURE_SIZE);
+            let mut sig = k256::ecdsa::Signature::from_bytes(signature)
+                .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
+            sig.normalize_s()
+                .map_err(|e| CryptoError::ParseError(format!("{:?}", e)))?;
+            array_copy!(sig.as_bytes(), signature, 0, SIGNATURE_SIZE);
             Ok(())
         }
     }

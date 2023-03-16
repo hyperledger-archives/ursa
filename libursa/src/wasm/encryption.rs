@@ -40,6 +40,7 @@ impl UrsaEncryptor {
         })
     }
 
+    #[wasm_bindgen(js_name = withKey)]
     pub fn with_key(cipher: &str, key: &str) -> Result<WasmCipherKey, JsValue> {
         let cipher = maperr!(EncryptorType::from_str(cipher));
         let key_size = get_keysize(cipher);

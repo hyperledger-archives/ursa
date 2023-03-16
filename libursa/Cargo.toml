@@ -102,7 +102,7 @@ sharing_native = ["failure", "int_traits", "lazy_static", "log", "openssl", "ran
 signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
 signatures_native = ["cl_native", "ed25519", "ecdsa_secp256k1_native", "bls_bls12381", "bls_bn254"]
 signatures_asm = ["cl_native", "ed25519_asm", "ecdsa_secp256k1_asm", "bls_bls12381", "bls_bn254_asm"]
-wasm = ["console_error_panic_hook", "failure", "hex", "js-sys", "log", "rand/wasm-bindgen", "serde", "serde_json", "wasm-bindgen", "zeroize"]
+wasm = ["console_error_panic_hook", "failure", "hex", "js-sys", "log", "rand/wasm-bindgen", "serde", "serde_json", "wasm-bindgen", "zeroize", "getrandom"]
 x25519 = ["arrayref", "curve25519-dalek/std", "curve25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "x25519-dalek/std", "x25519-dalek/u64_backend", "zeroize"]
 x25519_asm = ["arrayref", "curve25519-dalek/nightly", "curve25519-dalek/avx2_backend", "hex", "rand", "rand_chacha", "sha2/asm", "x25519-dalek/nightly", "x25519-dalek/u64_backend", "zeroize"]
 
@@ -137,6 +137,7 @@ num-traits = { version = "=0.2.11", optional = true }
 openssl = { version = "0.10", optional = true }
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "0.7", features = ["wasm-bindgen"], optional = true }
+getrandom = { version = "0.2", features = ["js"], optional = true }
 rand_chacha = { version = "=0.2.1", optional = true }
 rustchacha20poly1305 = { version = "0.7", package = "chacha20poly1305", optional = true }
 k256 = { version = "0.9.6", optional = true, features = ["ecdh", "ecdsa", "sha256"]}

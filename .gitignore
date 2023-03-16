@@ -1,5 +1,6 @@
 cargo-registry
 target
+pkg
 build
 .idea
 *.iml 

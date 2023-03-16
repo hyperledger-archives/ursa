@@ -1,8 +1,14 @@
+use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
+use keys::{PrivateKey, PublicKey, SessionKey};
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
 #[macro_use]
 mod macros;
 #[cfg(feature = "bls_bn254")]
 pub mod bls;
-
+#[cfg(feature = "cl")]
+pub mod cl;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 #[cfg(feature = "encryption")]
@@ -12,18 +18,21 @@ pub mod secp256k1;
 #[cfg(feature = "x25519")]
 pub mod x25519;
 
-use keys::{PrivateKey, PublicKey, SessionKey};
-
-use errors::{UrsaCryptoError, UrsaCryptoErrorKind};
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WasmPrivateKey(String);
+
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WasmPublicKey(String);
+
+#[wasm_bindgen]
+impl WasmPublicKey {
+    #[wasm_bindgen(constructor)]
+    pub fn new(key: &[u8]) -> Result<WasmPublicKey, JsValue> {
+        Ok(WasmPublicKey(hex::encode(&key[..])))
+    }
+}
 
 #[wasm_bindgen]
 #[derive(Debug, Serialize, Deserialize)]
@@ -97,8 +106,7 @@ impl From<SessionKey> for WasmSessionKey {
 
 impl From<UrsaCryptoError> for JsValue {
     fn from(err: UrsaCryptoError) -> JsValue {
-        let error = format!("{:?}", err);
-        JsValue::from_serde(&error).unwrap()
+        JsValue::from_serde(&err.to_string()).unwrap()
     }
 }
 

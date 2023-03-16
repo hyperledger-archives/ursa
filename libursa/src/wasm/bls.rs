@@ -8,14 +8,17 @@ pub struct Generator(bls::Generator);
 
 #[wasm_bindgen]
 impl Generator {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Result<Generator, JsValue> {
         Ok(Generator(maperr!(bls::Generator::new())))
     }
 
-    pub fn as_bytes(&self) -> Vec<u8> {
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Vec<u8> {
         self.0.as_bytes().to_vec()
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<Generator, JsValue> {
         Ok(Generator(maperr!(bls::Generator::from_bytes(bytes))))
     }
@@ -26,18 +29,22 @@ pub struct SignKey(bls::SignKey);
 
 #[wasm_bindgen]
 impl SignKey {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Result<SignKey, JsValue> {
         Ok(SignKey(maperr!(bls::SignKey::new(None))))
     }
 
+    #[wasm_bindgen(js_name = fromSeed)]
     pub fn from_seed(seed: &[u8]) -> Result<SignKey, JsValue> {
         Ok(SignKey(maperr!(bls::SignKey::new(Some(seed)))))
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<SignKey, JsValue> {
         Ok(SignKey(maperr!(bls::SignKey::from_bytes(bytes))))
     }
 
+    #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         Ok(self.0.as_bytes().to_vec())
     }
@@ -48,14 +55,17 @@ pub struct VerKey(bls::VerKey);
 
 #[wasm_bindgen]
 impl VerKey {
+    #[wasm_bindgen(constructor)]
     pub fn new(generator: Generator, sign_key: SignKey) -> Result<VerKey, JsValue> {
         Ok(VerKey(maperr!(bls::VerKey::new(&generator.0, &sign_key.0))))
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<VerKey, JsValue> {
         Ok(VerKey(maperr!(bls::VerKey::from_bytes(bytes))))
     }
 
+    #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         Ok(self.0.as_bytes().to_vec())
     }
@@ -66,6 +76,7 @@ pub struct ProofOfPossession(bls::ProofOfPossession);
 
 #[wasm_bindgen]
 impl ProofOfPossession {
+    #[wasm_bindgen(constructor)]
     pub fn new(ver_key: &VerKey, sign_key: &SignKey) -> Result<ProofOfPossession, JsValue> {
         Ok(ProofOfPossession(maperr!(bls::ProofOfPossession::new(
             &ver_key.0,
@@ -73,13 +84,15 @@ impl ProofOfPossession {
         ))))
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<ProofOfPossession, JsValue> {
         Ok(ProofOfPossession(maperr!(
             bls::ProofOfPossession::from_bytes(bytes)
         )))
     }
 
-    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         Ok(self.0.as_bytes().to_vec())
     }
 }
@@ -89,10 +102,13 @@ pub struct Signature(bls::Signature);
 
 #[wasm_bindgen]
 impl Signature {
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<Signature, JsValue> {
         Ok(Signature(maperr!(bls::Signature::from_bytes(bytes))))
     }
-    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         Ok(self.0.as_bytes().to_vec())
     }
 }
@@ -102,6 +118,7 @@ pub struct MultiSignature(bls::MultiSignature);
 
 #[wasm_bindgen]
 impl MultiSignature {
+    #[wasm_bindgen(constructor)]
     pub fn new(signatures: Vec<JsValue>) -> Result<MultiSignature, JsValue> {
         let sigs: Vec<bls::Signature> =
             signatures.iter().map(|x| x.into_serde().unwrap()).collect();
@@ -110,13 +127,15 @@ impl MultiSignature {
         )?))
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<MultiSignature, JsValue> {
         Ok(MultiSignature(maperr!(bls::MultiSignature::from_bytes(
             bytes
         ))))
     }
 
-    pub fn as_bytes(&self) -> Result<Vec<u8>, JsValue> {
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         Ok(self.0.as_bytes().to_vec())
     }
 }
@@ -125,8 +144,8 @@ impl MultiSignature {
 pub struct Bls(bls::Generator);
 
 #[wasm_bindgen]
-#[allow(non_snake_case)]
 impl Bls {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> Bls {
         Bls(bls::Generator::new().unwrap())
     }
@@ -151,7 +170,8 @@ impl Bls {
         )))
     }
 
-    pub fn verifyProofOfPosession(
+    #[wasm_bindgen(js_name = verifyProofOfPosession)]
+    pub fn verify_proof_of_posession(
         pop: &ProofOfPossession,
         ver_key: &VerKey,
         generator: &Generator,
@@ -163,7 +183,8 @@ impl Bls {
         )))
     }
 
-    pub fn verifyMultiSignature(
+    #[wasm_bindgen(js_name = verifyMultiSignature)]
+    pub fn verify_multi_signature(
         multi_sig: &MultiSignature,
         message: &[u8],
         ver_keys: Vec<JsValue>,
