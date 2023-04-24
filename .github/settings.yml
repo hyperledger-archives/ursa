@@ -4,14 +4,14 @@
 
 repository:
   name: ursa
-  description: Hyperledger Ursa is a shared cryptography library
+  description: Hyperledger Ursa has moved to end-of-life status.
   homepage: https://wiki.hyperledger.org/display/ursa
   default_branch: main
   has_downloads: true
   has_issues: true
   has_projects: false
   has_wiki: false
-  archived: false
+  archived: true
   private: false
   allow_squash_merge: false
   allow_merge_commit: false

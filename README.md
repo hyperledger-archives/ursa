@@ -1,8 +1,6 @@
 # HYPERLEDGER URSA
 
-[![Ursa CI](https://github.com/hyperledger/ursa/workflows/Ursa%20CI/badge.svg)](https://github.com/hyperledger/ursa/actions?query=workflow%3A%22Ursa+CI%22)
-[![Build status](https://ci.appveyor.com/api/projects/status/1htmp82mdvmfjjap?svg=true)](https://ci.appveyor.com/project/hyperledger/ursa)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2447/badge)](https://bestpractices.coreinfrastructure.org/projects/2447)
+[Hyperledger Ursa was moved to EOL at the TOC meeting on 27 APR 2023.](https://toc.hyperledger.org/meeting-minutes/2023/2023-04-27-TOC-meeting-record.html)
 
 - [Introduction](#introduction)
 - [Features](#features)
