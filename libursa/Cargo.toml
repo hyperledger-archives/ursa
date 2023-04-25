@@ -73,23 +73,23 @@ benchmarked25519 = ["ed25519"]
 benchmarksecp256k1 = ["bitcoinsecp256k1", "openssl"]
 benchmarkxchacha20poly1305 = ["chacha20poly1305"]
 bls_bls12381 = ["amcl_wrapper", "hex", "hkdf", "sha2/std", "zeroize"]
-bls_bn254 = ["amcl", "failure", "log", "rand", "sha2/std", "sha3"]
-bls_bn254_asm = ["amcl", "failure", "log", "rand", "sha2/asm", "sha3"]
-cl = ["amcl", "failure", "glass_pumpkin", "int_traits", "lazy_static", "log", "num-bigint", "num-integer", "num-traits", "rand", "sha2/std"]
-cl_native = ["amcl", "failure", "int_traits", "lazy_static", "log", "openssl", "rand"]
+bls_bn254 = ["amcl", "log", "rand", "sha2/std", "sha3"]
+bls_bn254_asm = ["amcl", "log", "rand", "sha2/asm", "sha3"]
+cl = ["amcl", "glass_pumpkin", "int_traits", "lazy_static", "log", "num-bigint", "num-integer", "num-traits", "rand", "sha2/std"]
+cl_native = ["amcl", "int_traits", "lazy_static", "log", "openssl", "rand"]
 chacha20poly1305 = ["aead", "hex", "rand", "rustchacha20poly1305", "zeroize"]
 chacha20poly1305_native = ["chacha20poly1305"]
-ecdh_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "k256", "sha2/std", "zeroize"]
-ecdh_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
-ecdh_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
-ecdsa_secp256k1 = ["amcl", "arrayref", "failure", "hex", "rand", "rand_chacha", "k256", "sha2/std", "zeroize"]
-ecdsa_secp256k1_native = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
-ecdsa_secp256k1_asm = ["arrayref", "failure", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
+ecdh_secp256k1 = ["amcl", "arrayref", "hex", "rand", "rand_chacha", "k256", "sha2/std", "zeroize"]
+ecdh_secp256k1_native = ["arrayref", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
+ecdh_secp256k1_asm = ["arrayref", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
+ecdsa_secp256k1 = ["amcl", "arrayref", "hex", "rand", "rand_chacha", "k256", "sha2/std", "zeroize"]
+ecdsa_secp256k1_native = ["arrayref", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/std", "zeroize"]
+ecdsa_secp256k1_asm = ["arrayref", "hex", "log", "rand", "bitcoinsecp256k1", "rand_chacha", "sha2/asm", "zeroize"]
 ed25519 = ["arrayref", "ed25519-dalek/std", "ed25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "zeroize"]
 ed25519_asm = ["arrayref", "ed25519-dalek/nightly", "ed25519-dalek/simd_backend", "hex", "rand", "rand_chacha", "sha2/asm", "zeroize"]
 encryption = ["aescbc", "aesgcm", "chacha20poly1305"]
 encryption_asm = ["aescbc_native", "aesgcm_native", "chacha20poly1305"]
-ffi = ["failure", "ffi-support", "logger", "serde", "serde_json"]
+ffi = ["ffi-support", "logger", "serde", "serde_json"]
 hashes = ["blake2/std", "sha2/std", "sha3"]
 hashes_asm = ["blake2/simd_asm", "sha2/asm", "sha3"]
 kex = ["ecdh_secp256k1", "x25519"]
@@ -98,12 +98,12 @@ kex_asm = ["ecdh_secp256k1_asm", "x25519_asm"]
 logger = ["env_logger", "log"]
 portable = ["clear_on_drop/no_cc", "encryption", "hashes", "kex", "serde", "signatures", "sharing"]
 portable_wasm = ["portable", "wasm"]
-sharing = ["failure", "glass_pumpkin", "int_traits", "lazy_static", "num-bigint", "num-integer", "num-traits", "log", "rand", "sha2/std"]
-sharing_native = ["failure", "int_traits", "lazy_static", "log", "openssl", "rand"]
+sharing = ["glass_pumpkin", "int_traits", "lazy_static", "num-bigint", "num-integer", "num-traits", "log", "rand", "sha2/std"]
+sharing_native = ["int_traits", "lazy_static", "log", "openssl", "rand"]
 signatures = ["cl", "ed25519", "ecdsa_secp256k1", "bls_bls12381", "bls_bn254"]
 signatures_native = ["cl_native", "ed25519", "ecdsa_secp256k1_native", "bls_bls12381", "bls_bn254"]
 signatures_asm = ["cl_native", "ed25519_asm", "ecdsa_secp256k1_asm", "bls_bls12381", "bls_bn254_asm"]
-wasm = ["console_error_panic_hook", "failure", "hex", "js-sys", "log", "rand/wasm-bindgen", "serde", "serde_json", "wasm-bindgen", "zeroize", "getrandom"]
+wasm = ["console_error_panic_hook", "hex", "js-sys", "log", "rand/wasm-bindgen", "serde", "serde_json", "wasm-bindgen", "zeroize"]
 x25519 = ["arrayref", "curve25519-dalek/std", "curve25519-dalek/u64_backend", "hex", "rand", "rand_chacha", "sha2/std", "x25519-dalek/std", "x25519-dalek/u64_backend", "zeroize"]
 x25519_asm = ["arrayref", "curve25519-dalek/nightly", "curve25519-dalek/avx2_backend", "hex", "rand", "rand_chacha", "sha2/asm", "x25519-dalek/nightly", "x25519-dalek/u64_backend", "zeroize"]
 
@@ -122,7 +122,6 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 curve25519-dalek = { version = "3.2", default-features = false, optional = true }
 ed25519-dalek = { version = "1.0", default-features = false, optional = true }
 env_logger = { version = "0.10", optional = true }
-failure = { version = "0.1.8", optional = true }
 ffi-support = { version = "0.4", optional = true }
 glass_pumpkin = { version = "1.5", optional = true }
 hex = { version = "0.4.3", optional = true }
@@ -135,7 +134,7 @@ log = { version = "0.4.17", optional = true }
 num-bigint = { version = "0.4", features = ["rand"], optional = true }
 num-integer = { version = "0.1.45", optional = true }
 num-traits = { version = "0.2.15", optional = true }
-openssl = { version = "0.10", optional = true }
+openssl = { version = "0.10.48", optional = true }
 # TODO: Find out if the wasm-bindgen feature can be made dependent on our own wasm feature
 rand = { version = "0.7", features = ["wasm-bindgen"], optional = true }
 getrandom = { version = "0.2", features = ["js"], optional = true }
@@ -151,6 +150,7 @@ subtle = { version = "2.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true, features = ["serde-serialize"] }
 x25519-dalek = { version = "1.2.1", optional = true, default-features = false, git = "https://github.com/appetrosyan/x25519-dalek" }
 zeroize = { version = "1.5", features = ["zeroize_derive"], optional =  true }
+thiserror = "1.0.40"
 
 [dev-dependencies]
 bytebuffer-rs = "2.0.1"

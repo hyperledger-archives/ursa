@@ -3,6 +3,7 @@ extern crate log;
 #[cfg(feature = "ffi")]
 use crate::ffi::ErrorCode;
 
+use core::fmt::Display;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::fmt;
@@ -10,8 +11,6 @@ use std::fmt;
 use std::os::raw::c_char;
 #[cfg(feature = "ffi")]
 use std::ptr;
-
-use failure::{Backtrace, Context, Fail};
 
 #[cfg(feature = "ffi")]
 use crate::utils::ctypes;
@@ -31,25 +30,25 @@ pub mod prelude {
     };
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, thiserror::Error)]
 pub enum UrsaCryptoErrorKind {
     // Common errors
-    #[fail(display = "Invalid library state")]
+    #[error("Invalid library state")]
     InvalidState,
-    #[fail(display = "Invalid structure")]
+    #[error("Invalid structure")]
     InvalidStructure,
-    #[fail(display = "Invalid parameter {}", 0)]
+    #[error("Invalid parameter {_0}")]
     InvalidParam(u32),
-    #[fail(display = "IO error")]
+    #[error("IO error")]
     IOError,
     // CL errors
-    #[fail(display = "Proof rejected")]
+    #[error("Proof rejected")]
     ProofRejected,
-    #[fail(display = "Revocation accumulator is full")]
+    #[error("Revocation accumulator is full")]
     RevocationAccumulatorIsFull,
-    #[fail(display = "Invalid revocation id")]
+    #[error("Invalid revocation id")]
     InvalidRevocationAccumulatorIndex,
-    #[fail(display = "Credential revoked")]
+    #[error("Credential revoked")]
     CredentialRevoked,
 }
 
@@ -58,13 +57,24 @@ pub struct UrsaCryptoError {
     inner: Context<UrsaCryptoErrorKind>,
 }
 
-impl Fail for UrsaCryptoError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.inner.cause()
-    }
+pub struct Context<T> {
+    error: T,
+    context: String,
+    backtrace: &'static str,
+}
 
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
+impl<T: core::fmt::Debug> core::fmt::Debug for Context<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Context")
+            .field("error", &self.error)
+            .field("context", &self.context)
+            .finish()
+    }
+}
+
+impl<T: Display> Display for Context<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        todo!()
     }
 }
 
@@ -74,29 +84,22 @@ impl UrsaCryptoError {
         D: fmt::Display + fmt::Debug + Send + Sync + 'static,
     {
         UrsaCryptoError {
-            inner: Context::new(msg).context(kind),
+            inner: Context {
+                error: kind,
+                context: msg.to_string(),
+                backtrace: "",
+            },
         }
     }
 
     pub fn kind(&self) -> UrsaCryptoErrorKind {
-        *self.inner.get_context()
+        self.inner.error
     }
 }
 
 impl fmt::Display for UrsaCryptoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut first = true;
-
-        for cause in <dyn Fail>::iter_chain(&self.inner) {
-            if first {
-                first = false;
-                writeln!(f, "Error: {}", cause)?;
-            } else {
-                writeln!(f, "Caused by: {}", cause)?;
-            }
-        }
-
-        Ok(())
+        todo!()
     }
 }
 
@@ -116,7 +119,13 @@ impl From<Context<UrsaCryptoErrorKind>> for UrsaCryptoError {
 #[cfg(feature = "logger")]
 impl From<log::SetLoggerError> for UrsaCryptoError {
     fn from(err: log::SetLoggerError) -> UrsaCryptoError {
-        err.context(UrsaCryptoErrorKind::InvalidState).into()
+        UrsaCryptoError {
+            inner: Context {
+                error: UrsaCryptoErrorKind::InvalidState,
+                context: "Setting logger failed".to_owned(),
+                backtrace: "",
+            },
+        }
     }
 }
 
@@ -203,15 +212,12 @@ pub trait UrsaCryptoErrorExt {
         D: fmt::Display + Send + Sync + 'static;
 }
 
-impl<E> UrsaCryptoErrorExt for E
-where
-    E: Fail,
-{
+impl UrsaCryptoErrorExt for openssl::error::ErrorStack {
     fn to_ursa<D>(self, kind: UrsaCryptoErrorKind, msg: D) -> UrsaCryptoError
     where
         D: fmt::Display + Send + Sync + 'static,
     {
-        self.context(msg).context(kind).into()
+        todo!()
     }
 }
 
