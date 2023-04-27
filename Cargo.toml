@@ -12,7 +12,7 @@ repository = "https://github.com/hyperledger/ursa"
 version = "0.5.0"
 
 [badges]
-maintenance = { status = "actively-developed" }
+maintenance = { status = "deprecated" }
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
