@@ -4,7 +4,7 @@
 
 repository:
   name: ursa
-  description: Hyperledger Ursa has moved to end-of-life status.
+  description: Hyperledger Ursa (a shared cryptographic library) has moved to end-of-life status, with the components of Ursa still in use moved to their relevant Hyperledger projects (AnonCreds, Indy, Aries and Iroha).
   homepage: https://wiki.hyperledger.org/display/ursa
   default_branch: main
   has_downloads: true

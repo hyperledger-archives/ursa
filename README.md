@@ -2,6 +2,14 @@
 
 [Hyperledger Ursa was moved to EOL at the TOC meeting on 27 APR 2023.](https://toc.hyperledger.org/meeting-minutes/2023/2023-04-27-TOC-meeting-record.html)
 
+The components of Ursa that are still in active use are moved to their respective projects where they will continue to be maintained, including:
+
+- CL Signatures to AnonCreds
+- BBS+ Signatures to Aries
+- BLS Signatures to Indy
+
+The published Ursa crates remain available for those projects already using them.
+
 - [Introduction](#introduction)
 - [Features](#features)
     - [Libursa](#Libursa)
